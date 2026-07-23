@@ -626,6 +626,20 @@
     border: 0.5px solid rgba(255,255,255,0.16);
     color: var(--text-primary);
   }
+  .table-actions .add-to-own.primary {
+    width: auto;
+    min-width: 86px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--accent);
+    border-color: rgba(212,83,126,0.35);
+    color: #2b0f19;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .table-actions .add-to-own.primary:hover {
+    background: #c14670;
+  }
   .table-actions .toggle-own.owned {
     color: #78d48f;
     border-color: rgba(120, 212, 143, 0.28);
@@ -821,7 +835,8 @@
     transform: translateY(-4px);
     transition: opacity 0.15s ease, transform 0.15s ease;
   }
-  .collection-card:hover .card-actions {
+  .collection-card:hover .card-actions,
+  .collection-card.remote-view .card-actions {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
@@ -834,6 +849,52 @@
     border: 0.5px solid rgba(255,255,255,0.16);
     color: var(--text-primary);
     backdrop-filter: blur(8px);
+  }
+  .card-actions .add-to-own {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--accent);
+    border-color: rgba(212,83,126,0.35);
+    color: #2b0f19;
+  }
+  .card-actions .add-to-own:hover {
+    transform: translateY(-1px);
+    background: #c14670;
+  }
+  .common-badge {
+    display: inline-flex;
+    margin-top: 10px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.08);
+    color: var(--text-secondary);
+  }
+  .common-badge.common,
+  .common-pill.common {
+    background: rgba(120, 212, 143, 0.16);
+    color: #78d48f;
+    border: 1px solid rgba(120,212,143,0.22);
+  }
+  .common-badge.remote-only,
+  .common-pill.remote-only {
+    background: rgba(57, 134, 255, 0.14);
+    color: #94b8ff;
+    border: 1px solid rgba(57,134,255,0.22);
+  }
+  .common-pill {
+    display: inline-flex;
+    margin: 4px 0 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
   }
   .card-actions .toggle-own.owned {
     color: #78d48f;
@@ -1681,11 +1742,11 @@ function renderUserList(users) {
     actions.className = 'user-item-actions';
 
     if (user.uid === currentUid) {
-      const ownLabel = document.createElement('button');
-      ownLabel.type = 'button';
-      ownLabel.textContent = 'Meine Sammlung';
-      ownLabel.disabled = true;
-      actions.appendChild(ownLabel);
+      const ownBtn = document.createElement('button');
+      ownBtn.type = 'button';
+      ownBtn.textContent = 'Meine Sammlung';
+      ownBtn.addEventListener('click', showOwnCollection);
+      actions.appendChild(ownBtn);
     } else {
       const viewBtn = document.createElement('button');
       viewBtn.type = 'button';
@@ -1829,14 +1890,14 @@ function saveOwnCollectionData() {
   saveCloudDataDebounced();
 }
 
+async function showOwnCollection() {
+  if (!currentUid) return;
+  await loadCloudData(currentUid);
+  if (userMenuPanel) userMenuPanel.classList.remove('open');
+}
+
 if (showOwnCollectionBtn) {
-  showOwnCollectionBtn.addEventListener('click', () => {
-    viewingOwnCollection = true;
-    collection = ownCollection;
-    collectionTitle = ownCollectionTitle;
-    updateViewingInfo();
-    renderCollection();
-  });
+  showOwnCollectionBtn.addEventListener('click', showOwnCollection);
 }
 
 if (toggleUserMenuBtn && userMenuPanel) {
@@ -2235,6 +2296,10 @@ function getVisibleLabel(item) {
   return pattern ? `${color} (${pattern})` : color;
 }
 
+function getAlbumComparisonKey(item) {
+  return `${(item.title || '').trim().toLowerCase()}___${(item.artist || '').trim().toLowerCase()}`;
+}
+
 function getReleaseType(item) {
   return item.releaseType || 'Album';
 }
@@ -2310,6 +2375,8 @@ function addRemoteEntryToOwn(itemId) {
   newItem.id = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
   ownCollection.push(newItem);
   saveOwnCollectionData();
+  saveCloudDataNow();
+  renderCollection();
   showAlert(`'${item.title}' wurde zu deiner Sammlung hinzugefügt.`);
 }
 
@@ -2871,6 +2938,7 @@ async function deleteEntry(id) {
   if (!ok) return;
   collection = collection.filter(c => c.id !== id);
   saveCollection();
+  await saveCloudDataNow();
 }
 
 function toggleOwned(id) {
@@ -2985,6 +3053,7 @@ function renderCollection() {
   document.getElementById('stat1xxx').textContent = stat1xxx;
   document.getElementById('stat2xxx').textContent = stat2xxx;
 
+  const ownKeys = new Set(ownCollection.map(getAlbumComparisonKey));
   let list = collection.slice().reverse();
   if (activeFilter === 'owned') list = list.filter(c => c.owned);
   if (activeFilter === 'wishlist') list = list.filter(c => !c.owned);
@@ -3043,7 +3112,7 @@ function renderCollection() {
     const allowEdit = viewingOwnCollection;
     list.forEach(item => {
       const card = document.createElement('div');
-      card.className = 'collection-card' + (item.owned ? ' owned' : ' wishlist');
+      card.className = 'collection-card' + (item.owned ? ' owned' : ' wishlist') + (!viewingOwnCollection ? ' remote-view' : '');
       const cardStyles = getCardBackground(item);
       Object.assign(card.style, cardStyles);
       card.style.setProperty('--condition-overlay', getConditionOverlay(item.condition || 'Sehr gut'));
@@ -3054,6 +3123,8 @@ function renderCollection() {
       const isGenreSort = activeSort === 'genre';
       const genreLabel = item.genre ? escapeHtml(item.genre) : '';
       const barStyle = getBarPatternStyle(item);
+      const isCommon = !viewingOwnCollection && ownKeys.has(getAlbumComparisonKey(item));
+      const commonBadgeHtml = !viewingOwnCollection ? `<span class="common-badge ${isCommon ? 'common' : 'remote-only'}">${isCommon ? 'Gemeinsam' : 'Nur bei ' + escapeHtml(viewedUsername || 'diesem Nutzer')}</span>` : '';
       const actionButtons = allowEdit ? `
             <button class="toggle-own ${item.owned ? 'owned' : ''}" title="Als besessen markieren" aria-label="Als besessen markieren">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -3068,7 +3139,6 @@ function renderCollection() {
             <button class="add-to-own" title="Zu eigener Sammlung hinzufügen" aria-label="Zu eigener Sammlung hinzufügen">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </button>
-            <span class="hint" style="font-size:12px; color:var(--text-secondary);">Nur Ansicht</span>
           `;
 
       card.innerHTML = `
@@ -3086,6 +3156,7 @@ ${actionButtons}
           <div class="meta-line">
             <span style="display:flex;align-items:center;gap:6px;"><span class="year">${escapeHtml(item.year)}</span>${genreLabel ? `<span class="genre-badge ${isGenreSort ? 'highlight' : ''}">${genreLabel}</span>` : ``}</span><span class="release-badge ${badge.className}">${escapeHtml(badge.label)}</span>
           </div>
+          ${commonBadgeHtml}
         </div>
       `;
 
@@ -3125,6 +3196,10 @@ ${actionButtons}
         ${list.map(item => {
           const badge = getReleaseBadge(item);
           const barStyle = getBarPatternStyle(item);
+          const isCommon = !viewingOwnCollection && ownKeys.has(getAlbumComparisonKey(item));
+          const commonLabel = !viewingOwnCollection ? `
+              <span class="common-pill ${isCommon ? 'common' : 'remote-only'}">${isCommon ? 'Gemeinsam' : 'Nur bei ' + escapeHtml(viewedUsername || 'diesem Nutzer')}</span>
+            ` : '';
           const actionCell = allowEdit ? `
                 <div class="table-actions">
                   <button class="toggle-own ${item.owned ? 'owned' : ''}" onclick="toggleOwned('${item.id}')" title="Status ändern">
@@ -3143,6 +3218,7 @@ ${actionButtons}
               <td class="cover-cell"><img src="${item.coverUrl || ''}" alt=""></td>
               <td class="title-cell">
                 <strong>${escapeHtml(item.title)}</strong>
+                ${commonLabel}
                 <span>${escapeHtml(item.artist)}</span>
               </td>
               <td><span class="state-pill">${escapeHtml(badge.label)}</span></td>
