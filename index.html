@@ -171,6 +171,90 @@
     justify-content: center;
   }
 
+  .user-list-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .user-list {
+    display: grid;
+    gap: 10px;
+  }
+  .user-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 0.5px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-2);
+  }
+  .user-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .user-item-info strong {
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+  .user-item-info .sub {
+    color: var(--text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .user-item-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .user-item button {
+    min-width: 110px;
+  }
+
+  .user-panel-toggle {
+    display: none;
+  }
+  .user-menu-panel {
+    display: none;
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 1.5rem;
+  }
+  .user-menu-panel.open {
+    display: block;
+  }
+  .user-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .user-menu-header .panel-title {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 900px) {
+    .user-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .user-item-actions {
+      justify-content: flex-start;
+    }
+  }
+
   .wrap { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
 
   .panel {
@@ -887,9 +971,143 @@
     .filter-tabs { gap: 4px; }
     .settings-panel { right: -8px; width: 240px; }
   }
+
+  /* Login / Account */
+  #authOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 20px;
+  }
+  #authOverlay.hidden { display: none; }
+  .auth-box {
+    width: 100%;
+    max-width: 340px;
+    background: var(--surface-1);
+    border: 0.5px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 24px;
+    box-shadow: var(--shadow);
+  }
+  .auth-box h1 {
+    font-size: 18px;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .auth-box .auth-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0 0 20px;
+  }
+  .auth-box label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 12px 0 6px;
+  }
+  .auth-box input {
+    width: 100%;
+  }
+  .auth-box button.primary {
+    width: 100%;
+    justify-content: center;
+    margin-top: 20px;
+    padding: 10px 12px;
+  }
+  .auth-toggle {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .auth-toggle a {
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .auth-error {
+    background: rgba(224, 100, 95, 0.12);
+    border: 0.5px solid rgba(224, 100, 95, 0.4);
+    color: var(--danger);
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 14px;
+    display: none;
+  }
+  .auth-error.show { display: block; }
+  .auth-loading {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 12px;
+    display: none;
+  }
+  .auth-loading.show { display: block; }
+  #appRoot.hidden { display: none; }
+  .user-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    border: 0.5px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .user-pill strong { color: var(--text-primary); font-weight: 600; }
+  .user-pill button {
+    padding: 4px 8px;
+    font-size: 11px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+  }
+  .user-pill button:hover { color: var(--danger); background: transparent; }
 </style>
 </head>
 <body>
+
+<!-- Login / Registrierung -->
+<div id="authOverlay">
+  <div class="auth-box">
+    <h1>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" stroke="#d4537e" stroke-width="1.4"/>
+        <circle cx="12" cy="12" r="6" stroke="#d4537e" stroke-width="1" opacity="0.6"/>
+        <circle cx="12" cy="12" r="1.8" fill="#d4537e"/>
+      </svg>
+      <span id="authTitle">Anmelden</span>
+    </h1>
+    <p class="auth-sub" id="authSub">Melde dich an, um deine Vinyl-Sammlung zu sehen.</p>
+
+    <label for="authUsername">Benutzername</label>
+    <input id="authUsername" type="text" autocomplete="username" placeholder="z. B. maxmustermann">
+
+    <label for="authPassword">Passwort</label>
+    <input id="authPassword" type="password" autocomplete="current-password" placeholder="Mindestens 6 Zeichen">
+
+    <button type="button" class="primary" id="authSubmitBtn">Anmelden</button>
+
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-loading" id="authLoading">Einen Moment…</div>
+
+    <p class="auth-toggle">
+      <span id="authToggleText">Noch keinen Account?</span>
+      <a id="authToggleLink">Registrieren</a>
+    </p>
+  </div>
+</div>
+
+<div id="appRoot" class="hidden">
 
 <header>
   <div class="logo">
@@ -910,6 +1128,10 @@
     <div class="stat-pill"><span>Frühestes Jahr</span> <strong id="stat1xxx">–</strong></div>
     <div class="stat-pill"><span>Spätestes Jahr</span> <strong id="stat2xxx">–</strong></div>
     <div class="stat-pill"><span>Wunschliste</span> <strong id="wishlistCount">0</strong></div>
+    <div class="user-pill">
+      <span>Angemeldet als <strong id="currentUsernameLabel">–</strong></span>
+      <button type="button" id="logoutBtn" title="Abmelden">Abmelden</button>
+    </div>
     <div class="header-actions">
       <!-- NEU: Wunschliste Clipboard-Export -->
       <button id="copyWishlistBtn" class="icon-btn" title="Wunschliste in Zwischenablage kopieren" aria-label="Wunschliste kopieren">
@@ -917,6 +1139,12 @@
           <rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
           <path d="M5 15H4C3.44772 15 3 14.5523 3 14V4C3 3.44772 3.44772 3 4 3H14C14.5523 3 15 3.44772 15 4V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
+      </button>
+      <button id="toggleUserMenuBtn" class="icon-btn" title="Andere Nutzer" aria-label="Andere Nutzer">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <button id="showOwnCollectionBtn" class="icon-btn" title="Eigene Sammlung anzeigen" aria-label="Eigene Sammlung anzeigen" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
       <button id="importBtn" class="icon-btn" title="Importieren" aria-label="Importieren">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3V15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 8L12 3L17 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14V18C5 18.5523 5.44772 19 6 19H18C18.5523 19 19 18.5523 19 18V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1058,6 +1286,17 @@
     </div>
   </div>
 
+  <div class="panel user-menu-panel" id="otherUsersPanel">
+    <div class="user-menu-header">
+      <p class="panel-title">Andere Nutzer</p>
+      <button type="button" id="closeUserMenuBtn" class="icon-btn" title="Schließen" aria-label="Schließen">
+        ✕
+      </button>
+    </div>
+    <div id="userList" class="user-list"></div>
+    <p class="hint" id="userListHint">Wähle hier einen anderen Benutzer, um seine Sammlung anzusehen oder zu importieren.</p>
+  </div>
+
   <div class="panel collection-panel">
     <div class="collection-header">
       <div class="collection-toolbar">
@@ -1121,13 +1360,503 @@
   </div>
 </div>
 
+</div><!-- /#appRoot -->
+
+<!-- Firebase SDK (kostenlos, "compat"-Version für einfache Einbindung ohne Build-Tool) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
 <script>
+// ============================================================
+// FIREBASE-KONFIGURATION
+// Trage hier deine eigenen Werte aus der Firebase-Konsole ein:
+// https://console.firebase.google.com -> Projekt anlegen ->
+// Web-App hinzufügen -> "Firebase SDK snippet" -> "Config"
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBpZDYzvGQvVo3X6-aFh5kHPGBIlqSXa1E",
+  authDomain: "vinylsammlung-44ec6.firebaseapp.com",
+  projectId: "vinylsammlung-44ec6",
+  storageBucket: "vinylsammlung-44ec6.firebasestorage.app",
+  messagingSenderId: "298740943171",
+  appId: "1:298740943171:web:77c2b5e3d5d2144a2607f6",
+  measurementId: "G-S0VJJ3W6SK"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 const STORAGE_KEY = 'vinylCollectionV1';
 const TITLE_STORAGE_KEY = 'vinylCollectionTitleV1';
 const DISCOGS_TOKEN_KEY = 'discogsTokenV1';
 const COVER_SOURCE_KEY = 'coverSourceV1';
 const DEFAULT_RELEASE_TYPE_KEY = 'defaultReleaseTypeV1';
 
+// Da Firebase Auth intern eine E-Mail-Adresse erwartet, der Nutzer
+// aber nur einen Benutzernamen eingibt, wird daraus eine "Pseudo-E-Mail"
+// gebaut. Diese wird nie versendet, sie dient nur als interner Login-Schlüssel.
+const AUTH_EMAIL_DOMAIN = 'vinylsammlung.app';
+function usernameToEmail(username) {
+  const clean = String(username).trim().toLowerCase();
+  return clean + '@' + AUTH_EMAIL_DOMAIN;
+}
+function isValidUsername(username) {
+  return /^[a-z0-9_.-]{3,20}$/i.test(String(username).trim());
+}
+
+let currentUid = null;
+let currentUsername = null;
+let saveDebounceTimer = null;
+let suppressNextCloudSave = false; // verhindert Schreib-Loop beim initialen Laden
+let viewingOwnCollection = true;
+let viewedUid = null;
+let viewedUsername = null;
+let ownCollection = [];
+let ownCollectionTitle = localStorage.getItem(TITLE_STORAGE_KEY) || 'Vinyl-Sammlung';
+let collectionTitle = ownCollectionTitle;
+
+const authOverlay = document.getElementById('authOverlay');
+const appRoot = document.getElementById('appRoot');
+const authTitle = document.getElementById('authTitle');
+const authSub = document.getElementById('authSub');
+const authUsernameInput = document.getElementById('authUsername');
+const authPasswordInput = document.getElementById('authPassword');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+const authError = document.getElementById('authError');
+const authLoading = document.getElementById('authLoading');
+const authToggleText = document.getElementById('authToggleText');
+const authToggleLink = document.getElementById('authToggleLink');
+const currentUsernameLabel = document.getElementById('currentUsernameLabel');
+const logoutBtn = document.getElementById('logoutBtn');
+const viewingInfoLabel = document.getElementById('viewingInfo');
+const showOwnCollectionBtn = document.getElementById('showOwnCollectionBtn');
+const toggleUserMenuBtn = document.getElementById('toggleUserMenuBtn');
+const userMenuPanel = document.getElementById('otherUsersPanel');
+const closeUserMenuBtn = document.getElementById('closeUserMenuBtn');
+const userList = document.getElementById('userList');
+const userListHint = document.getElementById('userListHint');
+
+let authMode = 'login'; // 'login' | 'register'
+
+function setAuthMode(mode) {
+  authMode = mode;
+  hideAuthError();
+  if (mode === 'login') {
+    authTitle.textContent = 'Anmelden';
+    authSub.textContent = 'Melde dich an, um deine Vinyl-Sammlung zu sehen.';
+    authSubmitBtn.textContent = 'Anmelden';
+    authPasswordInput.autocomplete = 'current-password';
+    authToggleText.textContent = 'Noch keinen Account?';
+    authToggleLink.textContent = 'Registrieren';
+  } else {
+    authTitle.textContent = 'Registrieren';
+    authSub.textContent = 'Erstelle einen Account für deine eigene Sammlung.';
+    authSubmitBtn.textContent = 'Account erstellen';
+    authPasswordInput.autocomplete = 'new-password';
+    authToggleText.textContent = 'Schon einen Account?';
+    authToggleLink.textContent = 'Anmelden';
+  }
+}
+authToggleLink.addEventListener('click', () => setAuthMode(authMode === 'login' ? 'register' : 'login'));
+
+function showAuthError(msg) {
+  authError.textContent = msg;
+  authError.classList.add('show');
+}
+function hideAuthError() {
+  authError.classList.remove('show');
+}
+function setAuthLoading(isLoading) {
+  authLoading.classList.toggle('show', isLoading);
+  authSubmitBtn.disabled = isLoading;
+  authUsernameInput.disabled = isLoading;
+  authPasswordInput.disabled = isLoading;
+}
+
+function friendlyAuthError(err) {
+  const code = err && err.code;
+  switch (code) {
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Benutzername oder Passwort ist falsch.';
+    case 'auth/email-already-in-use':
+      return 'Dieser Benutzername ist bereits vergeben.';
+    case 'auth/weak-password':
+      return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
+    case 'auth/too-many-requests':
+      return 'Zu viele Versuche. Bitte warte kurz und versuche es erneut.';
+    default:
+      return 'Etwas ist schiefgelaufen (' + (code || 'unbekannter Fehler') + ').';
+  }
+}
+
+async function handleAuthSubmit() {
+  hideAuthError();
+  const username = authUsernameInput.value.trim();
+  const password = authPasswordInput.value;
+
+  if (!isValidUsername(username)) {
+    showAuthError('Benutzername: 3-20 Zeichen, nur Buchstaben, Zahlen, „_“, „.“ oder „-“.');
+    return;
+  }
+  if (!password || password.length < 6) {
+    showAuthError('Das Passwort muss mindestens 6 Zeichen lang sein.');
+    return;
+  }
+
+  setAuthLoading(true);
+  const email = usernameToEmail(username);
+  try {
+    if (authMode === 'register') {
+      const usernameKey = username.toLowerCase();
+      const takenDoc = await db.collection('usernames').doc(usernameKey).get();
+      if (takenDoc.exists) {
+        showAuthError('Dieser Benutzername ist bereits vergeben.');
+        setAuthLoading(false);
+        return;
+      }
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      const uid = cred.user.uid;
+      await db.collection('usernames').doc(usernameKey).set({ uid: uid });
+      await db.collection('users').doc(uid).set({
+        username: username,
+        title: 'Vinyl-Sammlung',
+        collection: [],
+        settings: {},
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      await auth.signInWithEmailAndPassword(email, password);
+    }
+    // onAuthStateChanged übernimmt den Rest (Daten laden, UI umschalten)
+  } catch (err) {
+    showAuthError(friendlyAuthError(err));
+    setAuthLoading(false);
+  }
+}
+
+authSubmitBtn.addEventListener('click', handleAuthSubmit);
+authPasswordInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleAuthSubmit(); });
+authUsernameInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleAuthSubmit(); });
+
+logoutBtn.addEventListener('click', async () => {
+  await auth.signOut();
+});
+
+async function loadCloudData(uid) {
+  const docRef = db.collection('users').doc(uid);
+  const docSnap = await docRef.get();
+  const data = docSnap.exists ? docSnap.data() : { collection: [], title: 'Vinyl-Sammlung', settings: {} };
+  suppressNextCloudSave = true;
+  ownCollection = Array.isArray(data.collection)
+    ? data.collection.map(item => { item.color = normalizeColor(item.color); return item; })
+    : [];
+  collection = ownCollection;
+  viewingOwnCollection = true;
+  viewedUid = uid;
+  viewedUsername = currentUsername;
+  collectionTitle = typeof data.title === 'string' && data.title ? data.title : 'Vinyl-Sammlung';
+  ownCollectionTitle = collectionTitle;
+  if (!docSnap.exists) {
+    await docRef.set({
+      username: currentUsername,
+      title: collectionTitle,
+      collection: [],
+      settings: {},
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true }).catch(err => console.error('Neues Benutzer-Dokument konnte nicht erstellt werden:', err));
+  }
+  if (data.settings) {
+    if (data.settings.coverSource) {
+      localStorage.setItem(COVER_SOURCE_KEY, data.settings.coverSource);
+      if (coverSourceSelect) coverSourceSelect.value = data.settings.coverSource;
+    }
+    if (data.settings.discogsToken) {
+      localStorage.setItem(DISCOGS_TOKEN_KEY, data.settings.discogsToken);
+      if (discogsTokenInput) discogsTokenInput.value = data.settings.discogsToken;
+    }
+    if (data.settings.defaultReleaseType) {
+      localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, data.settings.defaultReleaseType);
+      if (defaultReleaseTypeSelect) defaultReleaseTypeSelect.value = data.settings.defaultReleaseType;
+    }
+  }
+  const titleInput = document.getElementById('collectionTitleInput');
+  if (titleInput) titleInput.value = collectionTitle;
+  updateSortButtons();
+  renderCollection();
+  updateViewingInfo();
+}
+
+async function saveCloudDataNow() {
+  if (!currentUid) return;
+  try {
+    await db.collection('users').doc(currentUid).set({
+      username: currentUsername,
+      title: ownCollectionTitle,
+      collection: ownCollection,
+      settings: {
+        coverSource: getCoverProvider(),
+        discogsToken: getDiscogsToken(),
+        defaultReleaseType: getDefaultReleaseType()
+      },
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.error('Cloud-Speichern fehlgeschlagen:', err);
+  }
+}
+
+function saveCloudDataDebounced() {
+  if (!currentUid) return;
+  if (suppressNextCloudSave) { suppressNextCloudSave = false; return; }
+  clearTimeout(saveDebounceTimer);
+  saveDebounceTimer = setTimeout(async () => {
+    await saveCloudDataNow();
+  }, 600);
+}
+
+async function loadUserList() {
+  if (!currentUid) return;
+  userList.innerHTML = '<div class="hint">Lade Benutzerliste…</div>';
+  try {
+    const snapshot = await db.collection('usernames').limit(200).get();
+    const users = [];
+    snapshot.forEach(doc => {
+      const data = doc.data() || {};
+      const username = String(doc.id || '').trim();
+      const uid = String(data.uid || '').trim();
+      if (!username || !uid) return;
+      users.push({ uid, username });
+    });
+    users.sort((a, b) => a.username.localeCompare(b.username, 'de'));
+    if (!users.length) {
+      throw new Error('Keine Benutzer gefunden.');
+    }
+    renderUserList(users);
+  } catch (err) {
+    console.warn('Benutzerliste (usernames) laden fehlgeschlagen, versuche Fallback users:', err);
+    try {
+      const snapshot = await db.collection('users').orderBy('username').limit(200).get();
+      const users = [];
+      snapshot.forEach(doc => {
+        const data = doc.data() || {};
+        const username = String(data.username || doc.id).trim();
+        const uid = String(doc.id);
+        if (!username || !uid) return;
+        users.push({ uid, username });
+      });
+      users.sort((a, b) => a.username.localeCompare(b.username, 'de'));
+      renderUserList(users);
+    } catch (fallbackErr) {
+      console.error('Benutzerliste (users) Fallback fehlgeschlagen:', fallbackErr);
+      userList.innerHTML = '<div class="hint">Benutzerliste nicht verfügbar.</div>';
+    }
+  }
+}
+
+function renderUserList(users) {
+  userList.innerHTML = '';
+  if (!users.length) {
+    userList.innerHTML = '<div class="hint">Keine Benutzer gefunden.</div>';
+    return;
+  }
+
+  users.forEach(user => {
+    const item = document.createElement('div');
+    item.className = 'user-item';
+
+    const info = document.createElement('div');
+    info.className = 'user-item-info';
+    const title = document.createElement('strong');
+    title.textContent = user.username;
+    const sub = document.createElement('span');
+    sub.className = 'sub';
+    sub.textContent = user.uid === currentUid ? 'Eigene Sammlung' : `UID: ${user.uid}`;
+    info.appendChild(title);
+    info.appendChild(sub);
+
+    const actions = document.createElement('div');
+    actions.className = 'user-item-actions';
+
+    if (user.uid === currentUid) {
+      const ownLabel = document.createElement('button');
+      ownLabel.type = 'button';
+      ownLabel.textContent = 'Meine Sammlung';
+      ownLabel.disabled = true;
+      actions.appendChild(ownLabel);
+    } else {
+      const viewBtn = document.createElement('button');
+      viewBtn.type = 'button';
+      viewBtn.textContent = 'Ansehen';
+      viewBtn.addEventListener('click', () => viewRemoteCollection(user.uid, user.username));
+      actions.appendChild(viewBtn);
+
+      const importBtn = document.createElement('button');
+      importBtn.type = 'button';
+      importBtn.textContent = 'Importieren';
+      importBtn.addEventListener('click', () => importUserCollection(user.uid, user.username));
+      actions.appendChild(importBtn);
+    }
+
+    item.appendChild(info);
+    item.appendChild(actions);
+    userList.appendChild(item);
+  });
+}
+
+function updateViewingInfo() {
+  if (!viewingInfoLabel) return;
+  if (viewingOwnCollection) {
+    viewingInfoLabel.textContent = 'Aktuelle Ansicht: Eigene Sammlung';
+    showOwnCollectionBtn.style.display = 'none';
+    userListHint.textContent = 'Wähle hier einen anderen Benutzer, um seine Sammlung anzusehen oder zu importieren.';
+  } else {
+    viewingInfoLabel.textContent = `Ansicht: Sammlung von ${viewedUsername || 'Benutzer'}`;
+    showOwnCollectionBtn.style.display = 'inline-flex';
+    userListHint.textContent = 'Diese Liste ist schreibgeschützt. Importiere sie in deine eigene Sammlung, um sie zu bearbeiten.';
+  }
+  const titleInput = document.getElementById('collectionTitleInput');
+  if (titleInput) {
+    titleInput.disabled = !viewingOwnCollection;
+    if (!viewingOwnCollection) {
+      titleInput.value = collectionTitle;
+    }
+  }
+}
+
+async function viewRemoteCollection(uid, username) {
+  if (!uid) return;
+  try {
+    const docSnap = await db.collection('users').doc(uid).get();
+    if (!docSnap.exists) {
+      await showAlert('Die Sammlung dieses Benutzers konnte nicht gefunden werden.');
+      return;
+    }
+    const data = docSnap.data() || {};
+    collection = Array.isArray(data.collection)
+      ? data.collection.map(item => { item.color = normalizeColor(item.color); return item; })
+      : [];
+    collectionTitle = data.title || `${username} - Sammlung`;
+    viewingOwnCollection = false;
+    viewedUid = uid;
+    viewedUsername = username;
+    if (userMenuPanel) userMenuPanel.classList.remove('open');
+    updateViewingInfo();
+    renderCollection();
+  } catch (err) {
+    console.error('Remote-Sammlung laden fehlgeschlagen:', err);
+    await showAlert('Fehler beim Laden der Sammlung. Bitte versuche es erneut.');
+  }
+}
+
+async function importUserCollection(uid, username) {
+  if (!uid) return;
+  const ok = await showConfirm(`Möchtest du die Sammlung von ${username} in deine eigene Sammlung importieren? Du kannst doppelte Einträge behalten oder sie später selbst bereinigen.`, { confirmLabel: 'Importieren', cancelLabel: 'Abbrechen' });
+  if (!ok) return;
+
+  try {
+    const docSnap = await db.collection('users').doc(uid).get();
+    if (!docSnap.exists) {
+      await showAlert('Die Sammlung dieses Benutzers konnte nicht gefunden werden.');
+      return;
+    }
+    const data = docSnap.data() || {};
+    const remoteCollection = Array.isArray(data.collection)
+      ? data.collection.map(item => { item.color = normalizeColor(item.color); return item; })
+      : [];
+
+    const seen = new Set(ownCollection.map(item => `${(item.title||'').trim().toLowerCase()}___${(item.artist||'').trim().toLowerCase()}`));
+    let importedCount = 0;
+    remoteCollection.forEach(item => {
+      const key = `${(item.title||'').trim().toLowerCase()}___${(item.artist||'').trim().toLowerCase()}`;
+      if (!seen.has(key)) {
+        ownCollection.push(item);
+        seen.add(key);
+        importedCount++;
+      }
+    });
+
+    collection = ownCollection;
+    viewingOwnCollection = true;
+    viewedUid = currentUid;
+    viewedUsername = currentUsername;
+    saveCollection();
+    updateViewingInfo();
+    loadUserList();
+    await showAlert(`Importiert ${importedCount} neuen Eintrag${importedCount === 1 ? '' : 'e'} in deine eigene Sammlung.`);
+  } catch (err) {
+    console.error('Import fehlgeschlagen:', err);
+    await showAlert('Fehler beim Importieren. Bitte versuche es erneut.');
+  }
+}
+
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    currentUid = user.uid;
+    // Benutzername aus Firestore holen (zuverlässiger als aus der Pseudo-E-Mail zu raten)
+    try {
+      const docSnap = await db.collection('users').doc(user.uid).get();
+      currentUsername = (docSnap.exists && docSnap.data().username) || (user.email || '').split('@')[0];
+    } catch (e) {
+      currentUsername = (user.email || '').split('@')[0];
+    }
+    currentUsernameLabel.textContent = currentUsername;
+    authOverlay.classList.add('hidden');
+    appRoot.classList.remove('hidden');
+    setAuthLoading(false);
+    await loadCloudData(user.uid);
+    if (userMenuPanel) userMenuPanel.classList.remove('open');
+  } else {
+    currentUid = null;
+    currentUsername = null;
+    authOverlay.classList.remove('hidden');
+    appRoot.classList.add('hidden');
+    authPasswordInput.value = '';
+    setAuthLoading(false);
+  }
+});
+
+function saveOwnCollectionData() {
+  ownCollectionTitle = ownCollectionTitle || 'Vinyl-Sammlung';
+  localStorage.setItem(TITLE_STORAGE_KEY, ownCollectionTitle);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(ownCollection));
+  if (collectionTitle === ownCollectionTitle || viewingOwnCollection) {
+    const titleInput = document.getElementById('collectionTitleInput');
+    if (titleInput) titleInput.value = ownCollectionTitle;
+  }
+  saveCloudDataDebounced();
+}
+
+if (showOwnCollectionBtn) {
+  showOwnCollectionBtn.addEventListener('click', () => {
+    viewingOwnCollection = true;
+    collection = ownCollection;
+    collectionTitle = ownCollectionTitle;
+    updateViewingInfo();
+    renderCollection();
+  });
+}
+
+if (toggleUserMenuBtn && userMenuPanel) {
+  toggleUserMenuBtn.addEventListener('click', async () => {
+    if (userMenuPanel.classList.contains('open')) {
+      userMenuPanel.classList.remove('open');
+      return;
+    }
+    await loadUserList();
+    userMenuPanel.classList.add('open');
+  });
+}
+if (closeUserMenuBtn && userMenuPanel) {
+  closeUserMenuBtn.addEventListener('click', () => {
+    userMenuPanel.classList.remove('open');
+  });
+}
+</script>
+
+<script>
 // Hilfsfunktion: Erkennt absolut zuverlässig, ob Schwarz gemeint ist
 function isBlackColor(hex) {
   if (!hex) return true;
@@ -1149,15 +1878,16 @@ function normalizeColor(hex) {
   return clean;
 }
 
-let collection = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+ownCollection = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 
 // Bereinige bestehende Einträge im LocalStorage direkt beim Laden
-collection = collection.map(item => {
+ownCollection = ownCollection.map(item => {
   item.color = normalizeColor(item.color);
   return item;
 });
 
-let collectionTitle = localStorage.getItem(TITLE_STORAGE_KEY) || 'Vinyl-Sammlung';
+collectionTitle = localStorage.getItem(TITLE_STORAGE_KEY) || 'Vinyl-Sammlung';
+let collection = ownCollection;
 let currentDraft = null;
 let currentTracks = [];
 let activeFilter = 'all';
@@ -1247,6 +1977,7 @@ if (coverSourceSelect) {
   coverSourceSelect.value = localStorage.getItem(COVER_SOURCE_KEY) || 'all';
   coverSourceSelect.addEventListener('change', () => {
     localStorage.setItem(COVER_SOURCE_KEY, coverSourceSelect.value);
+    saveCloudDataDebounced();
   });
 }
 
@@ -1255,6 +1986,7 @@ if (discogsTokenInput) {
   discogsTokenInput.value = getDiscogsToken();
   discogsTokenInput.addEventListener('change', () => {
     localStorage.setItem(DISCOGS_TOKEN_KEY, discogsTokenInput.value.trim());
+    saveCloudDataDebounced();
   });
 }
 
@@ -1263,6 +1995,7 @@ if (defaultReleaseTypeSelect) {
   defaultReleaseTypeSelect.value = getDefaultReleaseType();
   defaultReleaseTypeSelect.addEventListener('change', () => {
     localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, defaultReleaseTypeSelect.value);
+    saveCloudDataDebounced();
   });
 }
 
@@ -1556,11 +2289,28 @@ function getPlausibilityHint(item) {
 }
 
 function saveCollection() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
-  localStorage.setItem(TITLE_STORAGE_KEY, collectionTitle);
+  if (!viewingOwnCollection) return;
+  ownCollection = collection;
+  ownCollectionTitle = collectionTitle;
+  saveOwnCollectionData();
   const titleInput = document.getElementById('collectionTitleInput');
   if (titleInput) titleInput.value = collectionTitle;
   renderCollection();
+}
+
+function addRemoteEntryToOwn(itemId) {
+  const item = collection.find(c => c.id === itemId);
+  if (!item) return;
+  const key = `${(item.title || '').trim().toLowerCase()}___${(item.artist || '').trim().toLowerCase()}`;
+  if (ownCollection.some(c => `${(c.title || '').trim().toLowerCase()}___${(c.artist || '').trim().toLowerCase()}` === key)) {
+    showAlert('Dieses Album ist bereits in deiner Sammlung.');
+    return;
+  }
+  const newItem = JSON.parse(JSON.stringify(item));
+  newItem.id = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  ownCollection.push(newItem);
+  saveOwnCollectionData();
+  showAlert(`'${item.title}' wurde zu deiner Sammlung hinzugefügt.`);
 }
 
 function getExportData() {
@@ -1663,6 +2413,11 @@ let searchPage = 1;
 const SEARCH_PAGE_SIZE = 6;
 
 function quickAddFromSearch(entry) {
+  if (!viewingOwnCollection) {
+    showAlert('Du betrachtest gerade eine fremde Sammlung. Wechsel zurück zu deiner eigenen Sammlung, um Einträge hinzuzufügen.');
+    return;
+  }
+
   const title = (entry.title || '').trim();
   const artist = (entry.artist || '').trim();
   const alreadyExists = collection.some(item => {
@@ -2108,6 +2863,10 @@ function editEntry(id) {
 }
 
 async function deleteEntry(id) {
+  if (!viewingOwnCollection) {
+    await showAlert('Diese Sammlung kann nicht bearbeitet werden. Importiere sie zuerst in deine eigene Sammlung.');
+    return;
+  }
   const ok = await showConfirm('Dieses Album wirklich löschen?', { confirmLabel: 'Löschen', danger: true });
   if (!ok) return;
   collection = collection.filter(c => c.id !== id);
@@ -2115,6 +2874,10 @@ async function deleteEntry(id) {
 }
 
 function toggleOwned(id) {
+  if (!viewingOwnCollection) {
+    showAlert('Diese Sammlung kann nicht bearbeitet werden. Importiere sie zuerst in deine eigene Sammlung.');
+    return;
+  }
   const entry = collection.find(c => c.id === id);
   if (!entry) return;
   entry.owned = !entry.owned;
@@ -2168,8 +2931,13 @@ document.getElementById('sortDescBtn').addEventListener('click', () => setSortDi
 document.getElementById('viewGridBtn').addEventListener('click', () => setView('grid'));
 document.getElementById('viewTableBtn').addEventListener('click', () => setView('table'));
 document.getElementById('collectionTitleInput').addEventListener('input', e => {
-  collectionTitle = (e.target.value || '').trim() || 'Meine Sammlung';
-  localStorage.setItem(TITLE_STORAGE_KEY, collectionTitle);
+  const newTitle = (e.target.value || '').trim() || 'Meine Sammlung';
+  collectionTitle = newTitle;
+  if (viewingOwnCollection) {
+    ownCollectionTitle = newTitle;
+    localStorage.setItem(TITLE_STORAGE_KEY, ownCollectionTitle);
+    saveCloudDataDebounced();
+  }
 });
 
 function setView(view) {
@@ -2272,6 +3040,7 @@ function renderCollection() {
   if (list.length === 0) return;
 
   if (activeView === 'grid') {
+    const allowEdit = viewingOwnCollection;
     list.forEach(item => {
       const card = document.createElement('div');
       card.className = 'collection-card' + (item.owned ? ' owned' : ' wishlist');
@@ -2285,13 +3054,7 @@ function renderCollection() {
       const isGenreSort = activeSort === 'genre';
       const genreLabel = item.genre ? escapeHtml(item.genre) : '';
       const barStyle = getBarPatternStyle(item);
-
-      card.innerHTML = `
-        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"></div>
-        <div class="media">
-          <img src="${item.coverUrl || ''}" alt="">
-          
-          <div class="card-actions">
+      const actionButtons = allowEdit ? `
             <button class="toggle-own ${item.owned ? 'owned' : ''}" title="Als besessen markieren" aria-label="Als besessen markieren">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -2301,6 +3064,20 @@ function renderCollection() {
             <button class="del" title="Löschen" aria-label="Löschen">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
             </button>
+          ` : `
+            <button class="add-to-own" title="Zu eigener Sammlung hinzufügen" aria-label="Zu eigener Sammlung hinzufügen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <span class="hint" style="font-size:12px; color:var(--text-secondary);">Nur Ansicht</span>
+          `;
+
+      card.innerHTML = `
+        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"></div>
+        <div class="media">
+          <img src="${item.coverUrl || ''}" alt="">
+          
+          <div class="card-actions">
+${actionButtons}
           </div>
         </div>
         <div class="media-info">
@@ -2312,10 +3089,20 @@ function renderCollection() {
         </div>
       `;
 
-      card.querySelector('.toggle-own').addEventListener('click', e => { e.stopPropagation(); toggleOwned(item.id); });
-      card.querySelector('.edit').addEventListener('click', e => { e.stopPropagation(); editEntry(item.id); });
-      card.querySelector('.del').addEventListener('click', e => { e.stopPropagation(); deleteEntry(item.id); });
-      card.querySelector('.media').addEventListener('click', () => editEntry(item.id));
+      if (allowEdit) {
+        card.querySelector('.toggle-own').addEventListener('click', e => { e.stopPropagation(); toggleOwned(item.id); });
+        card.querySelector('.edit').addEventListener('click', e => { e.stopPropagation(); editEntry(item.id); });
+        card.querySelector('.del').addEventListener('click', e => { e.stopPropagation(); deleteEntry(item.id); });
+        card.querySelector('.media').addEventListener('click', () => editEntry(item.id));
+      } else {
+        const addBtn = card.querySelector('.add-to-own');
+        if (addBtn) {
+          addBtn.addEventListener('click', e => { e.stopPropagation(); addRemoteEntryToOwn(item.id); });
+        }
+        card.querySelector('.media').addEventListener('click', () => {
+          showAlert('Dies ist eine schreibgeschützte Ansicht. Importiere die Sammlung in deine eigene, um sie zu bearbeiten.');
+        });
+      }
       grid.appendChild(card);
     });
   } else {
@@ -2338,6 +3125,19 @@ function renderCollection() {
         ${list.map(item => {
           const badge = getReleaseBadge(item);
           const barStyle = getBarPatternStyle(item);
+          const actionCell = allowEdit ? `
+                <div class="table-actions">
+                  <button class="toggle-own ${item.owned ? 'owned' : ''}" onclick="toggleOwned('${item.id}')" title="Status ändern">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <button class="edit" onclick="editEntry('${item.id}')" title="Bearbeiten">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 20H8L18.5 9.5C19.0304 8.96957 19.3284 8.25 19.3284 7.5C19.3284 6.75 19.0304 6.03043 18.5 5.5L17.5 4.5C16.9696 3.96957 16.25 3.67157 15.5 3.67157C14.75 3.67157 14.0304 3.96957 13.5 4.5L3 15V20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 6L18 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </button>
+                  <button class="del" onclick="deleteEntry('${item.id}')" title="Löschen">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+              ` : `<button class="add-to-own primary" onclick="addRemoteEntryToOwn('${item.id}')" title="Zu eigener Sammlung hinzufügen">Hinzufügen</button>`;
           return `
             <tr>
               <td class="cover-cell"><img src="${item.coverUrl || ''}" alt=""></td>
@@ -2353,19 +3153,7 @@ function renderCollection() {
                 ${escapeHtml(getVisibleLabel(item))}
               </td>
               <td><span class="state-pill">${item.owned ? 'Besitze ich' : 'Wunschliste'}</span></td>
-              <td style="text-align:right;">
-                <div class="table-actions">
-                  <button class="toggle-own ${item.owned ? 'owned' : ''}" onclick="toggleOwned('${item.id}')" title="Status ändern">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                  <button class="edit" onclick="editEntry('${item.id}')" title="Bearbeiten">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 20H8L18.5 9.5C19.0304 8.96957 19.3284 8.25 19.3284 7.5C19.3284 6.75 19.0304 6.03043 18.5 5.5L17.5 4.5C16.9696 3.96957 16.25 3.67157 15.5 3.67157C14.75 3.67157 14.0304 3.96957 13.5 4.5L3 15V20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 6L18 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                  </button>
-                  <button class="del" onclick="deleteEntry('${item.id}')" title="Löschen">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                  </button>
-                </div>
-              </td>
+              <td style="text-align:right;">${actionCell}</td>
             </tr>
           `;
         }).join('')}
@@ -2400,6 +3188,12 @@ document.getElementById('importFile').addEventListener('change', e => {
   const reader = new FileReader();
   reader.onload = async event => {
     try {
+      if (!viewingOwnCollection) {
+        viewingOwnCollection = true;
+        collection = ownCollection;
+        collectionTitle = ownCollectionTitle;
+        updateViewingInfo();
+      }
       const parsed = JSON.parse(event.target.result);
       if (Array.isArray(parsed)) {
         collection = parsed.map(item => { item.color = normalizeColor(item.color); return item; });
@@ -2407,7 +3201,10 @@ document.getElementById('importFile').addEventListener('change', e => {
         if (Array.isArray(parsed.collection)) {
           collection = parsed.collection.map(item => { item.color = normalizeColor(item.color); return item; });
         }
-        if (parsed.title) collectionTitle = parsed.title;
+        if (parsed.title) {
+          collectionTitle = parsed.title;
+          ownCollectionTitle = parsed.title;
+        }
         if (parsed.settings) {
           if (parsed.settings.coverSource) {
             localStorage.setItem(COVER_SOURCE_KEY, parsed.settings.coverSource);
@@ -2427,8 +3224,11 @@ document.getElementById('importFile').addEventListener('change', e => {
         return;
       }
       saveCollection();
+      saveOwnCollectionData();
+      await saveCloudDataNow();
       await showAlert('Sammlung erfolgreich importiert!');
     } catch (err) {
+      console.error('Import-Fehler:', err);
       await showAlert('Fehler beim Lesen der JSON-Datei.');
     }
   };
