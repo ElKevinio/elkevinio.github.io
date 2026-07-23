@@ -1571,23 +1571,29 @@ async function handleAuthSubmit() {
   const email = usernameToEmail(username);
   try {
     if (authMode === 'register') {
-      const usernameKey = username.toLowerCase();
-      const takenDoc = await db.collection('usernames').doc(usernameKey).get();
-      if (takenDoc.exists) {
-        showAuthError('Dieser Benutzername ist bereits vergeben.');
-        setAuthLoading(false);
-        return;
-      }
       const cred = await auth.createUserWithEmailAndPassword(email, password);
       const uid = cred.user.uid;
-      await db.collection('usernames').doc(usernameKey).set({ uid: uid });
-      await db.collection('users').doc(uid).set({
-        username: username,
-        title: 'Vinyl-Sammlung',
-        collection: [],
-        settings: {},
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+      const usernameKey = username.toLowerCase();
+      try {
+        const takenDoc = await db.collection('usernames').doc(usernameKey).get();
+        if (takenDoc.exists) {
+          await cred.user.delete();
+          showAuthError('Dieser Benutzername ist bereits vergeben.');
+          setAuthLoading(false);
+          return;
+        }
+        await db.collection('usernames').doc(usernameKey).set({ uid: uid, username: username });
+        await db.collection('users').doc(uid).set({
+          username: username,
+          title: 'Vinyl-Sammlung',
+          collection: [],
+          settings: {},
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (innerErr) {
+        await cred.user.delete().catch(() => {});
+        throw innerErr;
+      }
     } else {
       await auth.signInWithEmailAndPassword(email, password);
     }
@@ -1652,6 +1658,8 @@ async function loadCloudData(uid) {
 
 async function saveCloudDataNow() {
   if (!currentUid) return;
+  clearTimeout(saveDebounceTimer);
+  saveDebounceTimer = null;
   try {
     await db.collection('users').doc(currentUid).set({
       username: currentUsername,
@@ -1789,6 +1797,9 @@ function updateViewingInfo() {
 
 async function viewRemoteCollection(uid, username) {
   if (!uid) return;
+  if (viewingOwnCollection && currentUid) {
+    await saveCloudDataNow();
+  }
   try {
     const docSnap = await db.collection('users').doc(uid).get();
     if (!docSnap.exists) {
@@ -1892,6 +1903,7 @@ function saveOwnCollectionData() {
 
 async function showOwnCollection() {
   if (!currentUid) return;
+  await saveCloudDataNow();
   await loadCloudData(currentUid);
   if (userMenuPanel) userMenuPanel.classList.remove('open');
 }
@@ -2520,6 +2532,12 @@ function quickAddFromSearch(entry) {
   saveCollection();
   const hint = document.getElementById('searchHint');
   hint.textContent = `Hinzugefügt: ${title || 'Album'}`;
+  const results = document.getElementById('searchResults');
+  const pagination = document.getElementById('searchPagination');
+  if (results) results.innerHTML = '';
+  if (pagination) pagination.innerHTML = '';
+  searchResultCards = [];
+  searchPage = 1;
 }
 
 function renderSearchResultsPage() {
@@ -2914,9 +2932,15 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   if (existingIndex >= 0) { collection[existingIndex] = currentDraft; } else { collection.push(currentDraft); }
   saveCollection();
   document.getElementById('formSection').style.display = 'none';
-  document.getElementById('searchResults').innerHTML = '';
-  document.getElementById('searchHint').textContent = '';
+  const searchResults = document.getElementById('searchResults');
+  const searchPagination = document.getElementById('searchPagination');
+  const searchHint = document.getElementById('searchHint');
+  if (searchResults) searchResults.innerHTML = '';
+  if (searchPagination) searchPagination.innerHTML = '';
+  if (searchHint) searchHint.textContent = '';
   document.getElementById('searchInput').value = '';
+  searchResultCards = [];
+  searchPage = 1;
   currentDraft = null;
 });
 
