@@ -1283,6 +1283,7 @@
             <input type="text" id="fGenre" placeholder="Genre">
           </div>
           <input type="text" id="fCoverUrl" placeholder="Cover-URL (optional manuell setzen)">
+          
         </div>
       </div>
       <div class="form-cover-results" id="formCoverResults"></div>
@@ -1377,6 +1378,9 @@
             <button id="filterOwned"><span class="filter-icon">✓</span><span class="filter-label">Besitze ich</span></button>
             <button id="filterWishlist"><span class="filter-icon">♡</span><span class="filter-label">Wunschliste</span></button>
           </div>
+        </div>
+        <div style="width:100%; margin-top:10px;">
+          <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Jahr, Genre..." style="width:100%;" />
         </div>
         <div class="toolbar-group right">
           <select id="sortSelect" class="sort-select">
@@ -1476,6 +1480,8 @@ let viewedUsername = null;
 let ownCollection = [];
 let ownCollectionTitle = localStorage.getItem(TITLE_STORAGE_KEY) || 'Vinyl-Sammlung';
 let collectionTitle = ownCollectionTitle;
+let collectionFilterQuery = '';
+let filterDebounceTimer = null;
 
 const authOverlay = document.getElementById('authOverlay');
 const appRoot = document.getElementById('appRoot');
@@ -2821,6 +2827,8 @@ document.getElementById('fCoverUrl').addEventListener('input', e => {
   document.getElementById('formCover').src = e.target.value;
 });
 
+
+
 async function searchCoverCandidates(query) {
   const provider = getCoverProvider();
   const candidates = [];
@@ -2928,6 +2936,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   currentDraft.owned = document.getElementById('fOwned').checked;
   currentDraft.tracklist = currentTracks;
   if (!currentDraft.title) { await showAlert('Bitte einen Titel eingeben.'); return; }
+
   const existingIndex = collection.findIndex(c => c.id === currentDraft.id);
   if (existingIndex >= 0) { collection[existingIndex] = currentDraft; } else { collection.push(currentDraft); }
   saveCollection();
@@ -3081,6 +3090,11 @@ function renderCollection() {
   let list = collection.slice().reverse();
   if (activeFilter === 'owned') list = list.filter(c => c.owned);
   if (activeFilter === 'wishlist') list = list.filter(c => !c.owned);
+
+  // Wenn ein Filtertext eingegeben wurde, nur passende Einträge anzeigen
+  if (collectionFilterQuery && collectionFilterQuery.length > 0) {
+    list = list.filter(item => matchesCollectionQuery(item, collectionFilterQuery));
+  }
 
   list = list.sort((a, b) => {
     const directionMultiplier = activeSortDirection === 'asc' ? 1 : -1;
@@ -3267,6 +3281,39 @@ document.getElementById('searchBtn').addEventListener('click', searchAlbums);
 document.getElementById('searchInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') searchAlbums();
 });
+
+// Collection filter: dynamisches Filtern nach Titel / Interpret / Jahr / Genre
+function matchesCollectionQuery(item, rawQuery) {
+  const q = String(rawQuery || '').trim().toLowerCase();
+  if (!q) return true;
+  const tokens = q.split(/\s+/).filter(Boolean);
+  const hay = [item.title, item.artist, item.genre, item.year, item.releaseType, item.notes]
+    .map(v => (v || '').toString().toLowerCase()).join(' ');
+  return tokens.every(t => hay.includes(t));
+}
+
+document.getElementById('collectionFilter').addEventListener('input', (e) => {
+  const v = e.target.value || '';
+  clearTimeout(filterDebounceTimer);
+  filterDebounceTimer = setTimeout(() => {
+    collectionFilterQuery = v.trim();
+    renderCollection();
+  }, 180);
+});
+
+// Verhindere, dass Enter im Collection-Filter die obere Such-Action auslöst
+const collectionFilterEl = document.getElementById('collectionFilter');
+if (collectionFilterEl) {
+  collectionFilterEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Option: bei Enter die Filter sofort anwenden
+      collectionFilterQuery = (collectionFilterEl.value || '').trim();
+      renderCollection();
+    }
+  });
+}
 
 document.getElementById('exportBtn').addEventListener('click', () => {
   const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(getExportData(), null, 2));
