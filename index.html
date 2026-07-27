@@ -364,6 +364,8 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 12px;
+    justify-content: start;
+    justify-items: start;
   }
   .search-card {
     position: relative;
@@ -583,8 +585,9 @@
     gap: 8px;
     flex-wrap: wrap;
   }
-  .toolbar-group.center { justify-content: center; flex: 1; }
-  .toolbar-group.right { margin-left: auto; }
+  .toolbar-group.left { order: 1; }
+  .toolbar-group.center { order: 2; flex: 1; justify-content: center; }
+  .toolbar-group.right { order: 3; margin-left: auto; }
   .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
   .filter-tabs button {
     padding: 7px 10px;
@@ -607,6 +610,18 @@
     background: var(--accent-bg);
     border-color: var(--accent-border);
     color: var(--accent);
+  }
+  @media (max-width: 1140px) and (min-width: 980px) {
+    .filter-tabs .filter-label { display: none; }
+    .filter-tabs button { padding: 8px; }
+    .filter-tabs { gap: 4px; }
+  }
+  @media (max-width: 640px) {
+    /* On small screens, ensure toolbar groups remain left-aligned */
+    .toolbar-group.center { justify-content: flex-start; width: 100%; }
+    .filter-tabs .filter-label { display: none; }
+    .filter-tabs button { padding: 8px; }
+    .filter-tabs { gap: 4px; }
   }
   .sort-select {
     min-width: 0;
@@ -791,7 +806,7 @@
     inset: 0;
     pointer-events: none;
     background: var(--condition-overlay, transparent);
-    opacity: 0.8;
+    opacity: 0.45;
     mix-blend-mode: screen;
     z-index: 0;
     border-radius: 14px;
@@ -806,14 +821,15 @@
     object-fit: cover;
     border-radius: 6px;
     transition: filter 0.2s ease, transform 0.2s ease;
+    will-change: transform;
   }
   .collection-card:hover img {
     filter: saturate(1.04) brightness(0.86) var(--hover-filter, none);
     transform: scale(1.03);
   }
   .collection-card.wishlist img {
-    filter: grayscale(0.82) brightness(0.88) saturate(0.75);
-    opacity: 0.95;
+    filter: grayscale(0.28) brightness(0.96) saturate(0.9);
+    opacity: 1;
   }
   .collection-card.wishlist:hover img {
     filter: grayscale(0.2) brightness(1) saturate(1);
@@ -835,6 +851,66 @@
     text-transform: uppercase;
     box-shadow: 0 2px 10px rgba(0,0,0,0.25);
   }
+
+  .price-bubble {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    padding: 4px 6px;
+    border-radius: 999px;
+    background: rgba(212,83,126,0.95);
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 1;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  .year-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 3;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.6);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    transition: opacity 120ms ease, transform 120ms ease;
+  }
+
+  .collection-card .genre-badge {
+    font-size: 10px;
+    background: rgba(255,255,255,0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+  }
+
+  .genre-section {
+    grid-column: 1 / -1;
+    padding: 8px 10px;
+    margin: 12px 0 6px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    color: var(--text-primary);
+    font-weight: 700;
+    background: linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0));
+    border-radius: 6px;
+  }
+
+  /* Hide small badges on hover so action buttons are clickable */
+  .collection-card:hover .price-bubble,
+  .collection-card:hover .year-badge {
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+  }
   .collection-card .release-badge.single {
     color: #ffd4a8;
     border-color: rgba(255, 212, 168, 0.28);
@@ -848,7 +924,7 @@
     position: absolute;
     left: 0; right: 0; bottom: 0;
     padding: 12px 10px 10px;
-    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.78) 100%);
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.56) 100%);
     backdrop-filter: blur(6px);
     border-top: 0.5px solid rgba(255,255,255,0.08);
     border-bottom-left-radius: 10px;
@@ -1650,6 +1726,8 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9H21" stroke="currentColor" stroke-width="1.8"/><path d="M8 4V20" stroke="currentColor" stroke-width="1.8"/></svg>
             </button>
           </div>
+        </div>
+        <div class="toolbar-group center">
           <div class="filter-tabs">
             <button id="filterAll" class="toggle-active"><span class="filter-icon">◉</span><span class="filter-label">Alle</span></button>
             <button id="filterOwned"><span class="filter-icon">✓</span><span class="filter-label">Besitze ich</span></button>
@@ -1663,15 +1741,16 @@
             <option value="artist">Interpret</option>
             <option value="year">Jahr</option>
             <option value="genre">Genre</option>
+            <option value="price">Preis</option>
             <option value="releaseType">LP/EP/7"</option>
           </select>
           <div class="sort-direction-group">
             <button type="button" id="sortDirBtn" class="sort-dir-btn" title="Sortierrichtung umkehren" aria-label="Sortierrichtung umkehren">↓</button>
           </div>
         </div>
-        <div style="width:100%; margin-top:10px;">
-          <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Jahr, Genre..." style="width:100%;" />
-        </div>
+      </div>
+      <div class="search-row" style="width:100%; margin-top:10px;">
+        <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Jahr, Genre..." style="width:100%;" />
       </div>
     </div>
     <div class="collection-grid" id="collectionGrid"></div>
@@ -1789,6 +1868,16 @@ function usernameToEmail(username) {
 }
 function isValidUsername(username) {
   return /^[a-z0-9_.-]{3,20}$/i.test(String(username).trim());
+}
+
+// Hilfsfunktion: Bereinigt alte/ungültige Farbwerte im Speicher auf echtes Schwarz
+function normalizeColor(hex) {
+  if (!hex || typeof hex !== 'string') return '#000000';
+  const clean = hex.trim().toLowerCase();
+  if (clean.length === 4 && clean.startsWith('#')) {
+    return '#' + clean[1] + clean[1] + clean[2] + clean[2] + clean[3] + clean[3];
+  }
+  return clean;
 }
 
 let currentUid = null;
@@ -1962,29 +2051,37 @@ async function loadCloudData(uid) {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true }).catch(err => console.error('Neues Benutzer-Dokument konnte nicht erstellt werden:', err));
   }
-  if (data.settings) {
+    if (data.settings) {
     if (data.settings.coverSource) {
       localStorage.setItem(COVER_SOURCE_KEY, data.settings.coverSource);
-      if (coverSourceSelect) coverSourceSelect.value = data.settings.coverSource;
+      try { if (typeof coverSourceSelect !== 'undefined' && coverSourceSelect) coverSourceSelect.value = data.settings.coverSource; } catch (e) {}
     }
     if (data.settings.discogsToken) {
       localStorage.setItem(DISCOGS_TOKEN_KEY, data.settings.discogsToken);
-      if (discogsTokenInput) discogsTokenInput.value = data.settings.discogsToken;
+      try { if (typeof discogsTokenInput !== 'undefined' && discogsTokenInput) discogsTokenInput.value = data.settings.discogsToken; } catch (e) {}
     }
     if (data.settings.defaultReleaseType) {
       localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, data.settings.defaultReleaseType);
-      if (defaultReleaseTypeSelect) defaultReleaseTypeSelect.value = data.settings.defaultReleaseType;
+      try { if (typeof defaultReleaseTypeSelect !== 'undefined' && defaultReleaseTypeSelect) defaultReleaseTypeSelect.value = data.settings.defaultReleaseType; } catch (e) {}
     }
     if (data.settings.discogsMode) {
       localStorage.setItem(DISCOGS_MODE_KEY, data.settings.discogsMode);
-      if (discogsModeSelect) discogsModeSelect.value = data.settings.discogsMode;
+      try { if (typeof discogsModeSelect !== 'undefined' && discogsModeSelect) discogsModeSelect.value = data.settings.discogsMode; } catch (e) {}
+    }
+    // Load table view settings (visible columns, sort column/direction)
+    if (typeof loadTableSettingsFromUser === 'function') {
+      loadTableSettingsFromUser(data.settings);
+    } else {
+      // If the table-settings code hasn't been parsed yet (different <script> tag),
+      // stash them for the later initializer to pick up.
+      window._pendingTableSettings = data.settings.tableSettings || null;
     }
   }
   const titleInput = document.getElementById('collectionTitleInput');
   if (titleInput) titleInput.value = collectionTitle;
-  updateSortButtons();
-  renderCollection();
-  updateViewingInfo();
+  try { if (typeof updateSortButtons === 'function') updateSortButtons(); } catch (e) {}
+  try { if (typeof renderCollection === 'function') renderCollection(); } catch (e) {}
+  try { if (typeof updateViewingInfo === 'function') updateViewingInfo(); } catch (e) {}
 }
 
 async function saveCloudDataNow() {
@@ -1992,15 +2089,17 @@ async function saveCloudDataNow() {
   clearTimeout(saveDebounceTimer);
   saveDebounceTimer = null;
   try {
+    const coverSource = (typeof getCoverProvider === 'function') ? getCoverProvider() : (localStorage.getItem(COVER_SOURCE_KEY) || 'all');
+    const discogsToken = (typeof getDiscogsToken === 'function') ? getDiscogsToken() : (localStorage.getItem(DISCOGS_TOKEN_KEY) || '');
+    const defaultReleaseType = (typeof getDefaultReleaseType === 'function') ? getDefaultReleaseType() : (localStorage.getItem(DEFAULT_RELEASE_TYPE_KEY) || 'auto');
+    const ts = (typeof getTableSettings === 'function') ? getTableSettings() : (window._pendingTableSettings || null);
+    const settingsObj = Object.assign({ coverSource, discogsToken, defaultReleaseType }, ts ? { tableSettings: ts } : {});
+
     await db.collection('users').doc(currentUid).set({
       username: currentUsername,
       title: ownCollectionTitle,
       collection: ownCollection,
-      settings: {
-        coverSource: getCoverProvider(),
-        discogsToken: getDiscogsToken(),
-        defaultReleaseType: getDefaultReleaseType()
-      },
+      settings: settingsObj,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
   } catch (err) {
@@ -2270,18 +2369,6 @@ function isBlackColor(hex) {
 
 // Hilfsfunktion: Bereinigt alte/ungültige Farbwerte im Speicher auf echtes Schwarz
 // Hilfsfunktion: Bereinigt alte/ungültige Farbwerte, erlaubt aber explizit Weiß
-function normalizeColor(hex) {
-  if (!hex || typeof hex !== 'string') return '#000000';
-  const clean = hex.trim().toLowerCase();
-  
-  // Wenn der Hex-Code dreistellig ist (z. B. #fff), in 6-stelligen Code umwandeln
-  if (clean.length === 4 && clean.startsWith('#')) {
-    return '#' + clean[1] + clean[1] + clean[2] + clean[2] + clean[3] + clean[3];
-  }
-  
-  return clean;
-}
-
 ownCollection = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 
 // Bereinige bestehende Einträge im LocalStorage direkt beim Laden
@@ -2734,6 +2821,41 @@ function getBarPatternStyle(item) {
     barBgSize: bgSize,
     isAnimated
   };
+}
+
+function getReadableTextColor(cssColor) {
+  // Parse hex (#rgb or #rrggbb) or rgb(...) strings
+  try {
+    let r=0,g=0,b=0;
+    if (!cssColor) return '#fff';
+    const c = cssColor.trim();
+    if (c.startsWith('#')) {
+      const hex = c.slice(1);
+      if (hex.length === 3) {
+        r = parseInt(hex[0]+hex[0],16);
+        g = parseInt(hex[1]+hex[1],16);
+        b = parseInt(hex[2]+hex[2],16);
+      } else if (hex.length === 6) {
+        r = parseInt(hex.slice(0,2),16);
+        g = parseInt(hex.slice(2,4),16);
+        b = parseInt(hex.slice(4,6),16);
+      }
+    } else if (c.startsWith('rgb')) {
+      const parts = c.replace(/rgba?\(|\)|\s/g,'').split(',');
+      r = parseInt(parts[0])||0; g = parseInt(parts[1])||0; b = parseInt(parts[2])||0;
+    } else {
+      return '#fff';
+    }
+    // relative luminance
+    const [R,G,B] = [r,g,b].map(v => {
+      const s = v/255;
+      return s <= 0.03928 ? s/12.92 : Math.pow((s+0.055)/1.055, 2.4);
+    });
+    const lum = 0.2126*R + 0.7152*G + 0.0722*B;
+    return lum > 0.6 ? '#000' : '#fff';
+  } catch (e) {
+    return '#fff';
+  }
 }
 
 function updateColorPreview() {
@@ -3858,7 +3980,7 @@ function setSortDirection(direction) {
 function updateSortButtons() {
   const dirBtn = document.getElementById('sortDirBtn');
   if (!dirBtn) return;
-  const useDirectionalSorting = ['title', 'artist', 'year', 'genre', 'releaseType'].includes(activeSort);
+  const useDirectionalSorting = ['title', 'artist', 'year', 'genre', 'releaseType', 'price'].includes(activeSort);
   dirBtn.textContent = activeSortDirection === 'asc' ? '↑' : '↓';
   dirBtn.title = activeSortDirection === 'asc' ? 'Aufsteigend (klicken für absteigend)' : 'Absteigend (klicken für aufsteigend)';
   dirBtn.classList.toggle('active', useDirectionalSorting);
@@ -3888,6 +4010,9 @@ function setView(view) {
     document.getElementById(id).classList.remove('toggle-active');
   });
   document.getElementById(view === 'grid' ? 'viewGridBtn' : 'viewTableBtn').classList.add('toggle-active');
+  // Show/hide the columns button only for table view
+  const colBtn = document.getElementById('tableColumnsBtn');
+  if (colBtn) colBtn.style.display = view === 'table' ? 'inline-flex' : 'none';
   renderCollection();
 }
 
@@ -3952,9 +4077,17 @@ function renderCollection() {
     list = list.filter(item => matchesCollectionQuery(item, collectionFilterQuery));
   }
 
+  // Bestimme aktive Sortierung (Grid benutzt globale, Table benutzt tableSettings)
+  let sortColumn = activeSort;
+  let sortDir = activeSortDirection;
+  if (activeView === 'table') {
+    const ts = getTableSettings();
+    sortColumn = ts.activeSortColumn || 'newest';
+    sortDir = ts.activeSortDir || 'desc';
+  }
   list = list.sort((a, b) => {
-    const directionMultiplier = activeSortDirection === 'asc' ? 1 : -1;
-    switch (activeSort) {
+    const directionMultiplier = sortDir === 'asc' ? 1 : -1;
+    switch (sortColumn) {
       case 'title':
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       case 'artist':
@@ -3985,6 +4118,12 @@ function renderCollection() {
         if (artistDiff !== 0) return directionMultiplier * artistDiff;
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       }
+      case 'price': {
+        const pa = Number(a.discogsLowestPrice != null ? a.discogsLowestPrice : (a.discogsAveragePrice != null ? a.discogsAveragePrice : 0)) || 0;
+        const pb = Number(b.discogsLowestPrice != null ? b.discogsLowestPrice : (b.discogsAveragePrice != null ? b.discogsAveragePrice : 0)) || 0;
+        if (pa !== pb) return directionMultiplier * (pa - pb);
+        return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
+      }
       default:
         return 0;
     }
@@ -4002,9 +4141,36 @@ function renderCollection() {
 
   if (list.length === 0) return;
 
+  const allowEdit = viewingOwnCollection;
+  const isGenreSort = (activeView === 'table' ? getTableSettings().activeSortColumn : activeSort) === 'genre';
   if (activeView === 'grid') {
-    const allowEdit = viewingOwnCollection;
-    list.forEach(item => {
+    // If sorting by genre in grid view, render grouped sections per genre
+    let renderItems = list;
+    if (activeSort === 'genre') {
+      const groups = {};
+      list.forEach(it => {
+        const g = (it.genre || 'Ohne Genre').trim() || 'Ohne Genre';
+        if (!groups[g]) groups[g] = [];
+        groups[g].push(it);
+      });
+      const sortedGenres = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'de'));
+      renderItems = [];
+      sortedGenres.forEach(g => {
+        renderItems.push({ __genreHeader: g });
+        groups[g].forEach(it => renderItems.push(it));
+      });
+    }
+
+    const frag = document.createDocumentFragment();
+
+    renderItems.forEach(item => {
+      if (item && item.__genreHeader) {
+        const h = document.createElement('div');
+        h.className = 'genre-section';
+        h.textContent = item.__genreHeader;
+        frag.appendChild(h);
+        return;
+      }
       const card = document.createElement('div');
       card.className = 'collection-card' + (item.owned ? ' owned' : ' wishlist') + (!viewingOwnCollection ? ' remote-view' : '');
       const cardStyles = getCardBackground(item);
@@ -4017,10 +4183,16 @@ function renderCollection() {
       const isGenreSort = activeSort === 'genre';
       const genreLabel = item.genre ? escapeHtml(item.genre) : '';
       const barStyle = getBarPatternStyle(item);
+      const priceTextColor = getReadableTextColor(barStyle.barColor);
       const discogsPriceValue = Number(item.discogsLowestPrice) || 0;
       const discogsPriceText = discogsPriceValue > 0 ? `Preis: ${discogsPriceValue.toFixed(2).replace(/\.00$/, '')} ${escapeHtml(item.discogsCurrency || '€')}` : '';
       const isCommon = !viewingOwnCollection && ownKeys.has(getAlbumComparisonKey(item));
       const commonBadgeHtml = !viewingOwnCollection ? `<span class="common-badge ${isCommon ? 'common' : 'remote-only'}">${isCommon ? 'Gemeinsam' : 'Nur bei ' + escapeHtml(viewedUsername || 'diesem Nutzer')}</span>` : '';
+      const remoteAddButtonGrid = !ownKeys.has(getAlbumComparisonKey(item)) ? `
+            <button class="add-to-own" title="Zu eigener Sammlung hinzufügen" aria-label="Zu eigener Sammlung hinzufügen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          ` : '';
       const actionButtons = allowEdit ? `
             <button class="toggle-own ${item.owned ? 'owned' : ''}" title="Als besessen markieren" aria-label="Als besessen markieren">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -4032,27 +4204,29 @@ function renderCollection() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
             </button>
           ` : `
-            <button class="add-to-own" title="Zu eigener Sammlung hinzufügen" aria-label="Zu eigener Sammlung hinzufügen">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </button>
+            ${remoteAddButtonGrid}
           `;
 
       card.innerHTML = `
         <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"></div>
         <div class="media">
-          <img src="${item.coverUrl || ''}" alt="">
-          
+          <img src="${item.coverUrl || ''}" alt="" loading="lazy" decoding="async">
+          ${item.year ? `<div class="year-badge">${escapeHtml(item.year)}</div>` : ''}
+          ${discogsPriceValue > 0 ? `<div class="price-bubble" style="background: ${barStyle.barColor}; color: ${priceTextColor};">${discogsPriceValue.toFixed(2).replace(/\.00$/, '')} ${escapeHtml(item.discogsCurrency || '€')}</div>` : ''}
           <div class="card-actions">
 ${actionButtons}
           </div>
         </div>
         <div class="media-info">
           <p class="title">${escapeHtml(item.title)}</p>
-          <p class="artist">${escapeHtml(item.artist)}</p>
-          <div class="meta-line">
-            <span style="display:flex;align-items:center;gap:6px;"><span class="year">${escapeHtml(item.year)}</span>${genreLabel ? `<span class="genre-badge ${isGenreSort ? 'highlight' : ''}">${genreLabel}</span>` : ``}</span><span class="release-badge ${badge.className}">${escapeHtml(badge.label)}</span>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div style="flex:1;">
+              <p class="artist" style="margin:4px 0 0;">${escapeHtml(item.artist)}</p>
+            </div>
+            <div style="flex-shrink:0; display:flex; align-items:center; gap:8px;">
+              <span class="release-badge ${badge.className}">${escapeHtml(badge.label)}</span>
+            </div>
           </div>
-          ${discogsPriceText ? `<div class="discogs-price">${discogsPriceText}</div>` : ''}
           ${commonBadgeHtml}
         </div>
       `;
@@ -4071,35 +4245,58 @@ ${actionButtons}
           showAlert('Dies ist eine schreibgeschützte Ansicht. Importiere die Sammlung in deine eigene, um sie zu bearbeiten.');
         });
       }
-      grid.appendChild(card);
+      frag.appendChild(card);
     });
+    grid.appendChild(frag);
   } else {
     const table = document.createElement('table');
     table.className = 'collection-table';
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th>Cover</th>
-          <th>Titel & Interpret</th>
-          <th>Typ</th>
-          <th>Jahr</th>
-          <th>Genre</th>
-          <th>Farbe</th>
-          <th>Status</th>
-          <th style="text-align:right;">Aktionen</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${list.map(item => {
-          const badge = getReleaseBadge(item);
-          const barStyle = getBarPatternStyle(item);
-          const discogsTablePriceValue = Number(item.discogsLowestPrice) || 0;
-          const discogsTablePriceText = discogsTablePriceValue > 0 ? `Preis: ${discogsTablePriceValue.toFixed(2).replace(/\.00$/, '')} ${escapeHtml(item.discogsCurrency || '€')}` : '';
-          const isCommon = !viewingOwnCollection && ownKeys.has(getAlbumComparisonKey(item));
-          const commonLabel = !viewingOwnCollection ? `
-              <span class="common-pill ${isCommon ? 'common' : 'remote-only'}">${isCommon ? 'Gemeinsam' : 'Nur bei ' + escapeHtml(viewedUsername || 'diesem Nutzer')}</span>
-            ` : '';
-          const actionCell = allowEdit ? `
+
+    const ts = getTableSettings();
+    // Build columns; include a 'common' column when viewing someone else's list
+    const colsBase = [
+      { key: 'cover', label: 'Cover' },
+      { key: 'title', label: 'Titel & Interpret' },
+      { key: 'type', label: 'Typ' },
+      { key: 'year', label: 'Jahr' },
+      { key: 'genre', label: 'Genre' },
+      { key: 'price', label: 'Preis' },
+      { key: 'color', label: 'Farbe' },
+      { key: 'status', label: 'Status' }
+    ];
+    const cols = viewingOwnCollection ? [...colsBase, { key: 'actions', label: 'Aktionen', alignRight: true }] : [...colsBase.slice(0,2), { key: 'common', label: 'Gemeinsam' }, ...colsBase.slice(2), { key: 'actions', label: 'Aktionen', alignRight: true }];
+
+    const thead = document.createElement('thead');
+    const trHead = document.createElement('tr');
+    cols.forEach(col => {
+      // Determine visibility: prefer user's saved setting, otherwise use default
+      const visibleDefault = (DEFAULT_TABLE_SETTINGS.visible && DEFAULT_TABLE_SETTINGS.visible[col.key]) || false;
+      const visible = (ts.visible && typeof ts.visible[col.key] !== 'undefined') ? ts.visible[col.key] : visibleDefault;
+      // Always show 'common' column for remote view even if not in settings
+      if (!(visible || (col.key === 'common' && !viewingOwnCollection))) return;
+      const th = document.createElement('th');
+      // Cover and actions are not sortable
+      const isSortable = !(col.key === 'actions' || col.key === 'cover' || col.key === 'common');
+      th.style.cursor = isSortable ? 'pointer' : 'default';
+      th.innerHTML = `${col.label} <span class="col-sort-ind">${isSortable ? getSortIndicator(col.key) : ''}</span>`;
+      if (isSortable) {
+        th.addEventListener('click', () => headerSortToggle(col.key));
+      }
+      if (col.alignRight) th.style.textAlign = 'right';
+      trHead.appendChild(th);
+    });
+    thead.appendChild(trHead);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    list.forEach(item => {
+      const badge = getReleaseBadge(item);
+      const barStyle = getBarPatternStyle(item);
+      const discogsTablePriceValue = Number(item.discogsLowestPrice) || 0;
+      const discogsTablePriceText = discogsTablePriceValue > 0 ? `Preis: ${discogsTablePriceValue.toFixed(2).replace(/\.00$/, '')} ${escapeHtml(item.discogsCurrency || '€')}` : '';
+      const isCommon = !viewingOwnCollection && ownKeys.has(getAlbumComparisonKey(item));
+      const commonLabel = !viewingOwnCollection ? `<span class="common-pill ${isCommon ? 'common' : 'remote-only'}">${isCommon ? 'Gemeinsam' : 'Nur bei ' + escapeHtml(viewedUsername || 'diesem Nutzer')}</span>` : '';
+      const actionCell = allowEdit ? `
                 <div class="table-actions">
                   <button class="toggle-own ${item.owned ? 'owned' : ''}" onclick="toggleOwned('${item.id}')" title="Status ändern">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -4112,32 +4309,200 @@ ${actionButtons}
                   </button>
                 </div>
               ` : `<button class="add-to-own primary" onclick="addRemoteEntryToOwn('${item.id}')" title="Zu eigener Sammlung hinzufügen">Hinzufügen</button>`;
-          return `
-            <tr>
-              <td class="cover-cell"><img src="${item.coverUrl || ''}" alt=""></td>
-              <td class="title-cell">
-                <strong>${escapeHtml(item.title)}</strong>
-                ${commonLabel}
-                <span>${escapeHtml(item.artist)}</span>
-                ${discogsTablePriceText ? `<span class="discogs-price-table">${discogsTablePriceText}</span>` : ''}
-              </td>
-              <td><span class="state-pill">${escapeHtml(badge.label)}</span></td>
-              <td>${escapeHtml(item.year)}</td>
-              <td>${escapeHtml(item.genre || '–')}</td>
-              <td>
-                <span class="album-color-bar inline ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};"></span>
-                ${escapeHtml(getVisibleLabel(item))}
-              </td>
-              <td><span class="state-pill">${item.owned ? 'Besitze ich' : 'Wunschliste'}</span></td>
-              <td style="text-align:right;">${actionCell}</td>
-            </tr>
-          `;
-        }).join('')}
-      </tbody>
-    `;
+      // If viewing remote collection, only show add button for items not in own collection
+      const remoteAddButton = !ownKeys.has(getAlbumComparisonKey(item)) ? `<button class="add-to-own primary" onclick="addRemoteEntryToOwn('${item.id}')" title="Zu eigener Sammlung hinzufügen">Hinzufügen</button>` : '';
+      const actionCellFinal = allowEdit ? (`` + `
+                <div class="table-actions">
+                  <button class="toggle-own ${item.owned ? 'owned' : ''}" onclick="toggleOwned('${item.id}')" title="Status ändern">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <button class="edit" onclick="editEntry('${item.id}')" title="Bearbeiten">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 20H8L18.5 9.5C19.0304 8.96957 19.3284 8.25 19.3284 7.5C19.3284 6.75 19.0304 6.03043 18.5 5.5L17.5 4.5C16.9696 3.96957 16.25 3.67157 15.5 3.67157C14.75 3.67157 14.0304 3.96957 13.5 4.5L3 15V20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 6L18 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </button>
+                  <button class="del" onclick="deleteEntry('${item.id}')" title="Löschen">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+              `) : remoteAddButton;
+
+      const tr = document.createElement('tr');
+      cols.forEach(col => {
+          // Respect visibility or force-show common for remote view
+          if (!(ts.visible[col.key] || (col.key === 'common' && !viewingOwnCollection))) return;
+          const td = document.createElement('td');
+          if (col.key === 'cover') {
+            td.className = 'cover-cell';
+            td.innerHTML = `<img src="${item.coverUrl || ''}" alt="">`;
+          } else if (col.key === 'title') {
+            td.className = 'title-cell';
+            td.innerHTML = `
+              <strong>${escapeHtml(item.title)}</strong>
+              <div style="margin-top:4px;">
+                <div style="color:var(--text-secondary); font-size:12px;">${escapeHtml(item.artist)}</div>
+                ${discogsTablePriceText ? `<div class="discogs-price-table" style="margin-top:4px;">${discogsTablePriceText}</div>` : ''}
+              </div>
+            `;
+          } else if (col.key === 'common') {
+            td.innerHTML = commonLabel || '';
+          } else if (col.key === 'type') {
+            td.innerHTML = `<span class="state-pill">${escapeHtml(badge.label)}</span>`;
+          } else if (col.key === 'year') {
+            td.textContent = item.year || '';
+          } else if (col.key === 'genre') {
+            td.textContent = item.genre || '–';
+          } else if (col.key === 'price') {
+            const pVal = Number(item.discogsLowestPrice != null ? item.discogsLowestPrice : (item.discogsAveragePrice != null ? item.discogsAveragePrice : 0)) || 0;
+            td.textContent = pVal > 0 ? (pVal.toFixed(2).replace(/\.00$/, '') + ' ' + escapeHtml(item.discogsCurrency || '€')) : '';
+          } else if (col.key === 'color') {
+            td.innerHTML = `<span class="album-color-bar inline ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};"></span>${escapeHtml(getVisibleLabel(item))}`;
+          } else if (col.key === 'status') {
+            td.innerHTML = `<span class="state-pill">${item.owned ? 'Besitze ich' : 'Wunschliste'}</span>`;
+          } else if (col.key === 'actions') {
+            td.style.textAlign = 'right';
+            // Use actionCellFinal when available (even if empty string); otherwise fallback
+            td.innerHTML = (typeof actionCellFinal !== 'undefined') ? actionCellFinal : actionCell;
+          }
+          tr.appendChild(td);
+        });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
     tableWrap.appendChild(table);
   }
 }
+
+/* --- Tabellen-Spalten- und Spalten-Sortierung (persistent pro Account) --- */
+const DEFAULT_TABLE_SETTINGS = {
+  visible: { cover: true, title: true, type: true, year: true, genre: true, price: true, color: true, status: true, actions: true, common: false },
+  // activeSort: column name or 'newest'
+  activeSortColumn: 'newest',
+  activeSortDir: 'desc'
+};
+let tableSettings = Object.assign({}, DEFAULT_TABLE_SETTINGS);
+
+function loadTableSettingsFromUser(settings) {
+  if (!settings || !settings.tableSettings) return;
+  tableSettings = Object.assign({}, DEFAULT_TABLE_SETTINGS, settings.tableSettings);
+}
+
+function getTableSettings() {
+  return tableSettings || Object.assign({}, DEFAULT_TABLE_SETTINGS);
+}
+
+function saveTableSettingsCloud() {
+  if (!currentUid) return;
+  const ts = getTableSettings();
+  const docRef = db.collection('users').doc(currentUid);
+  return docRef.update({ ['settings.tableSettings']: ts }).catch(err => {
+    if (err && /not-found/i.test(String(err.message || ''))) {
+      return docRef.set({ settings: { tableSettings: ts } }, { merge: true });
+    }
+    console.error('Table settings save failed:', err);
+  });
+}
+
+// If table settings were loaded earlier from a different script tag, apply them now
+if (window._pendingTableSettings) {
+  try {
+    loadTableSettingsFromUser({ tableSettings: window._pendingTableSettings });
+  } catch (e) {
+    console.warn('Applying pending table settings failed:', e);
+  }
+  window._pendingTableSettings = null;
+}
+
+function toggleColumnVisibility(colKey) {
+  const ts = getTableSettings();
+  ts.visible[colKey] = !ts.visible[colKey];
+  // Wenn die ausgeblendete Spalte die aktuelle Sortierspalte ist, zurücksetzen
+  if (!ts.visible[colKey] && ts.activeSortColumn === colKey) {
+    ts.activeSortColumn = 'newest';
+    ts.activeSortDir = 'desc';
+  }
+  saveTableSettingsCloud();
+  renderColumnsPanel();
+  renderCollection();
+}
+
+function renderColumnsPanel() {
+  const panel = document.getElementById('tableColumnsPanel');
+  if (!panel) return;
+  const ts = getTableSettings();
+  const cols = [
+    ['cover', 'Cover'], ['title', 'Titel & Interpret'], ['type', 'Typ'], ['year', 'Jahr'], ['genre', 'Genre'], ['price', 'Preis'], ['color', 'Farbe'], ['status', 'Status'], ['actions', 'Aktionen']
+  ];
+  panel.innerHTML = cols.map(c => {
+    const k = c[0];
+    const label = c[1];
+    const checked = ts.visible[k] ? 'checked' : '';
+    return `<label style="display:block; margin:6px 0;"><input type="checkbox" class="table-col-checkbox" data-col="${k}" ${checked}> ${label}</label>`;
+  }).join('');
+  panel.querySelectorAll('.table-col-checkbox').forEach(cb => cb.addEventListener('change', e => toggleColumnVisibility(e.target.dataset.col)));
+}
+
+// Tri-state sort toggle: asc -> desc -> none (none -> revert to newest)
+function headerSortToggle(col) {
+  const ts = getTableSettings();
+  const mappedCol = col === 'type' ? 'releaseType' : col === 'price' ? 'price' : col;
+  if (ts.activeSortColumn === mappedCol) {
+    if (ts.activeSortDir === 'asc') {
+      ts.activeSortDir = 'desc';
+    } else if (ts.activeSortDir === 'desc') {
+      // deselect -> revert to newest
+      ts.activeSortColumn = 'newest';
+      ts.activeSortDir = 'desc';
+    }
+  } else {
+    ts.activeSortColumn = mappedCol;
+    ts.activeSortDir = 'asc';
+  }
+  saveTableSettingsCloud();
+  renderCollection();
+}
+
+function getSortIndicator(col) {
+  const ts = getTableSettings();
+  const mappedCol = col === 'type' ? 'releaseType' : col === 'price' ? 'price' : col;
+  if (ts.activeSortColumn !== mappedCol) return '';
+  return ts.activeSortDir === 'asc' ? '↑' : (ts.activeSortDir === 'desc' ? '↓' : '');
+}
+
+// Render columns panel toggle button in toolbar
+(function injectColumnsUI() {
+  const toggleGroup = document.querySelector('.collection-view-toggle');
+  if (!toggleGroup) return;
+  const btn = document.createElement('button');
+  btn.id = 'tableColumnsBtn';
+  btn.title = 'Tabellen-Spalten anzeigen/verbergen';
+  btn.innerHTML = `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="4" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="10" y="4" width="4" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="17" y="4" width="4" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="14" width="4" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="10" y="14" width="4" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="17" y="14" width="4" height="6" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>`;
+  btn.style.padding = '6px 8px';
+  btn.style.fontSize = '13px';
+  btn.style.display = 'none';
+  toggleGroup.appendChild(btn);
+
+  const panel = document.createElement('div');
+  panel.id = 'tableColumnsPanel';
+  panel.style.position = 'absolute';
+  panel.style.top = '40px';
+  panel.style.left = '0';
+  panel.style.background = 'var(--surface-2)';
+  panel.style.border = '0.5px solid var(--border)';
+  panel.style.borderRadius = '10px';
+  panel.style.padding = '10px';
+  panel.style.minWidth = '180px';
+  panel.style.display = 'none';
+  panel.style.zIndex = 30;
+  toggleGroup.style.position = 'relative';
+  toggleGroup.appendChild(panel);
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    renderColumnsPanel();
+  });
+  document.addEventListener('click', () => { panel.style.display = 'none'; });
+})();
 
 document.getElementById('searchBtn').addEventListener('click', searchAlbums);
 document.getElementById('searchInput').addEventListener('keydown', e => {
@@ -4334,6 +4699,28 @@ renderCollection();
 // auslöste und so schnell das Rate Limit sprengte. Preise stehen bereits in Firebase
 // und werden nur einmalig benötigt. Nutze bei Bedarf manuell den Button
 // "Discogs-URLs nachladen" in den Einstellungen.
+
+// Debug: Zeige JS-Errors im UI, damit Probleme beim Laden sofort sichtbar sind
+window.addEventListener('error', (e) => {
+  try {
+    const overlay = document.getElementById('modalOverlay');
+    const box = document.querySelector('#modalOverlay .modal-box');
+    if (overlay && box) {
+      document.getElementById('modalMessage').textContent = 'JS-Fehler: ' + (e.message || e.error || 'unknown');
+      const actions = document.getElementById('modalActions');
+      actions.innerHTML = '<button onclick="location.reload()" class="primary">Neu laden</button>';
+      overlay.classList.add('open');
+    } else {
+      alert('JS-Fehler: ' + (e.message || e.error || 'unknown'));
+    }
+  } catch (err) {
+    console.error('Error displaying error overlay', err);
+  }
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  const msg = (ev.reason && ev.reason.message) ? ev.reason.message : String(ev.reason);
+  alert('Unhandled promise rejection: ' + msg);
+});
 </script>
 </body>
 </html>
