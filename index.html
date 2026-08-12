@@ -48,6 +48,8 @@
     border-bottom: 0.5px solid var(--border);
     box-shadow: var(--shadow);
   }
+  body { min-width: 450px; }
+  header { overflow: visible; }
   header .logo {
     width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center;
@@ -61,7 +63,7 @@
     flex-direction: column;
     gap: 2px;
     min-width: 0;
-    flex: 1;
+    flex: 1 1 320px;
   }
   header .title-input input {
     width: 100%;
@@ -78,16 +80,48 @@
     box-shadow: none;
     outline: none;
   }
+  header .collection-title {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   header .sub { font-size: 12px; color: var(--text-muted); margin: 0; }
+  header .header-top-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header .header-info-row {
+    width: 100%;
+  }
+  header .viewing-info {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.4;
+  }
   header .header-stats {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-left: auto;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    z-index: 30;
+    height: 36px;
   }
   header .header-stats .stat-pill {
+    flex: 0 0 auto;
+    min-width: 0;
     padding: 7px 10px;
     border-radius: 999px;
     background: rgba(255,255,255,0.04);
@@ -100,11 +134,32 @@
     color: var(--text-primary);
     font-weight: 600;
   }
+  header .header-stats .stat-pill .stat-icon {
+    margin-right: 6px;
+    font-size: 14px;
+  }
+  header .header-stats .stat-pill .stat-label {
+    display: inline;
+    margin-left: 6px;
+    color: var(--text-secondary);
+  }
   header .header-stats .stat-compact {
     display: none;
     align-items: center;
     gap: 4px;
   }
+
+  /* When the header wraps on very small screens, let action buttons overlap the title only at very small sizes */
+  @media (max-width: 480px) {
+    header .collection-title { z-index: 1; }
+    header .header-actions { z-index: 3; }
+    header .header-actions { margin-top: -28px; }
+  }
+  header .header-stats .stat-priority-1 { order: 1; }
+  header .header-stats .stat-priority-2 { order: 2; }
+  header .header-stats .stat-priority-3 { order: 3; }
+  header .header-stats .stat-priority-4 { order: 4; }
+  header .header-stats .stat-priority-5 { order: 5; }
 
   .sort-direction-group {
     display: flex;
@@ -138,6 +193,8 @@
   .settings-wrap .icon-btn {
     color: var(--text-secondary);
     background: rgba(255,255,255,0.04);
+    position: relative;
+    z-index: 2147483647; /* keep the button above the panel so it remains clickable */
   }
   .settings-wrap .icon-btn:hover { color: var(--text-primary); }
   .settings-panel {
@@ -155,6 +212,17 @@
     z-index: 20;
   }
   .settings-panel.open { display: block; }
+  /* When opened, make the settings panel fixed to the viewport so it escapes header stacking context
+     and always appears above other header elements (stat-pills, buttons). */
+  .settings-panel.open {
+    position: fixed;
+    top: 56px; /* place below the header/button so the button remains clickable */
+    right: 12px;
+    left: auto;
+    width: min(360px, 90vw);
+    max-width: 360px;
+    z-index: 2147483646; /* slightly below the button z-index */
+  }
   .settings-panel-title {
     margin: 0 0 8px;
     font-size: 12px;
@@ -171,6 +239,85 @@
     margin: 8px 0 0;
   }
   .settings-panel-hint a { color: var(--accent); }
+  .settings-toggle-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  @media (max-width: 640px) {
+    .settings-panel {
+      /* keep fallback positioning but prefer `.open` fixed rules when opened */
+      position: fixed;
+      top: 56px;
+      right: 8px;
+      left: auto;
+      width: min(320px, 90vw);
+      max-width: 340px;
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+      z-index: 2147483646;
+    }
+    .settings-wrap .icon-btn { z-index: 2147483647; }
+  }
+  .toggle-switch {
+    position: relative;
+    width: 46px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    cursor: pointer;
+  }
+  .toggle-slider {
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.12);
+    border-radius: 999px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-switch input:checked + .toggle-slider {
+    background: rgba(92, 204, 117, 0.86);
+  }
+  .toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+    background: #fff;
+  }
+  .toggle-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .toggle-title {
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+  .toggle-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
   .settings-divider {
     border: none;
     border-top: 0.5px solid var(--border);
@@ -621,17 +768,57 @@
   }
   .form-cover-results.open { display: grid; }
   .form-cover-results .hint-cell { grid-column: 1 / -1; font-size: 12px; color: var(--text-muted); margin: 0; }
-  .form-cover-results img {
+  .form-cover-results img,
+  .cover-search-card img {
     width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
     border-radius: 6px;
+    background: var(--surface-3);
+    display: block;
+  }
+  .form-cover-results img {
     cursor: pointer;
     border: 1.5px solid transparent;
-    background: var(--surface-3);
     transition: border-color 0.15s, transform 0.1s;
   }
   .form-cover-results img:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .cover-search-card {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 10px;
+    padding: 10px;
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s, background 0.15s;
+    width: 100%;
+  }
+  .cover-search-card:hover {
+    border-color: var(--accent-border);
+    transform: translateY(-1px);
+    background: rgba(255,255,255,0.04);
+  }
+  .cover-search-card strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+  .cover-search-card .cover-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .cover-search-card .cover-info span {
+    display: block;
+    line-height: 1.3;
+  }
   .form-fields { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 8px; }
   .form-fields .row { display: flex; gap: 8px; }
   .form-fields .row input,
@@ -1299,7 +1486,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-left: 12px;
+    margin-left: auto;
+    flex-shrink: 0;
   }
   .settings-user-pill {
     display: flex;
@@ -1404,6 +1592,73 @@
     flex: 1;
     min-height: 0;
     padding-right: 4px;
+  }
+  .cover-search-box {
+    max-width: 920px;
+    width: min(100%, 920px);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .cover-search-box .cover-search-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .cover-search-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+    width: 100%;
+    max-height: calc(80vh - 160px);
+    overflow-y: auto;
+    min-height: 120px;
+    padding-right: 4px;
+  }
+  .cover-search-status {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+  .cover-search-card {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 10px;
+    padding: 10px;
+    border: 0.5px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-2);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s, background 0.15s;
+    min-height: 220px;
+  }
+  .cover-search-card:hover {
+    border-color: var(--accent-border);
+    transform: translateY(-1px);
+    background: rgba(255,255,255,0.04);
+  }
+  .cover-search-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 12px;
+    display: block;
+  }
+  .cover-search-card .cover-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .cover-search-card .cover-info strong {
+    color: var(--text-primary);
+    font-size: 13px;
   }
   .discogs-match-box .modal-actions {
     flex-shrink: 0;
@@ -1631,7 +1886,19 @@
   }
   .fix-new strong { color: var(--accent); }
 
-  @media (max-width: 640px) {
+  @media (max-width: 1140px) {
+    header .header-stats .stat-priority-5 { display: none; }
+  }
+  @media (max-width: 1040px) {
+    header .header-stats .stat-priority-4 { display: none; }
+  }
+  @media (max-width: 940px) {
+    header .header-stats .stat-priority-3 { display: none; }
+  }
+  @media (max-width: 820px) {
+    header .header-stats .stat-priority-2 { display: none; }
+  }
+  @media (max-width: 720px) {
     .filter-tabs .filter-label { display: none; }
     .filter-tabs button { padding: 8px; }
     .filter-tabs { gap: 4px; }
@@ -1646,6 +1913,50 @@
     .toolbar-group.right { flex-wrap: nowrap; width: auto; }
     .sort-select { min-width: 0; flex: 1 1 auto; font-size: 13px; padding-left: 8px; padding-right: 8px; }
     .sort-direction-group { flex-shrink: 0; }
+  }
+
+  /* At small widths show two compact stats next to the header actions (buttons) */
+  @media (max-width: 720px) {
+    header { position: relative; }
+    header .header-actions { position: absolute; right: 12px; top: 12px; z-index: 40; width: 120px; display: flex; justify-content: flex-end; gap: 6px; }
+    header .header-stats {
+      position: absolute;
+      right: calc(12px + 120px + 4px); /* place stats to the left of the action buttons */
+      top: 12px;
+      display: flex;
+      flex-direction: row;
+      gap: 6px;
+      align-items: center;
+      pointer-events: auto;
+      max-width: calc(100% - 160px);
+      width: auto;
+      justify-content: flex-end;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      z-index: 35;
+      left: auto;
+    }
+    header .header-stats .stat-detail { display: none; }
+    header .header-stats .stat-compact { display: inline-flex; }
+    /* Ensure settings panel overlays the stats and actions */
+    .settings-panel { z-index: 10050; }
+    .settings-wrap .icon-btn { z-index: 10060; }
+  }
+
+  /* At very small widths stack the header stats vertically below the header and make them scrollable */
+  @media (max-width: 480px) {
+    header .header-stats {
+      position: static;
+      width: 100%;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 120px;
+      overflow: auto;
+      margin-top: 8px;
+    }
+    header .header-stats .stat-detail { display: flex; }
+    header .header-stats .stat-compact { display: none; }
   }
 
   /* Login / Account */
@@ -1786,29 +2097,18 @@
 <div id="appRoot" class="hidden">
 
 <header>
-  <div class="logo">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#d4537e" stroke-width="1.4"/>
-      <circle cx="12" cy="12" r="6" stroke="#d4537e" stroke-width="1" opacity="0.6"/>
-      <circle cx="12" cy="12" r="1.8" fill="#d4537e"/>
-    </svg>
-  </div>
-  <div class="title-input">
-    <input id="collectionTitleInput" type="text" value="Vinyl-Sammlung" aria-label="Sammlungsname" maxlength="50">
-  </div>
-  <div class="header-stats">
-    <div class="stat-pill stat-detail"><span>12"</span> <strong id="stat12Inch">0</strong></div>
-    <div class="stat-pill stat-detail"><span>7"</span> <strong id="stat7Inch">0</strong></div>
-    <div class="stat-pill stat-detail"><span>EP</span> <strong id="statEp">0</strong></div>
-    <div class="stat-pill stat-detail"><span>Discogs Preis</span> <strong id="discogsPriceSum">0 €</strong></div>
-    <div class="stat-pill stat-detail"><span>Frühestes Jahr</span> <strong id="stat1xxx">–</strong></div>
-    <div class="stat-pill stat-detail"><span>Spätestes Jahr</span> <strong id="stat2xxx">–</strong></div>
-    <div class="stat-pill stat-detail"><span>Im Besitz</span> <strong id="statOwnedCount">0</strong></div>
-    <div class="stat-pill stat-detail"><span>Wunschliste</span> <strong id="wishlistCount">0</strong></div>
-    <div class="stat-pill stat-compact" title="Im Besitz"><span aria-hidden="true">💿</span> <strong id="statOwnedCountCompact">0</strong></div>
-    <div class="stat-pill stat-compact" title="Wunschliste"><span aria-hidden="true">🎁</span> <strong id="wishlistCountCompact">0</strong></div>
+  <div class="header-top-row">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" stroke="#d4537e" stroke-width="1.4"/>
+        <circle cx="12" cy="12" r="6" stroke="#d4537e" stroke-width="1" opacity="0.6"/>
+        <circle cx="12" cy="12" r="1.8" fill="#d4537e"/>
+      </svg>
+    </div>
+    <div class="title-input">
+      <div class="collection-title" id="collectionTitleDisplay" aria-label="Sammlungsname">Vinyl-Sammlung</div>
+    </div>
     <div class="header-actions">
-      <!-- NEU: Wunschliste Clipboard-Export -->
       <button id="copyWishlistBtn" class="icon-btn" title="Wunschliste in Zwischenablage kopieren" aria-label="Wunschliste kopieren">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
@@ -1821,60 +2121,87 @@
       <button id="showOwnCollectionBtn" class="icon-btn" title="Eigene Sammlung anzeigen" aria-label="Eigene Sammlung anzeigen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-    </div>
-    <div class="settings-wrap">
-      <button id="settingsBtn" class="icon-btn" title="Einstellungen" aria-label="Einstellungen">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <div class="settings-panel" id="settingsPanel">
-        <p class="settings-panel-title">Konto</p>
-        <div class="user-pill settings-user-pill">
-          <span><strong id="currentUsernameLabel">–</strong></span>
-          <button type="button" id="logoutBtn" title="Abmelden">Abmelden</button>
+      <div class="settings-wrap">
+        <button id="settingsBtn" class="icon-btn" title="Einstellungen" aria-label="Einstellungen">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="settings-panel" id="settingsPanel">
+          <p class="settings-panel-title">Konto</p>
+          <div class="user-pill settings-user-pill">
+            <span><strong id="currentUsernameLabel">–</strong></span>
+            <button type="button" id="logoutBtn" title="Abmelden">Abmelden</button>
+          </div>
+          <div class="settings-panel-actions">
+            <button type="button" id="exportBtn" class="icon-btn tooltip-btn" title="Exportieren" aria-label="Exportieren" data-tooltip="Exportieren">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 9l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 19h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span>Export</span>
+            </button>
+            <button type="button" id="importBtn" class="icon-btn tooltip-btn" title="Importieren" aria-label="Importieren" data-tooltip="Importieren">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 5h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span>Import</span>
+            </button>
+            <button type="button" id="openFixToolBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Titel und Interpret reparieren">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:6px;"><path d="M4 20h4.5L20 8.5a2 2 0 0 0-4-4L4 16.5V20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 6l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 3l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span>Titel / Interpret</span>
+            </button>
+            <button type="button" id="bulkDiscogsUrlBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Discogs-URLs reparieren">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:6px;"><path d="M7 20h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 7.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19.5 3.5l1.5 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 11l1.5 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span>URLs</span>
+            </button>
+          </div>
+          <hr class="settings-divider">
+
+          <p class="settings-panel-title">Bildquelle</p>
+          <select id="coverSourceSelect" title="Bildquelle wählen">
+            <option value="all">Bildquelle: Alle</option>
+            <option value="itunes">Bildquelle: iTunes</option>
+            <option value="discogs">Bildquelle: Discogs</option>
+          </select>
+          <p class="settings-panel-title" style="margin-top:14px;">Discogs Token</p>
+          <input type="password" id="discogsTokenInput" placeholder="Discogs Personal Access Token">
+          <p class="settings-panel-hint"><a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener">discogs.com/settings/developers</a>.</p>
+          <div class="settings-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="priceWishlistCheckbox">
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="toggle-text">
+              <span class="toggle-title">Preise auch für Wunschlisten-Vinyls ermitteln</span>
+              <span class="toggle-hint">Aktiviere dies, wenn du Discogs-Preise auch für nicht besessene Einträge laden möchtest.</span>
+            </div>
+          </div>
+
+          <hr class="settings-divider">
+
+          <p class="settings-panel-title">Vinyl-Format in Suche</p>
+          <select id="defaultReleaseTypeSelect">
+            <option value="auto">Automatisch schätzen</option>
+            <option value="Album">Album (12")</option>
+            <option value="Single">Single (7")</option>
+            <option value="EP">EP</option>
+          </select>
+
+          <input type="file" id="importFile" accept="application/json">
         </div>
-        <div class="settings-panel-actions">
-          <button type="button" id="exportBtn" class="icon-btn tooltip-btn" title="Exportieren" aria-label="Exportieren" data-tooltip="Exportieren">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 9l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 19h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            <span>Export</span>
-          </button>
-          <button type="button" id="importBtn" class="icon-btn tooltip-btn" title="Importieren" aria-label="Importieren" data-tooltip="Importieren">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 5h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            <span>Import</span>
-          </button>
-          <button type="button" id="openFixToolBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Titel und Interpret reparieren">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:6px;"><path d="M4 20h4.5L20 8.5a2 2 0 0 0-4-4L4 16.5V20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 6l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 3l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            <span>Titel / Interpret</span>
-          </button>
-          <button type="button" id="bulkDiscogsUrlBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Discogs-URLs reparieren">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:6px;"><path d="M7 20h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 7.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19.5 3.5l1.5 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 11l1.5 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            <span>URLs</span>
-          </button>
-        </div>
-        <hr class="settings-divider">
-
-        <p class="settings-panel-title">Bildquelle</p>
-        <select id="coverSourceSelect" title="Bildquelle wählen">
-          <option value="all">Bildquelle: Alle</option>
-          <option value="itunes">Bildquelle: iTunes</option>
-          <option value="discogs">Bildquelle: Discogs</option>
-        </select>
-        <p class="settings-panel-title" style="margin-top:14px;">Discogs Token</p>
-        <input type="password" id="discogsTokenInput" placeholder="Discogs Personal Access Token">
-        <p class="settings-panel-hint"><a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener">discogs.com/settings/developers</a>.</p>
-
-        <hr class="settings-divider">
-
-        <p class="settings-panel-title">Vinyl-Format in Suche</p>
-        <select id="defaultReleaseTypeSelect">
-          <option value="auto">Automatisch schätzen</option>
-          <option value="Album">Album (12")</option>
-          <option value="Single">Single (7")</option>
-          <option value="EP">EP</option>
-        </select>
-
-        <input type="file" id="importFile" accept="application/json">
       </div>
     </div>
+  </div>
+  <div class="header-info-row"><p class="viewing-info" id="viewingInfo">Aktuelle Ansicht: Eigene Sammlung</p></div>
+  <div class="header-stats">
+    <div class="stat-pill stat-detail"><span>12"</span> <strong id="stat12Inch">0</strong></div>
+    <div class="stat-pill stat-detail"><span>7"</span> <strong id="stat7Inch">0</strong></div>
+    <div class="stat-pill stat-detail"><span>EP</span> <strong id="statEp">0</strong></div>
+    <div class="stat-pill stat-detail"><span>Besitz</span> <strong id="statOwnedValue">0 €</strong></div>
+    <div class="stat-pill stat-detail"><span>Wunschliste</span> <strong id="statWishlistValue">0 €</strong></div>
+    <div class="stat-pill stat-detail"><span>Genres</span> <strong id="statGenreCount">0</strong></div>
+    <div class="stat-pill stat-detail"><span>Artists</span> <strong id="statArtistCount">0</strong></div>
+    <div class="stat-pill stat-detail"><span>Häufigstes Jahr</span> <strong id="statMostFrequentYear">–</strong></div>
+    <div class="stat-pill stat-detail"><span>Frühestes Jahr</span> <strong id="stat1xxx">–</strong></div>
+    <div class="stat-pill stat-detail"><span>Spätestes Jahr</span> <strong id="stat2xxx">–</strong></div>
+    <div class="stat-pill stat-detail"><span>Im Besitz</span> <strong id="statOwnedCount">0</strong></div>
+    <div class="stat-pill stat-detail"><span>Wunschliste</span> <strong id="wishlistCount">0</strong></div>
+    <div class="stat-pill stat-compact" title="Im Besitz"><span aria-hidden="true">💿</span> <strong id="statOwnedCountCompact">0</strong></div>
+    <div class="stat-pill stat-compact" title="Wunschliste"><span aria-hidden="true">🎁</span> <strong id="wishlistCountCompact">0</strong></div>
   </div>
 </header>
 
@@ -2101,6 +2428,23 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="coverSearchOverlay">
+  <div class="modal-box cover-search-box">
+    <div class="cover-search-header">
+      <div>
+        <p class="modal-title">Cover auswählen</p>
+        <div class="cover-search-input-row">
+          <input id="coverSearchInput" type="text" placeholder="Suchbegriff anpassen...">
+          <button type="button" id="coverSearchSubmitBtn">Suche</button>
+        </div>
+      </div>
+      <button type="button" id="closeCoverSearchBtn" class="icon-btn" title="Schließen">×</button>
+    </div>
+    <p class="match-status" id="coverSearchStatus">Wähle ein Cover aus der Liste.</p>
+    <div class="cover-search-grid" id="coverSearchResults"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="discogsMatchOverlay">
   <div class="modal-box discogs-match-box">
     <div class="discogs-match-content">
@@ -2176,6 +2520,7 @@ const STORAGE_KEY = 'vinylCollectionV1';
 const TITLE_STORAGE_KEY = 'vinylCollectionTitleV1';
 const DISCOGS_TOKEN_KEY = 'discogsTokenV1';
 const COVER_SOURCE_KEY = 'coverSourceV1';
+const PRICE_WISHLIST_KEY = 'allowWishlistPriceV1';
 const DEFAULT_RELEASE_TYPE_KEY = 'defaultReleaseTypeV1';
 const COLLECTION_CARD_SIZE_KEY = 'collectionCardSizeV1';
 
@@ -2377,6 +2722,10 @@ async function loadCloudData(uid) {
       localStorage.setItem(COVER_SOURCE_KEY, data.settings.coverSource);
       try { if (typeof coverSourceSelect !== 'undefined' && coverSourceSelect) coverSourceSelect.value = data.settings.coverSource; } catch (e) {}
     }
+    if (typeof data.settings.allowWishlistPrice !== 'undefined') {
+      localStorage.setItem(PRICE_WISHLIST_KEY, data.settings.allowWishlistPrice ? 'true' : 'false');
+      try { if (typeof priceWishlistCheckbox !== 'undefined' && priceWishlistCheckbox) priceWishlistCheckbox.checked = !!data.settings.allowWishlistPrice; } catch (e) {}
+    }
     if (data.settings.discogsToken) {
       localStorage.setItem(DISCOGS_TOKEN_KEY, data.settings.discogsToken);
       try { if (typeof discogsTokenInput !== 'undefined' && discogsTokenInput) discogsTokenInput.value = data.settings.discogsToken; } catch (e) {}
@@ -2394,8 +2743,8 @@ async function loadCloudData(uid) {
       window._pendingTableSettings = data.settings.tableSettings || null;
     }
   }
-  const titleInput = document.getElementById('collectionTitleInput');
-  if (titleInput) titleInput.value = collectionTitle;
+  const titleDisplay = document.getElementById('collectionTitleDisplay');
+  if (titleDisplay) titleDisplay.textContent = collectionTitle;
   try { if (typeof updateSortButtons === 'function') updateSortButtons(); } catch (e) {}
   try { if (typeof renderCollection === 'function') renderCollection(); } catch (e) {}
   try { if (typeof updateViewingInfo === 'function') updateViewingInfo(); } catch (e) {}
@@ -2408,9 +2757,10 @@ async function saveCloudDataNow() {
   try {
     const coverSource = (typeof getCoverProvider === 'function') ? getCoverProvider() : (localStorage.getItem(COVER_SOURCE_KEY) || 'all');
     const discogsToken = (typeof getDiscogsToken === 'function') ? getDiscogsToken() : (localStorage.getItem(DISCOGS_TOKEN_KEY) || '');
+    const allowWishlistPrice = getAllowWishlistPrice();
     const defaultReleaseType = (typeof getDefaultReleaseType === 'function') ? getDefaultReleaseType() : (localStorage.getItem(DEFAULT_RELEASE_TYPE_KEY) || 'auto');
     const ts = (typeof getTableSettings === 'function') ? getTableSettings() : (window._pendingTableSettings || null);
-    const settingsObj = Object.assign({ coverSource, discogsToken, defaultReleaseType }, ts ? { tableSettings: ts } : {});
+    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, defaultReleaseType }, ts ? { tableSettings: ts } : {});
 
     await db.collection('users').doc(currentUid).set({
       username: currentUsername,
@@ -2524,21 +2874,17 @@ function renderUserList(users) {
 
 function updateViewingInfo() {
   if (!viewingInfoLabel) return;
+  // Show collection title in header (non-editable)
+  const titleDisplay = document.getElementById('collectionTitleDisplay');
+  if (titleDisplay) titleDisplay.textContent = collectionTitle || 'Vinyl-Sammlung';
+  // Hide the small viewing info label; user details belong into the user menu only
+  viewingInfoLabel.style.display = 'none';
   if (viewingOwnCollection) {
-    viewingInfoLabel.textContent = 'Aktuelle Ansicht: Eigene Sammlung';
     showOwnCollectionBtn.style.display = 'none';
     userListHint.textContent = 'Wähle hier einen anderen Benutzer, um seine Sammlung anzusehen oder zu importieren.';
   } else {
-    viewingInfoLabel.textContent = `Ansicht: Sammlung von ${viewedUsername || 'Benutzer'}`;
     showOwnCollectionBtn.style.display = 'inline-flex';
     userListHint.textContent = 'Diese Liste ist schreibgeschützt. Importiere sie in deine eigene Sammlung, um sie zu bearbeiten.';
-  }
-  const titleInput = document.getElementById('collectionTitleInput');
-  if (titleInput) {
-    titleInput.disabled = !viewingOwnCollection;
-    if (!viewingOwnCollection) {
-      titleInput.value = collectionTitle;
-    }
   }
 }
 
@@ -2642,8 +2988,8 @@ function saveOwnCollectionData() {
   localStorage.setItem(TITLE_STORAGE_KEY, ownCollectionTitle);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(ownCollection));
   if (collectionTitle === ownCollectionTitle || viewingOwnCollection) {
-    const titleInput = document.getElementById('collectionTitleInput');
-    if (titleInput) titleInput.value = ownCollectionTitle;
+    const titleDisplay = document.getElementById('collectionTitleDisplay');
+    if (titleDisplay) titleDisplay.textContent = ownCollectionTitle;
   }
   saveCloudDataDebounced();
 }
@@ -2705,7 +3051,7 @@ let currentDraft = null;
 
 async function enrichDiscogsPriceForItem(item) {
   if (!item || !item.discogsResourceUrl) return false;
-  if (!item.owned) return false;
+  if (!item.owned && !getAllowWishlistPrice()) return false;
   if (item.priceManual) return false;
   if (item.discogsLowestPrice != null && item.discogsAveragePrice != null) return false;
 
@@ -2823,6 +3169,10 @@ function getCoverProvider() {
   return document.getElementById('coverSourceSelect')?.value || 'all';
 }
 
+function getAllowWishlistPrice() {
+  return localStorage.getItem(PRICE_WISHLIST_KEY) === 'true';
+}
+
 function getDefaultReleaseType() {
   return localStorage.getItem(DEFAULT_RELEASE_TYPE_KEY) || 'auto';
 }
@@ -2832,6 +3182,15 @@ if (coverSourceSelect) {
   coverSourceSelect.value = localStorage.getItem(COVER_SOURCE_KEY) || 'all';
   coverSourceSelect.addEventListener('change', () => {
     localStorage.setItem(COVER_SOURCE_KEY, coverSourceSelect.value);
+    saveCloudDataDebounced();
+  });
+}
+
+const priceWishlistCheckbox = document.getElementById('priceWishlistCheckbox');
+if (priceWishlistCheckbox) {
+  priceWishlistCheckbox.checked = getAllowWishlistPrice();
+  priceWishlistCheckbox.addEventListener('change', () => {
+    localStorage.setItem(PRICE_WISHLIST_KEY, priceWishlistCheckbox.checked ? 'true' : 'false');
     saveCloudDataDebounced();
   });
 }
@@ -3479,8 +3838,8 @@ function saveCollection() {
   ownCollection = collection;
   ownCollectionTitle = collectionTitle;
   saveOwnCollectionData();
-  const titleInput = document.getElementById('collectionTitleInput');
-  if (titleInput) titleInput.value = collectionTitle;
+  const titleDisplay = document.getElementById('collectionTitleDisplay');
+  if (titleDisplay) titleDisplay.textContent = collectionTitle;
   renderCollection();
 }
 
@@ -3508,6 +3867,7 @@ function getExportData() {
     settings: {
       coverSource: getCoverProvider(),
       discogsToken: getDiscogsToken(),
+      allowWishlistPrice: getAllowWishlistPrice(),
       defaultReleaseType: getDefaultReleaseType()
     }
   };
@@ -3909,15 +4269,18 @@ async function bulkFillDiscogsUrls() {
     return;
   }
 
+  const allowWishlist = getAllowWishlistPrice();
   const entriesToUpdate = collection.filter(item => {
-    if (!item.owned) return false;
+    if (!item.owned && !allowWishlist) return false;
     if (item.priceManual) return false;
     const lacksPrice = item.discogsLowestPrice == null || item.discogsLowestPrice === '';
     const lacksUrl = !item.discogsResourceUrl;
     return (lacksUrl || lacksPrice) && (item.title || item.artist);
   });
   if (entriesToUpdate.length === 0) {
-    await showAlert('Keine Einträge im Besitz ohne Discogs-URL oder Discogs-Preis gefunden.');
+    await showAlert(allowWishlist
+      ? 'Keine Einträge ohne Discogs-URL oder Discogs-Preis gefunden.'
+      : 'Keine besessenen Einträge ohne Discogs-URL oder Discogs-Preis gefunden. Aktiviere die Einstellung, um auch Wunschlisten-Preise zu ermitteln.');
     return;
   }
 
@@ -3957,12 +4320,7 @@ async function renderDiscogsAlternativeResults(results) {
       formLoadedPriceManual = false;
       const manualPriceCurrencyField = document.getElementById('fManualPriceCurrency');
       if (manualPriceCurrencyField) manualPriceCurrencyField.value = selected.discogsCurrency || '€';
-      if (selected.cover) {
-        currentDraft.coverUrl = selected.cover;
-        document.getElementById('fCoverUrl').value = selected.cover;
-        document.getElementById('formCover').src = selected.cover;
-      }
-      document.getElementById('discogsAlternativeResults').innerHTML = `<p class="hint" style="margin:0; padding:8px 0;">Discogs-Alternative ausgewählt.</p>`;
+      document.getElementById('discogsAlternativeResults').innerHTML = `<p class="hint" style="margin:0; padding:8px 0;">Discogs-Alternative ausgewählt. Das Cover bleibt unverändert.</p>`;
     });
   });
 }
@@ -4124,13 +4482,6 @@ async function openDiscogsMatchOverlay(results, query, item = null) {
             if (manualPriceCurrencyField) manualPriceCurrencyField.value = selected.discogsCurrency || '€';
             formLoadedPrice = selected.discogsLowestPrice != null ? Number(selected.discogsLowestPrice) : null;
             formLoadedPriceManual = false;
-          }
-          if (selected.cover) {
-            targetItem.coverUrl = selected.cover;
-            const coverInput = document.getElementById('fCoverUrl');
-            const formCover = document.getElementById('formCover');
-            if (coverInput) coverInput.value = selected.cover;
-            if (formCover) formCover.src = selected.cover;
           }
           if (item && discogsMatchQueue.length > 0) {
             saveCollection();
@@ -4365,7 +4716,7 @@ async function searchCoverCandidates(query) {
       const data = await res.json();
       (data.results || []).forEach(album => {
         const cover = getAlbumCoverUrl(album);
-        if (cover) candidates.push({ cover, title: album.collectionName || '', artist: album.artistName || '' });
+        if (cover) candidates.push({ cover, title: album.collectionName || '', artist: album.artistName || '', year: album.releaseDate ? album.releaseDate.slice(0, 4) : '', source: 'iTunes' });
       });
     } catch (e) {
     }
@@ -4386,7 +4737,7 @@ async function searchCoverCandidates(query) {
           } catch (e) {
           }
         }
-        if (cover) candidates.push({ cover, title: r.title || '', artist: r.artist || '' });
+        if (cover) candidates.push({ cover, title: r.title || '', artist: r.artist || '', year: r.year || '', source: 'Discogs' });
       }
     } catch (e) {
     }
@@ -4408,33 +4759,78 @@ document.getElementById('formCoverSearchBtn').addEventListener('click', async ()
   const title = document.getElementById('fTitle').value.trim();
   const artist = document.getElementById('fArtist').value.trim();
   const query = [artist, title].filter(Boolean).join(' ');
-  const resultsBox = document.getElementById('formCoverResults');
   if (!query) {
     showAlert('Bitte zuerst Titel oder Interpret eingeben.');
     return;
   }
-  resultsBox.classList.add('open');
-  resultsBox.innerHTML = '<p class="hint-cell">Suche Cover...</p>';
   const candidates = await searchCoverCandidates(query);
+  await openCoverSearchOverlay(candidates, query);
+});
+
+function openCoverSearchOverlay(candidates, query) {
+  const overlay = document.getElementById('coverSearchOverlay');
+  const status = document.getElementById('coverSearchStatus');
+  const results = document.getElementById('coverSearchResults');
+  const searchInput = document.getElementById('coverSearchInput');
+  if (!overlay || !status || !results || !searchInput) return;
+  searchInput.value = query;
   if (candidates.length === 0) {
-    resultsBox.innerHTML = '<p class="hint-cell">Keine Cover gefunden. Ggf. Bildquelle wechseln oder URL manuell eintragen.</p>';
-    return;
-  }
-  resultsBox.innerHTML = '';
-  candidates.forEach(c => {
-    const thumb = document.createElement('img');
-    thumb.src = c.cover;
-    thumb.alt = c.title;
-    thumb.title = [c.artist, c.title].filter(Boolean).join(' – ');
-    thumb.addEventListener('click', () => {
-      document.getElementById('fCoverUrl').value = c.cover;
-      document.getElementById('formCover').src = c.cover;
-      if (currentDraft) currentDraft.coverUrl = c.cover;
-      resultsBox.classList.remove('open');
-      resultsBox.innerHTML = '';
+    status.textContent = 'Keine Cover gefunden. Ggf. Suchbegriff anpassen oder Bildquelle wechseln.';
+    results.innerHTML = '';
+  } else {
+    status.textContent = `Cover-Auswahl für: ${query}`;
+    results.innerHTML = candidates.map(c => `
+      <button type="button" class="cover-search-card" data-cover="${escapeHtml(c.cover)}">
+        <img src="${c.cover}" alt="${escapeHtml(c.title)}">
+        <div class="cover-info">
+          <strong>${escapeHtml(c.title)}</strong>
+          <span>${escapeHtml(c.artist)}</span>
+          <span>${escapeHtml(c.year || '')} ${c.source ? '· ' + escapeHtml(c.source) : ''}</span>
+        </div>
+      </button>
+    `).join('');
+    results.querySelectorAll('.cover-search-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const coverUrl = card.dataset.cover;
+        const coverInput = document.getElementById('fCoverUrl');
+        const formCover = document.getElementById('formCover');
+        if (coverInput) coverInput.value = coverUrl;
+        if (formCover) formCover.src = coverUrl;
+        if (currentDraft) currentDraft.coverUrl = coverUrl;
+        closeCoverSearchOverlay();
+      });
     });
-    resultsBox.appendChild(thumb);
-  });
+  }
+  overlay.classList.add('open');
+}
+
+document.getElementById('coverSearchSubmitBtn')?.addEventListener('click', async () => {
+  const input = document.getElementById('coverSearchInput');
+  if (!input) return;
+  const query = (input.value || '').trim();
+  if (!query) return;
+  const candidates = await searchCoverCandidates(query);
+  openCoverSearchOverlay(candidates, query);
+});
+
+document.getElementById('coverSearchInput')?.addEventListener('keydown', async e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('coverSearchSubmitBtn')?.click();
+  }
+});
+
+function closeCoverSearchOverlay() {
+  const overlay = document.getElementById('coverSearchOverlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+}
+
+document.getElementById('closeCoverSearchBtn')?.addEventListener('click', closeCoverSearchOverlay);
+document.getElementById('coverSearchOverlay')?.addEventListener('click', e => {
+  if (e.target === document.getElementById('coverSearchOverlay')) {
+    closeCoverSearchOverlay();
+  }
 });
 
 document.getElementById('fColorInputs').addEventListener('input', e => {
@@ -4649,15 +5045,7 @@ document.getElementById('sortSelect').addEventListener('change', e => setSort(e.
 document.getElementById('sortDirBtn').addEventListener('click', () => setSortDirection(activeSortDirection === 'asc' ? 'desc' : 'asc'));
 document.getElementById('viewGridBtn').addEventListener('click', () => setView('grid'));
 document.getElementById('viewTableBtn').addEventListener('click', () => setView('table'));
-document.getElementById('collectionTitleInput').addEventListener('input', e => {
-  const newTitle = (e.target.value || '').trim() || 'Meine Sammlung';
-  collectionTitle = newTitle;
-  if (viewingOwnCollection) {
-    ownCollectionTitle = newTitle;
-    localStorage.setItem(TITLE_STORAGE_KEY, ownCollectionTitle);
-    saveCloudDataDebounced();
-  }
-});
+// Title editing removed from header; collection title is displayed but not editable here.
 
 function setView(view) {
   activeView = view;
@@ -4709,18 +5097,50 @@ function renderCollection() {
     .reduce((sum, entry) => sum + entry.value, 0);
   const discogsPriceLabel = discogsPriceTotal > 0 ? `${discogsPriceTotal.toFixed(2).replace(/\.00$/, '')} €` : '0 €';
 
+  const wishlistPrices = collection
+    .filter(item => !item.owned)
+    .map(item => ({
+      value: Number(item.discogsLowestPrice) || 0,
+      currency: item.discogsCurrency || '€'
+    }))
+    .filter(entry => entry.value > 0 && entry.currency === '€');
+  const wishlistPriceTotal = wishlistPrices.reduce((sum, entry) => sum + entry.value, 0);
+  const wishlistPriceLabel = wishlistPriceTotal > 0 ? `${wishlistPriceTotal.toFixed(2).replace(/\.00$/, '')} €` : '0 €';
+
+  const ownedGenres = new Set(ownedCollection
+    .map(item => (item.genre || '').toString().trim().toLowerCase())
+    .filter(Boolean));
+  const ownedArtists = new Set(ownedCollection
+    .map(item => (item.artist || '').toString().trim().toLowerCase())
+    .filter(Boolean));
+
   const ownedYears = ownedCollection
     .map(item => Number(String(item.year || '').trim().slice(0, 4)))
     .filter(year => Number.isFinite(year));
   const stat1xxx = ownedYears.length ? Math.min(...ownedYears) : '–';
   const stat2xxx = ownedYears.length ? Math.max(...ownedYears) : '–';
+  const yearCounts = ownedYears.reduce((acc, year) => {
+    acc[year] = (acc[year] || 0) + 1;
+    return acc;
+  }, {});
+  const statMostFrequentYear = Object.keys(yearCounts).length
+    ? Object.entries(yearCounts).sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return Number(b[0]) - Number(a[0]);
+    })[0][0]
+    : '–';
 
   document.getElementById('stat12Inch')?.replaceChildren(document.createTextNode(stat12Inch));
   document.getElementById('stat7Inch')?.replaceChildren(document.createTextNode(stat7Inch));
   document.getElementById('statEp')?.replaceChildren(document.createTextNode(statEp));
   document.getElementById('discogsPriceSum')?.replaceChildren(document.createTextNode(discogsPriceLabel));
+  document.getElementById('statOwnedValue')?.replaceChildren(document.createTextNode(discogsPriceLabel));
+  document.getElementById('statWishlistValue')?.replaceChildren(document.createTextNode(wishlistPriceLabel));
   document.getElementById('stat1xxx')?.replaceChildren(document.createTextNode(stat1xxx));
   document.getElementById('stat2xxx')?.replaceChildren(document.createTextNode(stat2xxx));
+  document.getElementById('statGenreCount')?.replaceChildren(document.createTextNode(ownedGenres.size));
+  document.getElementById('statArtistCount')?.replaceChildren(document.createTextNode(ownedArtists.size));
+  document.getElementById('statMostFrequentYear')?.replaceChildren(document.createTextNode(statMostFrequentYear));
 
   const ownKeys = new Set(ownCollection.map(getAlbumComparisonKey));
   let list = collection.slice().reverse();
@@ -5324,6 +5744,10 @@ document.getElementById('importFile').addEventListener('change', e => {
           if (parsed.settings.coverSource) {
             localStorage.setItem(COVER_SOURCE_KEY, parsed.settings.coverSource);
             if (coverSourceSelect) coverSourceSelect.value = parsed.settings.coverSource;
+          }
+          if (typeof parsed.settings.allowWishlistPrice !== 'undefined') {
+            localStorage.setItem(PRICE_WISHLIST_KEY, parsed.settings.allowWishlistPrice ? 'true' : 'false');
+            if (priceWishlistCheckbox) priceWishlistCheckbox.checked = !!parsed.settings.allowWishlistPrice;
           }
           if (parsed.settings.discogsToken) {
             localStorage.setItem(DISCOGS_TOKEN_KEY, parsed.settings.discogsToken);
