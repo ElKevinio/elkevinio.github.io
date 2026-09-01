@@ -1535,6 +1535,35 @@
     opacity: 1;
     transform: translateX(-50%) translateY(-14px);
   }
+  .filter-help-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    width: min(320px, calc(100vw - 32px));
+    background: rgba(20, 20, 25, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 10px 12px;
+    z-index: 30;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .filter-help-panel strong {
+    color: #fff;
+    font-size: 12px;
+  }
+  .filter-help-panel code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: rgba(255,255,255,0.08);
+    padding: 2px 5px;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 11px;
+  }
   .settings-panel-actions .icon-btn {
     display: inline-flex;
     align-items: center;
@@ -2412,8 +2441,11 @@
           </div>
         </div>
       </div>
-      <div class="search-row" style="width:100%; margin-top:10px; display:flex; gap:12px; flex-wrap:wrap;">
-        <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Jahr, Genre..." style="flex:1; min-width:200px;" />
+      <div class="search-row" style="width:100%; margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; position:relative;">
+        <div style="flex:1; min-width:200px; display:flex; align-items:center; gap:8px; position:relative;">
+          <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Jahr, Genre..." style="flex:1; min-width:0;" />
+          <button type="button" id="collectionFilterHelpBtn" class="icon-btn tooltip-btn" title="Suchhilfe anzeigen" aria-label="Suchhilfe anzeigen" data-tooltip="Filter: title:, artist:, genre:, year:, notes:, releaseType:">?</button>
+        </div>
         <select id="collectionFilterReleaseType" style="padding:8px 12px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary); cursor:pointer;">
           <option value="all">Alle Formate</option>
           <option value="album">12" / Album</option>
@@ -2421,6 +2453,15 @@
           <option value="maxi single">Maxi Single</option>
           <option value="ep">EP</option>
         </select>
+      </div>
+      <div id="collectionFilterHelpPanel" class="filter-help-panel" aria-live="polite">
+        <strong>Verfügbare Filter</strong><br>
+        <code>title:</code> Titel, <code>artist:</code> Interpret, <code>genre:</code> Genre,<br>
+        <code>year:</code> Jahr, <code>notes:</code> Notizen, <code>releaseType:</code> Album / EP / 7"<br>
+        <strong>Beispiele:</strong><br>
+        <code>artist:Michael Jackson</code><br>
+        <code>genre:Rock year:1990</code><br>
+        <code>title:"Thriller"</code>
       </div>
       <div id="bulkEditBar" class="bulk-edit-bar" style="display:none; background:var(--surface-1); border-top:0.5px solid var(--border); padding:12px 24px; margin-top:12px; border-radius:10px; gap:12px; flex-wrap:wrap;">
         <div style="flex:1; display:flex; align-items:center; gap:8px;">
@@ -5991,6 +6032,46 @@ document.getElementById('collectionFilter').addEventListener('input', (e) => {
     renderCollection();
   }, 180);
 });
+
+const collectionFilterHelpBtn = document.getElementById('collectionFilterHelpBtn');
+const collectionFilterHelpPanel = document.getElementById('collectionFilterHelpPanel');
+if (collectionFilterHelpBtn && collectionFilterHelpPanel) {
+  const hideHelp = () => {
+    collectionFilterHelpPanel.style.display = 'none';
+  };
+  const showHelp = () => {
+    collectionFilterHelpPanel.style.display = 'block';
+  };
+
+  collectionFilterHelpBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isVisible = collectionFilterHelpPanel.style.display === 'block';
+    if (isVisible) {
+      hideHelp();
+    } else {
+      showHelp();
+    }
+  });
+
+  collectionFilterHelpBtn.addEventListener('mouseenter', () => {
+    if (window.matchMedia('(hover: hover)').matches) {
+      showHelp();
+    }
+  });
+
+  collectionFilterHelpBtn.addEventListener('mouseleave', () => {
+    if (window.matchMedia('(hover: hover)').matches) {
+      hideHelp();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!collectionFilterHelpPanel.contains(e.target) && !collectionFilterHelpBtn.contains(e.target)) {
+      hideHelp();
+    }
+  });
+}
 
 // Verhindere, dass Enter im Collection-Filter die obere Such-Action auslöst
 const collectionFilterEl = document.getElementById('collectionFilter');
