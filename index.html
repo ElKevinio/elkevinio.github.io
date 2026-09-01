@@ -1254,18 +1254,18 @@
   }
   .collection-card .release-badge {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
+    bottom: 8px;
+    right: 8px;
     z-index: 2;
-    padding: 4px 7px;
+    padding: 3px 6px;
     border-radius: 999px;
     background: rgba(8, 8, 12, 0.78);
     border: 0.5px solid rgba(255,255,255,0.16);
     color: var(--text-primary);
     backdrop-filter: blur(8px);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     box-shadow: 0 2px 10px rgba(0,0,0,0.25);
   }
@@ -1332,6 +1332,10 @@
   .collection-card .release-badge.single {
     color: #ffd4a8;
     border-color: rgba(255, 212, 168, 0.28);
+  }
+  .collection-card .release-badge.maxi {
+    color: #a9e7ff;
+    border-color: rgba(169, 231, 255, 0.28);
   }
   .collection-card .release-badge.ep {
     color: #b9b5ff;
@@ -2178,6 +2182,7 @@
             <option value="auto">Automatisch schätzen</option>
             <option value="Album">Album (12")</option>
             <option value="Single">Single (7")</option>
+            <option value="Maxi Single">Maxi Single</option>
             <option value="EP">EP</option>
           </select>
 
@@ -2190,6 +2195,7 @@
   <div class="header-stats">
     <div class="stat-pill stat-detail"><span>12"</span> <strong id="stat12Inch">0</strong></div>
     <div class="stat-pill stat-detail"><span>7"</span> <strong id="stat7Inch">0</strong></div>
+    <div class="stat-pill stat-detail"><span>Maxi</span> <strong id="statMaxiSingle">0</strong></div>
     <div class="stat-pill stat-detail"><span>EP</span> <strong id="statEp">0</strong></div>
     <div class="stat-pill stat-detail"><span>Besitz</span> <strong id="statOwnedValue">0 €</strong></div>
     <div class="stat-pill stat-detail"><span>Wunschliste</span> <strong id="statWishlistValue">0 €</strong></div>
@@ -2255,6 +2261,7 @@
         <select id="fReleaseType">
           <option value="Album">Typ: Album</option>
           <option value="Single">Typ: Single</option>
+          <option value="Maxi Single">Typ: Maxi Single</option>
           <option value="EP">Typ: EP</option>
         </select>
         
@@ -2310,9 +2317,12 @@
 
         <select id="fCondition">
           <option value="Neu">Zustand: Neu</option>
+          <option value="Wie neu">Zustand: Wie neu</option>
           <option value="Sehr gut">Zustand: Sehr gut</option>
           <option value="Gut">Zustand: Gut</option>
           <option value="Gebraucht">Zustand: Gebraucht</option>
+          <option value="Akzeptabel">Zustand: Akzeptabel</option>
+          <option value="Schlecht">Zustand: Schlecht</option>
         </select>
       </div>
 
@@ -2372,6 +2382,9 @@
             <button id="viewTableBtn" title="Tabellenansicht" aria-label="Tabellenansicht">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9H21" stroke="currentColor" stroke-width="1.8"/><path d="M8 4V20" stroke="currentColor" stroke-width="1.8"/></svg>
             </button>
+            <button id="selectModeBtn" title="Mehrfach-Auswahl" aria-label="Mehrfach-Auswahl" style="border-left:0.5px solid var(--border); padding:8px 10px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="3" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/></svg>
+            </button>
           </div>
         </div>
         <div class="toolbar-group center">
@@ -2389,7 +2402,9 @@
             <option value="year">Jahr</option>
             <option value="genre">Genre</option>
             <option value="status">Status</option>
+            <option value="condition">Zustand</option>
             <option value="price">Preis</option>
+            <option value="color">Farbe</option>
             <option value="releaseType">LP/EP/7"</option>
           </select>
           <div class="sort-direction-group">
@@ -2397,8 +2412,30 @@
           </div>
         </div>
       </div>
-      <div class="search-row" style="width:100%; margin-top:10px;">
-        <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Jahr, Genre..." style="width:100%;" />
+      <div class="search-row" style="width:100%; margin-top:10px; display:flex; gap:12px; flex-wrap:wrap;">
+        <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Jahr, Genre..." style="flex:1; min-width:200px;" />
+        <select id="collectionFilterReleaseType" style="padding:8px 12px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary); cursor:pointer;">
+          <option value="all">Alle Formate</option>
+          <option value="album">12" / Album</option>
+          <option value="single">7" / Single</option>
+          <option value="maxi single">Maxi Single</option>
+          <option value="ep">EP</option>
+        </select>
+      </div>
+      <div id="bulkEditBar" class="bulk-edit-bar" style="display:none; background:var(--surface-1); border-top:0.5px solid var(--border); padding:12px 24px; margin-top:12px; border-radius:10px; gap:12px; flex-wrap:wrap;">
+        <div style="flex:1; display:flex; align-items:center; gap:8px;">
+          <label class="toggle-switch" style="margin:0;">
+            <input type="checkbox" id="selectAllCheckbox" aria-label="Alle auswählen">
+            <span class="toggle-slider"></span>
+          </label>
+          <span id="bulkSelectedCount" style="font-size:14px; color:var(--text-secondary);">0 ausgewählt</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button id="showSelectedToggle" class="settings-fix-btn" style="min-width:120px;" title="Nur ausgewählte anzeigen">Ausgewählte</button>
+          <button id="clearSelectionBtn" class="settings-fix-btn" style="min-width:100px;" title="Auswahl löschen">Auswahl löschen</button>
+          <button id="bulkEditBtn" class="settings-fix-btn" style="min-width:100px;" disabled>Bearbeiten</button>
+          <button id="bulkCancelBtn" class="settings-fix-btn" style="min-width:100px;" style="color:var(--text-secondary);">Abbrechen</button>
+        </div>
       </div>
     </div>
     <div class="collection-grid" id="collectionGrid"></div>
@@ -2557,6 +2594,8 @@ let ownCollection = [];
 let ownCollectionTitle = localStorage.getItem(TITLE_STORAGE_KEY) || 'Vinyl-Sammlung';
 let collectionTitle = ownCollectionTitle;
 let collectionFilterQuery = '';
+let collectionFilterReleaseType = 'all';
+let showSelectedOnly = false;
 let filterDebounceTimer = null;
 
 const authOverlay = document.getElementById('authOverlay');
@@ -3095,6 +3134,9 @@ let activeFilter = 'all';
 let activeSort = 'newest';
 let activeSortDirection = 'desc';
 let activeView = 'grid';
+let selectModeActive = false;
+let selectedItemIds = new Set();
+
 
 function showModal({ message, buttons }) {
   return new Promise(resolve => {
@@ -3520,14 +3562,41 @@ function getHoverFilter(item) {
   return `drop-shadow(0 0 16px ${theme.accent}) saturate(1.08)`;
 }
 
+function normalizeConditionName(condition) {
+  const value = String(condition || '').trim();
+  const aliases = {
+    'Wie Neu': 'Wie neu',
+    'Wie neu': 'Wie neu',
+    'Sehr Gut': 'Sehr gut',
+    'Sehr gut': 'Sehr gut',
+    'Aktzeptabel': 'Akzeptabel',
+    'Akzeptabel': 'Akzeptabel',
+    'Schlecht': 'Schlecht',
+    'Fehlerhaft': 'Schlecht',
+    'Neu': 'Neu',
+    'Gut': 'Gut',
+    'Gebraucht': 'Gebraucht'
+  };
+  return aliases[value] || value || 'Sehr gut';
+}
+
 function getConditionOverlay(condition) {
-  switch (condition) {
+  const normalized = normalizeConditionName(condition);
+  switch (normalized) {
+    case 'Neu':
+      return 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 34%, rgba(255,255,255,0.06) 100%)';
+    case 'Wie neu':
+      return 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 42%, rgba(255,255,255,0.04) 100%)';
     case 'Gebraucht':
       return `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 35%, rgba(0,0,0,0.14) 100%), linear-gradient(90deg, transparent 0 70%, rgba(255,255,255,0.08) 70% 72%, transparent 72% 100%), linear-gradient(115deg, transparent 0 45%, rgba(255,255,255,0.07) 45% 48%, transparent 48% 100%), radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08) 0 1px, transparent 2px), radial-gradient(circle at 80% 40%, rgba(255,255,255,0.08) 0 1px, transparent 2px)`;
     case 'Gut':
       return `linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 35%, rgba(0,0,0,0.08) 100%), linear-gradient(90deg, transparent 0 68%, rgba(255,255,255,0.06) 68% 70%, transparent 70% 100%)`;
     case 'Sehr gut':
       return `linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 40%, rgba(0,0,0,0.04) 100%)`;
+    case 'Akzeptabel':
+      return 'linear-gradient(135deg, rgba(0,0,0,0.10) 0%, transparent 35%, rgba(0,0,0,0.18) 100%)';
+    case 'Schlecht':
+      return 'linear-gradient(135deg, rgba(0,0,0,0.18) 0%, transparent 30%, rgba(255,0,0,0.10) 100%)';
     default:
       return 'transparent';
   }
@@ -3780,15 +3849,30 @@ function getAlbumComparisonKey(item) {
   return `${(item.title || '').trim().toLowerCase()}___${(item.artist || '').trim().toLowerCase()}`;
 }
 
+function normalizeReleaseTypeValue(type) {
+  const value = String(type ?? '').trim();
+  if (!value) return 'Album';
+
+  const normalized = value.toLowerCase();
+  if (normalized === 'maxi single' || normalized === 'maxi-single' || normalized === 'maxi') return 'Maxi Single';
+  if (normalized === 'single' || normalized === '7"' || normalized === '7 inch' || normalized === '7-inch') return 'Single';
+  if (normalized === 'ep') return 'EP';
+  if (normalized === 'album' || normalized === 'lp' || normalized === '12"' || normalized === '12 inch' || normalized === '12-inch') return 'Album';
+
+  return value;
+}
+
 function getReleaseType(item) {
-  return item.releaseType || 'Album';
+  return normalizeReleaseTypeValue(item.releaseType || 'Album');
 }
 
 function inferReleaseTypeFromAlbum(album) {
   const raw = (album.collectionType || album.kind || album.type || '').toLowerCase();
   const title = (album.collectionName || album.title || '').toLowerCase();
+  const isMaxiSingleHint = raw.includes('maxi single') || raw.includes('maxi-single') || title.includes('maxi single') || title.includes('maxi-single') || title.includes('12" single') || title.includes('12 inch single');
   const isSingleHint = raw.includes('single') || title.includes('single') || title.includes('7"') || title.includes('single release');
   const isEphint = raw.includes('ep') || title.includes('ep');
+  if (isMaxiSingleHint) return 'Maxi Single';
   if (isSingleHint) return 'Single';
   if (isEphint) return 'EP';
 
@@ -3818,6 +3902,7 @@ function resolveReleaseType(album, tracklist) {
 function getReleaseBadge(item) {
   const type = getReleaseType(item);
   if (type === 'Single') return { label: '7"', className: 'single' };
+  if (type === 'Maxi Single') return { label: 'Maxi', className: 'maxi' };
   if (type === 'EP') return { label: 'EP', className: 'ep' };
   return { label: 'LP', className: 'album' };
 }
@@ -3826,6 +3911,9 @@ function getPlausibilityHint(item) {
   const type = getReleaseType(item);
   if (type === 'Single') {
     return 'Plausibilitätscheck: Singles werden als Einzel-Release behandelt; die Tracklist ist nur ein Hinweis und nicht vollständig.';
+  }
+  if (type === 'Maxi Single') {
+    return 'Plausibilitätscheck: Maxi-Singles werden als längere Single-Variante behandelt; die Tracklist ist nur ein grober Hinweis.';
   }
   if (type === 'EP') {
     return 'Plausibilitätscheck: EPs werden als kurze Release-Form behandelt; die Tracklist ist nur ein grober Hinweis.';
@@ -4639,7 +4727,7 @@ function openForm() {
   renderColorInputs(getInitialFormColors(currentDraft));
   document.getElementById('fPattern').value = currentDraft.pattern || 'Keine';
   document.getElementById('fTransparentVinyl').checked = !!currentDraft.transparent;
-  document.getElementById('fCondition').value = currentDraft.condition;
+  document.getElementById('fCondition').value = normalizeConditionName(currentDraft.condition);
   document.getElementById('fNotes').value = currentDraft.notes;
   document.getElementById('fOwned').checked = !!currentDraft.owned;
   document.getElementById('fManualPrice').value = currentDraft.discogsLowestPrice != null ? currentDraft.discogsLowestPrice : '';
@@ -5001,6 +5089,138 @@ function toggleOwned(id) {
   saveCollection();
 }
 
+function hexToHue(hex) {
+  if (!hex || hex[0] !== '#') return 0;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  let hue = 0;
+  if (delta !== 0) {
+    if (max === r) hue = 60 * (((g - b) / delta) % 6);
+    else if (max === g) hue = 60 * ((b - r) / delta + 2);
+    else hue = 60 * ((r - g) / delta + 4);
+  }
+  return hue < 0 ? hue + 360 : hue;
+}
+
+function getConditionOrder(condition) {
+  const normalized = normalizeConditionName(condition);
+  const order = { 'Neu': 0, 'Wie neu': 1, 'Sehr gut': 2, 'Gut': 3, 'Gebraucht': 4, 'Akzeptabel': 5, 'Schlecht': 6 };
+  return order[normalized] !== undefined ? order[normalized] : 99;
+}
+
+function toggleSelectMode() {
+  selectModeActive = !selectModeActive;
+  selectedItemIds.clear();
+  document.getElementById('selectModeBtn').classList.toggle('toggle-active', selectModeActive);
+  const bulkBar = document.getElementById('bulkEditBar');
+  bulkBar.style.display = selectModeActive ? 'flex' : 'none';
+  renderCollection();
+}
+
+function toggleItemSelection(id) {
+  if (!selectModeActive) return;
+  if (selectedItemIds.has(id)) {
+    selectedItemIds.delete(id);
+  } else {
+    selectedItemIds.add(id);
+  }
+  updateBulkUI();
+  renderCollection();
+}
+
+function updateBulkUI() {
+  const count = selectedItemIds.size;
+  document.getElementById('bulkSelectedCount').textContent = `${count} ausgewählt`;
+  document.getElementById('bulkEditBtn').disabled = count === 0;
+  document.getElementById('selectAllCheckbox').checked = false;
+  document.getElementById('selectAllCheckbox').indeterminate = count > 0 && count < collection.length;
+}
+
+function toggleSelectAll() {
+  const allCheckbox = document.getElementById('selectAllCheckbox');
+  // Nur die aktuelle gefilterte Liste auswählen
+  let currentList = collection.slice().reverse();
+  if (activeFilter === 'owned') currentList = currentList.filter(c => c.owned);
+  if (activeFilter === 'wishlist') currentList = currentList.filter(c => !c.owned);
+  if (collectionFilterQuery && collectionFilterQuery.length > 0) {
+    currentList = currentList.filter(item => matchesCollectionQuery(item, collectionFilterQuery));
+  }
+  if (collectionFilterReleaseType !== 'all') {
+    currentList = currentList.filter(item => getReleaseType(item).toLowerCase() === collectionFilterReleaseType.toLowerCase());
+  }
+  if (showSelectedOnly) {
+    currentList = currentList.filter(item => selectedItemIds.has(item.id));
+  }
+  
+  if (selectedItemIds.size === currentList.length && currentList.length > 0) {
+    // Alle bereits ausgewählt, deselektieren
+    currentList.forEach(item => selectedItemIds.delete(item.id));
+  } else {
+    // Alle der aktuellen Liste hinzufügen
+    currentList.forEach(item => selectedItemIds.add(item.id));
+  }
+  updateBulkUI();
+  renderCollection();
+}
+
+function openBulkEditDialog() {
+  if (selectedItemIds.size === 0) return;
+  const bulkEditModal = document.getElementById('bulkEditModal');
+  if (!bulkEditModal) {
+    showAlert('Bulk-Edit Modal nicht gefunden');
+    return;
+  }
+  bulkEditModal.style.display = 'block';
+  document.getElementById('bulkEditModalOverlay').style.display = 'block';
+}
+
+function closeBulkEditDialog() {
+  const bulkEditModal = document.getElementById('bulkEditModal');
+  if (bulkEditModal) bulkEditModal.style.display = 'none';
+  const overlay = document.getElementById('bulkEditModalOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function saveBulkChanges() {
+  if (selectedItemIds.size === 0) return;
+  if (!viewingOwnCollection) {
+    showAlert('Diese Sammlung kann nicht bearbeitet werden.');
+    return;
+  }
+
+  const condition = document.getElementById('bulkCondition').value;
+  const ownedValue = document.getElementById('bulkOwned').value;
+  const genre = document.getElementById('bulkGenre').value;
+  const notes = document.getElementById('bulkNotes').value;
+  const manualPrice = document.getElementById('bulkManualPrice').value;
+
+  selectedItemIds.forEach(id => {
+    const item = collection.find(c => c.id === id);
+    if (!item) return;
+
+    if (condition !== 'default') item.condition = condition;
+    if (ownedValue === 'true') item.owned = true;
+    if (ownedValue === 'false') item.owned = false;
+    if (genre !== 'default' && genre !== '') item.genre = genre;
+    if (notes !== 'default' && notes !== '') item.notes = notes;
+    if (manualPrice !== '') item.discogsLowestPrice = parseFloat(manualPrice);
+  });
+
+  const count = selectedItemIds.size;
+  saveCollection();
+  closeBulkEditDialog();
+  selectedItemIds.clear();
+  selectModeActive = false;
+  document.getElementById('selectModeBtn').classList.remove('toggle-active');
+  document.getElementById('bulkEditBar').style.display = 'none';
+  renderCollection();
+  showAlert(`${count} Einträge aktualisiert.`);
+}
+
 function setFilter(filter) {
   activeFilter = filter;
   ['filterAll', 'filterOwned', 'filterWishlist'].forEach(fid => {
@@ -5031,7 +5251,7 @@ function setSortDirection(direction) {
 function updateSortButtons() {
   const dirBtn = document.getElementById('sortDirBtn');
   if (!dirBtn) return;
-  const useDirectionalSorting = ['title', 'artist', 'year', 'genre', 'releaseType', 'price', 'status'].includes(activeSort);
+  const useDirectionalSorting = ['title', 'artist', 'year', 'genre', 'releaseType', 'price', 'status', 'condition', 'color'].includes(activeSort);
   dirBtn.textContent = activeSortDirection === 'asc' ? '↑' : '↓';
   dirBtn.title = activeSortDirection === 'asc' ? 'Aufsteigend (klicken für absteigend)' : 'Absteigend (klicken für aufsteigend)';
   dirBtn.classList.toggle('active', useDirectionalSorting);
@@ -5045,6 +5265,52 @@ document.getElementById('sortSelect').addEventListener('change', e => setSort(e.
 document.getElementById('sortDirBtn').addEventListener('click', () => setSortDirection(activeSortDirection === 'asc' ? 'desc' : 'asc'));
 document.getElementById('viewGridBtn').addEventListener('click', () => setView('grid'));
 document.getElementById('viewTableBtn').addEventListener('click', () => setView('table'));
+const selectModeBtn = document.getElementById('selectModeBtn');
+if (selectModeBtn) {
+  selectModeBtn.style.display = viewingOwnCollection ? 'flex' : 'none';
+  selectModeBtn.addEventListener('click', toggleSelectMode);
+}
+const bulkEditBtn = document.getElementById('bulkEditBtn');
+if (bulkEditBtn) {
+  bulkEditBtn.addEventListener('click', openBulkEditDialog);
+}
+const bulkCancelBtn = document.getElementById('bulkCancelBtn');
+if (bulkCancelBtn) {
+  bulkCancelBtn.addEventListener('click', () => {
+    selectModeActive = false;
+    selectedItemIds.clear();
+    document.getElementById('selectModeBtn').classList.remove('toggle-active');
+    document.getElementById('bulkEditBar').style.display = 'none';
+    renderCollection();
+  });
+}
+const collectionFilterReleaseTypeSelect = document.getElementById('collectionFilterReleaseType');
+if (collectionFilterReleaseTypeSelect) {
+  collectionFilterReleaseTypeSelect.addEventListener('change', (e) => {
+    collectionFilterReleaseType = e.target.value;
+    renderCollection();
+  });
+}
+const showSelectedToggle = document.getElementById('showSelectedToggle');
+if (showSelectedToggle) {
+  showSelectedToggle.addEventListener('click', () => {
+    showSelectedOnly = !showSelectedOnly;
+    showSelectedToggle.classList.toggle('toggle-active', showSelectedOnly);
+    renderCollection();
+  });
+}
+const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+if (clearSelectionBtn) {
+  clearSelectionBtn.addEventListener('click', () => {
+    selectedItemIds.clear();
+    updateBulkUI();
+    renderCollection();
+  });
+}
+const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+if (selectAllCheckbox) {
+  selectAllCheckbox.addEventListener('change', toggleSelectAll);
+}
 // Title editing removed from header; collection title is displayed but not editable here.
 
 function setView(view) {
@@ -5081,7 +5347,13 @@ function renderCollection() {
   const stat7Inch = ownedCollection.filter(item => {
     const type = (item.releaseType || '').toLowerCase();
     const title = (item.title || '').toLowerCase();
-    return type === 'single' || title.includes('7"') || title.includes('7 inch') || title.includes('single');
+    return type === 'single' || title.includes('7"') || title.includes('7 inch') || (title.includes('single') && !title.includes('maxi single') && !title.includes('12" single') && !title.includes('12 inch single'));
+  }).length;
+
+  const statMaxiSingle = ownedCollection.filter(item => {
+    const type = normalizeReleaseTypeValue(item.releaseType || '').toLowerCase();
+    const title = (item.title || '').toLowerCase();
+    return type === 'maxi single' || title.includes('maxi single') || title.includes('maxi-single') || title.includes('12" single') || title.includes('12 inch single');
   }).length;
 
   const statEp = ownedCollection.filter(item => (item.releaseType || '').toLowerCase() === 'ep').length;
@@ -5132,6 +5404,7 @@ function renderCollection() {
 
   document.getElementById('stat12Inch')?.replaceChildren(document.createTextNode(stat12Inch));
   document.getElementById('stat7Inch')?.replaceChildren(document.createTextNode(stat7Inch));
+  document.getElementById('statMaxiSingle')?.replaceChildren(document.createTextNode(statMaxiSingle));
   document.getElementById('statEp')?.replaceChildren(document.createTextNode(statEp));
   document.getElementById('discogsPriceSum')?.replaceChildren(document.createTextNode(discogsPriceLabel));
   document.getElementById('statOwnedValue')?.replaceChildren(document.createTextNode(discogsPriceLabel));
@@ -5154,6 +5427,16 @@ function renderCollection() {
       .map(item => ({ item, score: getCollectionQueryScore(item, collectionFilterQuery) }))
       .sort((a, b) => b.score - a.score)
       .map(entry => entry.item);
+  }
+
+  // Nach Release-Type filtern
+  if (collectionFilterReleaseType !== 'all') {
+    list = list.filter(item => getReleaseType(item).toLowerCase() === collectionFilterReleaseType.toLowerCase());
+  }
+
+  // Nur ausgewählte anzeigen
+  if (showSelectedOnly) {
+    list = list.filter(item => selectedItemIds.has(item.id));
   }
 
   // Bestimme aktive Sortierung (Grid benutzt globale, Table benutzt tableSettings)
@@ -5189,7 +5472,7 @@ function renderCollection() {
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       }
       case 'releaseType': {
-        const typeOrder = { 'Album': 1, 'EP': 2, 'Single': 3 };
+        const typeOrder = { 'Album': 1, 'EP': 2, 'Single': 3, 'Maxi Single': 4 };
         const tA = typeOrder[getReleaseType(a)] || 99;
         const tB = typeOrder[getReleaseType(b)] || 99;
         if (tA !== tB) return directionMultiplier * (tA - tB);
@@ -5209,8 +5492,20 @@ function renderCollection() {
         if (sa !== sb) return directionMultiplier * (sa - sb);
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       }
-      default:
-        return 0;
+      case 'condition': {
+        const ca = getConditionOrder(a.condition || 'Sehr gut');
+        const cb = getConditionOrder(b.condition || 'Sehr gut');
+        if (ca !== cb) return directionMultiplier * (ca - cb);
+        return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
+      }
+      case 'color': {
+        const colorA = normalizeColor(a.color) || '#000000';
+        const colorB = normalizeColor(b.color) || '#000000';
+        const hueA = hexToHue(colorA);
+        const hueB = hexToHue(colorB);
+        if (hueA !== hueB) return directionMultiplier * (hueA - hueB);
+        return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
+      }
     }
   });
 
@@ -5300,6 +5595,7 @@ function renderCollection() {
 
       card.innerHTML = `
         <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"></div>
+        ${selectModeActive ? `<div class="collection-card-checkbox" style="position:absolute;top:10px;left:10px;z-index:4;"><input type="checkbox" data-item-id="${item.id}" style="cursor:pointer; width:18px; height:18px;" ${selectedItemIds.has(item.id) ? 'checked' : ''}></div>` : ''}
         <div class="media">
           <img src="${item.coverUrl || ''}" alt="" loading="lazy" decoding="async">
           ${item.year ? `<div class="year-badge">${escapeHtml(item.year)}</div>` : ''}
@@ -5327,6 +5623,13 @@ ${actionButtons}
         card.querySelector('.edit').addEventListener('click', e => { e.stopPropagation(); editEntry(item.id); });
         card.querySelector('.del').addEventListener('click', e => { e.stopPropagation(); deleteEntry(item.id); });
         card.querySelector('.media').addEventListener('click', () => editEntry(item.id));
+        const checkbox = card.querySelector('input[data-item-id]');
+        if (checkbox) {
+          checkbox.addEventListener('change', e => {
+            e.stopPropagation();
+            toggleItemSelection(item.id);
+          });
+        }
       } else {
         const addBtn = card.querySelector('.add-to-own');
         if (addBtn) {
@@ -5887,5 +6190,55 @@ window.addEventListener('unhandledrejection', (ev) => {
   alert('Unhandled promise rejection: ' + msg);
 });
 </script>
+<div id="bulkEditModalOverlay" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000;"></div>
+<div id="bulkEditModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--surface-2); border:0.5px solid var(--border-strong); border-radius:var(--radius); padding:24px; max-width:500px; width:90%; max-height:80vh; overflow-y:auto; z-index:1001; box-shadow:var(--shadow);">
+  <h3 style="margin:0 0 20px; color:var(--text-primary);">Massenbearbeitung</h3>
+  
+  <div style="margin-bottom:16px;">
+    <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase;">Zustand</label>
+    <select id="bulkCondition" style="width:100%; padding:8px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary);">
+      <option value="default">Nicht ändern</option>
+      <option value="Neu">Neu</option>
+      <option value="Wie neu">Wie neu</option>
+      <option value="Sehr gut">Sehr gut</option>
+      <option value="Gut">Gut</option>
+      <option value="Gebraucht">Gebraucht</option>
+      <option value="Akzeptabel">Akzeptabel</option>
+      <option value="Schlecht">Schlecht</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase;">Im Besitz</label>
+    <select id="bulkOwned" style="width:100%; padding:8px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary);">
+      <option value="default">Unverändert</option>
+      <option value="true">Ja</option>
+      <option value="false">Nein</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase;">Genre</label>
+    <input type="text" id="bulkGenre" placeholder="z.B. Rock, Electronic..." style="width:100%; padding:8px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary);">
+    <div style="margin-top:4px; font-size:11px; color:var(--text-secondary);">Leer lassen = unverändert</div>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase;">Notizen</label>
+    <textarea id="bulkNotes" placeholder="Notizen hinzufügen..." style="width:100%; padding:8px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary); min-height:80px; resize:vertical;"></textarea>
+    <div style="margin-top:4px; font-size:11px; color:var(--text-secondary);">Leer lassen = unverändert</div>
+  </div>
+
+
+  <div style="margin-bottom:24px;">
+    <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase;">Manueller Preis</label>
+    <input type="number" id="bulkManualPrice" placeholder="z.B. 25.00" step="0.01" min="0" style="width:100%; padding:8px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary);">
+  </div>
+
+  <div style="display:flex; gap:12px; justify-content:flex-end;">
+    <button onclick="closeBulkEditDialog()" style="padding:8px 16px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary); cursor:pointer;">Abbrechen</button>
+    <button onclick="saveBulkChanges()" style="padding:8px 16px; border:0.5px solid var(--accent); border-radius:6px; background:var(--accent-bg); color:var(--accent); font-weight:600; cursor:pointer;">Speichern</button>
+  </div>
+</div>
 </body>
 </html>
