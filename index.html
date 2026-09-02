@@ -2565,6 +2565,15 @@
         <div style="flex:1; min-width:200px; display:flex; align-items:center; gap:8px; position:relative;">
           <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Jahr, Genre..." style="flex:1; min-width:0;" />
           <button type="button" id="collectionFilterHelpBtn" class="icon-btn tooltip-btn" title="Suchhilfe anzeigen" aria-label="Suchhilfe anzeigen" data-tooltip="Filter: title:, artist:, genre:, year:, notes:, releaseType:">?</button>
+          <div id="collectionFilterHelpPanel" class="filter-help-panel" aria-live="polite">
+            <strong>Verfügbare Filter</strong><br>
+            <code>title:</code> Titel, <code>artist:</code> Interpret, <code>genre:</code> Genre,<br>
+            <code>year:</code> Jahr, <code>notes:</code> Notizen, <code>releaseType:</code> Album / EP / 7&quot;<br>
+            <strong>Beispiele:</strong><br>
+            <code>artist:Michael Jackson</code><br>
+            <code>genre:Rock year:1990</code><br>
+            <code>title:&quot;Thriller&quot;</code>
+          </div>
         </div>
         <select id="collectionFilterReleaseType" style="padding:8px 12px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary); cursor:pointer;">
           <option value="all">Alle</option>
@@ -2573,15 +2582,6 @@
           <option value="maxi single">MAXI</option>
           <option value="ep">EP</option>
         </select>
-      </div>
-      <div id="collectionFilterHelpPanel" class="filter-help-panel" aria-live="polite">
-        <strong>Verfügbare Filter</strong><br>
-        <code>title:</code> Titel, <code>artist:</code> Interpret, <code>genre:</code> Genre,<br>
-        <code>year:</code> Jahr, <code>notes:</code> Notizen, <code>releaseType:</code> Album / EP / 7"<br>
-        <strong>Beispiele:</strong><br>
-        <code>artist:Michael Jackson</code><br>
-        <code>genre:Rock year:1990</code><br>
-        <code>title:"Thriller"</code>
       </div>
       <div id="bulkEditBar" class="bulk-edit-bar" style="display:none; background:var(--surface-1); border-top:0.5px solid var(--border); padding:12px 24px; margin-top:12px; border-radius:10px; gap:12px; flex-wrap:wrap;">
         <div style="flex:1; display:flex; align-items:center; gap:8px;">
