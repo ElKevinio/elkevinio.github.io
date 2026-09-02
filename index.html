@@ -151,8 +151,11 @@
 
   /* Keep header actions in the normal flow on very small screens. */
   @media (max-width: 480px) {
-    header .collection-title { z-index: 1; }
-    header .header-actions { z-index: 3; margin-top: 0; }
+    header .collection-title {
+      z-index: 0;
+      font-size: 13px;
+    }
+    header .header-actions { z-index: 50; margin-top: 0; }
   }
   header .header-stats .stat-priority-1 { order: 1; }
   header .header-stats .stat-priority-2 { order: 2; }
@@ -1988,6 +1991,9 @@
       overflow: hidden;
       position: relative;
       z-index: 0;
+      flex-basis: calc(100% - 210px);
+      width: calc(100% - 210px);
+      max-width: calc(100% - 210px);
     }
     header .header-stats {
       position: absolute;
@@ -2002,6 +2008,7 @@
       overflow-x: auto;
       overflow-y: hidden;
       margin-top: 0;
+      z-index: 50;
     }
     header .header-stats .stat-detail { display: none; }
     header .header-stats .stat-compact { display: inline-flex; }
@@ -2068,6 +2075,21 @@
       width: 30px;
       height: 30px;
       padding: 6px 4px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    header .title-input {
+      flex-basis: calc(100% - 210px);
+      width: calc(100% - 210px);
+      max-width: calc(100% - 210px);
+    }
+    header .header-stats .stat-compact {
+      background: var(--bar);
+    }
+    header .header-stats,
+    header .header-actions {
+      z-index: 50;
     }
   }
 
