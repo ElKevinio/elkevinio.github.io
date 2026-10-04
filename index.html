@@ -975,6 +975,7 @@
   .storage-unsorted, .storage-shelf {
     min-width: 220px;
     border: 0.5px solid var(--border-strong);
+    border-radius: 8px;
     background: var(--surface-1);
     padding: 12px;
   }
@@ -997,6 +998,7 @@
     min-width: 380px;
     min-height: 390px;
   }
+  .storage-shelf.display-mode { min-width:0; min-height:0; }
   .storage-shelf-header {
     display: flex;
     flex-direction: column;
@@ -1004,9 +1006,20 @@
     gap: 8px;
     margin-bottom: 10px;
   }
+  .storage-shelf-header, .storage-compartment-header {
+    position:relative;
+    top:auto;
+    z-index:auto;
+    flex-wrap:nowrap;
+    padding:0;
+    background:transparent;
+    border:0;
+    box-shadow:none;
+  }
   .storage-shelf-topline { display:flex; align-items:center; gap:6px; min-width:0; }
   .storage-shelf-dimensions { display:none; align-items:center; gap:10px; }
   .storage-shelf.settings-open .storage-shelf-dimensions { display:flex; }
+  .storage-shelf-dimensions select { width:auto; min-width:10px; padding:5px 7px; }
   .storage-shelf-settings { width:30px !important; min-width:30px !important; padding:0 !important; }
   .storage-shelf-header h3, .storage-shelf-name { flex: 1 1 auto; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .storage-shelf-name { width:100%; padding:0; border:0; background:transparent; color:var(--text-primary); font-size:14px; font-weight:600; }
@@ -1030,9 +1043,10 @@
     display:flex;
     flex-direction:column;
     min-width:0;
-    min-height:112px;
-    padding: 7px;
+    min-height:0px;
+    padding: 0px;
     border: 0.5px solid var(--border-strong);
+    border-radius: 8px;
     background: var(--surface-2);
     overflow:hidden;
     transition: background 0.15s, border-color 0.15s;
@@ -1051,23 +1065,40 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 6px;
-    margin-bottom: 6px;
+    gap: 4px;
+    height: 22px;
+    min-height: 22px;
+    margin-bottom: 4px;
     color: var(--text-secondary);
     font-size: 11px;
   }
+  .storage-count {
+    flex:0 0 auto;
+    padding:1px 6px;
+    border:0.5px solid var(--border-strong);
+    border-radius:999px;
+    color:var(--text-secondary);
+    font-size:10px;
+    line-height:1.5;
+    white-space:nowrap;
+  }
+  .storage-shelf-count { margin-left:4px; }
   .storage-compartment-name {
     flex:1;
     min-width:0;
-    padding:3px 5px;
+    position:relative;
+    top:-2px;
+    height:20px;
+    min-height:20px;
+    padding:0 4px;
     border:0;
     background:transparent;
     color:var(--text-secondary);
-    font-size:11px;
-    line-height:1.2;
+    font-size:10px;
+    line-height:normal;
   }
   .storage-compartment-name:focus { color:var(--text-primary); }
-  .storage-compartment-header button { width: 24px; min-width: 24px; height: 24px; }
+  .storage-compartment-header button { width: 20px; min-width: 20px; height: 20px; min-height:20px; padding:0; }
   .storage-records { display:flex; flex:1; flex-direction:column; gap:0; min-height:28px; overflow:auto; }
   .storage-record {
     display:grid;
@@ -1087,6 +1118,97 @@
     box-shadow:inset 0 0 0 1px var(--accent-border);
   }
   .storage-record img { width:24px; height:24px; object-fit:cover; border-radius:3px; background:var(--surface-3); cursor:grab; touch-action:none; }
+  .storage-shelf.display-mode .storage-compartment {
+    position:relative;
+    width:128px;
+    height:max-content;
+    min-width:0;
+    min-height:0;
+    padding:0;
+    align-self:start;
+  }
+  .storage-shelf.display-mode .storage-compartments {
+    grid-template-columns:repeat(var(--shelf-columns, 1), 128px);
+    grid-template-rows:repeat(var(--shelf-rows, 1), max-content);
+    height:max-content;
+    min-height:0;
+    flex:0 0 auto;
+    overflow:visible;
+    align-content:start;
+    justify-content:start;
+    align-items:start;
+  }
+  .storage-shelf.display-mode .storage-compartment-header .storage-count { display:none; }
+  .storage-shelf.display-mode .storage-compartment-header {
+    position:absolute;
+    z-index:2;
+    top:0;
+    left:50%;
+    width:calc(100% - 14px);
+    height:20px;
+    min-height:20px;
+    margin:0;
+    transform:translateX(-50%);
+    justify-content:center;
+    align-items:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.12s ease;
+  }
+  .storage-shelf.display-mode .storage-compartment:hover .storage-compartment-header,
+  .storage-shelf.display-mode .storage-compartment:focus-within .storage-compartment-header {
+    opacity:1;
+    pointer-events:auto;
+  }
+  .storage-shelf.display-mode .storage-compartment-name {
+    display:block;
+    box-sizing:border-box;
+    height:18px;
+    min-height:0px;
+    margin:0;
+    padding:0;
+    line-height:normal;
+    appearance:none;
+    align-self:center;
+    text-align:center;
+  }
+  .storage-shelf.display-mode .storage-compartment-header button { position:absolute; right:0; width:18px; min-width:18px; height:18px; min-height:18px; }
+  .storage-shelf.display-mode div.storage-records {
+    flex:0 0 auto;
+    width:100%;
+    min-height:0;
+    height:max-content;
+    justify-content:center;
+    align-items:center;
+    overflow:visible;
+    padding:0 !important;
+  }
+  .storage-shelf.display-mode .storage-record {
+    display:flex;
+    flex:0 0 auto;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+    width:100%;
+    height:max-content;
+    margin:0;
+    padding:0 !important;
+    border:0;
+  }
+  .storage-shelf.display-mode .storage-record img { width:min(100%, 112px); height:auto; max-height:112px; aspect-ratio:1; border-radius:6px; }
+  .storage-shelf.display-mode .storage-record-copy { flex-direction:column; align-items:center; gap:1px; width:100%; overflow:visible; white-space:normal; text-align:center; }
+  .storage-shelf.display-mode .storage-record-copy span::before { content:none; }
+  .storage-shelf.display-mode .storage-record strong,
+  .storage-shelf.display-mode .storage-record span {
+    flex:0 1 auto;
+    overflow:visible;
+    text-overflow:clip;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:normal;
+    line-height:1.25;
+  }
+  .storage-record-copy span::before { content:'· '; }
   .storage-page [data-storage-item] { cursor:grab; touch-action:pan-y; }
   .storage-page [data-storage-item]:active { cursor:grabbing; }
   .storage-pointer-source { opacity:0.45; }
@@ -1242,6 +1364,10 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+  }
+  .storage-page .storage-shelf.display-mode {
+    height:max-content;
+    align-self:flex-start;
   }
   .storage-page .storage-compartments {
     min-height: 0;
@@ -4019,6 +4145,7 @@ function normalizeShelfLocations(shelves) {
     return {
       id: String(shelf.id),
       name: String(shelf.name),
+      mode: shelf.mode === 'display' ? 'display' : 'shelf',
       rows,
       columns,
       removedCompartments,
@@ -4036,6 +4163,50 @@ function isValidShelfCompartment(shelf, compartmentNumber) {
   const number = Number(compartmentNumber);
   return Number.isInteger(number) && number >= 1 && number <= getShelfCapacity(shelf)
     && !(shelf.removedCompartments || []).includes(number);
+}
+
+async function setShelfMode(shelf, mode, select) {
+  if (mode === 'display') {
+    const occupiedCompartments = new Map();
+    collection.filter(item => item.owned && item.shelfId === shelf.id
+      && isValidShelfCompartment(shelf, item.shelfCompartment)).forEach(item => {
+      const number = Number(item.shelfCompartment);
+      const items = occupiedCompartments.get(number) || [];
+      items.push(item);
+      occupiedCompartments.set(number, items);
+    });
+    const extras = [...occupiedCompartments.values()].flatMap(items => items.slice(1));
+    if (extras.length) {
+      const confirmed = await showConfirm(`In ${occupiedCompartments.size} Fach/Fächern liegen mehrere Vinyls. Beim Wechsel zum Display bleiben je Fach nur das erste Album, ${extras.length} weitere werden unsortiert. Fortfahren?`, { confirmLabel: 'Display aktivieren', danger: true });
+      if (!confirmed) {
+        select.value = shelf.mode || 'shelf';
+        return;
+      }
+      extras.forEach(item => {
+        delete item.shelfId;
+        delete item.shelfCompartment;
+      });
+    }
+  }
+  shelf.mode = mode;
+  saveShelfLayout();
+  renderCollection();
+}
+
+function assignItemToStorageLocation(item, shelfId, compartmentNumber) {
+  const shelf = shelfLocations.find(entry => entry.id === shelfId);
+  if (shelf?.mode === 'display' && isValidShelfCompartment(shelf, compartmentNumber)) {
+    collection.forEach(existingItem => {
+      if (existingItem.owned && String(existingItem.id) !== String(item.id)
+        && existingItem.shelfId === shelfId
+        && Number(existingItem.shelfCompartment) === Number(compartmentNumber)) {
+        delete existingItem.shelfId;
+        delete existingItem.shelfCompartment;
+      }
+    });
+  }
+  item.shelfId = shelfId;
+  item.shelfCompartment = compartmentNumber;
 }
 
 function getStorageLabel(item) {
@@ -4202,7 +4373,7 @@ document.getElementById('addShelfBtn').addEventListener('click', () => {
     showAlert('Bitte Regalname und Reihen-/Spaltenmaße zwischen 1 und 10 angeben.');
     return;
   }
-  shelfLocations.push({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name, rows, columns, removedCompartments: [], compartmentNames: {}, compartments: rows * columns });
+  shelfLocations.push({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name, mode: 'shelf', rows, columns, removedCompartments: [], compartmentNames: {}, compartments: rows * columns });
   nameInput.value = '';
   saveCloudDataNow();
   renderShelfLocationsManager();
@@ -6325,6 +6496,9 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   if (currentDraft.owned) {
     currentDraft.shelfId = document.getElementById('fShelf').value || '';
     currentDraft.shelfCompartment = document.getElementById('fCompartment').value || '';
+    if (currentDraft.shelfId && currentDraft.shelfCompartment) {
+      assignItemToStorageLocation(currentDraft, currentDraft.shelfId, currentDraft.shelfCompartment);
+    }
     currentDraft.lastWashed = document.getElementById('fLastWashed').value || '';
   } else {
     delete currentDraft.shelfId;
@@ -6552,9 +6726,11 @@ function saveBulkChanges() {
         delete item.shelfId;
         delete item.shelfCompartment;
       } else if (shelfValue !== 'default') {
-        item.shelfId = shelfValue;
-        if (compartmentValue) item.shelfCompartment = compartmentValue;
-        else if (Number(item.shelfCompartment) > Number(shelfLocations.find(shelf => shelf.id === shelfValue)?.compartments || 0)) delete item.shelfCompartment;
+        if (compartmentValue) assignItemToStorageLocation(item, shelfValue, compartmentValue);
+        else {
+          item.shelfId = shelfValue;
+          delete item.shelfCompartment;
+        }
       }
       if (washedMode === 'set') item.lastWashed = washedDate;
       if (washedMode === 'clear') delete item.lastWashed;
@@ -6752,7 +6928,7 @@ function createStoredVinylTile(item) {
   tile.className = 'storage-record';
   tile.dataset.storageItem = item.id;
   tile.title = `${item.title || ''} · ${item.artist || ''}`;
-  tile.innerHTML = `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>· ${escapeHtml(item.artist || '')}</span></div>`;
+  tile.innerHTML = `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(item.artist || '')}</span></div>`;
   bindStorageItemPointerDrag(tile, item);
   tile.addEventListener('dblclick', () => editEntry(item.id));
   return tile;
@@ -6917,8 +7093,7 @@ document.addEventListener('pointerup', event => {
         delete drag.item.shelfId;
         delete drag.item.shelfCompartment;
       } else {
-        drag.item.shelfId = target.dataset.dropShelf;
-        drag.item.shelfCompartment = target.dataset.dropCompartment;
+        assignItemToStorageLocation(drag.item, target.dataset.dropShelf, target.dataset.dropCompartment);
       }
       suppressStorageClickUntil = Date.now() + 500;
       saveShelfLayout();
@@ -6944,6 +7119,7 @@ function addStorageShelf() {
   const shelf = {
     id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     name: `Regal ${shelfLocations.length + 1}`,
+    mode: 'shelf',
     rows: 1,
     columns: 1,
     removedCompartments: [],
@@ -7010,29 +7186,36 @@ function renderStorageBoard(visibleItems) {
     : allUnsorted;
   const sections = shelfLocations.map(shelf => {
     const capacity = getShelfCapacity(shelf);
-    const shelfWidth = Math.max(420, shelf.columns * 210 + 36);
+    const shelfWidth = shelf.mode === 'display'
+      ? shelf.columns * 128 + Math.max(0, shelf.columns - 1) * 8 + 25
+      : Math.max(420, shelf.columns * 210 + 36);
+    const shelfItems = collection.filter(item => item.owned && item.shelfId === shelf.id
+      && isValidShelfCompartment(shelf, item.shelfCompartment));
     const compartmentMarkup = Array.from({ length: capacity }, (_, index) => {
       const number = index + 1;
       if (!isValidShelfCompartment(shelf, number)) return '';
       const rowNumber = Math.floor(index / shelf.columns) + 1;
       const columnNumber = (index % shelf.columns) + 1;
+      const compartmentCount = shelfItems.filter(item => Number(item.shelfCompartment) === number).length;
       const hasSearchMatch = !!collectionFilterQuery && ownedItems.some(item => item.shelfId === shelf.id
         && Number(item.shelfCompartment) === number && matchesCollectionQuery(item, collectionFilterQuery));
       return `<section class="storage-compartment${hasSearchMatch ? ' search-match' : ''}" style="grid-row:${rowNumber};grid-column:${columnNumber};" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}">
-        <header class="storage-compartment-header"><input type="text" class="storage-compartment-name" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" value="${escapeHtml(shelf.compartmentNames?.[number] || '')}" placeholder="Fach ${number}" aria-label="Name für Fach ${number}"><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
+        <header class="storage-compartment-header"><input type="text" class="storage-compartment-name" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" value="${escapeHtml(shelf.compartmentNames?.[number] || '')}" placeholder="Fach ${number}" aria-label="Name für Fach ${number}"><span class="storage-count" title="${compartmentCount} Album${compartmentCount === 1 ? '' : 'e'}">${compartmentCount}</span><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
         <div class="storage-records" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}"></div>
       </section>`;
     }).join('');
-    return `<section class="storage-shelf${expandedStorageShelfIds.has(shelf.id) ? ' settings-open' : ''}" data-shelf-id="${escapeHtml(shelf.id)}" style="--shelf-rows:${shelf.rows};--shelf-columns:${shelf.columns};--shelf-width:${shelfWidth}px;">
+    return `<section class="storage-shelf${shelf.mode === 'display' ? ' display-mode' : ''}${expandedStorageShelfIds.has(shelf.id) ? ' settings-open' : ''}" data-shelf-id="${escapeHtml(shelf.id)}" style="--shelf-rows:${shelf.rows};--shelf-columns:${shelf.columns};--shelf-width:${shelfWidth}px;">
       <header class="storage-shelf-header">
         <div class="storage-shelf-topline">
           <input type="text" class="storage-shelf-name" data-shelf-id="${escapeHtml(shelf.id)}" value="${escapeHtml(shelf.name)}" aria-label="Regalname ${escapeHtml(shelf.name)}">
+          <span class="storage-count storage-shelf-count" title="${shelfItems.length} Album${shelfItems.length === 1 ? '' : 'e'} im Regal">${shelfItems.length}</span>
           <button type="button" class="storage-shelf-settings" aria-expanded="${expandedStorageShelfIds.has(shelf.id)}" title="Maßeinstellungen öffnen" aria-label="Maßeinstellungen öffnen">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51-1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <button type="button" class="remove-shelf" title="Regal löschen" aria-label="Regal ${escapeHtml(shelf.name)} löschen">×</button>
         </div>
         <div class="storage-shelf-dimensions">
+          <label class="storage-dimension-control">Ansicht <select class="storage-shelf-mode" aria-label="Regalansicht ${escapeHtml(shelf.name)}"><option value="shelf"${shelf.mode === 'display' ? '' : ' selected'}>Regal</option><option value="display"${shelf.mode === 'display' ? ' selected' : ''}>Display</option></select></label>
           <label class="storage-dimension-control">Reihen <input type="number" class="storage-shelf-rows" min="1" max="10" value="${shelf.rows}" aria-label="Reihen ${escapeHtml(shelf.name)}"></label>
           <label class="storage-dimension-control">Spalten <input type="number" class="storage-shelf-columns" min="1" max="10" value="${shelf.columns}" aria-label="Spalten ${escapeHtml(shelf.name)}"></label>
         </div>
@@ -7094,6 +7277,9 @@ function renderStorageBoard(visibleItems) {
       settingsButton.setAttribute('aria-label', settingsButton.title);
       if (isOpen) expandedStorageShelfIds.add(shelf.id);
       else expandedStorageShelfIds.delete(shelf.id);
+    });
+    shelfElement.querySelector('.storage-shelf-mode').addEventListener('change', event => {
+      setShelfMode(shelf, event.target.value, event.target);
     });
     const nameInput = shelfElement.querySelector('.storage-shelf-name');
     nameInput.addEventListener('change', () => {
