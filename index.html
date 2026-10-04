@@ -528,10 +528,24 @@
   button.toggle-active { background: var(--accent-bg); border-color: var(--accent-border); color: var(--accent); }
 
   .toprow { display: flex; gap: 8px; flex-wrap: wrap; }
-  .toprow input[type="text"] { flex: 1; min-width: 220px; }
+  .toprow input[type="text"], .toprow textarea { flex: 1; min-width: 220px; }
+  .toprow textarea {
+    min-height: 36px;
+    max-height: 120px;
+    resize: vertical;
+    line-height: 1.4;
+  }
+  .toprow .icon-btn { width: 36px; height: 36px; padding: 0; flex: 0 0 36px; }
   .manual-btn {
     font-size: 12px;
     padding: 6px 10px;
+  }
+  .existing-match-badge {
+    display: inline-block;
+    margin-top: 4px;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
   }
 
   .search-grid {
@@ -951,12 +965,294 @@
     display: inline-flex; align-items: center; justify-content: center;
     border-radius: 999px;
   }
-  .collection-table-wrap {
+  .storage-board {
     display: none;
-    overflow-x: auto;
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 3fr);
+    gap: 12px;
+    min-height: 420px;
+    overflow: auto;
+  }
+  .storage-unsorted, .storage-shelf {
+    min-width: 220px;
+    border: 0.5px solid var(--border-strong);
+    background: var(--surface-1);
+    padding: 12px;
+  }
+  .storage-unsorted { min-height: 420px; }
+  .storage-unsorted h3, .storage-shelf h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .storage-shelves {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: max-content;
+    min-height: 420px;
+  }
+  .storage-shelf {
+    width: var(--shelf-width, 420px);
+    flex: 0 0 var(--shelf-width, 420px);
+    min-width: 380px;
+    min-height: 390px;
+  }
+  .storage-shelf-header {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .storage-shelf-topline { display:flex; align-items:center; gap:6px; min-width:0; }
+  .storage-shelf-dimensions { display:none; align-items:center; gap:10px; }
+  .storage-shelf.settings-open .storage-shelf-dimensions { display:flex; }
+  .storage-shelf-settings { width:30px !important; min-width:30px !important; padding:0 !important; }
+  .storage-shelf-header h3, .storage-shelf-name { flex: 1 1 auto; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .storage-shelf-name { width:100%; padding:0; border:0; background:transparent; color:var(--text-primary); font-size:14px; font-weight:600; }
+  .storage-shelf-name:focus { outline:1px solid var(--accent-border); outline-offset:2px; }
+  .storage-dimension-control { display:flex; align-items:center; gap:4px; color:var(--text-secondary); font-size:11px; white-space:nowrap; }
+  .storage-dimension-control input { width:54px; padding:5px 4px; }
+  .storage-shelf-header button, .storage-compartment-header button, .storage-add-shelf {
+    min-width: 30px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+  .storage-compartments {
+    display: grid;
+    grid-template-columns: repeat(var(--shelf-columns, 2), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--shelf-rows, 2), minmax(112px, 1fr));
+    gap: 8px;
+  }
+  .storage-compartment {
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    min-height:112px;
+    padding: 7px;
+    border: 0.5px solid var(--border-strong);
+    background: var(--surface-2);
+    overflow:hidden;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .storage-compartment.drag-over, .storage-unsorted.drag-over {
+    border: 2px solid var(--accent);
+    background: var(--accent-bg);
+    box-shadow: 0 0 0 2px var(--accent-border);
+  }
+  .storage-compartment.search-match {
+    border: 2px solid var(--accent);
+    background: var(--accent-bg);
+    box-shadow: 0 0 0 2px var(--accent-border);
+  }
+  .storage-compartment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+  .storage-compartment-name {
+    flex:1;
+    min-width:0;
+    padding:3px 5px;
+    border:0;
+    background:transparent;
+    color:var(--text-secondary);
+    font-size:11px;
+    line-height:1.2;
+  }
+  .storage-compartment-name:focus { color:var(--text-primary); }
+  .storage-compartment-header button { width: 24px; min-width: 24px; height: 24px; }
+  .storage-records { display:flex; flex:1; flex-direction:column; gap:0; min-height:28px; overflow:auto; }
+  .storage-record {
+    display:grid;
+    grid-template-columns:24px minmax(0, 1fr);
+    align-items:center;
+    gap:6px;
+    min-width: 0;
+    padding: 3px 2px;
+    cursor: grab;
+    border:0;
+    border-bottom:0.5px solid var(--border);
+    background:transparent;
+  }
+  .storage-record:active { cursor: grabbing; }
+  .storage-record.random-highlight {
+    background:var(--accent-bg);
+    box-shadow:inset 0 0 0 1px var(--accent-border);
+  }
+  .storage-record img { width:24px; height:24px; object-fit:cover; border-radius:3px; background:var(--surface-3); cursor:grab; touch-action:none; }
+  .storage-page [data-storage-item] { cursor:grab; touch-action:pan-y; }
+  .storage-page [data-storage-item]:active { cursor:grabbing; }
+  .storage-pointer-source { opacity:0.45; }
+  .storage-pointer-preview {
+    position:fixed;
+    width:48px;
+    height:48px;
+    object-fit:cover;
+    border:1px solid rgba(255,255,255,0.7);
+    border-radius:4px;
+    background:var(--surface-3);
+    box-shadow:0 4px 12px rgba(0,0,0,0.35);
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    z-index:2147483647;
+  }
+  .storage-record-copy {
+    display:flex;
+    align-items:baseline;
+    gap:4px;
+    min-width:0;
+    overflow:hidden;
+    white-space:nowrap;
+  }
+  .storage-record strong, .storage-record span {
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:12px;
+    line-height:1.25;
+  }
+  .storage-record strong { flex:0 1 auto; }
+  .storage-record span { flex:1 1 auto; color:var(--text-secondary); font-size:11px; }
+  .storage-unsorted-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    align-content: start;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .storage-layout {
+    display:grid;
+    grid-template-columns:minmax(0, 2fr) 8px minmax(220px, 1fr);
+    grid-template-rows:minmax(0, 1fr);
+    gap:0;
+    width:100%;
+    height:100%;
+    min-width:0;
+    min-height:0;
+  }
+  .storage-shelves-pane, .storage-unsorted-pane { min-width:0; min-height:0; background:var(--surface-1); }
+  .storage-shelves-pane { overflow:auto; padding-right:8px; }
+  .storage-shelves-pane .storage-shelves { width:max-content; min-height:100%; overflow:visible; }
+  .storage-pane-resizer { position:relative; width:8px; min-width:8px; cursor:col-resize; touch-action:none; }
+  .storage-pane-resizer::after { content:''; position:absolute; top:0; bottom:0; left:3px; width:2px; background:var(--border-strong); }
+  .storage-pane-resizer:hover::after, .storage-pane-resizer.active::after { background:var(--accent); }
+  .storage-unsorted-pane { display:flex; flex-direction:column; border-left:0.5px solid var(--border); overflow:hidden; padding-left:12px; }
+  .storage-unsorted-pane.drag-over { outline:2px solid var(--accent); outline-offset:-2px; background:var(--accent-bg); }
+  .storage-unsorted-panel-header { display:flex; align-items:center; gap:8px; min-height:42px; padding:4px 0 8px; border-bottom:0.5px solid var(--border); }
+  .storage-unsorted-panel-header h3 { flex:1; min-width:0; margin:0; font-size:13px; }
+  .storage-unsorted-panel-header .state-pill { flex:0 0 auto; }
+  .storage-unsorted-toggle { width:30px; min-width:30px; height:30px; padding:0; justify-content:center; }
+  .storage-unsorted-toggle svg { transition:transform 0.15s ease; }
+  .storage-unsorted-pane .storage-unsorted-list { grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); align-content:start; overflow:auto; min-height:0; flex:1; padding:8px 2px; }
+  .storage-layout.unsorted-collapsed .storage-unsorted-pane { padding-left:5px; }
+  .storage-layout.unsorted-collapsed .storage-unsorted-panel-header { justify-content:center; border:0; }
+  .storage-layout.unsorted-collapsed .storage-unsorted-panel-header h3,
+  .storage-layout.unsorted-collapsed .storage-unsorted-panel-header .state-pill,
+  .storage-layout.unsorted-collapsed .storage-unsorted-list { display:none; }
+  .storage-layout.unsorted-collapsed .storage-unsorted-toggle svg { transform:rotate(180deg); }
+  .storage-layout.unsorted-collapsed .storage-pane-resizer { display:none; }
+  .storage-layout.unsorted-collapsed { grid-template-columns:minmax(0, 1fr) 42px !important; }
+  @media (max-width:720px) {
+    .storage-layout { grid-template-columns:minmax(0, 1fr); grid-template-rows:minmax(0, 1.3fr) 8px minmax(0, 1fr); }
+    .storage-pane-resizer { width:auto; min-width:0; height:8px; cursor:row-resize; }
+    .storage-pane-resizer::after { top:3px; bottom:auto; left:0; right:0; width:auto; height:2px; }
+    .storage-unsorted-pane { border-left:0; border-top:0.5px solid var(--border); padding:8px 0 0; }
+    .storage-layout.unsorted-collapsed { grid-template-columns:minmax(0, 1fr) !important; grid-template-rows:minmax(0, 1fr) 42px !important; }
+    .storage-layout.unsorted-collapsed .storage-unsorted-pane { padding:4px 0 0; }
+  }
+  .storage-unsorted-pane .storage-unsorted-list {
+    grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
+    align-content:start;
+    overflow:auto;
+    min-height:0;
+    flex:1;
+    padding:8px 2px;
+  }
+  .storage-unsorted-list.drag-over { outline: 1px solid var(--accent); background: var(--accent-bg); }
+  .storage-unsorted-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 5px; }
+  .storage-unsorted-actions button { width: 26px; height: 26px; min-width: 26px; padding: 0; justify-content: center; }
+  .storage-unsorted-actions .del:hover { color: var(--danger); border-color: var(--danger); }
+  .storage-add-shelf { align-self: flex-start; width: 42px; min-width: 42px; height: 42px; }
+  .collection-panel.storage-active .collection-grid,
+  .collection-panel.storage-active .collection-table-wrap { display: none !important; }
+  .collection-panel.storage-active .storage-board { display: grid !important; }
+  .collection-panel.storage-active .toolbar-group.center,
+  .collection-panel.storage-active .toolbar-group.right,
+  .collection-panel.storage-active #selectModeBtn,
+  .collection-panel.storage-active #bulkEditBar { display: none !important; }
+  .wrap.storage-page {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 12px 12px;
+  }
+  .storage-page .desktop-form-shell { display: block; }
+  .storage-page .desktop-form-shell > .panel:first-child {
+    margin: 0;
+    padding: 8px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .storage-page .desktop-form-shell > .panel:first-child > .panel-title { display: none; }
+  .storage-page .desktop-form-shell > .panel:first-child .toprow { align-items: center; }
+  .storage-page .desktop-form-shell > .panel:first-child .toprow textarea {
+    min-height: 38px;
+    max-height: 38px;
+    resize: none;
+  }
+  .storage-page .collection-panel { display: none !important; }
+  .storage-page > .storage-board {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    width: 100%;
+    height: calc(100dvh - 210px);
+    min-height: 360px;
     border: 0.5px solid var(--border);
-    border-radius: 12px;
-    background: rgba(255,255,255,0.02);
+    background: var(--surface-1);
+    padding: 12px;
+    overflow: hidden;
+  }
+  .storage-page .desktop-form-shell > .panel:first-child > .toprow,
+  .storage-page #searchResults,
+  .storage-page #searchPagination,
+  .storage-page #searchHint,
+  .storage-page #formSection { display: none !important; }
+  .storage-page #collectionSearchRow { margin: 0 !important; }
+  .storage-page #collectionFilterReleaseType { display: none !important; }
+  .storage-page .storage-shelves {
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+    overflow: visible;
+  }
+  .storage-page .storage-shelf {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .storage-page .storage-compartments {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    align-content: start;
+  }
+  @media (max-width: 720px) {
+    .wrap.storage-page { padding: 0 8px 8px; }
+    .storage-page > .storage-board { height: calc(100dvh - 250px); min-height: 320px; padding: 8px; }
+    .storage-page .desktop-form-shell > .panel:first-child .toprow textarea { min-width: 100px; }
   }
   .collection-table {
     width: 100%;
@@ -1372,6 +1668,19 @@
   }
   .collection-card .artist {
     margin: 3px 0 0; font-size: 11px; color: rgba(255,255,255,0.82);
+  }
+  .collection-card .collection-extra {
+    display: grid;
+    gap: 2px;
+    margin-top: 5px;
+    color: rgba(255,255,255,0.78);
+    font-size: 10px;
+    line-height: 1.25;
+  }
+  .collection-card .collection-extra span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .collection-card .meta-line {
     display: flex;
@@ -1899,6 +2208,18 @@
   .match-item button:hover {
     background: #c14670;
   }
+  .bulk-import-input {
+    width: 100%;
+    min-height: 110px;
+    resize: vertical;
+    margin-top: 8px;
+  }
+  .bulk-import-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+  }
   @media (max-width: 860px) {
     .discogs-match-content {
       grid-template-columns: 1fr;
@@ -1991,10 +2312,8 @@
   @media (max-width: 940px) {
     header .header-stats .stat-priority-3 { display: none; }
   }
-  @media (max-width: 820px) {
-    header .header-stats .stat-priority-2 { display: none; }
-  }
-  @media (max-width: 720px) {
+  @media (max-width: 720px) { .storage-shelf { min-width: 380px; } }
+  @media (max-width: 500px) {
     .filter-tabs .filter-label { display: none; }
     .filter-tabs button { padding: 8px; }
     .filter-tabs { gap: 4px; }
@@ -2014,17 +2333,17 @@
   /* At small widths show two compact stats next to the header actions (buttons) */
   @media (max-width: 720px) {
     header { position: sticky; }
-    header .header-actions { position: absolute; right: 12px; top: 12px; z-index: 40; width: 120px; display: flex; justify-content: flex-end; gap: 6px; }
+    header .header-actions { position: absolute; right: 12px; top: 12px; z-index: 40; width: 156px; display: flex; justify-content: flex-end; gap: 6px; }
     header .header-stats {
       position: absolute;
-      right: calc(12px + 120px + 4px); /* place stats to the left of the action buttons */
+      right: calc(12px + 156px + 4px); /* place stats to the left of the action buttons */
       top: 12px;
       display: flex;
       flex-direction: row;
       gap: 6px;
       align-items: center;
       pointer-events: auto;
-      max-width: calc(100% - 160px);
+      max-width: calc(100% - 196px);
       width: auto;
       justify-content: flex-end;
       overflow-x: auto;
@@ -2051,17 +2370,17 @@
       overflow: hidden;
       position: relative;
       z-index: 0;
-      flex-basis: calc(100% - 210px);
-      width: calc(100% - 210px);
-      max-width: calc(100% - 210px);
+      flex-basis: calc(100% - 246px);
+      width: calc(100% - 246px);
+      max-width: calc(100% - 246px);
     }
     header .header-stats {
       position: absolute;
-      right: calc(12px + 120px + 4px);
+      right: calc(12px + 156px + 4px);
       top: 12px;
       left: auto;
       width: auto;
-      max-width: calc(100% - 160px);
+      max-width: calc(100% - 196px);
       flex-direction: row;
       gap: 6px;
       max-height: 36px;
@@ -2079,8 +2398,8 @@
   @media (max-width: 512px) {
     header .title-input {
       flex: 0 1 auto;
-      width: calc(100% - 190px);
-      max-width: calc(100% - 190px);
+      width: calc(100% - 226px);
+      max-width: calc(100% - 226px);
     }
     header .collection-title {
       position: relative;
@@ -2140,9 +2459,9 @@
 
   @media (max-width: 480px) {
     header .title-input {
-      flex-basis: calc(100% - 210px);
-      width: calc(100% - 210px);
-      max-width: calc(100% - 210px);
+      flex-basis: calc(100% - 246px);
+      width: calc(100% - 246px);
+      max-width: calc(100% - 246px);
     }
     header .header-stats .stat-compact {
       background: var(--bar);
@@ -2150,6 +2469,19 @@
     header .header-stats,
     header .header-actions {
       z-index: 50;
+    }
+  }
+
+  @media (max-width: 720px) {
+    header .header-stats {
+      position: static;
+      top: auto;
+      right: auto;
+      left: auto;
+      width: 100%;
+      max-width: 100%;
+      justify-content: flex-start;
+      margin-top: 0;
     }
   }
 
@@ -2309,6 +2641,12 @@
           <path d="M5 15H4C3.44772 15 3 14.5523 3 14V4C3 3.44772 3.44772 3 4 3H14C14.5523 3 15 3.44772 15 4V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
       </button>
+      <button id="storageRandomPickBtn" class="icon-btn" type="button" title="Zufälliges einsortiertes Vinyl auswählen" aria-label="Zufälliges einsortiertes Vinyl auswählen" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>
+      </button>
+      <button id="viewStorageBtn" class="icon-btn" title="Lageransicht öffnen" aria-label="Lageransicht öffnen" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h18v16H3zM3 10h18M9 4v16M15 4v16" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </button>
       <button id="toggleUserMenuBtn" class="icon-btn" title="Andere Nutzer" aria-label="Andere Nutzer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -2345,6 +2683,10 @@
             <button type="button" id="bulkDiscogsMetadataBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Discogs-Tracklisten reparieren">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:6px;"><path d="M4 5h16v14H4z" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Tracklists</span>
+            </button>
+            <button type="button" id="manageShelvesBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Regale und Fächer verwalten">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h16v16H4zM4 10h16M4 16h16M10 4v16M16 4v16" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              <span>Lagerorte</span>
             </button>
           </div>
           <p class="settings-panel-title" style="margin-top:14px;">Akzentfarbe</p>
@@ -2424,7 +2766,7 @@
     <div class="panel">
       <p class="panel-title">Album suchen</p>
       <div class="toprow">
-        <input type="text" id="searchInput" placeholder="z. B. Michael Jackson Thriller">
+        <textarea id="searchInput" rows="1" placeholder="z. B. Michael Jackson Thriller"></textarea>
         <button id="searchBtn" class="icon-btn" title="Suchen" aria-label="Suchen">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
@@ -2554,6 +2896,18 @@
         <span class="switch-text">Ich besitze dieses Album bereits (sonst landet es auf der Wunschliste)</span>
       </label>
 
+      <div id="fStorageFields" style="display:none; margin-top:12px; padding:12px; border:0.5px solid var(--border); border-radius:8px;">
+        <p class="settings-panel-title">Lagerung & Pflege</p>
+        <div class="form-fields">
+          <div class="row">
+            <select id="fShelf" aria-label="Regal"><option value="">Kein Regal</option></select>
+            <select id="fCompartment" aria-label="Fach" disabled><option value="">Kein Fach</option></select>
+          </div>
+          <label for="fLastWashed" style="font-size:12px; color:var(--text-secondary);">Zuletzt gewaschen</label>
+          <input type="date" id="fLastWashed">
+        </div>
+      </div>
+
       <textarea id="fNotes" placeholder="Notizen (Presswerk, Kaufort, Widmung ...)"></textarea>
 
       <div id="tracklistSection">
@@ -2611,6 +2965,8 @@
             <option value="genre">Genre</option>
             <option value="status">Status</option>
             <option value="condition">Zustand</option>
+            <option value="location">Lagerort</option>
+            <option value="lastWashed">Waschdatum</option>
             <option value="price">Preis</option>
             <option value="color">Farbe</option>
             <option value="releaseType">LP/EP/7"</option>
@@ -2620,14 +2976,15 @@
           </div>
         </div>
       </div>
-      <div class="search-row" style="width:100%; margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; position:relative;">
+      <div id="collectionSearchRow" class="search-row" style="width:100%; margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; position:relative;">
         <div style="flex:1; min-width:200px; display:flex; align-items:center; gap:8px; position:relative;">
-          <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Track, Jahr..." style="flex:1; min-width:0;" />
-          <button type="button" id="collectionFilterHelpBtn" class="icon-btn tooltip-btn" title="Suchhilfe anzeigen" aria-label="Suchhilfe anzeigen" data-tooltip="Filter: title:, artist:, track:, genre:, year:, notes:, releaseType:">?</button>
+          <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Lagerort, Waschdatum..." style="flex:1; min-width:0;" />
+          <button type="button" id="collectionFilterHelpBtn" class="icon-btn tooltip-btn" title="Suchhilfe anzeigen" aria-label="Suchhilfe anzeigen" data-tooltip="Filter: title:, artist:, track:, genre:, year:, location:, washed:, notes:, releaseType:">?</button>
           <div id="collectionFilterHelpPanel" class="filter-help-panel" aria-live="polite">
             <strong>Verfügbare Filter</strong><br>
             <code>title:</code> Titel, <code>artist:</code> Interpret, <code>track:</code> Track, <code>genre:</code> Genre,<br>
-            <code>year:</code> Jahr, <code>notes:</code> Notizen, <code>releaseType:</code> Album / EP / 7&quot;<br>
+            <code>year:</code> Jahr, <code>location:</code> Lagerort, <code>washed:</code> Waschdatum,<br>
+            <code>notes:</code> Notizen, <code>releaseType:</code> Album / EP / 7&quot;<br>
             <strong>Beispiele:</strong><br>
             <code>artist:Michael Jackson</code><br>
             <code>genre:Rock year:1990</code><br>
@@ -2668,9 +3025,43 @@
     </div>
     <div class="collection-grid" id="collectionGrid"></div>
     <div class="collection-table-wrap" id="collectionTableWrap"></div>
+    <div class="storage-board" id="storageBoard"></div>
     <p class="empty-hint" id="emptyHint">Noch keine Vinyls. Suche oben ein Album oder füge es manuell hinzu.</p>
   </div>
 
+</div>
+
+<div class="modal-overlay" id="bulkImportOverlay">
+  <div class="modal-box discogs-match-box" style="width:min(980px, 94vw); max-height:90vh; overflow:auto;">
+    <div class="discogs-match-content">
+      <div class="discogs-match-left">
+        <p class="modal-title">Mehrere Alben importieren</p>
+        <div class="match-current">
+          <div class="match-current-info">
+            <strong id="bulkImportCurrentLine"></strong>
+            <span id="bulkImportProgress"></span>
+            <span>Wähle die passende Pressung aus.</span>
+          </div>
+        </div>
+      </div>
+      <div class="discogs-match-right">
+        <div class="match-search-header">
+          <span>Suche nach</span>
+          <strong id="bulkImportSearchLabel"></strong>
+        </div>
+        <div class="match-search-form">
+          <input id="bulkImportQueryInput" type="text" placeholder="Titel, Interpret oder Suchbegriff eingeben">
+          <button type="button" id="bulkImportSearchBtn">Suchen</button>
+        </div>
+        <p class="match-status" id="bulkImportStatus"></p>
+        <div id="bulkImportResults" class="match-results"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" id="bulkImportCancelBtn">Abbrechen</button>
+      <button type="button" id="bulkImportSkipBtn">Überspringen</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
@@ -2707,6 +3098,22 @@
     </div>
     <p class="match-status" id="coverSearchStatus">Wähle ein Cover aus der Liste.</p>
     <div class="cover-search-grid" id="coverSearchResults"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="shelfLocationsOverlay">
+  <div class="modal-box" style="width:min(560px, 94vw); max-height:85vh; overflow:auto;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <p class="modal-title">Lagerorte verwalten</p>
+      <button type="button" id="closeShelfLocationsBtn" class="icon-btn" title="Schließen" aria-label="Schließen">✕</button>
+    </div>
+    <div id="shelfLocationsList" style="display:grid; gap:8px; margin:14px 0;"></div>
+    <div style="display:grid; grid-template-columns:minmax(0,1fr) 88px 88px auto; align-items:end; gap:8px;">
+      <label style="font-size:12px; color:var(--text-secondary);">Regalname<input type="text" id="newShelfName" placeholder="z. B. Regal Wohnzimmer" style="display:block; width:100%; margin-top:5px;"></label>
+      <label style="font-size:12px; color:var(--text-secondary);">Reihen<input type="number" id="newShelfRows" min="1" max="10" value="4" style="display:block; width:100%; margin-top:5px;"></label>
+      <label style="font-size:12px; color:var(--text-secondary);">Spalten<input type="number" id="newShelfColumns" min="1" max="10" value="2" style="display:block; width:100%; margin-top:5px;"></label>
+      <button type="button" id="addShelfBtn" class="primary">Hinzufügen</button>
+    </div>
   </div>
 </div>
 
@@ -3019,6 +3426,7 @@ async function loadCloudData(uid) {
       window._pendingTableSettings = data.settings.tableSettings || null;
     }
   }
+  shelfLocations = normalizeShelfLocations(data.settings?.shelves);
   const titleDisplay = document.getElementById('collectionTitleDisplay');
   if (titleDisplay) titleDisplay.textContent = collectionTitle;
   try { if (typeof updateSortButtons === 'function') updateSortButtons(); } catch (e) {}
@@ -3038,7 +3446,7 @@ async function saveCloudDataNow() {
     const defaultReleaseType = (typeof getDefaultReleaseType === 'function') ? getDefaultReleaseType() : (localStorage.getItem(DEFAULT_RELEASE_TYPE_KEY) || 'auto');
     const accentColor = (typeof getAccentColor === 'function') ? getAccentColor() : (localStorage.getItem(ACCENT_COLOR_KEY) || '#d4537e');
     const ts = (typeof getTableSettings === 'function') ? getTableSettings() : (window._pendingTableSettings || null);
-    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor }, ts ? { tableSettings: ts } : {});
+    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations }, ts ? { tableSettings: ts } : {});
 
     await db.collection('users').doc(currentUid).set({
       username: currentUsername,
@@ -3159,9 +3567,14 @@ function updateViewingInfo() {
   viewingInfoLabel.style.display = 'none';
   if (viewingOwnCollection) {
     showOwnCollectionBtn.style.display = 'none';
+    if (viewStorageBtn) viewStorageBtn.style.display = 'inline-flex';
+    document.getElementById('manageShelvesBtn').style.display = 'inline-flex';
     userListHint.textContent = 'Wähle hier einen anderen Benutzer, um seine Sammlung anzusehen oder zu importieren.';
   } else {
     showOwnCollectionBtn.style.display = 'inline-flex';
+    if (activeView === 'storage') setView(viewBeforeStorage);
+    if (viewStorageBtn) viewStorageBtn.style.display = 'none';
+    document.getElementById('manageShelvesBtn').style.display = 'none';
     userListHint.textContent = 'Diese Liste ist schreibgeschützt. Importiere sie in deine eigene Sammlung, um sie zu bearbeiten.';
   }
 }
@@ -3373,8 +3786,11 @@ let activeFilter = 'all';
 let activeSort = 'newest';
 let activeSortDirection = 'desc';
 let activeView = 'grid';
+let viewBeforeStorage = 'grid';
+let filterBeforeStorage = 'all';
 let selectModeActive = false;
 let selectedItemIds = new Set();
+let shelfLocations = [];
 
 
 function showModal({ message, buttons }) {
@@ -3550,7 +3966,18 @@ const settingsPanel = document.getElementById('settingsPanel');
 if (settingsBtn && settingsPanel) {
   settingsBtn.addEventListener('click', e => {
     e.stopPropagation();
-    settingsPanel.classList.toggle('open');
+    const shouldOpen = !settingsPanel.classList.contains('open');
+    if (shouldOpen) {
+      document.body.appendChild(settingsPanel);
+      const buttonRect = settingsBtn.getBoundingClientRect();
+      const top = Math.max(8, buttonRect.bottom + 8);
+      settingsPanel.style.top = `${top}px`;
+      settingsPanel.style.right = `${Math.max(8, window.innerWidth - buttonRect.right)}px`;
+      settingsPanel.style.left = 'auto';
+      settingsPanel.style.maxHeight = `calc(100vh - ${top + 8}px)`;
+      settingsPanel.style.overflowY = 'auto';
+    }
+    settingsPanel.classList.toggle('open', shouldOpen);
   });
   settingsPanel.addEventListener('click', e => e.stopPropagation());
   document.addEventListener('click', () => settingsPanel.classList.remove('open'));
@@ -3568,6 +3995,218 @@ function escapeHtml(value) {
     "'": '&#39;'
   }[match]));
 }
+
+function normalizeShelfLocations(shelves) {
+  if (!Array.isArray(shelves)) return [];
+  return shelves.filter(shelf => shelf && shelf.id && shelf.name).map(shelf => {
+    const legacyCount = Math.max(1, Math.min(100, Number(shelf.compartments) || 1));
+    const rows = Math.max(1, Math.min(10, Number(shelf.rows) || Math.ceil(Math.sqrt(legacyCount))));
+    const columns = Math.max(1, Math.min(10, Number(shelf.columns) || Math.ceil(legacyCount / rows)));
+    const capacity = rows * columns;
+    const removedCompartments = [...new Set((Array.isArray(shelf.removedCompartments) ? shelf.removedCompartments : [])
+      .map(Number)
+      .filter(number => Number.isInteger(number) && number >= 1 && number <= capacity))];
+    const compartmentNames = {};
+    if (shelf.compartmentNames && typeof shelf.compartmentNames === 'object' && !Array.isArray(shelf.compartmentNames)) {
+      Object.entries(shelf.compartmentNames).forEach(([key, value]) => {
+        const number = Number(key);
+        const name = String(value || '').trim();
+        if (Number.isInteger(number) && number >= 1 && number <= capacity && !removedCompartments.includes(number) && name) {
+          compartmentNames[number] = name;
+        }
+      });
+    }
+    return {
+      id: String(shelf.id),
+      name: String(shelf.name),
+      rows,
+      columns,
+      removedCompartments,
+      compartmentNames,
+      compartments: capacity - removedCompartments.length
+    };
+  });
+}
+
+function getShelfCapacity(shelf) {
+  return Math.max(0, Number(shelf?.rows) || 0) * Math.max(0, Number(shelf?.columns) || 0);
+}
+
+function isValidShelfCompartment(shelf, compartmentNumber) {
+  const number = Number(compartmentNumber);
+  return Number.isInteger(number) && number >= 1 && number <= getShelfCapacity(shelf)
+    && !(shelf.removedCompartments || []).includes(number);
+}
+
+function getStorageLabel(item) {
+  if (!viewingOwnCollection || !item?.owned || !item?.shelfId) return '';
+  const shelf = shelfLocations.find(entry => entry.id === item.shelfId);
+  return shelf && isValidShelfCompartment(shelf, item.shelfCompartment)
+    ? `${shelf.name}${item.shelfCompartment ? ` · ${shelf.compartmentNames?.[item.shelfCompartment] || `Fach ${item.shelfCompartment}`}` : ''}`
+    : '';
+}
+
+function getWashedDateLabel(item) {
+  return viewingOwnCollection && item?.owned && item?.lastWashed ? item.lastWashed.split('-').reverse().join('.') : '';
+}
+
+function populateShelfSelect(select, selectedValue = '') {
+  if (!select) return;
+  select.innerHTML = '<option value="">Kein Regal</option>' + shelfLocations.map(shelf =>
+    `<option value="${escapeHtml(shelf.id)}">${escapeHtml(shelf.name)}</option>`
+  ).join('');
+  select.value = selectedValue || '';
+}
+
+function populateCompartmentSelect(select, shelfId, selectedValue, defaultLabel = 'Kein Fach') {
+  if (!select) return;
+  const shelf = shelfLocations.find(entry => entry.id === shelfId);
+  select.innerHTML = `<option value="">${escapeHtml(defaultLabel)}</option>`;
+  if (shelf) {
+    for (let number = 1; number <= getShelfCapacity(shelf); number += 1) {
+      if (!isValidShelfCompartment(shelf, number)) continue;
+      select.insertAdjacentHTML('beforeend', `<option value="${number}">Fach ${number}</option>`);
+    }
+  }
+  select.disabled = !shelf;
+  if (isValidShelfCompartment(shelf, selectedValue)) select.value = String(selectedValue);
+}
+
+function refreshStorageFields() {
+  const owned = document.getElementById('fOwned').checked;
+  document.getElementById('fStorageFields').style.display = owned ? 'block' : 'none';
+  if (!owned) return;
+  const shelfSelect = document.getElementById('fShelf');
+  populateShelfSelect(shelfSelect, currentDraft?.shelfId || '');
+  populateCompartmentSelect(document.getElementById('fCompartment'), shelfSelect.value, currentDraft?.shelfCompartment);
+  document.getElementById('fLastWashed').value = currentDraft?.lastWashed || '';
+}
+
+async function updateShelfDimensions(shelf, rows, columns) {
+  if (!Number.isInteger(rows) || !Number.isInteger(columns) || rows < 1 || columns < 1 || rows > 10 || columns > 10) return false;
+  const nextCapacity = rows * columns;
+  const removedSet = new Set(shelf.removedCompartments || []);
+  const movedItems = collection.filter(item => item.owned && item.shelfId === shelf.id
+    && (!Number.isInteger(Number(item.shelfCompartment)) || Number(item.shelfCompartment) > nextCapacity || removedSet.has(Number(item.shelfCompartment))));
+  if (movedItems.length) {
+    const managerOverlay = document.getElementById('shelfLocationsOverlay');
+    const managerWasOpen = managerOverlay.classList.contains('open');
+    if (managerWasOpen) managerOverlay.classList.remove('open');
+    const confirmed = await showConfirm(`${movedItems.length} Vinyl(s) liegen in Fächern, die durch diese Maße entfallen. Sie werden unsortiert. Maße ändern?`, { confirmLabel: 'Ändern', danger: true });
+    if (managerWasOpen) managerOverlay.classList.add('open');
+    if (!confirmed) return false;
+    movedItems.forEach(item => {
+      delete item.shelfId;
+      delete item.shelfCompartment;
+    });
+  }
+  shelf.rows = rows;
+  shelf.columns = columns;
+  shelf.removedCompartments = (shelf.removedCompartments || []).filter(number => number <= nextCapacity);
+  Object.keys(shelf.compartmentNames || {}).forEach(key => {
+    if (Number(key) > nextCapacity || shelf.removedCompartments.includes(Number(key))) delete shelf.compartmentNames[key];
+  });
+  shelf.compartments = nextCapacity - shelf.removedCompartments.length;
+  saveShelfLayout();
+  return true;
+}
+
+function renderShelfLocationsManager() {
+  const list = document.getElementById('shelfLocationsList');
+  if (!list) return;
+  if (shelfLocations.length === 0) {
+    list.innerHTML = '<p class="settings-panel-hint">Noch keine Regale angelegt.</p>';
+    return;
+  }
+  list.innerHTML = shelfLocations.map(shelf => `
+    <div data-shelf-id="${escapeHtml(shelf.id)}" style="display:grid; grid-template-columns:minmax(0,1fr) 104px 104px auto; gap:8px; align-items:center; padding:8px; border:0.5px solid var(--border); border-radius:8px;">
+      <input type="text" class="shelf-name-input" value="${escapeHtml(shelf.name)}" aria-label="Regalname">
+      <label class="storage-dimension-control">Reihen <input type="number" class="shelf-rows-input" min="1" max="10" value="${shelf.rows}" aria-label="Reihen"></label>
+      <label class="storage-dimension-control">Spalten <input type="number" class="shelf-columns-input" min="1" max="10" value="${shelf.columns}" aria-label="Spalten"></label>
+      <button type="button" class="remove-shelf-btn" title="Regal löschen" aria-label="Regal löschen">×</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('[data-shelf-id]').forEach(row => {
+    const shelf = shelfLocations.find(entry => entry.id === row.dataset.shelfId);
+    row.querySelector('.shelf-name-input').addEventListener('change', event => {
+      const name = event.target.value.trim();
+      if (!name) {
+        event.target.value = shelf.name;
+        return;
+      }
+      shelf.name = name;
+      saveCloudDataNow();
+      renderCollection();
+    });
+    const saveDimensions = async () => {
+      const rowInput = row.querySelector('.shelf-rows-input');
+      const columnInput = row.querySelector('.shelf-columns-input');
+      const updated = await updateShelfDimensions(shelf, Number(rowInput.value), Number(columnInput.value));
+      if (!updated) {
+        rowInput.value = shelf.rows;
+        columnInput.value = shelf.columns;
+        return;
+      }
+      renderShelfLocationsManager();
+    };
+    row.querySelector('.shelf-rows-input').addEventListener('change', saveDimensions);
+    row.querySelector('.shelf-columns-input').addEventListener('change', saveDimensions);
+    row.querySelector('.remove-shelf-btn').addEventListener('click', async () => {
+      const overlay = document.getElementById('shelfLocationsOverlay');
+      overlay.classList.remove('open');
+      const assigned = collection.filter(item => item.owned && item.shelfId === shelf.id);
+      const confirmed = assigned.length
+        ? await showConfirm(`Regal "${shelf.name}" löschen? ${assigned.length} Vinyl(s) werden unsortiert.`, { confirmLabel: 'Löschen', danger: true })
+        : true;
+      if (!confirmed) {
+        overlay.classList.add('open');
+        return;
+      }
+      shelfLocations = shelfLocations.filter(entry => entry.id !== shelf.id);
+      collection.forEach(item => {
+        if (item.shelfId === shelf.id) {
+          delete item.shelfId;
+          delete item.shelfCompartment;
+        }
+      });
+      saveCollection();
+      saveCloudDataNow();
+      renderShelfLocationsManager();
+      overlay.classList.add('open');
+    });
+  });
+}
+
+function openShelfLocationsManager() {
+  renderShelfLocationsManager();
+  document.getElementById('shelfLocationsOverlay').classList.add('open');
+}
+
+document.getElementById('manageShelvesBtn').addEventListener('click', () => {
+  settingsPanel.classList.remove('open');
+  openShelfLocationsManager();
+});
+document.getElementById('closeShelfLocationsBtn').addEventListener('click', () => {
+  document.getElementById('shelfLocationsOverlay').classList.remove('open');
+  renderCollection();
+});
+document.getElementById('shelfLocationsOverlay').addEventListener('click', event => {
+  if (event.target.id === 'shelfLocationsOverlay') event.currentTarget.classList.remove('open');
+});
+document.getElementById('addShelfBtn').addEventListener('click', () => {
+  const nameInput = document.getElementById('newShelfName');
+  const name = nameInput.value.trim();
+  const rows = Number(document.getElementById('newShelfRows').value);
+  const columns = Number(document.getElementById('newShelfColumns').value);
+  if (!name || !Number.isInteger(rows) || !Number.isInteger(columns) || rows < 1 || columns < 1 || rows > 10 || columns > 10) {
+    showAlert('Bitte Regalname und Reihen-/Spaltenmaße zwischen 1 und 10 angeben.');
+    return;
+  }
+  shelfLocations.push({ id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name, rows, columns, removedCompartments: [], compartmentNames: {}, compartments: rows * columns });
+  nameInput.value = '';
+  saveCloudDataNow();
+  renderShelfLocationsManager();
+});
 
 function detectTitleArtistSplit(title) {
   if (!title) return null;
@@ -4256,7 +4895,8 @@ function getExportData() {
       coverSource: getCoverProvider(),
       discogsToken: getDiscogsToken(),
       allowWishlistPrice: getAllowWishlistPrice(),
-      defaultReleaseType: getDefaultReleaseType()
+      defaultReleaseType: getDefaultReleaseType(),
+      shelves: shelfLocations
     }
   };
 }
@@ -4276,6 +4916,18 @@ function normalizeDiscogsImageUrl(url) {
   if (!cleaned) return '';
   if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) return cleaned;
   return '';
+}
+
+function splitDiscogsSearchResult(result) {
+  const rawTitle = String(result?.title || '').trim();
+  const rawArtist = String(result?.artist || '').trim();
+  const separator = rawTitle.match(/^(.+?)\s+-\s+(.+)$/);
+  const titleArtist = separator ? separator[1].trim() : '';
+  const cleanArtist = value => String(value || '').replace(/\s+\(\d+\).*$/, '').replace(/\s+\*$/, '').trim();
+  if (separator && (!rawArtist || normalizeAlbumPart(rawArtist) === normalizeAlbumPart(titleArtist) || normalizeAlbumPart(cleanArtist(rawArtist)) === normalizeAlbumPart(titleArtist) || normalizeAlbumPart(cleanArtist(titleArtist)) === normalizeAlbumPart(cleanArtist(rawArtist)))) {
+    return { artist: cleanArtist(rawArtist || titleArtist), title: separator[2].trim() };
+  }
+  return { artist: cleanArtist(rawArtist), title: rawTitle };
 }
 
 async function getCoverFromDiscogs(query) {
@@ -4347,7 +4999,39 @@ function getAlbumCoverUrl(album) {
 let searchResultCards = [];
 let searchPage = 1;
 let searchHintTimer = null;
+let collectionFilterBeforeAdd = null;
 const SEARCH_PAGE_SIZE = 6;
+
+function normalizeAlbumPart(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function findMatchingCollectionItems(entry) {
+  const title = normalizeAlbumPart(entry?.title || entry?.album?.collectionName || entry?.album?.title);
+  const artist = normalizeAlbumPart(entry?.artist || entry?.album?.artistName || entry?.album?.artist);
+  if (!title || !artist) return [];
+  return collection.filter(item => normalizeAlbumPart(item.title) === title && normalizeAlbumPart(item.artist) === artist);
+}
+
+function showExistingCollectionMatch(entry) {
+  const matches = findMatchingCollectionItems(entry);
+  if (matches.length === 0) return false;
+  if (collectionFilterBeforeAdd === null) collectionFilterBeforeAdd = collectionFilterQuery;
+  collectionFilterQuery = `${entry.artist} ${entry.title}`.trim();
+  const filter = document.getElementById('collectionFilter');
+  if (filter) filter.value = collectionFilterQuery;
+  renderCollection();
+  return true;
+}
+
+function restoreCollectionFilterAfterAdd() {
+  if (collectionFilterBeforeAdd === null) return;
+  collectionFilterQuery = collectionFilterBeforeAdd;
+  collectionFilterBeforeAdd = null;
+  const filter = document.getElementById('collectionFilter');
+  if (filter) filter.value = collectionFilterQuery;
+  renderCollection();
+}
 
 function quickAddFromSearch(entry) {
   if (!viewingOwnCollection) {
@@ -4357,17 +5041,9 @@ function quickAddFromSearch(entry) {
 
   const title = (entry.title || '').trim();
   const artist = (entry.artist || '').trim();
-  const alreadyExists = collection.some(item => {
-    const itemTitle = (item.title || '').trim().toLowerCase();
-    const itemArtist = (item.artist || '').trim().toLowerCase();
-    return itemTitle === title.toLowerCase() && itemArtist === artist.toLowerCase();
-  });
+  const alreadyExists = findMatchingCollectionItems(entry).length > 0;
 
-  if (alreadyExists) {
-    const hint = document.getElementById('searchHint');
-    hint.textContent = `${title || 'Dieses Album'} ist bereits in der Sammlung.`;
-    return;
-  }
+  const duplicateHint = alreadyExists ? `${title || 'Dieses Album'} ist bereits in der Sammlung und kann trotzdem hinzugefügt werden.` : '';
 
   const newEntry = {
     id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
@@ -4376,14 +5052,14 @@ function quickAddFromSearch(entry) {
     year: entry.album?.releaseDate ? entry.album.releaseDate.slice(0, 4) : (entry.album?.year ? String(entry.album.year) : ''),
     genre: entry.album?.primaryGenreName || (Array.isArray(entry.album?.genre) ? entry.album.genre[0] : '') || '',
     coverUrl: entry.cover || '',
-    releaseType: resolveReleaseType(entry.album, []),
+    releaseType: resolveReleaseType(entry.album, Array.isArray(entry.tracklist) ? entry.tracklist : []),
     color: '#000000',
     colorSecondary: '#d4537e',
     pattern: 'Keine',
     condition: 'Sehr gut',
     notes: '',
     owned: false,
-    tracklist: [],
+    tracklist: Array.isArray(entry.tracklist) ? entry.tracklist : [],
     discogsResourceUrl: entry.discogsResourceUrl || '',
     discogsLowestPrice: typeof entry.discogsLowestPrice === 'number' ? entry.discogsLowestPrice : (entry.discogsLowestPrice ? Number(entry.discogsLowestPrice) : null),
     discogsAveragePrice: typeof entry.discogsAveragePrice === 'number' ? entry.discogsAveragePrice : (entry.discogsAveragePrice ? Number(entry.discogsAveragePrice) : null),
@@ -4393,7 +5069,7 @@ function quickAddFromSearch(entry) {
   collection.push(newEntry);
   saveCollection();
   const hint = document.getElementById('searchHint');
-  hint.textContent = `Hinzugefügt: ${title || 'Album'}`;
+  hint.textContent = duplicateHint || `Hinzugefügt: ${title || 'Album'}`;
   clearTimeout(searchHintTimer);
   searchHintTimer = setTimeout(() => {
     hint.textContent = '';
@@ -4445,6 +5121,7 @@ function renderSearchResultsPage() {
       <span class="source-badge ${entry.source}" title="${badgeTitle}">${badgeLabel}</span>
       ${titleHtml}
       <p class="artist">${escapeHtml(entry.artist)}</p>
+      ${findMatchingCollectionItems(entry).length ? '<span class="existing-match-badge">Bereits in Sammlung</span>' : ''}
     `;
     card.querySelector('.quick-add-btn').addEventListener('click', e => {
       e.stopPropagation();
@@ -4478,7 +5155,13 @@ function renderSearchResultsPage() {
 }
 
 async function searchAlbums() {
-  const q = document.getElementById('searchInput').value.trim();
+  const rawQuery = document.getElementById('searchInput').value.trim();
+  if (rawQuery.includes('\n')) {
+    document.getElementById('bulkImportOverlay')?.classList.add('open');
+    await startBulkImportFromText(rawQuery);
+    return;
+  }
+  const q = rawQuery;
   const hint = document.getElementById('searchHint');
   const results = document.getElementById('searchResults');
   const pagination = document.getElementById('searchPagination');
@@ -4554,18 +5237,19 @@ async function searchAlbums() {
           return { result, cover, lowestPrice, averagePrice, priceCurrency };
         }));
         discogsCards.forEach(({ result, cover, lowestPrice, averagePrice, priceCurrency }) => {
+          const parsedResult = splitDiscogsSearchResult(result);
           cards.push({
             source: 'discogs',
             album: {
-              title: result.title || '',
-              artist: result.artist || '',
+              title: parsedResult.title,
+              artist: parsedResult.artist,
               cover_image: cover,
               year: result.year || '',
               genre: result.genre || [],
               discogsResourceUrl: result.resource_url || ''
             },
-            title: result.title || '',
-            artist: result.artist || '',
+            title: parsedResult.title,
+            artist: parsedResult.artist,
             cover,
             discogsResourceUrl: result.resource_url || '',
             discogsLowestPrice: lowestPrice,
@@ -4591,6 +5275,181 @@ async function searchAlbums() {
     if (manualBtn) manualBtn.style.display = 'inline-flex';
   }
 }
+
+let bulkImportLines = [];
+let bulkImportIndex = 0;
+
+async function searchBulkImportCandidates(query) {
+  const cards = [];
+  const provider = getCoverProvider();
+  const sources = provider === 'itunes' ? ['itunes'] : provider === 'discogs' ? ['discogs'] : ['itunes', 'discogs'];
+
+  if (sources.includes('itunes')) {
+    try {
+      const res = await fetch('https://itunes.apple.com/search?term=' + encodeURIComponent(query) + '&entity=album&limit=8');
+      const data = await res.json();
+      (data.results || []).forEach(album => cards.push({
+        source: 'itunes',
+        album,
+        title: album.collectionName || '',
+        artist: album.artistName || '',
+        cover: getAlbumCoverUrl(album)
+      }));
+    } catch (e) {}
+  }
+
+  if (sources.includes('discogs')) {
+    try {
+      const res = await fetch('https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=8' + discogsAuthParam());
+      const data = await res.json();
+      (data.results || []).forEach(result => {
+        const parsedResult = splitDiscogsSearchResult(result);
+        cards.push({
+        source: 'discogs',
+        album: {
+          title: parsedResult.title,
+          artist: parsedResult.artist,
+          year: result.year || '',
+          genre: Array.isArray(result.genre) ? result.genre : [],
+          discogsResourceUrl: result.resource_url || ''
+        },
+        title: parsedResult.title,
+        artist: parsedResult.artist,
+        year: result.year || '',
+        cover: normalizeDiscogsImageUrl(result.cover_image || result.thumb) || '',
+        discogsResourceUrl: result.resource_url || '',
+        discogsLowestPrice: result.lowest_price != null ? Number(result.lowest_price) || null : null,
+        discogsAveragePrice: result.average_price != null ? Number(result.average_price) || null : null,
+        discogsCurrency: result.currency || result.price_currency || '€'
+        });
+      });
+    } catch (e) {}
+  }
+  return cards;
+}
+
+async function addBulkImportEntry(entry) {
+  if (entry.source === 'discogs' && entry.discogsResourceUrl) {
+    try {
+      const token = getDiscogsToken();
+      const url = entry.discogsResourceUrl + (token ? '?token=' + encodeURIComponent(token) : '');
+      const detailRes = await fetch(url);
+      if (detailRes.ok) {
+        const detail = normalizeDiscogsReleaseDetail(await detailRes.json());
+        if (detail) {
+          entry.title = detail.title || entry.title;
+          entry.artist = detail.artist || entry.artist;
+          entry.cover = detail.cover || entry.cover;
+          entry.year = detail.year || entry.year;
+          entry.discogsLowestPrice = detail.discogsLowestPrice;
+          entry.discogsAveragePrice = detail.discogsAveragePrice;
+          entry.discogsCurrency = detail.discogsCurrency || entry.discogsCurrency;
+          entry.tracklist = detail.tracklist || [];
+          entry.album = Object.assign({}, entry.album, { title: entry.title, artist: entry.artist, year: entry.year, genre: detail.genre ? [detail.genre] : [] });
+        }
+      }
+    } catch (e) {}
+  }
+  if (!Array.isArray(entry.tracklist) || entry.tracklist.length === 0) {
+    entry.tracklist = await fetchTracklistForAlbum(entry.album, entry.title, entry.artist);
+  }
+  quickAddFromSearch(entry);
+}
+
+function closeBulkImport() {
+  document.getElementById('bulkImportOverlay')?.classList.remove('open');
+  document.getElementById('bulkImportResults').innerHTML = '';
+  document.getElementById('bulkImportProgress').textContent = '';
+}
+
+async function showBulkImportLine() {
+  const results = document.getElementById('bulkImportResults');
+  const progress = document.getElementById('bulkImportProgress');
+  const currentLine = document.getElementById('bulkImportCurrentLine');
+  const queryInput = document.getElementById('bulkImportQueryInput');
+  const searchLabel = document.getElementById('bulkImportSearchLabel');
+  const status = document.getElementById('bulkImportStatus');
+  if (bulkImportIndex >= bulkImportLines.length) {
+    const searchInput = document.getElementById('searchInput');
+    const searchHint = document.getElementById('searchHint');
+    if (searchInput) searchInput.value = '';
+    if (searchHint) {
+      searchHint.textContent = 'Mehrfachimport abgeschlossen.';
+      clearTimeout(searchHintTimer);
+      searchHintTimer = setTimeout(() => { searchHint.textContent = ''; }, 3500);
+    }
+    closeBulkImport();
+    return;
+  }
+  const query = bulkImportLines[bulkImportIndex];
+  progress.textContent = `Zeile ${bulkImportIndex + 1} von ${bulkImportLines.length}: Suche nach „${query}“ ...`;
+  currentLine.textContent = query;
+  searchLabel.textContent = query;
+  queryInput.value = query;
+  status.textContent = 'Suche läuft...';
+  results.innerHTML = '<p class="hint">Suche läuft...</p>';
+  const candidates = await searchBulkImportCandidates(query);
+  if (candidates.length === 0) {
+    status.textContent = 'Keine Treffer gefunden. Ändere den Suchbegriff oben und suche erneut.';
+    results.innerHTML = '<button type="button" id="bulkImportManualBtn" class="manual-btn">Manuell hinzufügen</button>';
+    document.getElementById('bulkImportManualBtn').addEventListener('click', () => {
+      closeBulkImport();
+      const searchInput = document.getElementById('searchInput');
+      const manualBtn = document.getElementById('manualBtn');
+      if (searchInput) searchInput.value = query;
+      manualBtn?.click();
+    });
+    return;
+  }
+  status.textContent = `${candidates.length} Treffer gefunden. Wähle einen passenden Eintrag aus.`;
+  results.innerHTML = candidates.slice(0, 8).map((entry, idx) => `
+    <div class="match-item">
+      <img src="${entry.cover || ''}" alt="">
+      <div class="match-info">
+        <strong>${escapeHtml(entry.title)}</strong>
+        <span>${escapeHtml(entry.artist)}</span>
+        <span>${escapeHtml(entry.year || '')}${entry.source === 'discogs' ? ' · Discogs' : ' · iTunes'}</span>
+        ${findMatchingCollectionItems(entry).length ? '<span class="existing-match-badge">Bereits in Sammlung</span>' : ''}
+        ${entry.discogsLowestPrice != null ? `<span class="match-price">${entry.discogsLowestPrice.toFixed(2).replace(/\.00$/, '')} ${escapeHtml(entry.discogsCurrency || '€')}</span>` : ''}
+      </div>
+      <button type="button" data-idx="${idx}">Importieren</button>
+    </div>
+  `).join('');
+  results.querySelectorAll('button[data-idx]').forEach(button => {
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      button.textContent = 'Lade...';
+      await addBulkImportEntry(candidates[Number(button.dataset.idx)]);
+      bulkImportIndex++;
+      await showBulkImportLine();
+    });
+  });
+}
+
+document.getElementById('bulkImportCancelBtn')?.addEventListener('click', closeBulkImport);
+async function startBulkImportFromText(input) {
+  bulkImportLines = input.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+  if (bulkImportLines.length === 0) return;
+  bulkImportIndex = 0;
+  await showBulkImportLine();
+}
+document.getElementById('bulkImportSearchBtn')?.addEventListener('click', async () => {
+  const queryInput = document.getElementById('bulkImportQueryInput');
+  const query = queryInput.value.trim();
+  if (!query) return;
+  bulkImportLines[bulkImportIndex] = query;
+  await showBulkImportLine();
+});
+document.getElementById('bulkImportQueryInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('bulkImportSearchBtn')?.click();
+  }
+});
+document.getElementById('bulkImportSkipBtn')?.addEventListener('click', async () => {
+  bulkImportIndex++;
+  await showBulkImportLine();
+});
 
 async function searchDiscogsReleases(query, limit = 8) {
   searchDiscogsReleases.lastError = null;
@@ -4639,9 +5498,10 @@ async function searchDiscogsReleases(query, limit = 8) {
           // ignore detailed lookup errors
         }
       }
+      const parsedResult = splitDiscogsSearchResult(result);
       return {
-        title: result.title || '',
-        artist: result.artist || '',
+        title: metadata?.title || parsedResult.title,
+        artist: metadata?.artist || parsedResult.artist,
         year: result.year || '',
         genre: Array.isArray(result.genre) ? result.genre[0] : '',
         cover,
@@ -5093,6 +5953,7 @@ async function selectAlbum(album, cover, source = 'itunes') {
     tracklist: [],
     discogsFormats: []
   };
+  showExistingCollectionMatch({ title, artist });
   currentTracks = [];
   openForm();
   document.getElementById('fTracklist').innerHTML = '<p style="font-size:12px; color:var(--text-muted); margin:0;">Lade Tracklist...</p>';
@@ -5157,6 +6018,7 @@ function openForm() {
   document.getElementById('fCondition').value = normalizeConditionName(currentDraft.condition);
   document.getElementById('fNotes').value = currentDraft.notes;
   document.getElementById('fOwned').checked = !!currentDraft.owned;
+  refreshStorageFields();
   document.getElementById('fManualPrice').value = currentDraft.discogsLowestPrice != null ? currentDraft.discogsLowestPrice : '';
   document.getElementById('fManualPriceCurrency').value = currentDraft.discogsCurrency || '€';
   formLoadedPrice = currentDraft.discogsLowestPrice != null ? Number(currentDraft.discogsLowestPrice) : null;
@@ -5421,6 +6283,12 @@ document.getElementById('fPattern').addEventListener('change', e => {
 document.getElementById('cancelBtn').addEventListener('click', () => {
   document.getElementById('formSection').style.display = 'none';
   currentDraft = null;
+  restoreCollectionFilterAfterAdd();
+});
+
+document.getElementById('fOwned').addEventListener('change', refreshStorageFields);
+document.getElementById('fShelf').addEventListener('change', event => {
+  populateCompartmentSelect(document.getElementById('fCompartment'), event.target.value, currentDraft?.shelfCompartment);
 });
 
 document.getElementById('saveBtn').addEventListener('click', async () => {
@@ -5454,6 +6322,15 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   currentDraft.condition = document.getElementById('fCondition').value;
   currentDraft.notes = document.getElementById('fNotes').value.trim();
   currentDraft.owned = document.getElementById('fOwned').checked;
+  if (currentDraft.owned) {
+    currentDraft.shelfId = document.getElementById('fShelf').value || '';
+    currentDraft.shelfCompartment = document.getElementById('fCompartment').value || '';
+    currentDraft.lastWashed = document.getElementById('fLastWashed').value || '';
+  } else {
+    delete currentDraft.shelfId;
+    delete currentDraft.shelfCompartment;
+    delete currentDraft.lastWashed;
+  }
   const manualPriceRaw = document.getElementById('fManualPrice').value.trim();
   const manualPriceValue = manualPriceRaw !== '' ? Number(manualPriceRaw) : null;
   if (manualPriceValue !== formLoadedPrice) {
@@ -5482,6 +6359,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   searchResultCards = [];
   searchPage = 1;
   currentDraft = null;
+  restoreCollectionFilterAfterAdd();
 });
 
 function editEntry(id) {
@@ -5513,6 +6391,11 @@ function toggleOwned(id) {
   const entry = collection.find(c => c.id === id);
   if (!entry) return;
   entry.owned = !entry.owned;
+  if (!entry.owned) {
+    delete entry.shelfId;
+    delete entry.shelfCompartment;
+    delete entry.lastWashed;
+  }
   saveCollection();
 }
 
@@ -5602,6 +6485,24 @@ function toggleSelectAll() {
 
 function openBulkEditDialog() {
   if (selectedItemIds.size === 0) return;
+  const bulkShelf = document.getElementById('bulkShelf');
+  bulkShelf.innerHTML = '<option value="default">Nicht ändern</option><option value="none">Lagerort entfernen</option>' + shelfLocations.map(shelf =>
+    `<option value="${escapeHtml(shelf.id)}">${escapeHtml(shelf.name)}</option>`
+  ).join('');
+  bulkShelf.onchange = event => {
+    const shelfId = event.target.value;
+    const compartment = document.getElementById('bulkCompartment');
+    populateCompartmentSelect(compartment, shelfId, '', shelfId === 'default' ? 'Fach nicht ändern' : 'Kein Fach');
+    if (shelfId === 'default' || shelfId === 'none') compartment.disabled = true;
+  };
+  document.getElementById('bulkWashedMode').onchange = event => {
+    document.getElementById('bulkLastWashed').disabled = event.target.value !== 'set';
+  };
+  bulkShelf.value = 'default';
+  populateCompartmentSelect(document.getElementById('bulkCompartment'), '', '', 'Fach nicht ändern');
+  document.getElementById('bulkWashedMode').value = 'default';
+  document.getElementById('bulkLastWashed').value = '';
+  document.getElementById('bulkLastWashed').disabled = true;
   const bulkEditModal = document.getElementById('bulkEditModal');
   if (!bulkEditModal) {
     showAlert('Bulk-Edit Modal nicht gefunden');
@@ -5630,6 +6531,14 @@ function saveBulkChanges() {
   const genre = document.getElementById('bulkGenre').value;
   const notes = document.getElementById('bulkNotes').value;
   const manualPrice = document.getElementById('bulkManualPrice').value;
+  const shelfValue = document.getElementById('bulkShelf').value;
+  const compartmentValue = document.getElementById('bulkCompartment').value;
+  const washedMode = document.getElementById('bulkWashedMode').value;
+  const washedDate = document.getElementById('bulkLastWashed').value;
+  if (washedMode === 'set' && !washedDate) {
+    showAlert('Bitte ein Waschdatum auswählen.');
+    return;
+  }
 
   selectedItemIds.forEach(id => {
     const item = collection.find(c => c.id === id);
@@ -5638,6 +6547,22 @@ function saveBulkChanges() {
     if (condition !== 'default') item.condition = condition;
     if (ownedValue === 'true') item.owned = true;
     if (ownedValue === 'false') item.owned = false;
+    if (item.owned) {
+      if (shelfValue === 'none') {
+        delete item.shelfId;
+        delete item.shelfCompartment;
+      } else if (shelfValue !== 'default') {
+        item.shelfId = shelfValue;
+        if (compartmentValue) item.shelfCompartment = compartmentValue;
+        else if (Number(item.shelfCompartment) > Number(shelfLocations.find(shelf => shelf.id === shelfValue)?.compartments || 0)) delete item.shelfCompartment;
+      }
+      if (washedMode === 'set') item.lastWashed = washedDate;
+      if (washedMode === 'clear') delete item.lastWashed;
+    } else {
+      delete item.shelfId;
+      delete item.shelfCompartment;
+      delete item.lastWashed;
+    }
     if (genre !== 'default' && genre !== '') item.genre = genre;
     if (notes !== 'default' && notes !== '') item.notes = notes;
     if (manualPrice !== '') item.discogsLowestPrice = parseFloat(manualPrice);
@@ -5655,6 +6580,7 @@ function saveBulkChanges() {
 }
 
 function setFilter(filter) {
+  if (activeView === 'storage' && filter !== 'owned') setView('grid');
   activeFilter = filter;
   ['filterAll', 'filterOwned', 'filterWishlist'].forEach(fid => {
     document.getElementById(fid).classList.remove('toggle-active');
@@ -5684,7 +6610,7 @@ function setSortDirection(direction) {
 function updateSortButtons() {
   const dirBtn = document.getElementById('sortDirBtn');
   if (!dirBtn) return;
-  const useDirectionalSorting = ['title', 'artist', 'year', 'genre', 'releaseType', 'price', 'status', 'condition', 'color'].includes(activeSort);
+  const useDirectionalSorting = ['title', 'artist', 'year', 'genre', 'releaseType', 'price', 'status', 'condition', 'color', 'location', 'lastWashed'].includes(activeSort);
   dirBtn.textContent = activeSortDirection === 'asc' ? '↑' : '↓';
   dirBtn.title = activeSortDirection === 'asc' ? 'Aufsteigend (klicken für absteigend)' : 'Absteigend (klicken für aufsteigend)';
   dirBtn.classList.toggle('active', useDirectionalSorting);
@@ -5698,6 +6624,13 @@ document.getElementById('sortSelect').addEventListener('change', e => setSort(e.
 document.getElementById('sortDirBtn').addEventListener('click', () => setSortDirection(activeSortDirection === 'asc' ? 'desc' : 'asc'));
 document.getElementById('viewGridBtn').addEventListener('click', () => setView('grid'));
 document.getElementById('viewTableBtn').addEventListener('click', () => setView('table'));
+const viewStorageBtn = document.getElementById('viewStorageBtn');
+if (viewStorageBtn) {
+  viewStorageBtn.style.display = viewingOwnCollection ? 'inline-flex' : 'none';
+  viewStorageBtn.addEventListener('click', () => setView(activeView === 'storage' ? viewBeforeStorage : 'storage'));
+}
+const storageRandomPickBtn = document.getElementById('storageRandomPickBtn');
+if (storageRandomPickBtn) storageRandomPickBtn.addEventListener('click', showRandomStoredVinyl);
 const selectModeBtn = document.getElementById('selectModeBtn');
 if (selectModeBtn) {
   selectModeBtn.style.display = viewingOwnCollection ? 'flex' : 'none';
@@ -5747,20 +6680,524 @@ if (selectAllCheckbox) {
 // Title editing removed from header; collection title is displayed but not editable here.
 
 function setView(view) {
+  if (view === 'storage' && !viewingOwnCollection) return;
+  const wrap = document.querySelector('.wrap');
+  const collectionPanel = document.querySelector('.collection-panel');
+  const storageBoard = document.getElementById('storageBoard');
+  const searchPanel = document.querySelector('.desktop-form-shell > .panel:first-child');
+  const collectionSearchRow = document.getElementById('collectionSearchRow');
+  if (activeView !== 'storage' && view === 'storage') {
+    viewBeforeStorage = activeView;
+    filterBeforeStorage = activeFilter;
+    activeFilter = 'owned';
+    collectionFilterReleaseType = 'all';
+    document.getElementById('collectionFilterReleaseType').value = 'all';
+    showSelectedOnly = false;
+    selectModeActive = false;
+    selectedItemIds.clear();
+    document.getElementById('bulkEditBar').style.display = 'none';
+    wrap.classList.add('storage-page');
+    wrap.appendChild(storageBoard);
+    searchPanel.insertBefore(collectionSearchRow, searchPanel.querySelector('.toprow'));
+  } else if (activeView === 'storage' && view !== 'storage') {
+    activeFilter = filterBeforeStorage;
+    storageUnsortedCollapsed = false;
+    wrap.classList.remove('storage-page');
+    collectionPanel.appendChild(storageBoard);
+    document.querySelector('.collection-header').insertBefore(collectionSearchRow, document.getElementById('bulkEditBar'));
+  }
   activeView = view;
-  ['viewGridBtn', 'viewTableBtn'].forEach(id => {
+  ['viewGridBtn', 'viewTableBtn', 'viewStorageBtn'].forEach(id => {
     document.getElementById(id).classList.remove('toggle-active');
   });
-  document.getElementById(view === 'grid' ? 'viewGridBtn' : 'viewTableBtn').classList.add('toggle-active');
+  const buttonId = view === 'table' ? 'viewTableBtn' : view === 'storage' ? 'viewStorageBtn' : 'viewGridBtn';
+  document.getElementById(buttonId).classList.add('toggle-active');
   // Show/hide the columns button only for table view
   const colBtn = document.getElementById('tableColumnsBtn');
   if (colBtn) colBtn.style.display = view === 'table' ? 'inline-flex' : 'none';
+  document.querySelector('.collection-panel')?.classList.toggle('storage-active', view === 'storage');
+  if (storageRandomPickBtn) storageRandomPickBtn.style.display = view === 'storage' && viewingOwnCollection ? 'inline-flex' : 'none';
+  if (viewStorageBtn) {
+    viewStorageBtn.style.display = viewingOwnCollection ? 'inline-flex' : 'none';
+    viewStorageBtn.classList.toggle('toggle-active', view === 'storage');
+    viewStorageBtn.title = view === 'storage' ? 'Zur Sammlung wechseln' : 'Lageransicht öffnen';
+    viewStorageBtn.setAttribute('aria-label', viewStorageBtn.title);
+  }
   renderCollection();
+}
+
+function createUnsortedStorageCard(item) {
+  const card = document.createElement('article');
+  card.className = 'collection-card owned';
+  card.dataset.storageItem = item.id;
+  card.innerHTML = `
+    <div class="media"><img class="storage-record-cover" src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" decoding="async" draggable="false"></div>
+    <div class="media-info">
+      <p class="title">${escapeHtml(item.title || '')}</p>
+      <p class="artist">${escapeHtml(item.artist || '')}</p>
+      <div class="storage-unsorted-actions">
+        <button type="button" class="edit" title="Bearbeiten" aria-label="Bearbeiten">✎</button>
+        <button type="button" class="del" title="Löschen" aria-label="Löschen">×</button>
+      </div>
+    </div>`;
+  bindStorageItemPointerDrag(card, item);
+  card.querySelector('.edit').addEventListener('click', () => editEntry(item.id));
+  card.querySelector('.del').addEventListener('click', () => deleteEntry(item.id));
+  card.querySelector('.media').addEventListener('click', () => editEntry(item.id));
+  return card;
+}
+
+function createStoredVinylTile(item) {
+  const tile = document.createElement('article');
+  tile.className = 'storage-record';
+  tile.dataset.storageItem = item.id;
+  tile.title = `${item.title || ''} · ${item.artist || ''}`;
+  tile.innerHTML = `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>· ${escapeHtml(item.artist || '')}</span></div>`;
+  bindStorageItemPointerDrag(tile, item);
+  tile.addEventListener('dblclick', () => editEntry(item.id));
+  return tile;
+}
+
+let lastRandomStoredItemId = null;
+let randomHighlightedItemId = null;
+
+function showRandomStoredVinyl() {
+  const storedTiles = [...document.querySelectorAll('#storageBoard .storage-record[data-storage-item]')];
+  if (storedTiles.length === 0) {
+    showAlert('Es sind noch keine Vinyls in Fächern einsortiert.');
+    return;
+  }
+  const choices = storedTiles.length > 1
+    ? storedTiles.filter(tile => tile.dataset.storageItem !== String(lastRandomStoredItemId))
+    : storedTiles;
+  const selectedTile = choices[Math.floor(Math.random() * choices.length)];
+  const selectedItem = collection.find(item => String(item.id) === selectedTile.dataset.storageItem);
+  if (!selectedItem) return;
+  lastRandomStoredItemId = selectedItem.id;
+  randomHighlightedItemId = selectedItem.id;
+  renderCollection();
+  document.querySelector(`#storageBoard .storage-record[data-storage-item="${CSS.escape(String(selectedItem.id))}"]`)
+    ?.scrollIntoView({ behavior:'smooth', block:'center', inline:'center' });
+}
+
+let storageUnsortedCollapsed = false;
+let storagePaneSplit = 0.67;
+let storagePaneResize = null;
+let activeStorageLayout = null;
+let activeStoragePointerDrag = null;
+let activeStorageDropTarget = null;
+let suppressStorageClickUntil = 0;
+
+function applyStoragePaneLayout(layout) {
+  if (!layout) return;
+  layout.classList.toggle('unsorted-collapsed', storageUnsortedCollapsed);
+  const isStacked = window.matchMedia('(max-width: 720px)').matches;
+  if (storageUnsortedCollapsed) {
+    layout.style.gridTemplateColumns = isStacked ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 42px';
+    layout.style.gridTemplateRows = isStacked ? 'minmax(0, 1fr) 42px' : 'minmax(0, 1fr)';
+    return;
+  }
+  if (isStacked) {
+    layout.style.gridTemplateColumns = 'minmax(0, 1fr)';
+    layout.style.gridTemplateRows = `minmax(0, ${storagePaneSplit}fr) 8px minmax(0, ${1 - storagePaneSplit}fr)`;
+  } else {
+    layout.style.gridTemplateColumns = `minmax(0, ${storagePaneSplit}fr) 8px minmax(220px, ${1 - storagePaneSplit}fr)`;
+    layout.style.gridTemplateRows = 'minmax(0, 1fr)';
+  }
+}
+
+function bindStoragePaneResizer(layout, handle) {
+  handle.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || storageUnsortedCollapsed) return;
+    event.preventDefault();
+    storagePaneResize = {
+      pointerId: event.pointerId,
+      layout,
+      handle,
+      orientation: window.matchMedia('(max-width: 720px)').matches ? 'vertical' : 'horizontal'
+    };
+    handle.classList.add('active');
+    handle.setPointerCapture(event.pointerId);
+  });
+  handle.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const isStacked = window.matchMedia('(max-width: 720px)').matches;
+    const towardEnd = isStacked ? event.key === 'ArrowDown' : event.key === 'ArrowRight';
+    const towardStart = isStacked ? event.key === 'ArrowUp' : event.key === 'ArrowLeft';
+    if (towardEnd) storagePaneSplit = Math.max(0.28, storagePaneSplit - 0.04);
+    if (towardStart) storagePaneSplit = Math.min(0.78, storagePaneSplit + 0.04);
+    applyStoragePaneLayout(layout);
+  });
+}
+
+document.addEventListener('pointermove', event => {
+  if (!storagePaneResize || storagePaneResize.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  const rect = storagePaneResize.layout.getBoundingClientRect();
+  const position = storagePaneResize.orientation === 'vertical'
+    ? event.clientY - rect.top
+    : event.clientX - rect.left;
+  const size = storagePaneResize.orientation === 'vertical' ? rect.height : rect.width;
+  storagePaneSplit = Math.max(0.28, Math.min(0.78, position / size));
+  applyStoragePaneLayout(storagePaneResize.layout);
+}, { capture:true, passive:false });
+
+document.addEventListener('pointerup', event => {
+  if (!storagePaneResize || storagePaneResize.pointerId !== event.pointerId) return;
+  storagePaneResize.handle.classList.remove('active');
+  storagePaneResize = null;
+});
+
+window.addEventListener('resize', () => applyStoragePaneLayout(activeStorageLayout));
+
+function findStorageDropTargetAt(x, y) {
+  return document.elementFromPoint(x, y)?.closest('.storage-compartment, [data-drop-unsorted]') || null;
+}
+
+function setStoragePointerDropTarget(target) {
+  if (activeStorageDropTarget === target) return;
+  activeStorageDropTarget?.classList.remove('drag-over');
+  activeStorageDropTarget = target;
+  activeStorageDropTarget?.classList.add('drag-over');
+}
+
+function clearStoragePointerDrag() {
+  activeStorageDropTarget?.classList.remove('drag-over');
+  activeStorageDropTarget = null;
+  activeStoragePointerDrag?.preview?.remove();
+  activeStoragePointerDrag?.source?.classList.remove('storage-pointer-source');
+  activeStoragePointerDrag = null;
+}
+
+function bindStorageItemPointerDrag(source, item) {
+  if (!source) return;
+  source.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || !item.owned) return;
+    if (event.target.closest('button, input, textarea, select')) return;
+    activeStoragePointerDrag = {
+      pointerId: event.pointerId,
+      item,
+      source,
+      startX: event.clientX,
+      startY: event.clientY,
+      dragging: false,
+      preview: null
+    };
+  });
+}
+
+document.addEventListener('pointermove', event => {
+  const drag = activeStoragePointerDrag;
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
+  event.preventDefault();
+  if (!drag.dragging) {
+    drag.dragging = true;
+    drag.source.classList.add('storage-pointer-source');
+    drag.preview = document.createElement('img');
+    drag.preview.className = 'storage-pointer-preview';
+    drag.preview.src = drag.item.coverUrl || '';
+    drag.preview.alt = '';
+    document.body.appendChild(drag.preview);
+  }
+  drag.preview.style.left = `${event.clientX}px`;
+  drag.preview.style.top = `${event.clientY}px`;
+  setStoragePointerDropTarget(findStorageDropTargetAt(event.clientX, event.clientY));
+}, { capture: true, passive: false });
+
+document.addEventListener('pointerup', event => {
+  const drag = activeStoragePointerDrag;
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  if (drag.dragging) {
+    event.preventDefault();
+    const target = findStorageDropTargetAt(event.clientX, event.clientY);
+    if (target && drag.item.owned) {
+      if (target.hasAttribute('data-drop-unsorted')) {
+        delete drag.item.shelfId;
+        delete drag.item.shelfCompartment;
+      } else {
+        drag.item.shelfId = target.dataset.dropShelf;
+        drag.item.shelfCompartment = target.dataset.dropCompartment;
+      }
+      suppressStorageClickUntil = Date.now() + 500;
+      saveShelfLayout();
+    }
+  }
+  clearStoragePointerDrag();
+}, true);
+
+document.addEventListener('pointercancel', clearStoragePointerDrag, true);
+document.addEventListener('click', event => {
+  if (Date.now() > suppressStorageClickUntil || !event.target.closest('[data-storage-item]')) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  suppressStorageClickUntil = 0;
+}, true);
+
+function saveShelfLayout() {
+  saveCollection();
+  saveCloudDataNow();
+}
+
+function addStorageShelf() {
+  const shelf = {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    name: `Regal ${shelfLocations.length + 1}`,
+    rows: 1,
+    columns: 1,
+    removedCompartments: [],
+    compartmentNames: {},
+    compartments: 1
+  };
+  shelfLocations.push(shelf);
+  saveShelfLayout();
+  renderCollection();
+  const nameInput = document.querySelector(`#storageBoard .storage-shelf[data-shelf-id="${CSS.escape(shelf.id)}"] .storage-shelf-name`);
+  nameInput?.focus();
+  nameInput?.select();
+}
+
+async function removeShelf(shelf) {
+  const assigned = collection.filter(item => item.owned && item.shelfId === shelf.id);
+  if (assigned.length) {
+    const confirmed = await showConfirm(`„${shelf.name}“ enthält ${assigned.length} Vinyl(s). Beim Löschen werden diese unsortiert. Regal löschen?`, { confirmLabel: 'Regal löschen', danger: true });
+    if (!confirmed) return;
+  }
+  collection.forEach(item => {
+    if (item.shelfId === shelf.id) {
+      delete item.shelfId;
+      delete item.shelfCompartment;
+    }
+  });
+  shelfLocations = shelfLocations.filter(entry => entry.id !== shelf.id);
+  saveShelfLayout();
+}
+
+async function removeShelfCompartment(shelf, compartmentNumber) {
+  if (!isValidShelfCompartment(shelf, compartmentNumber)) return;
+  const affected = collection.filter(item => item.owned && item.shelfId === shelf.id && Number(item.shelfCompartment) === compartmentNumber);
+  if (affected.length) {
+    const confirmed = await showConfirm(`Fach ${compartmentNumber} enthält ${affected.length} Vinyl(s). Diese werden unsortiert. Fach löschen?`, { confirmLabel: 'Fach löschen', danger: true });
+    if (!confirmed) return;
+  }
+  collection.forEach(item => {
+    if (item.shelfId === shelf.id && Number(item.shelfCompartment) === compartmentNumber) {
+      delete item.shelfId;
+      delete item.shelfCompartment;
+    }
+  });
+  shelf.removedCompartments = [...new Set([...(shelf.removedCompartments || []), compartmentNumber])];
+  delete shelf.compartmentNames?.[compartmentNumber];
+  shelf.compartments = getShelfCapacity(shelf) - shelf.removedCompartments.length;
+  saveShelfLayout();
+}
+
+const expandedStorageShelfIds = new Set();
+
+function renderStorageBoard(visibleItems) {
+  const board = document.getElementById('storageBoard');
+  const ownedItems = visibleItems.filter(item => item.owned);
+  const randomSelectedItem = ownedItems.find(item => item.id === randomHighlightedItemId);
+  const randomSelectedShelf = randomSelectedItem ? shelfLocations.find(entry => entry.id === randomSelectedItem.shelfId) : null;
+  if (randomSelectedItem && !isValidShelfCompartment(randomSelectedShelf, randomSelectedItem.shelfCompartment)) randomHighlightedItemId = null;
+  const allUnsorted = ownedItems.filter(item => {
+    const shelf = shelfLocations.find(entry => entry.id === item.shelfId);
+    return !isValidShelfCompartment(shelf, item.shelfCompartment);
+  });
+  const unsorted = collectionFilterQuery
+    ? allUnsorted.filter(item => matchesCollectionQuery(item, collectionFilterQuery))
+    : allUnsorted;
+  const sections = shelfLocations.map(shelf => {
+    const capacity = getShelfCapacity(shelf);
+    const shelfWidth = Math.max(420, shelf.columns * 210 + 36);
+    const compartmentMarkup = Array.from({ length: capacity }, (_, index) => {
+      const number = index + 1;
+      if (!isValidShelfCompartment(shelf, number)) return '';
+      const rowNumber = Math.floor(index / shelf.columns) + 1;
+      const columnNumber = (index % shelf.columns) + 1;
+      const hasSearchMatch = !!collectionFilterQuery && ownedItems.some(item => item.shelfId === shelf.id
+        && Number(item.shelfCompartment) === number && matchesCollectionQuery(item, collectionFilterQuery));
+      return `<section class="storage-compartment${hasSearchMatch ? ' search-match' : ''}" style="grid-row:${rowNumber};grid-column:${columnNumber};" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}">
+        <header class="storage-compartment-header"><input type="text" class="storage-compartment-name" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" value="${escapeHtml(shelf.compartmentNames?.[number] || '')}" placeholder="Fach ${number}" aria-label="Name für Fach ${number}"><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
+        <div class="storage-records" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}"></div>
+      </section>`;
+    }).join('');
+    return `<section class="storage-shelf${expandedStorageShelfIds.has(shelf.id) ? ' settings-open' : ''}" data-shelf-id="${escapeHtml(shelf.id)}" style="--shelf-rows:${shelf.rows};--shelf-columns:${shelf.columns};--shelf-width:${shelfWidth}px;">
+      <header class="storage-shelf-header">
+        <div class="storage-shelf-topline">
+          <input type="text" class="storage-shelf-name" data-shelf-id="${escapeHtml(shelf.id)}" value="${escapeHtml(shelf.name)}" aria-label="Regalname ${escapeHtml(shelf.name)}">
+          <button type="button" class="storage-shelf-settings" aria-expanded="${expandedStorageShelfIds.has(shelf.id)}" title="Maßeinstellungen öffnen" aria-label="Maßeinstellungen öffnen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51-1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="remove-shelf" title="Regal löschen" aria-label="Regal ${escapeHtml(shelf.name)} löschen">×</button>
+        </div>
+        <div class="storage-shelf-dimensions">
+          <label class="storage-dimension-control">Reihen <input type="number" class="storage-shelf-rows" min="1" max="10" value="${shelf.rows}" aria-label="Reihen ${escapeHtml(shelf.name)}"></label>
+          <label class="storage-dimension-control">Spalten <input type="number" class="storage-shelf-columns" min="1" max="10" value="${shelf.columns}" aria-label="Spalten ${escapeHtml(shelf.name)}"></label>
+        </div>
+      </header>
+      <div class="storage-compartments">${compartmentMarkup}</div>
+    </section>`;
+  }).join('');
+  board.innerHTML = `<div class="storage-layout">
+      <section class="storage-shelves-pane"><div class="storage-shelves">${sections}<button type="button" class="storage-add-shelf" title="Regal hinzufügen" aria-label="Regal hinzufügen">+</button></div></section>
+      <div class="storage-pane-resizer" role="separator" tabindex="0" aria-label="Bereichsbreite anpassen" aria-orientation="vertical"></div>
+      <aside class="storage-unsorted-pane" data-drop-unsorted>
+        <header class="storage-unsorted-panel-header">
+          <h3>Unsortiert</h3>
+          <span class="state-pill">${collectionFilterQuery ? `${unsorted.length} / ${allUnsorted.length}` : allUnsorted.length}</span>
+          <button type="button" class="storage-unsorted-toggle" aria-expanded="${!storageUnsortedCollapsed}" title="Unsortiert einklappen" aria-label="Unsortiert einklappen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </header>
+        <div class="storage-unsorted-list"></div>
+      </aside>
+    </div>`;
+
+  const layout = board.querySelector('.storage-layout');
+  activeStorageLayout = layout;
+  applyStoragePaneLayout(layout);
+  const resizer = layout.querySelector('.storage-pane-resizer');
+  bindStoragePaneResizer(layout, resizer);
+  layout.querySelector('.storage-unsorted-toggle').addEventListener('click', event => {
+    storageUnsortedCollapsed = !storageUnsortedCollapsed;
+    event.currentTarget.setAttribute('aria-expanded', String(!storageUnsortedCollapsed));
+    event.currentTarget.title = storageUnsortedCollapsed ? 'Unsortiert ausklappen' : 'Unsortiert einklappen';
+    event.currentTarget.setAttribute('aria-label', event.currentTarget.title);
+    applyStoragePaneLayout(layout);
+  });
+  const unsortedList = layout.querySelector('.storage-unsorted-list');
+  unsortedList.innerHTML = '';
+  if (unsorted.length === 0) unsortedList.innerHTML = `<p class="settings-panel-hint">${collectionFilterQuery && allUnsorted.length ? 'Keine passenden unsortierten Vinyls.' : 'Keine unsortierten Vinyls.'}</p>`;
+  unsorted.forEach(item => unsortedList.appendChild(createUnsortedStorageCard(item)));
+  ownedItems.forEach(item => {
+    const shelf = shelfLocations.find(entry => entry.id === item.shelfId);
+    if (!isValidShelfCompartment(shelf, item.shelfCompartment)) return;
+    const target = board.querySelector(`[data-drop-shelf="${CSS.escape(item.shelfId)}"][data-drop-compartment="${Number(item.shelfCompartment)}"] .storage-records`)
+      || board.querySelector(`.storage-records[data-drop-shelf="${CSS.escape(item.shelfId)}"][data-drop-compartment="${Number(item.shelfCompartment)}"]`);
+    if (target) {
+      const tile = createStoredVinylTile(item);
+      if (item.id === randomHighlightedItemId) tile.classList.add('random-highlight');
+      target.appendChild(tile);
+    }
+  });
+
+  board.querySelectorAll('.storage-shelf').forEach(shelfElement => {
+    const shelf = shelfLocations.find(entry => entry.id === shelfElement.dataset.shelfId);
+    shelfElement.querySelector('.remove-shelf').addEventListener('click', () => removeShelf(shelf));
+    const settingsButton = shelfElement.querySelector('.storage-shelf-settings');
+    settingsButton.addEventListener('click', () => {
+      const isOpen = shelfElement.classList.toggle('settings-open');
+      settingsButton.setAttribute('aria-expanded', String(isOpen));
+      settingsButton.title = isOpen ? 'Maßeinstellungen schließen' : 'Maßeinstellungen öffnen';
+      settingsButton.setAttribute('aria-label', settingsButton.title);
+      if (isOpen) expandedStorageShelfIds.add(shelf.id);
+      else expandedStorageShelfIds.delete(shelf.id);
+    });
+    const nameInput = shelfElement.querySelector('.storage-shelf-name');
+    nameInput.addEventListener('change', () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        nameInput.value = shelf.name;
+        return;
+      }
+      shelf.name = name;
+      nameInput.setAttribute('aria-label', `Regalname ${name}`);
+      saveShelfLayout();
+    });
+    const saveDimensions = async () => {
+      const rowInput = shelfElement.querySelector('.storage-shelf-rows');
+      const columnInput = shelfElement.querySelector('.storage-shelf-columns');
+      const updated = await updateShelfDimensions(shelf, Number(rowInput.value), Number(columnInput.value));
+      if (!updated) {
+        rowInput.value = shelf.rows;
+        columnInput.value = shelf.columns;
+      } else {
+        renderCollection();
+      }
+    };
+    shelfElement.querySelector('.storage-shelf-rows').addEventListener('change', saveDimensions);
+    shelfElement.querySelector('.storage-shelf-columns').addEventListener('change', saveDimensions);
+    shelfElement.querySelectorAll('.storage-compartment-name').forEach(input => {
+      input.addEventListener('change', () => {
+        const number = input.dataset.compartment;
+        const name = input.value.trim();
+        if (name) shelf.compartmentNames[number] = name;
+        else delete shelf.compartmentNames[number];
+        input.value = name;
+        saveCloudDataNow();
+      });
+    });
+    shelfElement.querySelectorAll('.remove-compartment').forEach(button => {
+      button.addEventListener('click', () => removeShelfCompartment(shelf, Number(button.dataset.compartment)));
+    });
+  });
+  layout.querySelector('.storage-add-shelf').addEventListener('click', addStorageShelf);
+}
+
+function captureStorageBoardState(board) {
+  if (!board) return null;
+  const scrollPositions = [...board.querySelectorAll('.storage-shelves-pane, .storage-unsorted-list, .storage-records')].map(element => ({
+    kind: element.classList.contains('storage-shelves-pane') ? 'shelves' : element.classList.contains('storage-unsorted-list') ? 'unsorted' : 'compartment',
+    shelfId: element.dataset.dropShelf || '',
+    compartment: element.dataset.dropCompartment || '',
+    left: element.scrollLeft,
+    top: element.scrollTop
+  }));
+  const activeElement = document.activeElement;
+  let focus = null;
+  if (board.contains(activeElement)) {
+    const shelf = activeElement.closest('.storage-shelf');
+    const controlClass = ['storage-shelf-name', 'storage-shelf-rows', 'storage-shelf-columns'].find(className => activeElement.classList.contains(className));
+    if (shelf && controlClass) {
+      focus = { kind: 'shelf-control', shelfId: shelf.dataset.shelfId, controlClass };
+    } else if (shelf && activeElement.classList.contains('storage-compartment-name')) {
+      focus = { kind: 'compartment-name', shelfId: shelf.dataset.shelfId, compartment: activeElement.dataset.compartment };
+    }
+    if (focus && activeElement.matches('input[type="text"], textarea')) {
+      try {
+        focus.selectionStart = activeElement.selectionStart;
+        focus.selectionEnd = activeElement.selectionEnd;
+      } catch (error) {
+      }
+    }
+  }
+  return { scrollPositions, focus, windowX: window.scrollX, windowY: window.scrollY };
+}
+
+function restoreStorageBoardState(board, state) {
+  if (!board || !state) return;
+  state.scrollPositions.forEach(position => {
+    let element = null;
+    if (position.kind === 'shelves') element = board.querySelector('.storage-shelves-pane');
+    else if (position.kind === 'unsorted') element = board.querySelector('.storage-unsorted-list');
+    else element = [...board.querySelectorAll('.storage-records')].find(candidate =>
+      candidate.dataset.dropShelf === position.shelfId && candidate.dataset.dropCompartment === position.compartment);
+    if (element) {
+      element.scrollLeft = position.left;
+      element.scrollTop = position.top;
+    }
+  });
+  window.scrollTo(state.windowX, state.windowY);
+  if (!state.focus) return;
+  const shelf = [...board.querySelectorAll('.storage-shelf')].find(element => element.dataset.shelfId === state.focus.shelfId);
+  if (!shelf) return;
+  const target = state.focus.kind === 'shelf-control'
+    ? shelf.querySelector(`.${state.focus.controlClass}`)
+    : [...shelf.querySelectorAll('.storage-compartment-name')].find(input => input.dataset.compartment === state.focus.compartment);
+  if (!target) return;
+  target.focus({ preventScroll: true });
+  if (state.focus.selectionStart != null && typeof target.setSelectionRange === 'function') {
+    target.setSelectionRange(state.focus.selectionStart, state.focus.selectionEnd);
+  }
 }
 
 function renderCollection() {
   const grid = document.getElementById('collectionGrid');
   const tableWrap = document.getElementById('collectionTableWrap');
+  const storageBoard = document.getElementById('storageBoard');
+  const storageBoardState = activeView === 'storage' ? captureStorageBoardState(storageBoard) : null;
   const emptyHint = document.getElementById('emptyHint');
   const wishlistCount = collection.filter(c => !c.owned).length;
   document.getElementById('wishlistCount').textContent = wishlistCount;
@@ -5855,11 +7292,13 @@ function renderCollection() {
 
   // Wenn ein Filtertext eingegeben wurde, nur passende Einträge anzeigen
   if (collectionFilterQuery && collectionFilterQuery.length > 0) {
-    list = list.filter(item => matchesCollectionQuery(item, collectionFilterQuery));
-    list = list
-      .map(item => ({ item, score: getCollectionQueryScore(item, collectionFilterQuery) }))
-      .sort((a, b) => b.score - a.score)
-      .map(entry => entry.item);
+    if (activeView !== 'storage') {
+      list = list.filter(item => matchesCollectionQuery(item, collectionFilterQuery));
+      list = list
+        .map(item => ({ item, score: getCollectionQueryScore(item, collectionFilterQuery) }))
+        .sort((a, b) => b.score - a.score)
+        .map(entry => entry.item);
+    }
   }
 
   // Nach Release-Type filtern
@@ -5931,6 +7370,11 @@ function renderCollection() {
         if (ca !== cb) return directionMultiplier * (ca - cb);
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       }
+      case 'location':
+        return directionMultiplier * getStorageLabel(a).localeCompare(getStorageLabel(b), 'de');
+      case 'lastWashed':
+        return directionMultiplier * ((viewingOwnCollection && a.owned ? a.lastWashed : '') || '').localeCompare((viewingOwnCollection && b.owned ? b.lastWashed : '') || '')
+          || directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       case 'color': {
         const colorA = normalizeColor(a.color) || '#000000';
         const colorB = normalizeColor(b.color) || '#000000';
@@ -5944,13 +7388,21 @@ function renderCollection() {
 
   grid.innerHTML = '';
   tableWrap.innerHTML = '';
-  emptyHint.style.display = list.length === 0 ? 'block' : 'none';
+  storageBoard.innerHTML = '';
+  emptyHint.style.display = activeView === 'storage' ? 'none' : list.length === 0 ? 'block' : 'none';
   emptyHint.textContent = collection.length === 0
     ? 'Noch keine Vinyls. Suche oben ein Album oder füge es manuell hinzu.'
     : 'Keine Einträge in dieser Ansicht.';
 
   grid.style.display = activeView === 'grid' ? 'grid' : 'none';
   tableWrap.style.display = activeView === 'table' ? 'block' : 'none';
+  storageBoard.style.display = activeView === 'storage' ? 'grid' : 'none';
+
+  if (activeView === 'storage') {
+    renderStorageBoard(list.filter(item => item.owned));
+    restoreStorageBoardState(storageBoard, storageBoardState);
+    return;
+  }
 
   if (list.length === 0) return;
 
@@ -6048,6 +7500,7 @@ ${actionButtons}
             </div>
           </div>
           ${commonBadgeHtml}
+          ${viewingOwnCollection && item.owned && (getStorageLabel(item) || item.lastWashed) ? `<div class="collection-extra">${getStorageLabel(item) ? `<span>${escapeHtml(getStorageLabel(item))}</span>` : ''}${item.lastWashed ? `<span>Gewaschen: ${escapeHtml(getWashedDateLabel(item))}</span>` : ''}</div>` : ''}
         </div>
       `;
 
@@ -6087,6 +7540,8 @@ ${actionButtons}
       { key: 'type', label: 'Typ' },
       { key: 'year', label: 'Jahr' },
       { key: 'genre', label: 'Genre' },
+      { key: 'location', label: 'Lagerort' },
+      { key: 'lastWashed', label: 'Gewaschen' },
       { key: 'price', label: 'Preis' },
       { key: 'color', label: 'Farbe' },
       { key: 'status', label: 'Status' }
@@ -6176,6 +7631,10 @@ ${actionButtons}
             td.textContent = item.year || '';
           } else if (col.key === 'genre') {
             td.textContent = item.genre || '–';
+          } else if (col.key === 'location') {
+            td.textContent = item.owned ? getStorageLabel(item) : '';
+          } else if (col.key === 'lastWashed') {
+            td.textContent = item.owned ? getWashedDateLabel(item) : '';
           } else if (col.key === 'price') {
             const pVal = Number(item.discogsLowestPrice != null ? item.discogsLowestPrice : (item.discogsAveragePrice != null ? item.discogsAveragePrice : 0)) || 0;
             td.textContent = pVal > 0 ? (pVal.toFixed(2).replace(/\.00$/, '') + ' ' + escapeHtml(item.discogsCurrency || '€')) : '';
@@ -6199,7 +7658,7 @@ ${actionButtons}
 
 /* --- Tabellen-Spalten- und Spalten-Sortierung (persistent pro Account) --- */
 const DEFAULT_TABLE_SETTINGS = {
-  visible: { cover: true, title: true, type: true, year: true, genre: true, price: true, color: true, status: true, actions: true, common: false },
+  visible: { cover: true, title: true, type: true, year: true, genre: true, location: true, lastWashed: true, price: true, color: true, status: true, actions: true, common: false },
   // activeSort: column name or 'newest'
   activeSortColumn: 'newest',
   activeSortDir: 'desc'
@@ -6208,7 +7667,9 @@ let tableSettings = Object.assign({}, DEFAULT_TABLE_SETTINGS);
 
 function loadTableSettingsFromUser(settings) {
   if (!settings || !settings.tableSettings) return;
-  tableSettings = Object.assign({}, DEFAULT_TABLE_SETTINGS, settings.tableSettings);
+  tableSettings = Object.assign({}, DEFAULT_TABLE_SETTINGS, settings.tableSettings, {
+    visible: Object.assign({}, DEFAULT_TABLE_SETTINGS.visible, settings.tableSettings.visible || {})
+  });
 }
 
 function getTableSettings() {
@@ -6255,7 +7716,7 @@ function renderColumnsPanel() {
   if (!panel) return;
   const ts = getTableSettings();
   const cols = [
-    ['cover', 'Cover'], ['title', 'Titel & Interpret'], ['type', 'Typ'], ['year', 'Jahr'], ['genre', 'Genre'], ['price', 'Preis'], ['color', 'Farbe'], ['status', 'Status'], ['actions', 'Aktionen']
+    ['cover', 'Cover'], ['title', 'Titel & Interpret'], ['type', 'Typ'], ['year', 'Jahr'], ['genre', 'Genre'], ['location', 'Lagerort'], ['lastWashed', 'Gewaschen'], ['price', 'Preis'], ['color', 'Farbe'], ['status', 'Status'], ['actions', 'Aktionen']
   ];
   panel.innerHTML = cols.map(c => {
     const k = c[0];
@@ -6332,17 +7793,20 @@ function getSortIndicator(col) {
 
 document.getElementById('searchBtn').addEventListener('click', searchAlbums);
 document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') searchAlbums();
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    searchAlbums();
+  }
 });
 
 // Collection filter: dynamisches Filtern nach Titel / Interpret / Jahr / Genre
 function parseCollectionQuery(rawQuery) {
   const query = String(rawQuery || '').trim().toLowerCase();
-  const fieldTerms = { title: [], artist: [], track: [], genre: [], year: [] };
+  const fieldTerms = { title: [], artist: [], track: [], genre: [], year: [], location: [], washed: [] };
   const tokens = [];
   let remainder = query;
 
-  const fieldPattern = /\b(title|artist|track|genre|year):"([^"]+)"|\b(title|artist|track|genre|year):(\S+)/gi;
+  const fieldPattern = /\b(title|artist|track|genre|year|location|washed):"([^"]+)"|\b(title|artist|track|genre|year|location|washed):(\S+)/gi;
   remainder = remainder.replace(fieldPattern, (match, f1, qval, f2, sval) => {
     const field = (f1 || f2).toLowerCase();
     const value = String(qval || sval || '').trim();
@@ -6368,7 +7832,9 @@ function matchesCollectionQuery(item, rawQuery) {
     genre: (item.genre || '').toString().toLowerCase(),
     year: (item.year || '').toString().toLowerCase(),
     releaseType: (item.releaseType || '').toString().toLowerCase(),
-    notes: (item.notes || '').toString().toLowerCase()
+    notes: (item.notes || '').toString().toLowerCase(),
+    location: getStorageLabel(item).toLowerCase(),
+    washed: viewingOwnCollection && item.owned ? (item.lastWashed || '').toString().toLowerCase() : ''
   };
 
   for (const field of Object.keys(fieldTerms)) {
@@ -6385,7 +7851,9 @@ function matchesCollectionQuery(item, rawQuery) {
       || fields.genre.includes(token)
       || fields.year.includes(token)
       || fields.releaseType.includes(token)
-      || fields.notes.includes(token);
+      || fields.notes.includes(token)
+      || fields.location.includes(token)
+      || fields.washed.includes(token);
   });
 }
 
@@ -6401,7 +7869,9 @@ function getCollectionQueryScore(item, rawQuery) {
     genre: (item.genre || '').toString().toLowerCase(),
     year: (item.year || '').toString().toLowerCase(),
     releaseType: (item.releaseType || '').toString().toLowerCase(),
-    notes: (item.notes || '').toString().toLowerCase()
+    notes: (item.notes || '').toString().toLowerCase(),
+    location: getStorageLabel(item).toLowerCase(),
+    washed: viewingOwnCollection && item.owned ? (item.lastWashed || '').toString().toLowerCase() : ''
   };
 
   let score = 0;
@@ -6421,6 +7891,7 @@ function getCollectionQueryScore(item, rawQuery) {
     if (fields.year.includes(token)) score += 8;
     if (fields.releaseType.includes(token)) score += 6;
     if (fields.notes.includes(token)) score += 4;
+    if (fields.location.includes(token) || fields.washed.includes(token)) score += 5;
   });
 
   return score;
@@ -6543,6 +8014,7 @@ document.getElementById('importFile').addEventListener('change', e => {
             localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, parsed.settings.defaultReleaseType);
             if (defaultReleaseTypeSelect) defaultReleaseTypeSelect.value = parsed.settings.defaultReleaseType;
           }
+          if (Array.isArray(parsed.settings.shelves)) shelfLocations = normalizeShelfLocations(parsed.settings.shelves);
         }
       } else {
         await showAlert('Ungültiges Format der Import-Datei.');
@@ -6698,6 +8170,20 @@ window.addEventListener('unhandledrejection', (ev) => {
       <option value="true">Ja</option>
       <option value="false">Nein</option>
     </select>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase;">Regal / Fach</label>
+    <select id="bulkShelf" style="width:100%;"><option value="default">Nicht ändern</option></select>
+    <select id="bulkCompartment" style="width:100%; margin-top:8px;" disabled><option value="">Fach nicht ändern</option></select>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase;">Zuletzt gewaschen</label>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <select id="bulkWashedMode" style="flex:0 0 150px;"><option value="default">Nicht ändern</option><option value="set">Datum setzen</option><option value="clear">Datum entfernen</option></select>
+      <input type="date" id="bulkLastWashed" style="flex:1;" disabled>
+    </div>
   </div>
 
   <div style="margin-bottom:16px;">
