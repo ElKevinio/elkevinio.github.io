@@ -595,7 +595,7 @@
     top: 8px;
     right: 8px;
     width: 30px;
-    height: 30px;
+    height: 26px;
     border-radius: 50%;
     display: inline-flex;
     align-items: center;
@@ -734,6 +734,110 @@
   .hint:empty { display: none; }
 
   .form-section { display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 0.5px solid var(--border); }
+  .album-editor-overlay { z-index: 120; }
+  .album-editor-box {
+    width: min(680px, calc(100vw - 16px));
+    max-width: 680px;
+    max-height: calc(100dvh - 16px);
+    overflow: auto;
+    padding: 14px;
+  }
+  .album-editor-form.form-section {
+    display: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .album-editor-form.form-section.editor-open { display: block; }
+  .album-editor-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .album-editor-heading .modal-title { margin: 0; }
+  .album-editor-form .form-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .album-editor-form .form-cover-column {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .album-editor-form .form-cover-wrap { width: 96px; height: 96px; }
+  .album-cover-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: center;
+    gap: 8px 12px;
+    min-width: 0;
+    flex: 1;
+  }
+  .album-meta-item,
+  .album-year-field,
+  .album-owned-item { display: grid; gap: 2px; min-width: 0; }
+  .album-meta-item > span:first-child,
+  .album-year-field > span,
+  .album-owned-item > span:first-child {
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .album-meta-item strong { font-size: 12px; font-weight: 600; }
+  .album-meta-color { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .album-meta-color i { width: 14px; height: 14px; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; flex: 0 0 auto; }
+  .album-meta-color strong { overflow: hidden; text-overflow: ellipsis; }
+  .album-year-field input { width: 100%; min-width: 0; padding: 5px 7px; font-size: 12px; }
+  .owned-status-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    justify-self: start;
+    min-height: 30px;
+    padding: 4px 7px;
+    border: 1px solid var(--border-strong);
+    border-radius: 7px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    font-size: 11px;
+    line-height: 1.2;
+    cursor: pointer;
+  }
+  .owned-status-toggle svg { width: 16px; height: 16px; flex: 0 0 auto; }
+  .owned-status-toggle .owned-check,
+  .owned-status-toggle .owned-remove,
+  .owned-status-toggle .wishlist-icon { display: none; }
+  .owned-status-toggle .owned-action-label { display: none; }
+  .owned-status-toggle[data-owned="true"] .owned-check { display: block; color: #55c77a; }
+  .owned-status-toggle[data-owned="true"]:hover .owned-check { display: none; }
+  .owned-status-toggle[data-owned="true"]:hover .owned-remove { display: block; color: #ef625d; }
+  .owned-status-toggle[data-owned="true"]:hover #ownedStatusLabel { display: none; }
+  .owned-status-toggle[data-owned="true"]:hover .owned-action-wishlist { display: inline; }
+  .owned-status-toggle[data-owned="false"] .wishlist-icon { display: block; color: #f1f1ef; }
+  .owned-status-toggle[data-owned="false"]:hover .wishlist-icon { display: none; }
+  .owned-status-toggle[data-owned="false"]:hover .owned-check { display: block; color: #55c77a; }
+  .owned-status-toggle[data-owned="false"]:hover #ownedStatusLabel { display: none; }
+  .owned-status-toggle[data-owned="false"]:hover .owned-action-owned { display: inline; }
+  .album-editor-form #fOwned { display: none; }
+  .album-identity-fields { display: grid; gap: 7px; min-width: 0; }
+  .album-genre-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .album-genre-row input { flex: 1; min-width: 0; }
+  .album-cover-url-btn { width: 36px; height: 36px; flex: 0 0 36px; padding: 0; justify-content: center; }
+  .album-editor-form #fCoverUrl { display: none; }
+  .album-editor-form #fNotes { min-height: 54px; margin: 10px 0 0; }
+  .album-editor-form .plausibility-hint { margin: 2px 0 8px; }
+  .album-editor-form .own-toggle { margin: 8px 0 0 !important; }
+  @media (min-width: 560px) {
+    .album-editor-form .form-top { grid-template-columns: minmax(0, 1fr); }
+    .album-editor-form .form-fields { min-width: 0; }
+  }
+  #toggleSearchPanelBtn { display: none; }
   .desktop-form-shell {
     display: flex;
     flex-direction: column;
@@ -755,6 +859,14 @@
       position: sticky;
       top: 92px;
     }
+    .desktop-form-shell.search-collapsed {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .desktop-form-shell.search-collapsed > .panel:first-child {
+      display: none;
+    }
+    #toggleSearchPanelBtn { display: inline-flex; }
+    .collection-panel.storage-active #toggleSearchPanelBtn { display: none; }
   }
   .form-top { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
   .form-top img {
@@ -765,6 +877,19 @@
   }
   .form-cover-wrap { position: relative; width: 130px; height: 130px; flex-shrink: 0; }
   .form-cover-wrap img { width: 100%; height: 100%; }
+  .form-vinyl-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; margin-bottom: 2px; color: var(--text-primary); font-size: 12px; font-weight: 600; }
+  .form-vinyl-heading span { min-width: 0; color: var(--text-muted); font-size: 11px; font-weight: 400; }
+  .form-fields .price-design-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; min-width: 0; }
+  .form-fields .price-design-row #fManualPrice { flex: 1 1 150px; min-width: 100px; max-width: 180px; }
+  .form-fields .price-design-row #fManualPriceCurrency { flex: 0 0 76px; width: 76px; }
+  .vinyl-design-icon-btn { width: 38px; height: 38px; min-width: 38px; padding: 0; justify-content: center; }
+  .editor-select-field { display: grid; gap: 4px; flex: 1 1 150px; min-width: 130px; }
+  .editor-select-field > span { color: var(--text-secondary); font-size: 11px; line-height: 1.2; }
+  .editor-collapsible { border: 1px solid var(--border); border-radius: 7px; background: rgba(255,255,255,.02); }
+  .editor-collapsible > summary { padding: 8px 10px; color: var(--text-secondary); font-size: 12px; cursor: pointer; user-select: none; }
+  .editor-collapsible[open] > summary { border-bottom: 1px solid var(--border); }
+  .editor-collapsible-content { padding: 10px; }
+  .editor-collapsible .form-fields { min-width: 0; }
   .form-cover-search-btn {
     position: absolute;
     bottom: 6px;
@@ -811,25 +936,37 @@
     transition: border-color 0.15s, transform 0.1s;
   }
   .form-cover-results img:hover { border-color: var(--accent); transform: translateY(-1px); }
+  #coverSearchOverlay { z-index: 140; }
+  .cover-search-box { width: min(760px, calc(100vw - 24px)); }
+  .cover-search-grid {
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+    max-height: min(68vh, 620px);
+    padding: 2px;
+  }
   .cover-search-card {
-    display: grid;
-    grid-template-columns: 80px 1fr;
-    gap: 10px;
-    padding: 10px;
-    border: 0.5px solid var(--border);
-    border-radius: 12px;
+    display: block;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 6px;
     background: var(--surface-2);
     color: var(--text-primary);
-    text-align: left;
     cursor: pointer;
-    transition: border-color 0.15s, transform 0.1s, background 0.15s;
+    transition: border-color 0.15s, transform 0.1s;
     width: 100%;
+    aspect-ratio: 1;
   }
   .cover-search-card:hover {
     border-color: var(--accent-border);
     transform: translateY(-1px);
-    background: rgba(255,255,255,0.04);
   }
+  .cover-search-card img { width: 100%; height: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 0; }
+  .cover-search-status:empty,
+  .cover-search-status[hidden] { display: none; }
   .cover-search-card strong {
     display: block;
     margin-bottom: 4px;
@@ -1029,7 +1166,7 @@
   .storage-shelf-header button, .storage-compartment-header button, .storage-add-shelf {
     min-width: 30px;
     width: 30px;
-    height: 30px;
+    height: 26px;
     padding: 0;
     justify-content: center;
   }
@@ -1111,11 +1248,40 @@
     border:0;
     border-bottom:0.5px solid var(--border);
     background:transparent;
+    user-select:none;
+    -webkit-user-select:none;
   }
+  .storage-record * { user-select:none; -webkit-user-select:none; }
   .storage-record:active { cursor: grabbing; }
   .storage-record.random-highlight {
     background:var(--accent-bg);
     box-shadow:inset 0 0 0 1px var(--accent-border);
+  }
+  .storage-shelf.random-pick-shelf { animation: storageShelfPick .55s ease-in-out; outline:2px solid var(--accent); outline-offset:2px; }
+  .storage-compartment.random-pick-compartment { animation: storageCompartmentPick .55s ease-in-out; outline:2px solid var(--accent); outline-offset:1px; z-index:2; }
+  .storage-record.random-pick-spinning { position:relative; z-index:3; animation: storageVinylPick .75s cubic-bezier(.2,.8,.2,1); }
+  .storage-record.random-pick-decoy { position:relative; z-index:2; background:var(--accent-bg); box-shadow:inset 0 0 0 1px var(--accent-border); }
+  @keyframes storageShelfPick { 50% { box-shadow:0 0 20px var(--accent); } }
+  @keyframes storageCompartmentPick { 50% { box-shadow:0 0 18px var(--accent); transform:scale(1.025); } }
+  @keyframes storageVinylPick { 0% { transform:perspective(280px) rotateY(0) scale(.88); } 65% { transform:perspective(280px) rotateY(390deg) scale(1.08); } 100% { transform:perspective(280px) rotateY(360deg) scale(1); } }
+  .storage-random-filter-wrap { position:relative; flex:0 0 auto; }
+  .storage-random-filter-panel {
+    display:none;
+    position:fixed;
+    z-index:10080;
+    width:min(220px, calc(100vw - 16px));
+    padding:12px;
+    border:1px solid var(--border-strong);
+    border-radius:8px;
+    background:var(--surface-2);
+    box-shadow:var(--shadow);
+  }
+  .storage-random-filter-panel.open { display:grid; gap:8px; }
+  .storage-random-filter-panel strong { font-size:12px; color:var(--text-secondary); }
+  .storage-random-filter-option { display:flex; align-items:center; gap:9px; font-size:13px; cursor:pointer; }
+  .storage-random-filter-option input { width:16px; height:16px; margin:0; accent-color:var(--accent); }
+  @media (prefers-reduced-motion: reduce) {
+    .storage-shelf.random-pick-shelf, .storage-compartment.random-pick-compartment, .storage-record.random-pick-spinning { animation:none; }
   }
   .storage-record img { width:24px; height:24px; object-fit:cover; border-radius:3px; background:var(--surface-3); cursor:grab; touch-action:none; }
   .storage-shelf.display-mode .storage-compartment {
@@ -1209,8 +1375,9 @@
     line-height:1.25;
   }
   .storage-record-copy span::before { content:'· '; }
-  .storage-page [data-storage-item] { cursor:grab; touch-action:pan-y; }
-  .storage-page [data-storage-item]:active { cursor:grabbing; }
+  .storage-page [data-storage-item] { cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+  .storage-page [data-storage-item] * { user-select:none; -webkit-user-select:none; }
+  .storage-page [data-storage-item]:active { cursor:grabbing; user-select:none; -webkit-user-select:none; }
   .storage-pointer-source { opacity:0.45; }
   .storage-pointer-preview {
     position:fixed;
@@ -1237,7 +1404,7 @@
     display:block;
     min-width:0;
     overflow:hidden;
-    text-overflow:ellipsis;
+  .storage-record:active { cursor:grabbing; user-select:none; -webkit-user-select:none; }
     white-space:nowrap;
     font-size:12px;
     line-height:1.25;
@@ -1580,9 +1747,11 @@
 
   /* Album Farb- & Pattern-Leiste Styles */
   .album-color-bar {
+    position: relative;
     width: 100%;
-    height: 9px;
+    height: 16px;
     border-radius: 4px;
+    overflow: hidden;
     margin-bottom: 6px;
     border: 0.5px solid rgba(255, 255, 255, 0.25);
     box-shadow: 0 1px 4px rgba(0,0,0,0.4);
@@ -1603,8 +1772,178 @@
     margin-right: 6px;
   }
   .collection-card:hover .album-color-bar {
-    transform: scaleY(1.2);
     box-shadow: 0 2px 8px var(--bar-color, rgba(255,255,255,0.2));
+  }
+
+  .vinyl-card-preview {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: clamp(128px, 18vw, 176px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.65);
+    background-color: var(--vinyl-base, #111);
+    background-image: var(--vinyl-art, none), repeating-radial-gradient(circle, transparent 0 4px, rgba(255,255,255,.1) 4.5px 5px, transparent 5.5px 9px);
+    background-size: cover;
+    box-shadow: 0 2px 12px rgba(0,0,0,.55);
+    pointer-events: none;
+    overflow: hidden;
+  }
+  @keyframes liquidFlow {
+    from { transform: translateX(-50%); }
+    to { transform: translateX(0); }
+  }
+  .vinyl-liquid-fill {
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 100%;
+    transform: translateX(-50%);
+    background-image: var(--liquid-image);
+    background-size: 50% 100%;
+    background-repeat: repeat-x;
+    animation: liquidFlow var(--liquid-duration, 6s) linear infinite;
+    animation-delay: var(--liquid-delay, 0s);
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vinyl-liquid-fill { animation: none; }
+  }
+  .vinyl-card-preview::after, .vinyl-editor-disc::after {
+    content: '';
+    position: absolute;
+    width: 30%;
+    height: 30%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: var(--vinyl-label, #d4537e);
+    border: 1px solid rgba(255,255,255,.55);
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,.12);
+    z-index: 1;
+  }
+  .vinyl-card-preview::before, .vinyl-editor-disc::before {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    width: 5%;
+    aspect-ratio: 1;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: #181818;
+    border: 1px solid rgba(255,255,255,.6);
+  }
+  .vinyl-editor-box {
+    width: min(1100px, 96vw);
+    max-width: 1100px;
+    height: min(860px, calc(100dvh - 32px));
+    max-height: calc(100dvh - 32px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .vinyl-editor-box > .vinyl-editor-toolbar,
+  .vinyl-editor-box > .vinyl-editor-footer {
+    flex: 0 0 auto;
+  }
+  .vinyl-editor-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, .8fr) minmax(0, 1.5fr);
+    gap: 24px;
+    align-items: stretch;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .vinyl-editor-preview {
+    position: sticky;
+    top: 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    justify-items: center;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: radial-gradient(circle at 50% 42%, rgba(255,255,255,.08), transparent 64%), var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .vinyl-editor-disc {
+    position: relative;
+    width: min(100%, 300px, 42vh);
+    max-width: 100%;
+    min-width: 0;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background-color: var(--vinyl-base, #111);
+    background-image: var(--vinyl-art, none), repeating-radial-gradient(circle, transparent 0 6px, rgba(255,255,255,.12) 6.5px 7px, transparent 7.5px 12px);
+    background-size: cover;
+    border: 1px solid rgba(255,255,255,.6);
+    box-shadow: 0 12px 32px rgba(0,0,0,.55);
+    overflow: hidden;
+  }
+  .vinyl-editor-controls { display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; overflow: hidden; }
+  .vinyl-editor-toolbar, .vinyl-editor-actions, .vinyl-layer-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .vinyl-count-control { display: grid; grid-template-columns: auto 72px; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+  .vinyl-count-control label { color: var(--text-secondary); font-size: 13px; }
+  .vinyl-count-control input { width: 72px; min-width: 0; }
+  .vinyl-editor-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .vinyl-editor-meta label, .vinyl-layer-fields label { display: grid; gap: 5px; color: var(--text-secondary); font-size: 12px; }
+  .vinyl-editor-meta input[type="color"], .vinyl-layer-fields input[type="color"] { width: 100%; height: 36px; padding: 2px; }
+  .vinyl-editor-meta input[type="range"] { width: 100%; height: 24px; padding: 0; accent-color: var(--accent); }
+  .vinyl-transparency-label > span { justify-self: end; color: var(--text-primary); font-size: 11px; }
+  .vinyl-editor-layer-list { display: grid; align-content: start; gap: 8px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px 5px 2px 0; }
+  .vinyl-layer-row { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-1); }
+  .vinyl-layer-heading strong { font-size: 13px; }
+  .vinyl-layer-actions { display: flex; gap: 4px; }
+  .vinyl-layer-actions button { width: 28px; height: 30px; min-width: 28px; padding: 0; justify-content: center; }
+  .vinyl-layer-actions button:disabled { opacity: .35; cursor: not-allowed; }
+  .vinyl-layer-fields { display: grid; gap: 8px; margin-top: 8px; }
+  .vinyl-layer-main-row { display: grid; grid-template-columns: minmax(0, 1fr) 48px auto auto; gap: 6px; align-items: end; }
+  .vinyl-layer-count { display: grid !important; grid-template-columns: auto 54px; align-items: center; gap: 5px !important; white-space: nowrap; }
+  .vinyl-layer-count input[type="number"] { width: 54px; }
+  .vinyl-layer-liquid-main { grid-template-columns: minmax(0, 1fr) 48px auto; }
+  .vinyl-layer-fields input[type="range"] { width: 100%; height: 24px; padding: 0; accent-color: var(--accent); }
+  .vinyl-liquid-control { grid-column: 1 / -1; grid-template-columns: 1fr auto; align-items: center; }
+  .vinyl-liquid-control span { color: var(--text-primary); font-size: 11px; }
+  .vinyl-liquid-control input { grid-column: 1 / -1; }
+  .vinyl-layer-detail-row { display: grid; grid-template-columns: 78px repeat(7, minmax(42px, 1fr)); gap: 6px; align-items: end; }
+  .vinyl-layer-fields .angle-fields { grid-column: span 2; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; min-width: 0; }
+  .vinyl-layer-fields label { display: grid; min-width: 0; gap: 4px; font-size: 11px; white-space: nowrap; }
+  .vinyl-layer-fields input[type="number"], .vinyl-layer-fields select { width: 100%; min-width: 0; height: 30px; padding: 4px 3px; font-size: 11px; }
+  .vinyl-layer-fields input[type="color"] { width: 48px; max-width: 100%; height: 30px; padding: 2px; }
+  .vinyl-editor-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .vinyl-form-control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .vinyl-form-control .settings-panel-hint { margin: 0; }
+  @media (max-width: 700px) {
+    .vinyl-editor-box { height: calc(100dvh - 20px); max-height: calc(100dvh - 20px); padding: 14px; }
+    .vinyl-editor-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(170px, 34%) minmax(0, 1fr); gap: 10px; }
+    .vinyl-editor-preview { position: static; grid-template-columns: minmax(110px, 150px) 1fr; gap: 10px; padding: 10px; min-height: 0; }
+    .vinyl-editor-disc { width: min(100%, 150px, 22vh); }
+    .vinyl-editor-preview .vinyl-editor-meta { grid-template-columns: 1fr; }
+    .vinyl-layer-main-row { grid-template-columns: minmax(0, 1fr) 44px auto auto; gap: 4px; }
+    .vinyl-layer-detail-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .vinyl-point-size-fields { display: contents; }
+  }
+  @media (max-width: 640px) {
+    .album-color-bar:not(.inline) { height: 14px; }
+    .vinyl-card-preview { width: clamp(112px, 32vw, 150px); }
+  }
+  @media (max-width: 700px) and (max-height: 650px) {
+    .vinyl-editor-layout { grid-template-rows: minmax(132px, 30%) minmax(0, 1fr); }
+    .vinyl-editor-disc { width: min(100%, 120px, 18vh); }
+    .vinyl-editor-preview { gap: 6px; padding: 8px; }
   }
 
   /* FIX: Kartenrahmen standardmäßig auf Schwarz setzen */
@@ -2061,6 +2400,27 @@
     max-width: 340px;
     width: 100%;
   }
+  .modal-box.vinyl-editor-box {
+    width: min(1100px, 96vw);
+    max-width: 1100px;
+  }
+  .modal-box.album-editor-box {
+    width: min(680px, calc(100vw - 16px));
+    max-width: 680px;
+    max-height: calc(100dvh - 16px);
+    overflow: auto;
+    padding: 14px;
+  }
+  @media (max-width: 600px) {
+    .album-editor-box,
+    .modal-box.album-editor-box { max-height: min(680px, calc(100dvh - 120px)); }
+    .album-editor-heading { margin-bottom: 10px; }
+    .album-editor-form .form-fields { gap: 6px; }
+  }
+  .cover-url-overlay { z-index: 140; }
+  .cover-url-box { width: min(420px, calc(100vw - 24px)); padding: 14px; }
+  .cover-url-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+  .cover-url-actions .icon-btn { width: 36px; height: 36px; padding: 0; justify-content: center; }
   .discogs-match-box {
     max-width: 900px;
     width: min(100%, 920px);
@@ -2460,6 +2820,7 @@
     .sort-select { min-width: 0; flex: 1 1 auto; font-size: 13px; padding-left: 8px; padding-right: 8px; }
     .sort-direction-group { flex-shrink: 0; }
   }
+  body.storage-page-active .header-actions { gap: 4px; }
 
   /* At small widths show two compact stats next to the header actions (buttons) */
   @media (max-width: 720px) {
@@ -2775,6 +3136,19 @@
       <button id="storageRandomPickBtn" class="icon-btn" type="button" title="Zufälliges einsortiertes Vinyl auswählen" aria-label="Zufälliges einsortiertes Vinyl auswählen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>
       </button>
+      <div class="storage-random-filter-wrap" id="storageRandomFilterWrap" style="display:none;">
+        <button id="storageRandomFilterBtn" class="icon-btn" type="button" title="Formate für Zufallsauswahl" aria-label="Formate für Zufallsauswahl" aria-expanded="false" aria-controls="storageRandomFilterPanel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M7 12h10m-7 5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="7" r="2" fill="var(--bar)" stroke="currentColor" stroke-width="1.6"/><circle cx="15" cy="12" r="2" fill="var(--bar)" stroke="currentColor" stroke-width="1.6"/></svg>
+        </button>
+        <div class="storage-random-filter-panel" id="storageRandomFilterPanel" aria-label="Formate für Zufallsauswahl">
+          <strong>Formate einbeziehen</strong>
+          <label class="storage-random-filter-option"><input type="checkbox" id="storageRandomAnimationCheckbox" checked> Ziehanimation abspielen</label>
+          <label class="storage-random-filter-option"><input type="checkbox" data-storage-random-format="Album" checked> LP</label>
+          <label class="storage-random-filter-option"><input type="checkbox" data-storage-random-format="Maxi Single" checked> Maxi</label>
+          <label class="storage-random-filter-option"><input type="checkbox" data-storage-random-format="Single" checked> 7 Inch</label>
+          <label class="storage-random-filter-option"><input type="checkbox" data-storage-random-format="EP" checked> EP</label>
+        </div>
+      </div>
       <button id="viewStorageBtn" class="icon-btn" title="Lageransicht öffnen" aria-label="Lageransicht öffnen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h18v16H3zM3 10h18M9 4v16M15 4v16" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
       </button>
@@ -2818,6 +3192,10 @@
             <button type="button" id="manageShelvesBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Regale und Fächer verwalten">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h16v16H4zM4 10h16M4 16h16M10 4v16M16 4v16" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
               <span>Lagerorte</span>
+            </button>
+            <button type="button" id="reviewLegacyVinylBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Alben ohne neues Vinyl-Design nacheinander gestalten">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+              <span>Vinyl-Farben durchgehen</span>
             </button>
           </div>
           <p class="settings-panel-title" style="margin-top:14px;">Akzentfarbe</p>
@@ -2909,29 +3287,53 @@
 
       <div class="form-section" id="formSection">
         <div class="form-top">
-        <div class="form-cover-wrap">
-          <img id="formCover" src="" alt="">
-          <button type="button" id="formCoverSearchBtn" class="form-cover-search-btn" title="Cover neu suchen" aria-label="Cover neu suchen">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
+        <div class="form-cover-column">
+          <div class="form-cover-wrap">
+            <img id="formCover" src="" alt="">
+            <button type="button" id="formCoverSearchBtn" class="form-cover-search-btn" title="Cover neu suchen" aria-label="Cover neu suchen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="album-cover-meta">
+            <div class="album-meta-item"><span>Vinyls</span><strong id="editorVinylCount">1 LP</strong></div>
+            <div class="album-meta-item"><span>Farbe</span><span class="album-meta-color"><i id="editorVinylColorSwatch"></i><strong id="editorVinylColor">#111111</strong></span></div>
+            <label class="album-year-field" for="fYear"><span>Jahr</span><input type="text" id="fYear" placeholder="Jahr" inputmode="numeric"></label>
+            <div class="album-owned-item">
+              <span>Status</span>
+              <button type="button" id="ownedStatusToggle" class="owned-status-toggle" data-owned="false" aria-pressed="false" aria-label="Auf Wunschliste. Als im Besitz markieren" title="Auf Wunschliste. Klicken, um als im Besitz zu markieren">
+                <svg class="owned-check" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m5 12.5 4.2 4.2L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg class="owned-remove" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                <svg class="wishlist-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 8h16v12H4zM2.5 5h19v3h-19zM12 5v15M12 5c-4.2 0-5.2-3.5-2.4-3.5C11.2 1.5 12 5 12 5Zm0 0c4.2 0 5.2-3.5 2.4-3.5C12.8 1.5 12 5 12 5Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span id="ownedStatusLabel">Wunschliste</span>
+                <span class="owned-action-label owned-action-owned" aria-hidden="true">Im Besitz</span>
+                <span class="owned-action-label owned-action-wishlist" aria-hidden="true">Wunschliste</span>
+              </button>
+            </div>
+          </div>
         </div>
         <div class="form-fields">
-          <input type="text" id="fTitle" placeholder="Titel des Albums">
-          <input type="text" id="fArtist" placeholder="Interpret">
-          <div class="row">
-            <input type="text" id="fYear" placeholder="Jahr" style="max-width:100px;">
-            <input type="text" id="fGenre" placeholder="Genre">
+          <div class="album-identity-fields">
+            <input type="text" id="fTitle" placeholder="Titel des Albums">
+            <input type="text" id="fArtist" placeholder="Interpret">
+            <div class="album-genre-row">
+              <input type="text" id="fGenre" placeholder="Genre">
+              <button type="button" id="openCoverUrlBtn" class="icon-btn album-cover-url-btn" title="Cover-Bildlink kopieren oder ändern" aria-label="Cover-Bildlink kopieren oder ändern">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M10 13.5a4.5 4.5 0 0 0 6.36 0l3-3A4.5 4.5 0 0 0 13 4.14l-1.72 1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 10.5a4.5 4.5 0 0 0-6.36 0l-3 3A4.5 4.5 0 0 0 11 19.86l1.72-1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </button>
+            </div>
           </div>
-          <input type="text" id="fCoverUrl" placeholder="Cover-URL (optional manuell setzen)">
-          <div class="row" style="margin-top:8px;">
+          <input type="text" id="fCoverUrl" aria-label="Cover-Bildlink">
+          <div class="price-design-row">
             <input type="number" id="fManualPrice" placeholder="Preis manuell (z. B. 25.00)" step="0.01" min="0" style="max-width:180px;">
             <select id="fManualPriceCurrency" style="max-width:90px;">
               <option value="€">€</option>
               <option value="$">$</option>
               <option value="£">£</option>
             </select>
+            <button type="button" id="openVinylEditorBtn" class="icon-btn vinyl-design-icon-btn" title="Vinyl gestalten" aria-label="Vinyl gestalten">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+            </button>
           </div>
-          <p class="settings-panel-hint" style="margin:4px 0 0;">Ein manuell gesetzter Preis hat Vorrang und wird beim Discogs-Nachladen nicht überschrieben.</p>
           <div class="row" style="margin-top:8px;">
             <input type="url" id="fDiscogsUrl" placeholder="Discogs-Release- oder Master-Link" aria-label="Discogs-URL des Albums">
             <button type="button" id="loadDiscogsUrlBtn" title="Diesen Discogs-Link nur für dieses Album laden">Laden</button>
@@ -2944,97 +3346,30 @@
       <div class="form-cover-results" id="formCoverResults"></div>
 
       <div class="select-row">
-        <select id="fReleaseType">
-          <option value="Album">Typ: Album</option>
-          <option value="Single">Typ: Single</option>
-          <option value="Maxi Single">Typ: Maxi Single</option>
-          <option value="EP">Typ: EP</option>
-        </select>
-        
-        <select id="fPattern">
-          <option value="Keine">Muster: Kein Muster</option>
-          <option value="Splatter">Muster: Splatter (komplett konfigurierbar)</option>
-          <option value="Split">Muster: Split</option>
-          <option value="Picture">Muster: Picture Disk</option>
-          <option value="Liquid">Muster: Liquid (Flüssig-Effekt)</option>
-        </select>
-
-        <div style="display:flex; align-items:center; gap:12px;">
-          <fieldset id="fTransparentGroup" style="display:flex; align-items:center; gap:8px; padding:6px 8px;">
-            <input type="checkbox" id="fTransparentVinyl">
-            <label for="fTransparentVinyl" style="margin:0;">Transparentes Vinyl</label>
-          </fieldset>
-
-          <div style="margin-left:auto;">
-            <button type="button" id="designOptionsToggle" class="small">Design Optionen ▾</button>
-          </div>
-        </div>
-
-        <!-- Hidden color inputs container — controls are managed via preview swatches -->
-        <div id="fColorInputs" class="color-inputs" style="display:none;"></div>
-
-        <div id="designOptions" style="display:none; margin-top:8px; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--panel);">
-          <p style="margin:0 0 8px; font-size:13px; color:var(--text-secondary);">Muster-Parameter (ein- / ausklappbar)</p>
-          <div style="display:flex; gap:12px; flex-wrap:wrap;">
-            <div style="min-width:200px;">
-              <label style="font-size:12px; color:var(--text-secondary);">Splatter Anzahl: <span id="sSplatterCountVal">8</span></label>
-              <input type="range" id="sSplatterCount" min="0" max="50" value="8">
-            </div>
-            <div style="min-width:200px;">
-              <label style="font-size:12px; color:var(--text-secondary);">Splatter Größe: <span id="sSplatterSizeVal">18</span>px</label>
-              <input type="range" id="sSplatterSize" min="0" max="80" value="18">
-            </div>
-            <div style="min-width:200px;">
-              <label style="font-size:12px; color:var(--text-secondary);"><input type="checkbox" id="sStripesEnable"> Streifen aktivieren</label>
-              <label style="font-size:12px; color:var(--text-secondary); display:block;">Streifen Anzahl: <span id="sStripeCountVal">10</span></label>
-              <input type="range" id="sStripeCount" min="0" max="50" value="10">
-            </div>
-            <div style="min-width:200px;">
-              <label style="font-size:12px; color:var(--text-secondary);"><input type="checkbox" id="sDotsEnable"> Punkte aktivieren</label>
-              <label style="font-size:12px; color:var(--text-secondary); display:block;">Punkte Anzahl: <span id="sDotCountVal">12</span></label>
-              <input type="range" id="sDotCount" min="0" max="50" value="12">
-            </div>
-            <div style="min-width:200px;">
-              <label style="font-size:12px; color:var(--text-secondary);">Zufälligkeit: <span id="sRandomVal">50</span>%</label>
-              <input type="range" id="sRandom" min="0" max="100" value="50">
-            </div>
-          </div>
-        </div>
-
-        <select id="fCondition">
-          <option value="Neu">Zustand: Neu</option>
-          <option value="Wie neu">Zustand: Wie neu</option>
-          <option value="Sehr gut">Zustand: Sehr gut</option>
-          <option value="Gut">Zustand: Gut</option>
-          <option value="Gebraucht">Zustand: Gebraucht</option>
-          <option value="Akzeptabel">Zustand: Akzeptabel</option>
-          <option value="Schlecht">Zustand: Schlecht</option>
-        </select>
+        <label class="editor-select-field"><span>Typ</span><select id="fReleaseType">
+          <option value="Album">Album</option>
+          <option value="Single">Single</option>
+          <option value="Maxi Single">Maxi Single</option>
+          <option value="EP">EP</option>
+        </select></label>
+        <label class="editor-select-field"><span>Zustand</span><select id="fCondition">
+          <option value="Neu">Neu</option>
+          <option value="Wie neu">Wie neu</option>
+          <option value="Sehr gut">Sehr gut</option>
+          <option value="Gut">Gut</option>
+          <option value="Gebraucht">Gebraucht</option>
+          <option value="Akzeptabel">Akzeptabel</option>
+          <option value="Schlecht">Schlecht</option>
+        </select></label>
       </div>
 
-      <div class="color-preview" id="colorPreview">
-        <div style="display:flex; align-items:center; gap:8px; width:100%;">
-          <div class="preview-swatches" id="colorPreviewSwatches"></div>
-          <div style="margin-left:auto; display:flex; gap:6px;">
-            <button type="button" id="previewAddColorBtn" class="small secondary">+</button>
-            <button type="button" id="previewRemoveColorBtn" class="small secondary">−</button>
-          </div>
-        </div>
-        <div id="colorPreviewText" style="min-width:120px; text-align:right; color:var(--text-secondary); font-size:12px;">&nbsp;</div>
-      </div>
-      <!-- Preview of the bar that will be shown above the vinyl (actual vinyl-bar style) -->
-      <div id="vinylBarPreview" class="album-color-bar" style="height:12px; border-radius:6px; margin-top:8px; border:0.5px solid var(--border);"></div>
-      <div class="plausibility-hint" id="plausibilityHint"></div>
+      <input type="checkbox" id="fOwned" aria-hidden="true" tabindex="-1">
 
-      <label class="own-toggle" style="margin:12px 0 0;">
-        <input type="checkbox" id="fOwned">
-        <span class="switch"></span>
-        <span class="switch-text">Ich besitze dieses Album bereits (sonst landet es auf der Wunschliste)</span>
-      </label>
+      <textarea id="fNotes" placeholder="Notizen (Presswerk, Kaufort, Widmung ...)"></textarea>
 
-      <div id="fStorageFields" style="display:none; margin-top:12px; padding:12px; border:0.5px solid var(--border); border-radius:8px;">
-        <p class="settings-panel-title">Lagerung & Pflege</p>
-        <div class="form-fields">
+      <details id="fStorageFields" class="editor-collapsible" style="display:none; margin-top:12px;">
+        <summary>Lagerung & Pflege</summary>
+        <div class="editor-collapsible-content form-fields">
           <div class="row">
             <select id="fShelf" aria-label="Regal"><option value="">Kein Regal</option></select>
             <select id="fCompartment" aria-label="Fach" disabled><option value="">Kein Fach</option></select>
@@ -3042,14 +3377,12 @@
           <label for="fLastWashed" style="font-size:12px; color:var(--text-secondary);">Zuletzt gewaschen</label>
           <input type="date" id="fLastWashed">
         </div>
-      </div>
+      </details>
 
-      <textarea id="fNotes" placeholder="Notizen (Presswerk, Kaufort, Widmung ...)"></textarea>
-
-      <div id="tracklistSection">
-        <p style="font-size:13px; color:var(--text-secondary); margin:0 0 6px;">Tracklist</p>
-        <div class="tracklist-box" id="fTracklist"></div>
-      </div>
+      <details id="tracklistSection" class="editor-collapsible">
+        <summary>Tracklist</summary>
+        <div class="editor-collapsible-content"><div class="tracklist-box" id="fTracklist"></div></div>
+      </details>
 
       <div class="form-actions">
         <button id="cancelBtn">Abbrechen</button>
@@ -3073,6 +3406,9 @@
     <div class="collection-header">
       <div class="collection-toolbar">
         <div class="toolbar-group left">
+          <button type="button" id="toggleSearchPanelBtn" class="icon-btn" title="Album-Suche einklappen" aria-label="Album-Suche einklappen" aria-expanded="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="8" height="16" rx="1" stroke="currentColor" stroke-width="1.8"/><path d="M15 8h6M15 12h6M15 16h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
           <div class="collection-view-toggle">
             <button id="viewGridBtn" class="toggle-active" title="Rasteransicht" aria-label="Rasteransicht">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="15" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="15" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="15" y="15" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/></svg>
@@ -3232,8 +3568,78 @@
       </div>
       <button type="button" id="closeCoverSearchBtn" class="icon-btn" title="Schließen">×</button>
     </div>
-    <p class="match-status" id="coverSearchStatus">Wähle ein Cover aus der Liste.</p>
+    <p class="match-status" id="coverSearchStatus" hidden></p>
     <div class="cover-search-grid" id="coverSearchResults"></div>
+  </div>
+</div>
+
+<div class="modal-overlay album-editor-overlay" id="albumEditorOverlay" aria-modal="true" role="dialog" aria-labelledby="albumEditorTitle">
+  <div class="modal-box album-editor-box">
+    <div class="album-editor-heading">
+      <p class="modal-title" id="albumEditorTitle">Album bearbeiten</p>
+      <button type="button" id="closeAlbumEditorBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+    <div id="albumEditorModalContent"></div>
+  </div>
+</div>
+
+<div class="modal-overlay cover-url-overlay" id="coverUrlOverlay" aria-modal="true" role="dialog" aria-labelledby="coverUrlTitle">
+  <div class="modal-box cover-url-box">
+    <div class="album-editor-heading">
+      <p class="modal-title" id="coverUrlTitle">Cover-Bildlink</p>
+      <button type="button" id="closeCoverUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+    <input type="url" id="coverUrlModalInput" aria-label="Cover-Bildlink" placeholder="https://…">
+    <div class="cover-url-actions">
+      <button type="button" id="copyCoverUrlBtn" class="icon-btn" title="Bildlink kopieren" aria-label="Bildlink kopieren">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.8"/></svg>
+      </button>
+      <button type="button" id="applyCoverUrlBtn" class="primary">Übernehmen</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="vinylEditorOverlay" aria-modal="true" role="dialog" aria-labelledby="vinylEditorTitle">
+  <div class="modal-box vinyl-editor-box">
+    <div class="vinyl-editor-toolbar">
+      <div>
+        <p class="modal-title" id="vinylEditorTitle">Vinyl gestalten</p>
+        <span class="settings-panel-hint" id="vinylEditorAlbumTitle"></span>
+        <span class="settings-panel-hint" id="vinylMigrationProgress" style="display:none;"></span>
+      </div>
+      <button type="button" id="closeVinylEditorBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+    <div class="vinyl-editor-layout">
+      <section class="vinyl-editor-preview" aria-label="Vinyl-Vorschau">
+        <div id="vinylEditorDisc" class="vinyl-editor-disc"></div>
+        <div class="vinyl-editor-meta">
+          <label>Grundfarbe<input type="color" id="vinylBaseColor" value="#111111"></label>
+          <label>Label-Farbe<input type="color" id="vinylLabelColor" value="#d4537e"></label>
+          <label class="vinyl-transparency-label">Transparenz <span id="vinylTransparencyValue">0%</span><input type="range" id="vinylTransparencyInput" min="0" max="100" value="0" aria-label="Transparenz"></label>
+        </div>
+      </section>
+      <section class="vinyl-editor-controls">
+        <div class="vinyl-editor-toolbar">
+          <div class="vinyl-count-control">
+            <label for="vinylCountInput">Anzahl Vinyls</label>
+            <input type="number" id="vinylCountInput" min="1" max="8" value="1">
+          </div>
+          <label style="display:flex; align-items:center; gap:8px; font-size:13px;">Aktuelle Vinyl
+            <select id="vinylIndexSelect" style="min-width:90px;"></select>
+          </label>
+        </div>
+        <div class="vinyl-editor-actions">
+          <button type="button" id="copyVinylDesignBtn" class="small">Auf andere Vinyls kopieren</button>
+          <button type="button" id="addVinylLayerBtn" class="small primary">+ Effekt-Ebene</button>
+        </div>
+        <div id="vinylLayerList" class="vinyl-editor-layer-list"></div>
+      </section>
+    </div>
+    <div class="vinyl-editor-footer">
+      <button type="button" id="cancelVinylEditorBtn">Abbrechen</button>
+      <button type="button" id="saveVinylEditorBtn" class="primary">Übernehmen</button>
+      <button type="button" id="vinylMigrationNextBtn" class="primary" style="display:none;">Weiter</button>
+    </div>
   </div>
 </div>
 
@@ -3563,6 +3969,18 @@ async function loadCloudData(uid) {
       window._pendingTableSettings = data.settings.tableSettings || null;
     }
   }
+  const defaultStorageRandomFormats = ['Album', 'Maxi Single', 'Single', 'EP'];
+  const storageRandomFormats = Array.isArray(data.settings?.storageRandomFormats)
+    ? data.settings.storageRandomFormats.filter(format => defaultStorageRandomFormats.includes(format))
+    : defaultStorageRandomFormats;
+  localStorage.setItem('storageRandomFormatsV1', JSON.stringify(storageRandomFormats));
+  document.querySelectorAll('#storageRandomFilterPanel [data-storage-random-format]').forEach(input => {
+    input.checked = storageRandomFormats.includes(input.dataset.storageRandomFormat);
+  });
+  const storageRandomAnimation = data.settings?.storageRandomAnimation !== false;
+  localStorage.setItem('storageRandomAnimationV1', storageRandomAnimation ? 'true' : 'false');
+  const storageRandomAnimationCheckbox = document.getElementById('storageRandomAnimationCheckbox');
+  if (storageRandomAnimationCheckbox) storageRandomAnimationCheckbox.checked = storageRandomAnimation;
   shelfLocations = normalizeShelfLocations(data.settings?.shelves);
   const titleDisplay = document.getElementById('collectionTitleDisplay');
   if (titleDisplay) titleDisplay.textContent = collectionTitle;
@@ -3583,7 +4001,10 @@ async function saveCloudDataNow() {
     const defaultReleaseType = (typeof getDefaultReleaseType === 'function') ? getDefaultReleaseType() : (localStorage.getItem(DEFAULT_RELEASE_TYPE_KEY) || 'auto');
     const accentColor = (typeof getAccentColor === 'function') ? getAccentColor() : (localStorage.getItem(ACCENT_COLOR_KEY) || '#d4537e');
     const ts = (typeof getTableSettings === 'function') ? getTableSettings() : (window._pendingTableSettings || null);
-    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations }, ts ? { tableSettings: ts } : {});
+    const storageRandomFormats = [...document.querySelectorAll('#storageRandomFilterPanel [data-storage-random-format]:checked')]
+      .map(input => input.dataset.storageRandomFormat);
+    const storageRandomAnimation = document.getElementById('storageRandomAnimationCheckbox')?.checked !== false;
+    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations, storageRandomFormats, storageRandomAnimation }, ts ? { tableSettings: ts } : {});
 
     await db.collection('users').doc(currentUid).set({
       username: currentUsername,
@@ -3700,18 +4121,26 @@ function updateViewingInfo() {
   // Show collection title in header (non-editable)
   const titleDisplay = document.getElementById('collectionTitleDisplay');
   if (titleDisplay) titleDisplay.textContent = collectionTitle || 'Vinyl-Sammlung';
+  const searchToggle = document.getElementById('toggleSearchPanelBtn');
+  if (searchToggle) searchToggle.style.display = viewingOwnCollection ? '' : 'none';
+  const ownedFilterLabel = document.querySelector('#filterOwned .filter-label');
+  if (ownedFilterLabel) ownedFilterLabel.textContent = viewingOwnCollection
+    ? 'Besitze ich'
+    : `Besitzt ${viewedUsername || 'Nutzer'}`;
   // Hide the small viewing info label; user details belong into the user menu only
   viewingInfoLabel.style.display = 'none';
   if (viewingOwnCollection) {
     showOwnCollectionBtn.style.display = 'none';
     if (viewStorageBtn) viewStorageBtn.style.display = 'inline-flex';
     document.getElementById('manageShelvesBtn').style.display = 'inline-flex';
+    document.getElementById('reviewLegacyVinylBtn').style.display = 'inline-flex';
     userListHint.textContent = 'Wähle hier einen anderen Benutzer, um seine Sammlung anzusehen oder zu importieren.';
   } else {
     showOwnCollectionBtn.style.display = 'inline-flex';
     if (activeView === 'storage') setView(viewBeforeStorage);
     if (viewStorageBtn) viewStorageBtn.style.display = 'none';
     document.getElementById('manageShelvesBtn').style.display = 'none';
+    document.getElementById('reviewLegacyVinylBtn').style.display = 'none';
     userListHint.textContent = 'Diese Liste ist schreibgeschützt. Importiere sie in deine eigene Sammlung, um sie zu bearbeiten.';
   }
 }
@@ -3876,6 +4305,14 @@ ownCollection = ownCollection.map(item => {
 collectionTitle = localStorage.getItem(TITLE_STORAGE_KEY) || 'Vinyl-Sammlung';
 let collection = ownCollection;
 let currentDraft = null;
+const albumEditorOverlay = document.getElementById('albumEditorOverlay');
+const albumEditorModalContent = document.getElementById('albumEditorModalContent');
+const albumEditorFormSection = document.getElementById('formSection');
+albumEditorFormSection.classList.add('album-editor-form');
+albumEditorModalContent.appendChild(albumEditorFormSection);
+let vinylMigrationQueue = [];
+let vinylMigrationIndex = -1;
+let vinylMigrationActive = false;
 
 async function enrichDiscogsPriceForItem(item) {
   if (!item || !item.discogsResourceUrl) return false;
@@ -4263,6 +4700,19 @@ function populateCompartmentSelect(select, shelfId, selectedValue, defaultLabel 
 
 function refreshStorageFields() {
   const owned = document.getElementById('fOwned').checked;
+  const statusButton = document.getElementById('ownedStatusToggle');
+  const statusLabel = document.getElementById('ownedStatusLabel');
+  if (statusButton) {
+    statusButton.dataset.owned = String(owned);
+    statusButton.setAttribute('aria-pressed', String(owned));
+    statusButton.setAttribute('aria-label', owned
+      ? 'Im Besitz. Klicken, um auf die Wunschliste zu setzen'
+      : 'Auf Wunschliste. Klicken, um als im Besitz zu markieren');
+    statusButton.title = owned
+      ? 'Im Besitz. Klicken, um auf die Wunschliste zu setzen'
+      : 'Auf Wunschliste. Klicken, um als im Besitz zu markieren';
+  }
+  if (statusLabel) statusLabel.textContent = owned ? 'Im Besitz' : 'Wunschliste';
   document.getElementById('fStorageFields').style.display = owned ? 'block' : 'none';
   if (!owned) return;
   const shelfSelect = document.getElementById('fShelf');
@@ -4374,6 +4824,10 @@ function openShelfLocationsManager() {
 document.getElementById('manageShelvesBtn').addEventListener('click', () => {
   settingsPanel.classList.remove('open');
   openShelfLocationsManager();
+});
+document.getElementById('reviewLegacyVinylBtn').addEventListener('click', () => {
+  settingsPanel.classList.remove('open');
+  startLegacyVinylReview();
 });
 document.getElementById('closeShelfLocationsBtn').addEventListener('click', () => {
   document.getElementById('shelfLocationsOverlay').classList.remove('open');
@@ -4573,82 +5027,445 @@ function normalizeColors(colors) {
   return (Array.isArray(colors) ? colors : []).map(normalizeColor).filter(Boolean);
 }
 
-function getFormColors() {
-  const inputs = Array.from(document.querySelectorAll('#fColorInputs input[type=color]'));
-  const colors = inputs.map(input => normalizeColor(input.value)).filter(Boolean);
-  return colors.length ? colors : ['#000000'];
+const VINYL_EFFECT_TYPES = ['VollFarbe', 'Streifen Random', 'Punkte Random', 'Quadrate Random', 'Marble Random', 'Farbe Innen', 'Liquid'];
+const VINYL_EFFECT_LABELS = {
+  'VollFarbe': 'Vollfarbe',
+  'Streifen Random': 'Streifen',
+  'Punkte Random': 'Punkte',
+  'Quadrate Random': 'Quadrate',
+  'Marble Random': 'Marmor',
+  'Farbe Innen': 'Farbe innen',
+  'Liquid': 'Liquid-Wellen'
+};
+
+function getVinylEffectLabel(type) {
+  return VINYL_EFFECT_LABELS[type] || type;
 }
 
-function getInitialFormColors(draft) {
-  if (!draft) return ['#000000'];
-  // If a `colors` array exists, use it as authoritative.
-  if (Array.isArray(draft.colors) && draft.colors.length > 0) return normalizeColors(draft.colors);
-  // Otherwise treat this as a single-color vinyl: only use `draft.color` to avoid showing fallback extras.
-  const main = normalizeColor(draft.color) || '#000000';
-  return [main];
+function getVinylLayerLength(layer, random = createVinylRandom(layer.seed)) {
+  const configuredLength = Math.max(1, Math.min(100, Number(layer.length) || 65));
+  if (layer.lengthMode === 'fixed') return configuredLength;
+  const minimum = Math.max(0, Math.min(100, Number(layer.lengthMin ?? 0) || 0));
+  const maximum = Math.max(minimum, Math.min(100, Number(layer.lengthMax ?? layer.length ?? 65) || 0));
+  return minimum + random() * (maximum - minimum);
 }
 
-function getDesignParams() {
-  return {
-    splatterCount: Number(document.getElementById('sSplatterCount')?.value || 8),
-    splatterSize: Number(document.getElementById('sSplatterSize')?.value || 18),
-    stripeCount: Number(document.getElementById('sStripeCount')?.value || 10),
-    dotCount: Number(document.getElementById('sDotCount')?.value || 12),
-    stripesEnabled: !!document.getElementById('sStripesEnable')?.checked,
-    dotsEnabled: !!document.getElementById('sDotsEnable')?.checked,
-    randomness: Number(document.getElementById('sRandom')?.value || 50)
+let vinylEditorDesign = null;
+let activeVinylIndex = 0;
+
+function safeVinylColor(value, fallback = '#111111') {
+  const color = normalizeColor(value);
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
+}
+
+function makeDefaultVinylRecord(color = '#111111', labelColor = '#d4537e') {
+  return { baseColor: safeVinylColor(color), labelColor: safeVinylColor(labelColor, '#d4537e'), transparency: 0, layers: [] };
+}
+
+function normalizeVinylDesign(item) {
+  const source = item?.vinylDesign;
+  if (source && Array.isArray(source.records) && source.records.length) {
+    return {
+      version: 1,
+      records: source.records.slice(0, 8).map(record => ({
+        baseColor: safeVinylColor(record?.baseColor, '#111111'),
+        labelColor: safeVinylColor(record?.labelColor, '#d4537e'),
+        transparency: Math.max(0, Math.min(100, Number(record?.transparency) || 0)),
+        layers: Array.isArray(record?.layers) ? record.layers.map(layer => ({
+          id: String(layer.id || Math.random().toString(36).slice(2)),
+          type: VINYL_EFFECT_TYPES.includes(layer.type) ? layer.type : 'Punkte Random',
+          color: safeVinylColor(layer.color),
+          count: Math.max(1, Math.min(100, Number(layer.count) || 12)),
+          length: Math.max(1, Math.min(100, Number(layer.length) || 65)),
+          lengthMin: Math.max(0, Math.min(100, Number(layer.lengthMin ?? 0) || 0)),
+          lengthMax: Math.max(
+            Math.max(0, Math.min(100, Number(layer.lengthMin ?? 0) || 0)),
+            Math.min(100, Number(layer.lengthMax ?? layer.length ?? 65) || 0)
+          ),
+          lengthMode: layer.type === 'Streifen Random' || layer.type === 'Farbe Innen'
+            ? (layer.lengthMode === 'random' ? 'random' : 'fixed')
+            : 'fixed',
+          sizeMode: layer.sizeMode === 'fixed' ? 'fixed' : 'random',
+          size: Math.max(1, Math.min(20, Number(layer.size) || 4)),
+          startAngle: Math.max(0, Math.min(360, Number(layer.startAngle) || 0)),
+          endAngle: Math.max(0, Math.min(360, Number(layer.endAngle ?? 360))),
+          ...(layer.type === 'Liquid' ? { amount: Math.max(0, Math.min(100, Number(layer.amount ?? 50) || 0)) } : {}),
+          seed: Number.isFinite(Number(layer.seed)) ? Number(layer.seed) : 1
+        })) : []
+      }))
+    };
+  }
+
+  const colors = normalizeColors(item?.colors);
+  const baseColor = safeVinylColor(colors[0] || item?.color);
+  const labelColor = safeVinylColor(item?.labelColor || item?.colorSecondary, '#d4537e');
+  const legacyRecord = makeDefaultVinylRecord(baseColor, labelColor);
+  if (item?.pattern === 'Splatter') {
+    legacyRecord.layers.push({
+      id: 'legacy-splatter', type: 'Punkte Random', color: labelColor,
+      count: Math.max(1, Math.min(100, Number(item.design?.splatterCount) || 8)),
+      length: 90, lengthMin: 0, lengthMax: 90, lengthMode: 'fixed',
+      sizeMode: 'random', size: 4, startAngle: 0, endAngle: 360,
+      seed: hashVinylSeed(item.id || item.title || 'legacy')
+    });
+  }
+  return { version: 1, records: [legacyRecord] };
+}
+
+function hashVinylSeed(value) {
+  let hash = 2166136261;
+  for (const character of String(value)) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createVinylRandom(seed) {
+  let state = Number(seed) >>> 0 || 1;
+  return () => {
+    state += 0x6D2B79F5;
+    let value = state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
   };
 }
 
-function renderColorInputs(initialColors = ['#000000']) {
-  const container = document.getElementById('fColorInputs');
-  container.innerHTML = '';
-  initialColors.forEach((color, index) => {
-    const row = document.createElement('div');
-    row.className = 'color-input-row';
-    row.innerHTML = `
-      <span class="color-input-label">Farbe ${index + 1}</span>
-      <input type="color" value="${color}">
-      <button type="button" class="remove-color" title="Farbe entfernen">×</button>
-    `;
-    if (index === 0) {
-      row.querySelector('.remove-color').style.visibility = 'hidden';
-    }
-    container.appendChild(row);
-  });
-  updateRemoveButtons();
+function vinylAngleForRange(random, startValue, endValue) {
+  const start = Math.max(0, Math.min(360, Number(startValue) || 0));
+  const end = Math.max(0, Math.min(360, Number(endValue ?? 360)));
+  const span = end >= start ? end - start : 360 - start + end;
+  return (start + random() * span + 270) % 360;
 }
 
-function addColorInput(value = '#000000') {
-  const container = document.getElementById('fColorInputs');
-  const row = document.createElement('div');
-  row.className = 'color-input-row';
-  row.innerHTML = `
-    <span class="color-input-label">Farbe</span>
-    <input type="color" value="${value}">
-    <button type="button" class="remove-color" title="Farbe entfernen">×</button>
-  `;
-  container.appendChild(row);
-  updateRemoveButtons();
+function vinylSectorPath(radius, startAngle, endAngle) {
+  const start = Number(startAngle) || 0;
+  const end = Number(endAngle ?? 360);
+  const span = end >= start ? end - start : 360 - start + end;
+  if (span >= 359.5) return `M 200 200 m 0 -${radius} a ${radius} ${radius} 0 1 0 0 ${radius * 2} a ${radius} ${radius} 0 1 0 0 -${radius * 2} Z`;
+  if (span <= 0) return '';
+  const toPoint = angle => {
+    const radians = (angle - 90) * Math.PI / 180;
+    return [200 + Math.cos(radians) * radius, 200 + Math.sin(radians) * radius];
+  };
+  const [x1, y1] = toPoint(start);
+  const [x2, y2] = toPoint(start + span);
+  return `M 200 200 L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius} ${radius} 0 ${span > 180 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
 }
 
-function updateRemoveButtons() {
-  const rows = Array.from(document.querySelectorAll('#fColorInputs .color-input-row'));
-  rows.forEach((row, index) => {
-    const btn = row.querySelector('.remove-color');
-    if (!btn) return;
-    btn.style.visibility = index === 0 ? 'hidden' : 'visible';
-  });
-}
-
-function removeLastColorInput() {
-  const container = document.getElementById('fColorInputs');
-  const rows = container.querySelectorAll('.color-input-row');
-  if (rows.length > 1) {
-    rows[rows.length-1].remove();
-    updateRemoveButtons();
-    updateColorPreview();
+function vinylWavyCirclePath(radius, seed) {
+  const random = createVinylRandom(seed);
+  const phase = random() * Math.PI * 2;
+  const amplitude = 4 + random() * 8;
+  const points = [];
+  for (let index = 0; index <= 96; index += 1) {
+    const angle = index / 96 * Math.PI * 2;
+    const wave = Math.sin(angle * 5 + phase) * amplitude
+      + Math.sin(angle * 9 - phase * .7) * amplitude * .3;
+    const edge = radius + wave;
+    points.push(`${(200 + Math.cos(angle) * edge).toFixed(1)},${(200 + Math.sin(angle) * edge).toFixed(1)}`);
   }
+  return `M ${points.join(' L ')} Z`;
+}
+
+const vinylSvgCache = new Map();
+
+function getVinylSvgData(record) {
+  const cacheKey = JSON.stringify(record || { layers: [] });
+  if (vinylSvgCache.has(cacheKey)) return vinylSvgCache.get(cacheKey);
+  const parts = [];
+  [...(record?.layers || [])].reverse().forEach(layer => {
+    const random = createVinylRandom(layer.seed);
+    const color = safeVinylColor(layer.color);
+    const count = Math.max(1, Math.min(100, Number(layer.count) || 12));
+    const length = getVinylLayerLength(layer);
+    const start = Number(layer.startAngle) || 0;
+    const end = Number(layer.endAngle ?? 360);
+    if (layer.type === 'VollFarbe') {
+      const path = vinylSectorPath(198, start, end);
+      if (path) parts.push(`<path d="${path}" fill="${color}"/>`);
+    } else if (layer.type === 'Farbe Innen') {
+      const radius = 58 + Math.max(1, Math.min(100, Number(layer.length) || 65)) * 1.38;
+      const path = layer.lengthMode === 'random'
+        ? vinylWavyCirclePath(radius, layer.seed)
+        : `M 200 200 m 0 -${radius} a ${radius} ${radius} 0 1 0 0 ${radius * 2} a ${radius} ${radius} 0 1 0 0 -${radius * 2} Z`;
+      parts.push(`<path d="${path}" fill="${color}"/>`);
+    } else if (layer.type === 'Streifen Random') {
+      for (let index = 0; index < count; index += 1) {
+        const angle = vinylAngleForRange(random, start, end) * Math.PI / 180;
+        const stripeLength = getVinylLayerLength(layer, random);
+        const outerRadius = 58 + stripeLength * 1.38;
+        const radius = 58;
+        const x1 = 200 + Math.cos(angle) * radius;
+        const y1 = 200 + Math.sin(angle) * radius;
+        const x2 = 200 + Math.cos(angle) * outerRadius;
+        const y2 = 200 + Math.sin(angle) * outerRadius;
+        parts.push(`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${(2 + random() * 5).toFixed(1)}" stroke-linecap="round" opacity=".92"/>`);
+      }
+    } else if (layer.type === 'Punkte Random' || layer.type === 'Quadrate Random') {
+      const outerRadius = 58 + length * 1.38;
+      for (let index = 0; index < count; index += 1) {
+        const angle = vinylAngleForRange(random, start, end) * Math.PI / 180;
+        const radius = Math.sqrt(58 * 58 + random() * (outerRadius * outerRadius - 58 * 58));
+        const x = 200 + Math.cos(angle) * radius;
+        const y = 200 + Math.sin(angle) * radius;
+        const size = 2 + random() * 6;
+        parts.push(layer.type === 'Punkte Random'
+          ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(layer.sizeMode === 'fixed' ? Math.max(1, Math.min(20, Number(layer.size) || 4)) : size).toFixed(1)}" fill="${color}"/>`
+          : `<rect x="${(x - size).toFixed(1)}" y="${(y - size).toFixed(1)}" width="${(size * 2).toFixed(1)}" height="${(size * 2).toFixed(1)}" rx=".5" fill="${color}" transform="rotate(${Math.round(random() * 90)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`);
+      }
+    } else if (layer.type === 'Marble Random') {
+      for (let index = 0; index < count; index += 1) {
+        const angle = vinylAngleForRange(random, start, end) * Math.PI / 180;
+        const radius = 68 + random() * Math.max(1, length * 1.15);
+        const x = 200 + Math.cos(angle) * radius;
+        const y = 200 + Math.sin(angle) * radius;
+        const width = 5 + random() * (8 + length / 5);
+        const height = 3 + random() * 8;
+        parts.push(`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${width.toFixed(1)}" ry="${height.toFixed(1)}" fill="${color}" fill-opacity=".75" stroke="${color}" stroke-opacity=".55" stroke-width="2" transform="rotate(${Math.round(random() * 180)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`);
+      }
+    }
+  });
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><defs><clipPath id="disc"><circle cx="200" cy="200" r="199"/></clipPath></defs><g clip-path="url(#disc)">${parts.join('')}</g></svg>`;
+  const image = `url('data:image/svg+xml,${encodeURIComponent(svg)}')`;
+  if (vinylSvgCache.size >= 256) vinylSvgCache.delete(vinylSvgCache.keys().next().value);
+  vinylSvgCache.set(cacheKey, image);
+  return image;
+}
+
+function getVinylLiquidMarkup(record) {
+  return (record?.layers || []).filter(layer => layer.type === 'Liquid').map(layer => {
+    const amount = Math.max(0, Math.min(100, Number(layer.amount ?? 50) || 0));
+    if (amount === 0) return '';
+    const boundary = 400 - amount * 4;
+    const amplitude = amount === 100 ? 0 : 12;
+    const phase = createVinylRandom(layer.seed)() * Math.PI * 2;
+    const points = [];
+    for (let index = 0; index <= 64; index += 1) {
+      const progress = index / 64;
+      const x = progress * 400;
+      const wave = amplitude * (Math.sin(progress * Math.PI * 2 + phase) + Math.sin(progress * Math.PI * 4 + phase * .7) * .2);
+      points.push(`${x.toFixed(1)},${(boundary + wave).toFixed(1)}`);
+    }
+    const path = `M 0 400 L ${points.join(' L ')} L 400 400 Z`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><path d="${path}" fill="${safeVinylColor(layer.color)}"/></svg>`;
+    const seed = Math.abs(Number(layer.seed) || 1);
+    const duration = 5 + seed % 4;
+    const delay = (seed % duration).toFixed(2);
+    return `<span class="vinyl-liquid-fill" aria-hidden="true" style="--liquid-image:url('data:image/svg+xml,${encodeURIComponent(svg)}');--liquid-duration:${duration}s;--liquid-delay:-${delay}s"></span>`;
+  }).join('');
+}
+
+function getVinylRecordForItem(item, index = 0) {
+  const design = normalizeVinylDesign(item);
+  return design.records[index] || design.records[0] || makeDefaultVinylRecord(item?.color, item?.colorSecondary);
+}
+
+function renderVinylLayerDetailControls(layer) {
+  if (layer.type === 'Liquid') {
+    return `<label class="vinyl-liquid-control">Liquid-Anteil <span data-liquid-amount>${layer.amount ?? 50}%</span><input type="range" data-layer-field="amount" min="0" max="100" value="${layer.amount ?? 50}" aria-label="Liquid-Anteil"></label>`;
+  }
+
+  let lengthControls = '';
+  if (layer.type === 'Streifen Random') {
+    lengthControls = `<label>Länge<select data-layer-field="lengthMode"><option value="random" ${layer.lengthMode !== 'fixed' ? 'selected' : ''}>Zufällig</option><option value="fixed" ${layer.lengthMode === 'fixed' ? 'selected' : ''}>Fest</option></select></label>
+      ${layer.lengthMode === 'fixed'
+        ? `<label>Länge %<input type="number" data-layer-field="length" min="1" max="100" value="${layer.length}"></label>`
+        : `<label>Min %<input type="number" data-layer-field="lengthMin" min="0" max="100" value="${layer.lengthMin}"></label><label>Max %<input type="number" data-layer-field="lengthMax" min="0" max="100" value="${layer.lengthMax}"></label>`}`;
+  } else if (layer.type === 'Farbe Innen') {
+    lengthControls = `<label>Rand<select data-layer-field="lengthMode"><option value="fixed" ${layer.lengthMode !== 'random' ? 'selected' : ''}>Fest</option><option value="random" ${layer.lengthMode === 'random' ? 'selected' : ''}>Zufällig</option></select></label>
+      <label>Baseline %<input type="number" data-layer-field="length" min="1" max="100" value="${layer.length}"></label>`;
+  } else if (['Punkte Random', 'Quadrate Random', 'Marble Random'].includes(layer.type)) {
+    lengthControls = `<label>Bereich %<input type="number" data-layer-field="length" min="1" max="100" value="${layer.length}"></label>`;
+  }
+
+  const sizeControls = layer.type === 'Punkte Random'
+    ? `<label>Größe<select data-layer-field="sizeMode"><option value="random" ${layer.sizeMode !== 'fixed' ? 'selected' : ''}>Zufällig</option><option value="fixed" ${layer.sizeMode === 'fixed' ? 'selected' : ''}>Fest</option></select></label>${layer.sizeMode === 'fixed' ? `<label>Größe<input type="number" data-layer-field="size" min="1" max="20" value="${layer.size}"></label>` : ''}`
+    : '';
+  const angleControls = ['VollFarbe', 'Streifen Random', 'Punkte Random', 'Quadrate Random', 'Marble Random'].includes(layer.type)
+    ? `<div class="angle-fields"><label>Start Grad<input type="number" data-layer-field="startAngle" min="0" max="360" value="${layer.startAngle}"></label><label>Ende Grad<input type="number" data-layer-field="endAngle" min="0" max="360" value="${layer.endAngle}"></label></div>`
+    : '';
+  return `${lengthControls}${sizeControls}${angleControls}`;
+}
+
+function renderVinylEditor() {
+  const record = vinylEditorDesign.records[activeVinylIndex];
+  const preview = document.getElementById('vinylEditorDisc');
+  preview.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
+  preview.style.setProperty('--vinyl-label', record.labelColor);
+  preview.style.setProperty('--vinyl-art', getVinylSvgData(record));
+  preview.innerHTML = getVinylLiquidMarkup(record);
+  document.getElementById('vinylBaseColor').value = record.baseColor;
+  document.getElementById('vinylLabelColor').value = record.labelColor;
+  document.getElementById('vinylTransparencyInput').value = record.transparency;
+  document.getElementById('vinylTransparencyValue').textContent = `${record.transparency}%`;
+  document.getElementById('vinylCountInput').value = vinylEditorDesign.records.length;
+  const indexSelect = document.getElementById('vinylIndexSelect');
+  indexSelect.innerHTML = vinylEditorDesign.records.map((_, index) => `<option value="${index}">Vinyl ${index + 1}</option>`).join('');
+  indexSelect.value = String(activeVinylIndex);
+  const layerList = document.getElementById('vinylLayerList');
+  layerList.innerHTML = record.layers.map((layer, index) => `
+    <div class="vinyl-layer-row" data-layer-index="${index}">
+      <div class="vinyl-layer-fields">
+        <div class="vinyl-layer-main-row ${layer.type === 'Liquid' ? 'vinyl-layer-liquid-main' : ''}">
+          <label class="vinyl-layer-captionless"><select data-layer-field="type" aria-label="Effekt" title="Effekt">${VINYL_EFFECT_TYPES.map(type => `<option value="${type}" ${type === layer.type ? 'selected' : ''}>${escapeHtml(getVinylEffectLabel(type))}</option>`).join('')}</select></label>
+          <label class="vinyl-layer-captionless"><input type="color" data-layer-field="color" aria-label="Effektfarbe" title="Effektfarbe" value="${layer.color}"></label>
+          ${['Liquid', 'VollFarbe', 'Farbe Innen'].includes(layer.type) ? '' : `<label class="vinyl-layer-count">Anzahl<input type="number" data-layer-field="count" aria-label="Anzahl" min="1" max="100" value="${layer.count}"></label>`}
+          <div class="vinyl-layer-actions">
+            <button type="button" data-layer-action="up" aria-label="Effekt nach oben verschieben" title="Nach oben" ${index === 0 || record.layers.length === 1 ? 'disabled' : ''}>↑</button>
+            <button type="button" data-layer-action="down" aria-label="Effekt nach unten verschieben" title="Nach unten" ${index === record.layers.length - 1 || record.layers.length === 1 ? 'disabled' : ''}>↓</button>
+            <button type="button" data-layer-action="remove" aria-label="Effekt löschen" title="Löschen">×</button>
+          </div>
+        </div>
+        <div class="vinyl-layer-detail-row">
+        ${renderVinylLayerDetailControls(layer)}
+        </div>
+      </div>
+    </div>
+  `).join('') || '<p class="settings-panel-hint">Noch keine Effekt-Ebenen. Die Platte bleibt einfarbig.</p>';
+}
+
+function updateVinylEditorPreview() {
+  const record = vinylEditorDesign.records[activeVinylIndex];
+  const preview = document.getElementById('vinylEditorDisc');
+  preview.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
+  preview.style.setProperty('--vinyl-label', record.labelColor);
+  preview.style.setProperty('--vinyl-art', getVinylSvgData(record));
+  preview.innerHTML = getVinylLiquidMarkup(record);
+}
+
+let vinylPreviewFrame = 0;
+
+function scheduleVinylEditorPreview() {
+  if (vinylPreviewFrame) cancelAnimationFrame(vinylPreviewFrame);
+  vinylPreviewFrame = requestAnimationFrame(() => {
+    vinylPreviewFrame = 0;
+    if (vinylEditorDesign) updateVinylEditorPreview();
+  });
+}
+
+function openVinylEditor() {
+  if (!currentDraft) return;
+  vinylEditorDesign = JSON.parse(JSON.stringify(normalizeVinylDesign(currentDraft)));
+  activeVinylIndex = 0;
+  document.getElementById('vinylEditorAlbumTitle').textContent = [currentDraft.artist, currentDraft.title].filter(Boolean).join(' · ');
+  renderVinylEditor();
+  document.getElementById('vinylEditorOverlay').classList.add('open');
+}
+
+function closeVinylEditor() {
+  document.getElementById('vinylEditorOverlay').classList.remove('open');
+  vinylEditorDesign = null;
+}
+
+function setVinylMigrationControls(active) {
+  document.getElementById('vinylMigrationProgress').style.display = active ? 'block' : 'none';
+  document.getElementById('cancelVinylEditorBtn').style.display = active ? 'inline-flex' : '';
+  document.getElementById('saveVinylEditorBtn').style.display = active ? 'none' : '';
+  document.getElementById('vinylMigrationNextBtn').style.display = active ? 'inline-flex' : 'none';
+  document.getElementById('closeVinylEditorBtn').title = active ? 'Speichern und schließen' : 'Schließen';
+}
+
+function getLegacyVinylEntries() {
+  return collection.filter(item => !Array.isArray(item.vinylDesign?.records) || item.vinylDesign.records.length === 0);
+}
+
+function openVinylMigrationItem() {
+  while (vinylMigrationIndex < vinylMigrationQueue.length) {
+    const entry = collection.find(item => String(item.id) === vinylMigrationQueue[vinylMigrationIndex]);
+    if (entry && (!Array.isArray(entry.vinylDesign?.records) || entry.vinylDesign.records.length === 0)) {
+      currentDraft = JSON.parse(JSON.stringify(entry));
+      currentTracks = Array.isArray(entry.tracklist) ? entry.tracklist : [];
+      document.getElementById('vinylMigrationProgress').textContent = `Album ${vinylMigrationIndex + 1} von ${vinylMigrationQueue.length}`;
+      document.getElementById('vinylEditorAlbumTitle').textContent = [entry.artist, entry.title].filter(Boolean).join(' · ');
+      openVinylEditor();
+      return true;
+    }
+    vinylMigrationIndex += 1;
+  }
+  finishVinylMigration();
+  return false;
+}
+
+function startLegacyVinylReview() {
+  if (!viewingOwnCollection) {
+    showAlert('Wechsle zuerst zu deiner eigenen Sammlung, um Vinyl-Farben zu bearbeiten.');
+    return;
+  }
+  if (document.getElementById('formSection').style.display === 'block') {
+    showAlert('Speichere oder schließe zuerst das aktuell geöffnete Album.');
+    return;
+  }
+  const entries = getLegacyVinylEntries();
+  if (entries.length === 0) {
+    showAlert('Alle Alben haben bereits ein Vinyl-Design.');
+    return;
+  }
+  vinylMigrationQueue = entries.map(item => String(item.id));
+  vinylMigrationIndex = 0;
+  vinylMigrationActive = true;
+  setVinylMigrationControls(true);
+  openVinylMigrationItem();
+}
+
+function finishVinylMigration() {
+  vinylMigrationActive = false;
+  vinylMigrationQueue = [];
+  vinylMigrationIndex = -1;
+  currentDraft = null;
+  currentTracks = [];
+  setVinylMigrationControls(false);
+  closeVinylEditor();
+}
+
+function abortVinylMigration() {
+  finishVinylMigration();
+}
+
+function applyVinylEditorDesignToDraft() {
+  if (!currentDraft || !vinylEditorDesign) return;
+  currentDraft.vinylDesign = JSON.parse(JSON.stringify(vinylEditorDesign));
+  currentDraft.color = currentDraft.vinylDesign.records[0].baseColor;
+  currentDraft.colors = [currentDraft.color];
+  currentDraft.colorSecondary = currentDraft.vinylDesign.records[0].labelColor;
+  currentDraft.colorTertiary = currentDraft.colorSecondary;
+  currentDraft.labelColor = currentDraft.colorSecondary;
+  currentDraft.pattern = 'Vinyl';
+  delete currentDraft.barPattern;
+  delete currentDraft.barBgSize;
+  delete currentDraft.barColor;
+  delete currentDraft.barColorSolid;
+  delete currentDraft.isAnimated;
+}
+
+function commitVinylMigrationItem(continueReview) {
+  if (!vinylMigrationActive || !currentDraft) return;
+  applyVinylEditorDesignToDraft();
+  const existingIndex = collection.findIndex(item => String(item.id) === String(currentDraft.id));
+  if (existingIndex >= 0) collection[existingIndex] = currentDraft;
+  saveCollection();
+  vinylMigrationIndex += 1;
+  if (continueReview) {
+    openVinylMigrationItem();
+  } else {
+    finishVinylMigration();
+  }
+}
+
+function updateVinylDesignSummary() {
+  const design = normalizeVinylDesign(currentDraft || {});
+  const count = design.records.length || 1;
+  const color = design.records[0]?.baseColor || '#111111';
+  const effects = design.records.reduce((total, record) => total + (record.layers?.length || 0), 0) || 0;
+  const summary = document.getElementById('vinylDesignSummary');
+  const vinylCount = document.getElementById('editorVinylCount');
+  const vinylColor = document.getElementById('editorVinylColor');
+  const vinylColorSwatch = document.getElementById('editorVinylColorSwatch');
+  if (summary) summary.textContent = `${count} Vinyl${count === 1 ? '' : 's'} · ${effects ? `${effects} Effekt-Ebene${effects === 1 ? '' : 'n'}` : 'Einfarbig'}`;
+  if (vinylCount) vinylCount.textContent = `${count} LP${count === 1 ? '' : 's'}`;
+  if (vinylColor) vinylColor.textContent = color.toUpperCase();
+  if (vinylColorSwatch) vinylColorSwatch.style.backgroundColor = color;
 }
 
 function getThemeForItem(item) {
@@ -4737,6 +5554,16 @@ function getConditionOverlay(condition) {
 }
 
 function getBarPatternStyle(item) {
+  if (item?.vinylDesign?.records?.length) {
+    const record = getVinylRecordForItem(item);
+    return {
+      barColor: record.baseColor,
+      barColorSolid: record.baseColor,
+      barPattern: getVinylSvgData(record),
+      barBgSize: 'cover',
+      isAnimated: false
+    };
+  }
   // If a precomputed pattern was saved, use it verbatim so saved items render identically.
   if (item && item.barPattern) {
     const themeSaved = getThemeForItem(item);
@@ -4773,7 +5600,7 @@ function getBarPatternStyle(item) {
   if (pattern === 'Splatter') {
     // build randomized splatter, stripes and dots according to design params
     const parts = [];
-    const rand = () => Math.random();
+    const rand = createVinylRandom(hashVinylSeed(item?.id || JSON.stringify({ colors, pattern, design })));
     const randomness = (design.randomness || 50) / 100;
     // Splatter dots
     const splCount = Number(design.splatterCount) || 0;
@@ -4894,76 +5721,6 @@ function getReadableTextColor(cssColor) {
     return lum > 0.6 ? '#000' : '#fff';
   } catch (e) {
     return '#fff';
-  }
-}
-
-function updateColorPreview() {
-  const colors = getFormColors();
-  const color = colors[0] || '#000000';
-  const colorSecondary = colors[1] || colors[0] || '#d4537e';
-  const colorTertiary = colors[2] || colors[1] || colorSecondary;
-  const pattern = document.getElementById('fPattern').value || 'Keine';
-  const transparent = document.getElementById('fTransparentVinyl').checked;
-  const colorInputs = document.getElementById('fColorInputs');
-  if (pattern === 'Keine') {
-    colorInputs.style.opacity = '0.8';
-  } else {
-    colorInputs.style.opacity = '1';
-  }
-
-  const theme = getThemeForItem({ colors, pattern, transparent });
-  const preview = document.getElementById('colorPreview');
-  const previewSwatches = document.getElementById('colorPreviewSwatches');
-  const label = document.getElementById('colorPreviewText');
-  preview.style.background = transparent
-    ? `repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 8px, transparent 0 16px), linear-gradient(135deg, ${theme.tint} 0%, rgba(255,255,255,0.05) 100%)`
-    : `linear-gradient(135deg, ${theme.tint} 0%, rgba(255,255,255,0.03) 100%)`;
-  preview.style.borderColor = theme.border;
-
-  previewSwatches.innerHTML = '';
-  // Ensure color inputs exist and match swatches so clicking a swatch opens the corresponding picker
-  const inputs = Array.from(document.querySelectorAll('#fColorInputs input[type=color]'));
-  if (inputs.length !== colors.length) {
-    // render hidden inputs to match colors
-    renderColorInputs(colors);
-  }
-  const updatedInputs = Array.from(document.querySelectorAll('#fColorInputs input[type=color]'));
-  previewSwatches.innerHTML = '';
-  colors.forEach((col, i) => {
-    const swatch = document.createElement('span');
-    swatch.className = 'preview-swatch';
-    swatch.style.background = col;
-    swatch.dataset.index = String(i);
-    swatch.title = 'Klicke, um Farbe zu ändern';
-    swatch.addEventListener('click', () => {
-      const targetInput = updatedInputs[i];
-      if (targetInput) {
-        targetInput.click();
-      } else {
-        // fallback: add an input and open it
-        addColorInput(col);
-        const after = document.querySelectorAll('#fColorInputs input[type=color]');
-        const last = after[after.length-1];
-        last?.click();
-      }
-    });
-    previewSwatches.appendChild(swatch);
-  });
-  // Update simple label (no hex codes)
-  const previewDetails = [];
-  if (pattern && pattern !== 'Keine') previewDetails.push(pattern);
-  previewDetails.push(`${colors.length} Farbe${colors.length > 1 ? 'n' : ''}`);
-  if (transparent) previewDetails.push('Transparent');
-  label.textContent = previewDetails.join(' · ');
-
-  // Update the vinyl-bar preview (shows how the bar will look above the vinyl)
-  const vinylPreview = document.getElementById('vinylBarPreview');
-  if (vinylPreview) {
-    const barStyleForVinyl = getBarPatternStyle({ colors, pattern, transparent, design: getDesignParams() });
-    vinylPreview.className = 'album-color-bar ' + (barStyleForVinyl.isAnimated ? 'animated' : '');
-    vinylPreview.style.setProperty('--bar-color', barStyleForVinyl.barColor);
-    vinylPreview.style.setProperty('--bar-pattern', barStyleForVinyl.barPattern);
-    vinylPreview.style.setProperty('--bar-bg-size', barStyleForVinyl.barBgSize || '');
   }
 }
 
@@ -6274,7 +7031,8 @@ async function selectAlbum(album, cover, source = 'itunes') {
   }
 
   document.getElementById('fReleaseType').value = currentDraft.releaseType || 'Album';
-  document.getElementById('plausibilityHint').textContent = getPlausibilityHint(currentDraft);
+  const plausibilityHint = document.getElementById('plausibilityHint');
+  if (plausibilityHint) plausibilityHint.textContent = getPlausibilityHint(currentDraft);
   renderTracklist();
 }
 
@@ -6293,7 +7051,10 @@ function renderTracklist() {
 }
 
 function openForm() {
-  document.getElementById('formSection').style.display = 'block';
+  document.getElementById('formSection').classList.add('editor-open');
+  albumEditorOverlay.classList.add('open');
+  document.getElementById('fStorageFields').open = false;
+  document.getElementById('tracklistSection').open = false;
   document.getElementById('fTitle').value = currentDraft.title;
   document.getElementById('fArtist').value = currentDraft.artist;
   document.getElementById('fYear').value = currentDraft.year;
@@ -6303,9 +7064,6 @@ function openForm() {
   document.getElementById('fDiscogsUrlStatus').textContent = '';
   document.getElementById('formCover').src = currentDraft.coverUrl;
   document.getElementById('fReleaseType').value = currentDraft.releaseType || 'Album';
-  renderColorInputs(getInitialFormColors(currentDraft));
-  document.getElementById('fPattern').value = currentDraft.pattern || 'Keine';
-  document.getElementById('fTransparentVinyl').checked = !!currentDraft.transparent;
   document.getElementById('fCondition').value = normalizeConditionName(currentDraft.condition);
   document.getElementById('fNotes').value = currentDraft.notes;
   document.getElementById('fOwned').checked = !!currentDraft.owned;
@@ -6317,29 +7075,9 @@ function openForm() {
   const coverResults = document.getElementById('formCoverResults');
   coverResults.classList.remove('open');
   coverResults.innerHTML = '';
-  updateColorPreview();
-  // populate design sliders from draft if available
-  const design = currentDraft.design || {};
-  ['sSplatterCount','sSplatterSize','sStripeWidth','sDotSize'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const key = id.replace(/^s/, '').replace(/Val$/,'');
-    // map ids to design keys
-  });
-  if (design.splatterCount != null) document.getElementById('sSplatterCount').value = design.splatterCount;
-  if (design.splatterSize != null) document.getElementById('sSplatterSize').value = design.splatterSize;
-  if (design.stripeCount != null) document.getElementById('sStripeCount').value = design.stripeCount;
-  if (design.dotCount != null) document.getElementById('sDotCount').value = design.dotCount;
-  if (design.stripesEnabled != null) document.getElementById('sStripesEnable').checked = !!design.stripesEnabled;
-  if (design.dotsEnabled != null) document.getElementById('sDotsEnable').checked = !!design.dotsEnabled;
-  if (design.randomness != null) document.getElementById('sRandom').value = design.randomness;
-  // update numeric labels
-  document.getElementById('sSplatterCountVal').textContent = document.getElementById('sSplatterCount').value;
-  document.getElementById('sSplatterSizeVal').textContent = document.getElementById('sSplatterSize').value;
-  document.getElementById('sStripeCountVal').textContent = document.getElementById('sStripeCount').value;
-  document.getElementById('sDotCountVal').textContent = document.getElementById('sDotCount').value;
-  document.getElementById('sRandomVal').textContent = document.getElementById('sRandom').value;
-  document.getElementById('plausibilityHint').textContent = getPlausibilityHint(currentDraft);
+  updateVinylDesignSummary();
+  const plausibilityHint = document.getElementById('plausibilityHint');
+  if (plausibilityHint) plausibilityHint.textContent = getPlausibilityHint(currentDraft);
   document.getElementById('formSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
@@ -6370,6 +7108,34 @@ document.getElementById('manualBtn').addEventListener('click', () => {
 
 document.getElementById('fCoverUrl').addEventListener('input', e => {
   document.getElementById('formCover').src = e.target.value;
+});
+
+const coverUrlOverlay = document.getElementById('coverUrlOverlay');
+document.getElementById('openCoverUrlBtn').addEventListener('click', () => {
+  document.getElementById('coverUrlModalInput').value = document.getElementById('fCoverUrl').value;
+  coverUrlOverlay.classList.add('open');
+  document.getElementById('coverUrlModalInput').focus();
+});
+const closeCoverUrlDialog = () => coverUrlOverlay.classList.remove('open');
+document.getElementById('closeCoverUrlBtn').addEventListener('click', closeCoverUrlDialog);
+coverUrlOverlay.addEventListener('click', event => {
+  if (event.target === coverUrlOverlay) closeCoverUrlDialog();
+});
+document.getElementById('copyCoverUrlBtn').addEventListener('click', async () => {
+  const input = document.getElementById('coverUrlModalInput');
+  try {
+    await navigator.clipboard.writeText(input.value);
+  } catch {
+    input.select();
+    document.execCommand('copy');
+  }
+});
+document.getElementById('applyCoverUrlBtn').addEventListener('click', () => {
+  const coverUrl = document.getElementById('coverUrlModalInput').value.trim();
+  document.getElementById('fCoverUrl').value = coverUrl;
+  document.getElementById('formCover').src = coverUrl;
+  if (currentDraft) currentDraft.coverUrl = coverUrl;
+  closeCoverUrlDialog();
 });
 
 document.getElementById('loadDiscogsUrlBtn').addEventListener('click', async () => {
@@ -6482,17 +7248,13 @@ function openCoverSearchOverlay(candidates, query) {
   searchInput.value = query;
   if (candidates.length === 0) {
     status.textContent = 'Keine Cover gefunden. Ggf. Suchbegriff anpassen oder Bildquelle wechseln.';
+    status.hidden = false;
     results.innerHTML = '';
   } else {
-    status.textContent = `Cover-Auswahl für: ${query}`;
-    results.innerHTML = candidates.map(c => `
-      <button type="button" class="cover-search-card" data-cover="${escapeHtml(c.cover)}">
-        <img src="${c.cover}" alt="${escapeHtml(c.title)}">
-        <div class="cover-info">
-          <strong>${escapeHtml(c.title)}</strong>
-          <span>${escapeHtml(c.artist)}</span>
-          <span>${escapeHtml(c.year || '')} ${c.source ? '· ' + escapeHtml(c.source) : ''}</span>
-        </div>
+    status.hidden = true;
+    results.innerHTML = candidates.map((c, index) => `
+      <button type="button" class="cover-search-card" data-cover="${escapeHtml(c.cover)}" aria-label="Cover ${index + 1} auswählen">
+        <img src="${escapeHtml(c.cover)}" alt="" loading="lazy" decoding="async">
       </button>
     `).join('');
     results.querySelectorAll('.cover-search-card').forEach(card => {
@@ -6539,83 +7301,162 @@ document.getElementById('coverSearchOverlay')?.addEventListener('click', e => {
   }
 });
 
-document.getElementById('fColorInputs').addEventListener('input', e => {
-  if (e.target && e.target.type === 'color') updateColorPreview();
-});
-document.getElementById('fColorInputs').addEventListener('click', e => {
-  if (e.target && e.target.matches('button.remove-color')) {
-    const row = e.target.closest('.color-input-row');
-    row?.remove();
-    updateRemoveButtons();
-    updateColorPreview();
-  }
-});
-document.getElementById('fAddColorBtn')?.addEventListener('click', () => {
-  addColorInput('#000000');
-  updateColorPreview();
-});
-document.getElementById('previewAddColorBtn').addEventListener('click', () => {
-  addColorInput('#000000');
-  updateRemoveButtons();
-  updateColorPreview();
-});
-document.getElementById('previewRemoveColorBtn').addEventListener('click', () => {
-  const container = document.getElementById('fColorInputs');
-  const rows = container.querySelectorAll('.color-input-row');
-  if (rows.length > 1) {
-    rows[rows.length-1].remove();
-    updateRemoveButtons();
-    updateColorPreview();
-  }
-});
-document.getElementById('fPattern').addEventListener('change', updateColorPreview);
-document.getElementById('fTransparentVinyl').addEventListener('change', updateColorPreview);
-
-// Design options toggle and slider bindings
-document.getElementById('designOptionsToggle').addEventListener('click', () => {
-  const box = document.getElementById('designOptions');
-  const open = box.style.display !== 'none';
-  box.style.display = open ? 'none' : 'block';
-  document.getElementById('designOptionsToggle').textContent = open ? 'Design Optionen ▾' : 'Design Optionen ▴';
-});
-
-['sSplatterCount','sSplatterSize','sStripeCount','sDotCount','sRandom'].forEach(id => {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener('input', () => {
-    const valSpan = document.getElementById(id + 'Val') || document.getElementById(id.replace('s','s') + 'Val');
-    if (valSpan) valSpan.textContent = el.value;
-    updateColorPreview();
-  });
-});
-
-['sStripesEnable','sDotsEnable'].forEach(id => {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.addEventListener('change', () => updateColorPreview());
-});
-
-// Show design options only for patterns that support them
-document.getElementById('fPattern').addEventListener('change', e => {
-  const v = e.target.value;
-  const box = document.getElementById('designOptions');
-  if (v === 'Splatter') {
-    // keep collapsed but make visible
-    box.style.display = box.style.display === 'none' ? 'none' : 'block';
-    document.getElementById('designOptionsToggle').style.display = 'inline-block';
-  } else {
-    box.style.display = 'none';
-    document.getElementById('designOptionsToggle').style.display = 'none';
-  }
-});
-
 document.getElementById('cancelBtn').addEventListener('click', () => {
-  document.getElementById('formSection').style.display = 'none';
+  document.getElementById('formSection').classList.remove('editor-open');
+  albumEditorOverlay.classList.remove('open');
   currentDraft = null;
   restoreCollectionFilterAfterAdd();
 });
+document.getElementById('closeAlbumEditorBtn').addEventListener('click', () => document.getElementById('cancelBtn').click());
+albumEditorOverlay.addEventListener('click', event => {
+  if (event.target === albumEditorOverlay) document.getElementById('cancelBtn').click();
+});
+
+document.getElementById('openVinylEditorBtn').addEventListener('click', openVinylEditor);
+document.getElementById('closeVinylEditorBtn').addEventListener('click', () => {
+  if (vinylMigrationActive) commitVinylMigrationItem(false);
+  else closeVinylEditor();
+});
+document.getElementById('cancelVinylEditorBtn').addEventListener('click', () => {
+  if (vinylMigrationActive) abortVinylMigration();
+  else closeVinylEditor();
+});
+document.getElementById('vinylMigrationNextBtn').addEventListener('click', () => commitVinylMigrationItem(true));
+document.getElementById('vinylEditorOverlay').addEventListener('click', event => {
+  if (event.target.id !== 'vinylEditorOverlay') return;
+  if (vinylMigrationActive) commitVinylMigrationItem(false);
+  else closeVinylEditor();
+});
+document.getElementById('vinylBaseColor').addEventListener('input', event => {
+  vinylEditorDesign.records[activeVinylIndex].baseColor = event.target.value;
+  scheduleVinylEditorPreview();
+});
+document.getElementById('vinylLabelColor').addEventListener('input', event => {
+  vinylEditorDesign.records[activeVinylIndex].labelColor = event.target.value;
+  scheduleVinylEditorPreview();
+});
+document.getElementById('vinylTransparencyInput').addEventListener('input', event => {
+  const transparency = Math.max(0, Math.min(100, Number(event.target.value) || 0));
+  vinylEditorDesign.records[activeVinylIndex].transparency = transparency;
+  document.getElementById('vinylTransparencyValue').textContent = `${transparency}%`;
+  scheduleVinylEditorPreview();
+});
+document.getElementById('vinylCountInput').addEventListener('change', event => {
+  const count = Math.max(1, Math.min(8, Number(event.target.value) || 1));
+  event.target.value = count;
+  while (vinylEditorDesign.records.length < count) {
+    const first = vinylEditorDesign.records[0];
+    vinylEditorDesign.records.push(makeDefaultVinylRecord(first.baseColor, first.labelColor));
+  }
+  vinylEditorDesign.records.length = count;
+  activeVinylIndex = Math.min(activeVinylIndex, count - 1);
+  renderVinylEditor();
+});
+document.getElementById('vinylIndexSelect').addEventListener('change', event => {
+  activeVinylIndex = Number(event.target.value) || 0;
+  renderVinylEditor();
+});
+document.getElementById('addVinylLayerBtn').addEventListener('click', () => {
+  vinylEditorDesign.records[activeVinylIndex].layers.push({
+    id: Math.random().toString(36).slice(2), type: 'Punkte Random', color: '#d4537e',
+    count: 12, length: 65, lengthMin: 0, lengthMax: 65, lengthMode: 'fixed', sizeMode: 'random', size: 4, startAngle: 0, endAngle: 360,
+    seed: hashVinylSeed(`${Date.now()}-${Math.random()}`)
+  });
+  renderVinylEditor();
+  scheduleVinylEditorPreview();
+});
+document.getElementById('copyVinylDesignBtn').addEventListener('click', () => {
+  const source = vinylEditorDesign.records[activeVinylIndex];
+  vinylEditorDesign.records.forEach((record, index) => {
+    if (index !== activeVinylIndex) vinylEditorDesign.records[index] = JSON.parse(JSON.stringify(source));
+  });
+  renderVinylEditor();
+});
+document.getElementById('vinylLayerList').addEventListener('input', event => {
+  const field = event.target.dataset.layerField;
+  if (!field) return;
+  const row = event.target.closest('[data-layer-index]');
+  const layer = vinylEditorDesign.records[activeVinylIndex].layers[Number(row.dataset.layerIndex)];
+  if (!layer) return;
+  if (field === 'color') layer.color = safeVinylColor(event.target.value);
+  else if (field === 'type') {
+    layer.type = VINYL_EFFECT_TYPES.includes(event.target.value) ? event.target.value : 'Punkte Random';
+    if (layer.type === 'Liquid' && layer.amount == null) layer.amount = 50;
+  }
+  else if (field === 'amount') {
+    const requestedAmount = Math.max(0, Math.min(100, Number(event.target.value) || 0));
+    layer.amount = Math.abs(requestedAmount - 50) <= 2 ? 50 : requestedAmount;
+    event.target.value = layer.amount;
+    const amountLabel = row.querySelector('[data-liquid-amount]');
+    if (amountLabel) amountLabel.textContent = `${layer.amount}%`;
+  }
+  else if (field === 'sizeMode') layer.sizeMode = event.target.value === 'fixed' ? 'fixed' : 'random';
+  else if (field === 'lengthMode') layer.lengthMode = event.target.value === 'fixed' ? 'fixed' : 'random';
+  else if (event.target.type === 'number') {
+    if (event.target.value === '') return;
+    const parsedValue = Number(event.target.value);
+    if (Number.isFinite(parsedValue)) layer[field] = parsedValue;
+    return;
+  }
+  const randomLengthOption = row.querySelector('[data-layer-field="lengthMode"] option[value="random"]');
+  if (randomLengthOption) randomLengthOption.textContent = 'Zufällig';
+  scheduleVinylEditorPreview();
+});
+document.getElementById('vinylLayerList').addEventListener('change', event => {
+  const field = event.target.dataset.layerField;
+  if (!field) return;
+  if (['type', 'sizeMode', 'lengthMode'].includes(field)) {
+    renderVinylEditor();
+    scheduleVinylEditorPreview();
+    return;
+  }
+  if (event.target.type !== 'number') return;
+  const row = event.target.closest('[data-layer-index]');
+  const layer = vinylEditorDesign.records[activeVinylIndex].layers[Number(row.dataset.layerIndex)];
+  const limits = field === 'startAngle' || field === 'endAngle' ? [0, 360]
+    : field === 'size' ? [1, 20]
+      : field === 'lengthMin' ? [0, 100] : [1, 100];
+  const parsedValue = event.target.value === '' ? limits[0] : Number(event.target.value);
+  layer[field] = Math.max(limits[0], Math.min(limits[1], Number.isFinite(parsedValue) ? parsedValue : limits[0]));
+  event.target.value = layer[field];
+  if (field === 'lengthMin' && layer.lengthMin > layer.lengthMax) layer.lengthMax = layer.lengthMin;
+  if (field === 'lengthMax' && layer.lengthMax < layer.lengthMin) layer.lengthMin = layer.lengthMax;
+  if (field === 'lengthMin' || field === 'lengthMax') {
+    const minimumInput = row.querySelector('[data-layer-field="lengthMin"]');
+    const maximumInput = row.querySelector('[data-layer-field="lengthMax"]');
+    if (minimumInput) minimumInput.value = layer.lengthMin;
+    if (maximumInput) maximumInput.value = layer.lengthMax;
+  }
+  scheduleVinylEditorPreview();
+});
+document.getElementById('vinylLayerList').addEventListener('click', event => {
+  const button = event.target.closest('[data-layer-action]');
+  if (!button) return;
+  const record = vinylEditorDesign.records[activeVinylIndex];
+  const index = Number(button.closest('[data-layer-index]').dataset.layerIndex);
+  const action = button.dataset.layerAction;
+  if (action === 'remove') record.layers.splice(index, 1);
+  if (action === 'up' && index > 0) [record.layers[index - 1], record.layers[index]] = [record.layers[index], record.layers[index - 1]];
+  if (action === 'down' && index < record.layers.length - 1) [record.layers[index + 1], record.layers[index]] = [record.layers[index], record.layers[index + 1]];
+  renderVinylEditor();
+  scheduleVinylEditorPreview();
+});
+document.getElementById('saveVinylEditorBtn').addEventListener('click', () => {
+  applyVinylEditorDesignToDraft();
+  if (vinylMigrationActive) {
+    commitVinylMigrationItem(true);
+    return;
+  }
+  updateVinylDesignSummary();
+  closeVinylEditor();
+});
 
 document.getElementById('fOwned').addEventListener('change', refreshStorageFields);
+document.getElementById('ownedStatusToggle').addEventListener('click', () => {
+  const ownedInput = document.getElementById('fOwned');
+  ownedInput.checked = !ownedInput.checked;
+  ownedInput.dispatchEvent(new Event('change', { bubbles: true }));
+});
 document.getElementById('fShelf').addEventListener('change', event => {
   populateCompartmentSelect(document.getElementById('fCompartment'), event.target.value, currentDraft?.shelfCompartment);
 });
@@ -6628,26 +7469,6 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   currentDraft.genre = document.getElementById('fGenre').value.trim();
   currentDraft.coverUrl = document.getElementById('fCoverUrl').value.trim();
   currentDraft.releaseType = document.getElementById('fReleaseType').value;
-  const colors = getFormColors();
-  currentDraft.colors = colors;
-  currentDraft.color = colors[0] || '#000000';
-  currentDraft.colorSecondary = colors[1] || colors[0] || '#d4537e';
-  currentDraft.colorTertiary = colors[2] || colors[1] || currentDraft.colorSecondary;
-  currentDraft.pattern = document.getElementById('fPattern').value;
-  currentDraft.transparent = document.getElementById('fTransparentVinyl').checked;
-  // persist design parameters so the saved item renders 1:1
-  currentDraft.design = getDesignParams();
-  // generate and store the concrete bar pattern so it won't re-randomize on later renders
-  try {
-    const barStyleForSave = getBarPatternStyle(Object.assign({}, currentDraft, { colors: currentDraft.colors, pattern: currentDraft.pattern, transparent: currentDraft.transparent, design: currentDraft.design }));
-    currentDraft.barPattern = barStyleForSave.barPattern;
-    currentDraft.barBgSize = barStyleForSave.barBgSize;
-    currentDraft.barColor = barStyleForSave.barColor;
-    currentDraft.barColorSolid = barStyleForSave.barColorSolid;
-    currentDraft.isAnimated = barStyleForSave.isAnimated;
-  } catch (e) {
-    // ignore pattern save errors
-  }
   currentDraft.condition = document.getElementById('fCondition').value;
   currentDraft.notes = document.getElementById('fNotes').value.trim();
   currentDraft.owned = document.getElementById('fOwned').checked;
@@ -6680,7 +7501,8 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   const existingIndex = collection.findIndex(c => c.id === currentDraft.id);
   if (existingIndex >= 0) { collection[existingIndex] = currentDraft; } else { collection.push(currentDraft); }
   saveCollection();
-  document.getElementById('formSection').style.display = 'none';
+  document.getElementById('formSection').classList.remove('editor-open');
+  albumEditorOverlay.classList.remove('open');
   const searchResults = document.getElementById('searchResults');
   const searchPagination = document.getElementById('searchPagination');
   const searchHint = document.getElementById('searchHint');
@@ -6956,6 +7778,18 @@ document.getElementById('filterOwned').addEventListener('click', () => setFilter
 document.getElementById('filterWishlist').addEventListener('click', () => setFilter('wishlist'));
 document.getElementById('sortSelect').addEventListener('change', e => setSort(e.target.value));
 document.getElementById('sortDirBtn').addEventListener('click', () => setSortDirection(activeSortDirection === 'asc' ? 'desc' : 'asc'));
+const toggleSearchPanelBtn = document.getElementById('toggleSearchPanelBtn');
+const desktopFormShell = document.querySelector('.desktop-form-shell');
+if (toggleSearchPanelBtn && desktopFormShell) {
+  toggleSearchPanelBtn.addEventListener('click', () => {
+    const collapsed = desktopFormShell.classList.toggle('search-collapsed');
+    const label = collapsed ? 'Album-Suche einblenden' : 'Album-Suche einklappen';
+    toggleSearchPanelBtn.title = label;
+    toggleSearchPanelBtn.setAttribute('aria-label', label);
+    toggleSearchPanelBtn.setAttribute('aria-expanded', String(!collapsed));
+  });
+}
+
 document.getElementById('viewGridBtn').addEventListener('click', () => setView('grid'));
 document.getElementById('viewTableBtn').addEventListener('click', () => setView('table'));
 const viewStorageBtn = document.getElementById('viewStorageBtn');
@@ -6965,6 +7799,61 @@ if (viewStorageBtn) {
 }
 const storageRandomPickBtn = document.getElementById('storageRandomPickBtn');
 if (storageRandomPickBtn) storageRandomPickBtn.addEventListener('click', showRandomStoredVinyl);
+const storageRandomFilterWrap = document.getElementById('storageRandomFilterWrap');
+const storageRandomFilterBtn = document.getElementById('storageRandomFilterBtn');
+const storageRandomFilterPanel = document.getElementById('storageRandomFilterPanel');
+if (storageRandomFilterBtn && storageRandomFilterPanel) {
+  storageRandomFilterBtn.addEventListener('click', event => {
+    event.stopPropagation();
+    const opening = !storageRandomFilterPanel.classList.contains('open');
+    if (opening) {
+      document.body.appendChild(storageRandomFilterPanel);
+      storageRandomFilterPanel.classList.add('open');
+      const buttonRect = storageRandomFilterBtn.getBoundingClientRect();
+      const panelRect = storageRandomFilterPanel.getBoundingClientRect();
+      const top = Math.min(buttonRect.bottom + 8, window.innerHeight - panelRect.height - 8);
+      const right = Math.min(window.innerWidth - panelRect.width - 8, Math.max(8, window.innerWidth - buttonRect.right));
+      storageRandomFilterPanel.style.top = `${Math.max(8, top)}px`;
+      storageRandomFilterPanel.style.right = `${right}px`;
+      storageRandomFilterPanel.style.left = 'auto';
+    } else {
+      storageRandomFilterPanel.classList.remove('open');
+    }
+    storageRandomFilterBtn.setAttribute('aria-expanded', String(opening));
+  });
+  storageRandomFilterPanel.addEventListener('click', event => event.stopPropagation());
+  storageRandomFilterPanel.addEventListener('change', event => {
+    if (event.target.matches('[data-storage-random-format]')) {
+      localStorage.setItem('storageRandomFormatsV1', JSON.stringify(getStorageRandomFormats()));
+      saveCloudDataDebounced();
+    }
+    if (event.target.id === 'storageRandomAnimationCheckbox') {
+      localStorage.setItem('storageRandomAnimationV1', event.target.checked ? 'true' : 'false');
+      saveCloudDataDebounced();
+    }
+  });
+  document.addEventListener('click', () => {
+    storageRandomFilterPanel.classList.remove('open');
+    storageRandomFilterBtn.setAttribute('aria-expanded', 'false');
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      storageRandomFilterPanel.classList.remove('open');
+      storageRandomFilterBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+  try {
+    const animationInput = document.getElementById('storageRandomAnimationCheckbox');
+    if (animationInput) animationInput.checked = localStorage.getItem('storageRandomAnimationV1') !== 'false';
+    const savedFormats = JSON.parse(localStorage.getItem('storageRandomFormatsV1') || 'null');
+    if (Array.isArray(savedFormats)) {
+      storageRandomFilterPanel.querySelectorAll('[data-storage-random-format]').forEach(input => {
+        input.checked = savedFormats.includes(input.dataset.storageRandomFormat);
+      });
+    }
+  } catch (error) {
+  }
+}
 const selectModeBtn = document.getElementById('selectModeBtn');
 if (selectModeBtn) {
   selectModeBtn.style.display = viewingOwnCollection ? 'flex' : 'none';
@@ -7041,6 +7930,7 @@ function setView(view) {
     document.querySelector('.collection-header').insertBefore(collectionSearchRow, document.getElementById('bulkEditBar'));
   }
   activeView = view;
+  document.body.classList.toggle('storage-page-active', view === 'storage');
   ['viewGridBtn', 'viewTableBtn', 'viewStorageBtn'].forEach(id => {
     document.getElementById(id).classList.remove('toggle-active');
   });
@@ -7051,6 +7941,9 @@ function setView(view) {
   if (colBtn) colBtn.style.display = view === 'table' ? 'inline-flex' : 'none';
   document.querySelector('.collection-panel')?.classList.toggle('storage-active', view === 'storage');
   if (storageRandomPickBtn) storageRandomPickBtn.style.display = view === 'storage' && viewingOwnCollection ? 'inline-flex' : 'none';
+  if (storageRandomFilterWrap) storageRandomFilterWrap.style.display = view === 'storage' && viewingOwnCollection ? 'block' : 'none';
+  storageRandomFilterPanel?.classList.remove('open');
+  storageRandomFilterBtn?.setAttribute('aria-expanded', 'false');
   if (viewStorageBtn) {
     viewStorageBtn.style.display = viewingOwnCollection ? 'inline-flex' : 'none';
     viewStorageBtn.classList.toggle('toggle-active', view === 'storage');
@@ -7074,10 +7967,6 @@ function createUnsortedStorageCard(item) {
         <button type="button" class="del" title="Löschen" aria-label="Löschen">×</button>
       </div>
     </div>`;
-  bindStorageItemPointerDrag(card, item);
-  card.querySelector('.edit').addEventListener('click', () => editEntry(item.id));
-  card.querySelector('.del').addEventListener('click', () => deleteEntry(item.id));
-  card.querySelector('.media').addEventListener('click', () => editEntry(item.id));
   return card;
 }
 
@@ -7094,24 +7983,125 @@ function createStoredVinylTile(item) {
 
 let lastRandomStoredItemId = null;
 let randomHighlightedItemId = null;
+let storageRandomPickInProgress = false;
 
-function showRandomStoredVinyl() {
-  const storedTiles = [...document.querySelectorAll('#storageBoard .storage-record[data-storage-item]')];
-  if (storedTiles.length === 0) {
-    showAlert('Es sind noch keine Vinyls in Fächern einsortiert.');
+function getStorageRandomFormats() {
+  return [...document.querySelectorAll('#storageRandomFilterPanel [data-storage-random-format]:checked')]
+    .map(input => input.dataset.storageRandomFormat);
+}
+
+async function showRandomStoredVinyl() {
+  if (storageRandomPickInProgress) return;
+  const selectedFormats = getStorageRandomFormats();
+  if (selectedFormats.length === 0) {
+    await showAlert('Wähle mindestens ein Vinyl-Format für die Zufallsauswahl.');
     return;
   }
-  const choices = storedTiles.length > 1
-    ? storedTiles.filter(tile => tile.dataset.storageItem !== String(lastRandomStoredItemId))
-    : storedTiles;
-  const selectedTile = choices[Math.floor(Math.random() * choices.length)];
+  const storedTiles = [...document.querySelectorAll('#storageBoard .storage-record[data-storage-item]')]
+    .filter(tile => {
+      const item = collection.find(entry => String(entry.id) === tile.dataset.storageItem);
+      return item && selectedFormats.includes(getReleaseType(item));
+    });
+  if (storedTiles.length === 0) {
+    await showAlert('Für die ausgewählten Formate sind keine Vinyls in Fächern einsortiert.');
+    return;
+  }
+
+  const shelfGroups = new Map();
+  storedTiles.forEach(tile => {
+    const shelfElement = tile.closest('.storage-shelf');
+    const compartmentElement = tile.closest('.storage-compartment');
+    if (!shelfElement || !compartmentElement) return;
+    if (!shelfGroups.has(shelfElement)) shelfGroups.set(shelfElement, { element: shelfElement, compartments: new Map() });
+    const shelfGroup = shelfGroups.get(shelfElement);
+    if (!shelfGroup.compartments.has(compartmentElement)) {
+      shelfGroup.compartments.set(compartmentElement, { element: compartmentElement, tiles: [] });
+    }
+    shelfGroup.compartments.get(compartmentElement).tiles.push(tile);
+  });
+  const eligibleShelves = [...shelfGroups.values()];
+  if (eligibleShelves.length === 0) {
+    await showAlert('Für die ausgewählten Formate sind keine Vinyls in Regalfächern einsortiert.');
+    return;
+  }
+  const selectedShelfGroup = eligibleShelves[Math.floor(Math.random() * eligibleShelves.length)];
+  const eligibleCompartments = [...selectedShelfGroup.compartments.values()];
+  const selectedCompartmentGroup = eligibleCompartments[Math.floor(Math.random() * eligibleCompartments.length)];
+  const itemChoices = selectedCompartmentGroup.tiles.length > 1
+    ? selectedCompartmentGroup.tiles.filter(tile => tile.dataset.storageItem !== String(lastRandomStoredItemId))
+    : selectedCompartmentGroup.tiles;
+  const selectedTile = itemChoices[Math.floor(Math.random() * itemChoices.length)];
   const selectedItem = collection.find(item => String(item.id) === selectedTile.dataset.storageItem);
   if (!selectedItem) return;
-  lastRandomStoredItemId = selectedItem.id;
-  randomHighlightedItemId = selectedItem.id;
-  renderCollection();
-  document.querySelector(`#storageBoard .storage-record[data-storage-item="${CSS.escape(String(selectedItem.id))}"]`)
-    ?.scrollIntoView({ behavior:'smooth', block:'center', inline:'center' });
+
+  storageRandomPickInProgress = true;
+  if (storageRandomPickBtn) storageRandomPickBtn.disabled = true;
+  const shelf = selectedShelfGroup.element;
+  const compartment = selectedCompartmentGroup.element;
+  const clearPickClasses = () => document.querySelectorAll('#storageBoard .random-pick-shelf, #storageBoard .random-pick-compartment, #storageBoard .random-pick-spinning, #storageBoard .random-pick-decoy, #storageBoard .random-highlight')
+    .forEach(element => element.classList.remove('random-pick-shelf', 'random-pick-compartment', 'random-pick-spinning', 'random-pick-decoy', 'random-highlight'));
+  clearPickClasses();
+  const pause = duration => new Promise(resolve => window.setTimeout(resolve, duration));
+  const playAnimation = document.getElementById('storageRandomAnimationCheckbox')?.checked !== false
+    && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clearStage = selector => document.querySelectorAll(selector).forEach(element => {
+    element.classList.remove('random-pick-shelf', 'random-pick-compartment', 'random-pick-decoy');
+  });
+
+  async function runRoulette(candidates, winner, className, phase) {
+    const decoys = candidates.filter(candidate => candidate !== winner);
+    const steps = 10;
+    for (let index = 0; index < steps; index += 1) {
+      const current = index === steps - 1 || decoys.length === 0
+        ? winner
+        : decoys[Math.floor(Math.random() * decoys.length)];
+      clearStage('.storage-shelf.random-pick-shelf, .storage-compartment.random-pick-compartment, .storage-record.random-pick-decoy');
+      current.classList.add(className);
+      if (phase === 'shelf') {
+        const shelvesPane = document.querySelector('#storageBoard .storage-shelves-pane');
+        if (shelvesPane) shelvesPane.scrollTo({
+          left: current.offsetLeft - shelvesPane.clientWidth / 2 + current.offsetWidth / 2,
+          behavior: 'smooth'
+        });
+      } else {
+        current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+      await pause(45 + index * 58);
+    }
+  }
+
+  try {
+    if (playAnimation) {
+      await runRoulette([...document.querySelectorAll('#storageBoard .storage-shelf')], shelf, 'random-pick-shelf', 'shelf');
+      await runRoulette(eligibleCompartments.map(group => group.element), compartment, 'random-pick-compartment', 'compartment');
+      await runRoulette(selectedCompartmentGroup.tiles, selectedTile, 'random-pick-decoy', 'vinyl');
+    }
+
+    document.querySelectorAll('#storageBoard .random-pick-shelf, #storageBoard .random-pick-compartment, #storageBoard .random-pick-decoy')
+      .forEach(element => element.classList.remove('random-pick-shelf', 'random-pick-compartment', 'random-pick-decoy'));
+    if (playAnimation) {
+      shelf?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      shelf?.classList.add('random-pick-shelf');
+      await pause(220);
+      shelf?.classList.remove('random-pick-shelf');
+      compartment?.classList.add('random-pick-compartment');
+      await pause(220);
+      compartment?.classList.remove('random-pick-compartment');
+    }
+    selectedTile.scrollIntoView({ behavior: playAnimation ? 'smooth' : 'auto', block: 'center', inline: 'center' });
+    selectedTile.classList.add('random-highlight');
+    if (playAnimation) selectedTile.classList.add('random-pick-spinning');
+    randomHighlightedItemId = selectedItem.id;
+    lastRandomStoredItemId = selectedItem.id;
+    if (playAnimation) await pause(760);
+    selectedTile.classList.remove('random-pick-spinning');
+  } finally {
+    shelf?.classList.remove('random-pick-shelf');
+    compartment?.classList.remove('random-pick-compartment');
+    selectedTile.classList.remove('random-pick-spinning');
+    storageRandomPickInProgress = false;
+    if (storageRandomPickBtn) storageRandomPickBtn.disabled = false;
+  }
 }
 
 let storageUnsortedCollapsed = false;
@@ -7796,8 +8786,10 @@ function renderCollection() {
       card.style.setProperty('--frame-color', getFrameColor(item));
       const badge = getReleaseBadge(item);
       const isGenreSort = activeSort === 'genre';
+      const showCollectionExtra = ['location', 'lastWashed', 'genre', 'condition', 'releaseType'].includes(activeSort);
       const genreLabel = item.genre ? escapeHtml(item.genre) : '';
       const barStyle = getBarPatternStyle(item);
+      const vinylRecordPreview = getVinylRecordForItem(item);
       const priceTextColor = getReadableTextColor(barStyle.barColorSolid || barStyle.barColor);
       const discogsPriceValue = Number(item.discogsLowestPrice) || 0;
       const discogsPriceText = discogsPriceValue > 0 ? `Preis: ${discogsPriceValue.toFixed(2).replace(/\.00$/, '')} ${escapeHtml(item.discogsCurrency || '€')}` : '';
@@ -7823,7 +8815,7 @@ function renderCollection() {
           `;
 
       card.innerHTML = `
-        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"></div>
+        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview" style="--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${vinylRecordPreview.labelColor};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="Vinyl-Design">${getVinylLiquidMarkup(vinylRecordPreview)}</div></div>
         ${selectModeActive ? `<div class="collection-card-checkbox" style="position:absolute;top:10px;left:10px;z-index:4;"><input type="checkbox" data-item-id="${item.id}" style="cursor:pointer; width:18px; height:18px;" ${selectedItemIds.has(item.id) ? 'checked' : ''}></div>` : ''}
         <div class="media">
           <img src="${item.coverUrl || ''}" alt="" loading="lazy" decoding="async">
@@ -7844,7 +8836,7 @@ ${actionButtons}
             </div>
           </div>
           ${commonBadgeHtml}
-          ${viewingOwnCollection && item.owned && (getStorageLabel(item) || item.lastWashed) ? `<div class="collection-extra">${getStorageLabel(item) ? `<span>${escapeHtml(getStorageLabel(item))}</span>` : ''}${item.lastWashed ? `<span>Gewaschen: ${escapeHtml(getWashedDateLabel(item))}</span>` : ''}</div>` : ''}
+          ${showCollectionExtra && viewingOwnCollection && item.owned && (getStorageLabel(item) || item.lastWashed) ? `<div class="collection-extra">${getStorageLabel(item) ? `<span>${escapeHtml(getStorageLabel(item))}</span>` : ''}${item.lastWashed ? `<span>Gewaschen: ${escapeHtml(getWashedDateLabel(item))}</span>` : ''}</div>` : ''}
         </div>
       `;
 
