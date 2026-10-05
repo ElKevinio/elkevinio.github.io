@@ -2191,6 +2191,11 @@
     margin-bottom: 6px;
     font-size: 15px;
   }
+  .match-current-vinyl-bar {
+    height:12px;
+    margin:4px 0 8px;
+    border-radius:6px;
+  }
   .match-current-info span {
     display: block;
     font-size: 13px;
@@ -2927,6 +2932,11 @@
             </select>
           </div>
           <p class="settings-panel-hint" style="margin:4px 0 0;">Ein manuell gesetzter Preis hat Vorrang und wird beim Discogs-Nachladen nicht überschrieben.</p>
+          <div class="row" style="margin-top:8px;">
+            <input type="url" id="fDiscogsUrl" placeholder="Discogs-Release- oder Master-Link" aria-label="Discogs-URL des Albums">
+            <button type="button" id="loadDiscogsUrlBtn" title="Diesen Discogs-Link nur für dieses Album laden">Laden</button>
+          </div>
+          <p id="fDiscogsUrlStatus" class="settings-panel-hint" aria-live="polite" style="margin:0;"></p>
           <button type="button" id="searchDiscogsAlternativeBtn" class="settings-fix-btn" style="margin-top:8px; width:100%;">Discogs-Alternative suchen</button>
           <div id="discogsAlternativeResults" class="alternative-results"></div>
         </div>
@@ -3253,6 +3263,7 @@
           <div class="match-current-info">
             <strong id="matchCurrentTitle"></strong>
             <span id="matchCurrentArtist"></span>
+            <div id="matchCurrentVinylBar" class="album-color-bar match-current-vinyl-bar" aria-label="Farbe und Muster des eigenen Vinyls"></div>
             <span id="matchCurrentYearGenre"></span>
             <span id="matchCurrentPrice"></span>
           </div>
@@ -3876,7 +3887,8 @@ async function enrichDiscogsPriceForItem(item) {
     const url = item.discogsResourceUrl + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : '');
     const res = await fetch(url);
     const detailData = await res.json();
-    let updated = false;
+    item.discogsPriceCheckedAt = new Date().toISOString();
+    let updated = true;
 
     if ((item.discogsLowestPrice == null || item.discogsLowestPrice === '') && detailData?.lowest_price != null) {
       item.discogsLowestPrice = Number(detailData.lowest_price) || null;
@@ -4217,6 +4229,12 @@ function getStorageLabel(item) {
     : '';
 }
 
+function getDiscogsPriceCheckedDateLabel(item) {
+  if (!item?.discogsPriceCheckedAt) return '';
+  const checkedAt = new Date(item.discogsPriceCheckedAt);
+  return Number.isNaN(checkedAt.getTime()) ? '' : checkedAt.toLocaleDateString('de-DE');
+}
+
 function getWashedDateLabel(item) {
   return viewingOwnCollection && item?.owned && item?.lastWashed ? item.lastWashed.split('-').reverse().join('.') : '';
 }
@@ -4455,16 +4473,16 @@ if (discogsMatchSearchBtn && discogsMatchQueryInput) {
     }
     setDiscogsMatchStatus('Suche läuft...');
     let results = [];
-    if (parsed.type === 'release') {
-      const detail = await fetchDiscogsReleaseById(parsed.id);
+    if (parsed.type === 'release' || parsed.type === 'master') {
+      const detail = await fetchDiscogsInput(parsed);
       if (detail) results = [detail];
     } else if (parsed.type === 'query') {
       results = await searchDiscogsReleases(parsed.query, 8);
     }
     await openDiscogsMatchOverlay(results, parsed.type === 'release' ? `Release ${parsed.id}` : parsed.query, discogsMatchCurrentItem || currentDraft);
     if (results.length === 0) {
-      setDiscogsMatchStatus(parsed.type === 'release'
-        ? (fetchDiscogsReleaseById.lastError || `Release ${parsed.id} wurde nicht gefunden.`)
+      setDiscogsMatchStatus(parsed.type === 'release' || parsed.type === 'master'
+        ? (fetchDiscogsReleaseById.lastError || `Discogs-${parsed.type === 'master' ? 'Master' : 'Release'} ${parsed.id} wurde nicht gefunden.`)
         : (searchDiscogsReleases.lastError || 'Keine passenden Discogs-Treffer gefunden.'));
     }
   });
@@ -4481,6 +4499,7 @@ if (skipDiscogsMatchBtn) {
         const currencySelect = document.getElementById('discogsMatchManualPriceCurrency');
         targetItem.discogsCurrency = currencySelect ? currencySelect.value : (targetItem.discogsCurrency || '€');
         targetItem.priceManual = true;
+        discogsMatchPriceSelectionMade = true;
         if (targetItem === currentDraft) {
           const formPriceField = document.getElementById('fManualPrice');
           if (formPriceField) formPriceField.value = manualPriceValue;
@@ -4497,6 +4516,11 @@ if (skipDiscogsMatchBtn) {
       }
     }
     if (discogsMatchQueue.length > 0) {
+      const completedItem = discogsMatchQueue[discogsMatchQueueIndex] || discogsMatchCurrentItem;
+      if (discogsMatchMode === 'price' && completedItem && discogsMatchPriceSelectionMade) {
+        completedItem.discogsPriceCheckedAt = new Date().toISOString();
+      }
+      saveCollection();
       await processDiscogsQueueItem(discogsMatchQueueIndex + 1);
       return;
     }
@@ -5350,6 +5374,30 @@ async function searchAlbums() {
     hint.textContent = 'Suche läuft... (Hinweis: ohne Discogs-Token bleiben Cover-Bilder leer)';
   }
 
+  const directDiscogsInput = parseDiscogsInput(q);
+  if (directDiscogsInput?.type === 'release' || directDiscogsInput?.type === 'master') {
+    const release = await fetchDiscogsInput(directDiscogsInput);
+    if (!release) {
+      hint.textContent = fetchDiscogsReleaseById.lastError || 'Der Discogs-Link konnte nicht geladen werden.';
+      return;
+    }
+    const entry = {
+      ...release,
+      album: {
+        title: release.title,
+        artist: release.artist,
+        year: release.year,
+        genre: release.genre ? [release.genre] : [],
+        discogsResourceUrl: release.discogsResourceUrl
+      },
+      source: 'discogs'
+    };
+    searchResultCards = [entry];
+    hint.textContent = 'Discogs-Release gefunden:';
+    renderSearchResultsPage();
+    return;
+  }
+
   const sources = provider === 'itunes' ? ['itunes'] : provider === 'discogs' ? ['discogs'] : ['itunes', 'discogs'];
   const cards = [];
 
@@ -5711,6 +5759,15 @@ async function bulkFillDiscogsUrls() {
     if (item.priceManual) return false;
     return (lacksUrl || lacksPrice) && (item.title || item.artist);
   });
+  entriesToUpdate.sort((a, b) => {
+    const checkedA = Date.parse(a.discogsPriceCheckedAt || '');
+    const checkedB = Date.parse(b.discogsPriceCheckedAt || '');
+    const hasCheckedA = Number.isFinite(checkedA);
+    const hasCheckedB = Number.isFinite(checkedB);
+    if (!hasCheckedA && hasCheckedB) return -1;
+    if (hasCheckedA && !hasCheckedB) return 1;
+    return hasCheckedA ? checkedA - checkedB : 0;
+  });
   if (entriesToUpdate.length === 0) {
     await showAlert(refreshPrices
       ? (allowWishlist ? 'Keine Einträge zum Erneuern gefunden.' : 'Keine besessenen Einträge zum Erneuern gefunden. Aktiviere die Einstellung, um auch Wunschlisten-Preise zu erneuern.')
@@ -5779,17 +5836,20 @@ let discogsMatchQueue = [];
 let discogsMatchQueueIndex = 0;
 let discogsMatchCurrentItem = null;
 let discogsMatchMode = 'price';
+let discogsMatchPriceSelectionMade = false;
 let formLoadedPrice = null;
 let formLoadedPriceManual = false;
 
 function parseDiscogsInput(input) {
   const trimmed = String(input || '').trim();
   if (!trimmed) return null;
-  const releaseMatch = trimmed.match(/(?:discogs\.com\/[^\s?#]*release\/|api\.discogs\.com\/releases\/)(\d+)/i)
-    || trimmed.match(/^release\s*[:#-]?\s*(\d+)$/i);
-  if (releaseMatch) {
-    return { type: 'release', id: releaseMatch[1] };
+  const discogsMatch = trimmed.match(/(?:discogs\.com\/[^\s?#]*?\b(release|master)\/|api\.discogs\.com\/(releases|masters)\/)(\d+)/i);
+  if (discogsMatch) {
+    const type = (discogsMatch[1] || discogsMatch[2]).toLowerCase().replace(/s$/, '');
+    return { type, id: discogsMatch[3] };
   }
+  const releaseMatch = trimmed.match(/^release\s*[:#-]?\s*(\d+)$/i);
+  if (releaseMatch) return { type: 'release', id: releaseMatch[1] };
   if (/^\d+$/.test(trimmed)) {
     return { type: 'release', id: trimmed };
   }
@@ -5858,6 +5918,41 @@ async function fetchDiscogsReleaseById(releaseId) {
   }
 }
 
+async function fetchDiscogsMasterById(masterId) {
+  if (!masterId) return null;
+  try {
+    const token = getDiscogsToken();
+    const url = 'https://api.discogs.com/masters/' + encodeURIComponent(masterId) + (token ? '?token=' + encodeURIComponent(token) : '');
+    const res = await fetch(url);
+    if (!res.ok) {
+      let bodyText = '';
+      try { bodyText = await res.text(); } catch (e) {}
+      fetchDiscogsReleaseById.lastError = 'Discogs-Fehler ' + res.status + (res.status === 404 ? ' (Master nicht gefunden)' : res.status === 401 ? ' (Token ungültig)' : '') + (bodyText ? ': ' + bodyText.slice(0, 160) : '');
+      return null;
+    }
+    fetchDiscogsReleaseById.lastError = null;
+    return await res.json();
+  } catch (e) {
+    fetchDiscogsReleaseById.lastError = 'Netzwerkfehler: ' + (e?.message || e);
+    return null;
+  }
+}
+
+async function fetchDiscogsInput(input) {
+  if (input?.type === 'release') return fetchDiscogsReleaseById(input.id);
+  if (input?.type !== 'master') return null;
+  const master = await fetchDiscogsMasterById(input.id);
+  if (!master) return null;
+  const mainReleaseId = master.main_release || String(master.main_release_url || '').match(/\/releases\/(\d+)/i)?.[1];
+  if (mainReleaseId) {
+    const mainRelease = await fetchDiscogsReleaseById(mainReleaseId);
+    if (mainRelease) return mainRelease;
+  }
+  const normalizedMaster = normalizeDiscogsReleaseDetail(master);
+  if (normalizedMaster) normalizedMaster.discogsResourceUrl = master.resource_url || `https://api.discogs.com/masters/${encodeURIComponent(input.id)}`;
+  return normalizedMaster;
+}
+
 function setDiscogsMatchStatus(message) {
   const statusEl = document.getElementById('discogsMatchStatus');
   if (statusEl) statusEl.textContent = message;
@@ -5914,14 +6009,15 @@ async function processDiscogsQueueItem(index) {
   discogsMatchQueueIndex = index;
   const item = discogsMatchQueue[index];
   discogsMatchCurrentItem = item;
+  discogsMatchPriceSelectionMade = false;
   const manualPriceInput = document.getElementById('discogsMatchManualPrice');
   if (manualPriceInput) manualPriceInput.value = '0';
   const query = [item.artist, item.title].filter(Boolean).join(' ').trim();
   let results = query ? await searchDiscogsReleases(query, 8) : [];
-  if (discogsMatchMode === 'tracklist' && item.discogsResourceUrl) {
+  if (item.discogsResourceUrl) {
     const storedInput = parseDiscogsInput(item.discogsResourceUrl);
-    if (storedInput?.type === 'release') {
-      const storedRelease = await fetchDiscogsReleaseById(storedInput.id);
+    if (storedInput?.type === 'release' || storedInput?.type === 'master') {
+      const storedRelease = await fetchDiscogsInput(storedInput);
       if (storedRelease) {
         storedRelease.isStoredDiscogsRelease = true;
         results = [storedRelease, ...results.filter(result => result.discogsResourceUrl !== storedRelease.discogsResourceUrl)];
@@ -5945,6 +6041,7 @@ async function openDiscogsMatchOverlay(results, query, item = null, mode = 'pric
   const overlay = document.getElementById('discogsMatchOverlay');
   if (!overlay) return;
   const currentCover = document.getElementById('matchCurrentCover');
+  const currentVinylBar = document.getElementById('matchCurrentVinylBar');
   const currentTitle = document.getElementById('matchCurrentTitle');
   const currentArtist = document.getElementById('matchCurrentArtist');
   const currentYearGenre = document.getElementById('matchCurrentYearGenre');
@@ -5958,6 +6055,14 @@ async function openDiscogsMatchOverlay(results, query, item = null, mode = 'pric
   const tracklistOnly = mode === 'tracklist';
 
   if (currentCover) currentCover.src = target?.coverUrl || '';
+  if (currentVinylBar && target) {
+    const barStyle = getBarPatternStyle(target);
+    currentVinylBar.classList.toggle('animated', barStyle.isAnimated);
+    currentVinylBar.style.setProperty('--bar-color', barStyle.barColor);
+    currentVinylBar.style.setProperty('--bar-pattern', barStyle.barPattern || 'none');
+    currentVinylBar.style.setProperty('--bar-bg-size', barStyle.barBgSize || 'cover');
+    currentVinylBar.title = `Eigene Vinyl-Farbe: ${getVisibleLabel(target)}`;
+  }
   if (currentTitle) currentTitle.textContent = target?.title || 'Unbekannt';
   if (currentArtist) currentArtist.textContent = target?.artist || '';
   if (currentYearGenre) {
@@ -5967,9 +6072,13 @@ async function openDiscogsMatchOverlay(results, query, item = null, mode = 'pric
   }
   if (currentPrice) {
     const priceValue = Number(target?.discogsLowestPrice) || 0;
+    const priceLabel = priceValue > 0
+      ? `Letzter Discogs-Preis: ${priceValue.toFixed(2).replace(/\.00$/, '')} ${target?.discogsCurrency || '€'}`
+      : 'Kein Discogs-Preis eingetragen';
+    const checkedDate = mode === 'price' ? getDiscogsPriceCheckedDateLabel(target) : '';
     currentPrice.textContent = mode === 'tracklist'
       ? ''
-      : (priceValue > 0 ? `Letzter Discogs-Preis: ${priceValue.toFixed(2).replace(/\.00$/, '')} ${target?.discogsCurrency || '€'}` : 'Kein Discogs-Preis eingetragen');
+      : `${priceLabel}${checkedDate ? ` · Zuletzt abgefragt: ${checkedDate}` : ''}`;
   }
   const queryText = query || [target?.artist, target?.title].filter(Boolean).join(' ') || 'Manuelle Suche';
   if (searchQuery) searchQuery.textContent = queryText;
@@ -6012,6 +6121,8 @@ async function openDiscogsMatchOverlay(results, query, item = null, mode = 'pric
             applyDiscogsTracklist(targetItem, selected);
           } else {
             applyDiscogsMetadata(targetItem, selected);
+            if (discogsMatchQueue.length > 0) discogsMatchPriceSelectionMade = true;
+            else targetItem.discogsPriceCheckedAt = new Date().toISOString();
           }
           if (targetItem === currentDraft) {
             const manualPriceField = document.getElementById('fManualPrice');
@@ -6037,6 +6148,13 @@ async function openDiscogsMatchOverlay(results, query, item = null, mode = 'pric
 
 async function closeDiscogsMatchOverlay() {
   const overlay = document.getElementById('discogsMatchOverlay');
+  if (discogsMatchQueue.length > 0 && discogsMatchMode === 'price') {
+    const pendingItem = discogsMatchQueue[discogsMatchQueueIndex] || discogsMatchCurrentItem;
+    if (pendingItem?.discogsPriceCheckedAt) {
+      delete pendingItem.discogsPriceCheckedAt;
+      saveCollection();
+    }
+  }
   if (overlay) overlay.classList.remove('open');
 }
 
@@ -6181,6 +6299,8 @@ function openForm() {
   document.getElementById('fYear').value = currentDraft.year;
   document.getElementById('fGenre').value = currentDraft.genre;
   document.getElementById('fCoverUrl').value = currentDraft.coverUrl;
+  document.getElementById('fDiscogsUrl').value = currentDraft.discogsResourceUrl || '';
+  document.getElementById('fDiscogsUrlStatus').textContent = '';
   document.getElementById('formCover').src = currentDraft.coverUrl;
   document.getElementById('fReleaseType').value = currentDraft.releaseType || 'Album';
   renderColorInputs(getInitialFormColors(currentDraft));
@@ -6250,6 +6370,44 @@ document.getElementById('manualBtn').addEventListener('click', () => {
 
 document.getElementById('fCoverUrl').addEventListener('input', e => {
   document.getElementById('formCover').src = e.target.value;
+});
+
+document.getElementById('loadDiscogsUrlBtn').addEventListener('click', async () => {
+  if (!currentDraft) return;
+  const urlInput = document.getElementById('fDiscogsUrl');
+  const status = document.getElementById('fDiscogsUrlStatus');
+  const parsed = parseDiscogsInput(urlInput.value);
+  if (!parsed || !['release', 'master'].includes(parsed.type)) {
+    status.textContent = 'Bitte einen gültigen Discogs-Release- oder Master-Link eingeben.';
+    return;
+  }
+  status.textContent = 'Lade Discogs-Daten für dieses Album...';
+  const detail = await fetchDiscogsInput(parsed);
+  if (!detail) {
+    status.textContent = fetchDiscogsReleaseById.lastError || 'Der Discogs-Link konnte nicht geladen werden.';
+    return;
+  }
+  applyDiscogsMetadata(currentDraft, detail);
+  currentDraft.title = detail.title || currentDraft.title;
+  currentDraft.artist = detail.artist || currentDraft.artist;
+  currentDraft.year = detail.year || currentDraft.year;
+  currentDraft.genre = detail.genre || currentDraft.genre;
+  currentDraft.coverUrl = detail.cover || currentDraft.coverUrl;
+  currentDraft.discogsPriceCheckedAt = new Date().toISOString();
+  currentTracks = detail.tracklist?.length ? detail.tracklist : currentTracks;
+  urlInput.value = currentDraft.discogsResourceUrl;
+  document.getElementById('fTitle').value = currentDraft.title;
+  document.getElementById('fArtist').value = currentDraft.artist;
+  document.getElementById('fYear').value = currentDraft.year;
+  document.getElementById('fGenre').value = currentDraft.genre;
+  document.getElementById('fCoverUrl').value = currentDraft.coverUrl;
+  document.getElementById('formCover').src = currentDraft.coverUrl;
+  document.getElementById('fManualPrice').value = currentDraft.discogsLowestPrice ?? '';
+  document.getElementById('fManualPriceCurrency').value = currentDraft.discogsCurrency || '€';
+  formLoadedPrice = currentDraft.discogsLowestPrice != null ? Number(currentDraft.discogsLowestPrice) : null;
+  formLoadedPriceManual = false;
+  renderTracklist();
+  status.textContent = 'Discogs-Link und Daten für dieses Album geladen. Mit „Speichern“ übernehmen.';
 });
 
 
