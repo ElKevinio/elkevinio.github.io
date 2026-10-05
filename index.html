@@ -8098,21 +8098,31 @@ async function showRandomStoredVinyl() {
 
   try {
     if (playAnimation) {
-      await runRoulette([...document.querySelectorAll('#storageBoard .storage-shelf')], shelf, 'random-pick-shelf', 'shelf');
-      await runRoulette(eligibleCompartments.map(group => group.element), compartment, 'random-pick-compartment', 'compartment');
-      await runRoulette(selectedCompartmentGroup.tiles, selectedTile, 'random-pick-decoy', 'vinyl');
+      if (eligibleShelves.length > 1) {
+        await runRoulette(eligibleShelves.map(group => group.element), shelf, 'random-pick-shelf', 'shelf');
+      }
+      if (eligibleCompartments.length > 1) {
+        await runRoulette(eligibleCompartments.map(group => group.element), compartment, 'random-pick-compartment', 'compartment');
+      }
+      if (selectedCompartmentGroup.tiles.length > 1) {
+        await runRoulette(selectedCompartmentGroup.tiles, selectedTile, 'random-pick-decoy', 'vinyl');
+      }
     }
 
     document.querySelectorAll('#storageBoard .random-pick-shelf, #storageBoard .random-pick-compartment, #storageBoard .random-pick-decoy')
       .forEach(element => element.classList.remove('random-pick-shelf', 'random-pick-compartment', 'random-pick-decoy'));
     if (playAnimation) {
-      shelf?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      shelf?.classList.add('random-pick-shelf');
-      await pause(220);
-      shelf?.classList.remove('random-pick-shelf');
-      compartment?.classList.add('random-pick-compartment');
-      await pause(220);
-      compartment?.classList.remove('random-pick-compartment');
+      if (eligibleShelves.length > 1) {
+        shelf?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        shelf?.classList.add('random-pick-shelf');
+        await pause(220);
+        shelf?.classList.remove('random-pick-shelf');
+      }
+      if (eligibleCompartments.length > 1) {
+        compartment?.classList.add('random-pick-compartment');
+        await pause(220);
+        compartment?.classList.remove('random-pick-compartment');
+      }
     }
     selectedTile.scrollIntoView({ behavior: playAnimation ? 'smooth' : 'auto', block: 'center', inline: 'center' });
     selectedTile.classList.add('random-highlight');
