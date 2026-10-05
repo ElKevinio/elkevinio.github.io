@@ -7992,6 +7992,7 @@ function createUnsortedStorageCard(item) {
         <button type="button" class="del" title="Löschen" aria-label="Löschen">×</button>
       </div>
     </div>`;
+  bindStorageItemPointerDrag(card, item);
   return card;
 }
 
@@ -8740,7 +8741,10 @@ function renderCollection() {
       case 'color': {
         const colorA = colorSortInfoByItem.get(a);
         const colorB = colorSortInfoByItem.get(b);
-        if (colorA.isNeutral !== colorB.isNeutral) return colorA.isNeutral ? 1 : -1;
+        if (colorA.isNeutral !== colorB.isNeutral) {
+          if (directionMultiplier === 1) return colorA.isNeutral ? 1 : -1;
+          return colorA.isNeutral ? -1 : 1;
+        }
         if (colorA.isNeutral) {
           if (colorA.luminance !== colorB.luminance) return directionMultiplier * (colorB.luminance - colorA.luminance);
         } else {
