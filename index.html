@@ -827,7 +827,48 @@
   .album-editor-form #fOwned { display: none; }
   .album-identity-fields { display: grid; gap: 7px; min-width: 0; }
   .album-genre-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .album-genre-row input { flex: 1; min-width: 0; }
+  .album-genre-row .genre-chip-input { flex: 1; min-width: 0; }
+  .genre-chip-input {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:5px;
+    min-height:38px;
+    padding:4px 7px;
+    border:0.5px solid var(--border);
+    border-radius:6px;
+    background:var(--surface-1);
+    cursor:text;
+  }
+  .genre-chip-input:focus-within { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-bg); }
+  .genre-chip-list { display:contents; }
+  .genre-chip {
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    max-width:100%;
+    padding:2px 7px;
+    border:0.5px solid var(--accent-border);
+    border-radius:999px;
+    background:var(--accent-bg);
+    color:var(--text-primary);
+    font-size:12px;
+    line-height:1.5;
+  }
+  .genre-chip-remove {
+    width:16px !important;
+    min-width:16px !important;
+    height:16px !important;
+    min-height:16px !important;
+    padding:0 !important;
+    border:0 !important;
+    background:transparent !important;
+    color:var(--text-secondary);
+    font-size:14px;
+    line-height:1;
+  }
+  .genre-chip-remove:hover { color:var(--danger); }
+  .genre-chip-text { flex:1 1 90px; width:90px; min-width:70px; padding:2px 0 !important; border:0 !important; background:transparent !important; box-shadow:none !important; }
   .album-cover-url-btn { width: 36px; height: 36px; flex: 0 0 36px; padding: 0; justify-content: center; }
   .album-editor-form #fCoverUrl { display: none; }
   .album-editor-form #fNotes { min-height: 54px; margin: 10px 0 0; }
@@ -1169,6 +1210,10 @@
   .storage-shelf-settings { width:30px !important; min-width:30px !important; padding:0 !important; }
   .storage-shelf-header h3, .storage-shelf-name { flex: 1 1 auto; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .storage-shelf-name { width:100%; padding:0; border:0; background:transparent; color:var(--text-primary); font-size:14px; font-weight:600; }
+  .storage-shelf-name-label { display:none; flex:1 1 auto; min-width:0; overflow:hidden; color:var(--text-primary); font-size:14px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; cursor:grab; user-select:none; }
+  .storage-shelf-name-label:active { cursor:grabbing; }
+  .storage-shelf-drag-handle { display:none; width:24px !important; min-width:24px !important; cursor:grab; color:var(--text-muted); }
+  .storage-shelf-drag-handle:active { cursor:grabbing; }
   .storage-shelf-name:focus { outline:1px solid var(--accent-border); outline-offset:2px; }
   .storage-dimension-control { display:flex; align-items:center; gap:4px; color:var(--text-secondary); font-size:11px; white-space:nowrap; }
   .storage-dimension-control input { width:54px; padding:5px 4px; }
@@ -1298,7 +1343,7 @@
     width:128px;
     height:max-content;
     min-width:0;
-    min-height:0;
+    min-height:20px;
     padding:0;
     align-self:start;
   }
@@ -1306,7 +1351,7 @@
     grid-template-columns:repeat(var(--shelf-columns, 1), 128px);
     grid-template-rows:repeat(var(--shelf-rows, 1), max-content);
     height:max-content;
-    min-height:0;
+    min-height:20px;
     flex:0 0 auto;
     overflow:visible;
     align-content:start;
@@ -1339,7 +1384,7 @@
     display:block;
     box-sizing:border-box;
     height:18px;
-    min-height:0px;
+    min-height:20px;
     margin:0;
     padding:0;
     line-height:normal;
@@ -1348,6 +1393,10 @@
     text-align:center;
   }
   .storage-shelf.display-mode .storage-compartment-header button { position:absolute; right:0; width:18px; min-width:18px; height:18px; min-height:18px; }
+  .storage-shelf.display-mode .storage-shelf-topline { gap:3px; }
+  .storage-shelf.display-mode .storage-shelf-name { min-width:24px; }
+  .storage-shelf.display-mode .storage-shelf-topline button { width:22px; min-width:22px; height:22px; padding:0; }
+  .storage-shelf.display-mode .storage-shelf-count { padding-right:3px; padding-left:3px; }
   .storage-shelf.display-mode div.storage-records {
     flex:0 0 auto;
     width:100%;
@@ -1439,7 +1488,90 @@
   }
   .storage-shelves-pane, .storage-unsorted-pane { min-width:0; min-height:0; background:var(--surface-1); }
   .storage-shelves-pane { overflow:auto; padding-right:8px; }
-  .storage-shelves-pane .storage-shelves { width:max-content; min-height:100%; overflow:visible; }
+  .storage-shelf-groups { display:flex; flex-direction:column; gap:12px; width:max-content; min-width:100%; height:calc(100% - 40px); min-height:calc(100% - 40px); }
+  .storage-shelf-group { display:flex; flex-direction:column; align-items:flex-start; gap:8px; width:max-content; }
+  .storage-shelf-group-heading { display:flex; align-items:center; gap:6px; color:var(--text-secondary); font-size:11px; font-weight:600; }
+  .storage-shelf-group-count { color:var(--text-muted); font-weight:400; }
+  .storage-shelf-group-list { display:flex; align-items:flex-start; gap:10px; width:max-content; min-width:100%; }
+  .storage-shelf-group-collapsed { padding:10px; border:0.5px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.025); }
+  .storage-shelf-group-expanded { flex:1; min-height:0; }
+  .storage-shelf-group-expanded .storage-shelf-group-list { align-items:stretch; height:100%; min-height:0; }
+  .storage-shelves-toolbar { position:sticky; left:0; z-index:4; display:flex; justify-content:flex-end; gap:8px; width:100%; padding-bottom:8px; background:var(--surface-1); }
+  .storage-shelves-toggle-all { min-height:32px; padding:5px 9px; font-size:12px; }
+  .storage-placement-mode-toggle { min-height:32px; padding:5px 9px; font-size:12px; }
+  .storage-placement-mode-toggle[aria-pressed="true"] { color:var(--accent); border-color:var(--accent-border); background:var(--accent-bg); }
+  .storage-layout.storage-item-dragging.storage-placement-mode .storage-shelf:not(.is-collapsed) {
+    width:calc(var(--shelf-columns, 1) * 148px + 24px);
+    max-width:none;
+    min-width:0;
+    min-height:0;
+    height:max-content;
+    flex:0 0 auto;
+    align-self:flex-start;
+  }
+  .storage-layout.storage-item-dragging.storage-placement-mode .storage-shelf:not(.is-collapsed) .storage-compartments {
+    display:grid;
+    grid-template-columns:repeat(var(--shelf-columns, 1), 136px);
+    grid-template-rows:repeat(var(--shelf-rows, 1), 136px);
+    flex:0 0 auto;
+    min-height:0;
+    overflow:visible;
+  }
+  .storage-layout.storage-item-dragging.storage-placement-mode .storage-compartment {
+    width:136px;
+    height:136px;
+    min-height:0;
+    align-items:center;
+    justify-content:center;
+    padding:8px;
+  }
+  .storage-layout.storage-item-dragging.storage-placement-mode .storage-compartment-header {
+    position:static;
+    top:auto;
+    left:auto;
+    z-index:auto;
+    width:100%;
+    height:auto;
+    min-height:0;
+    margin:0;
+    transform:none;
+    justify-content:center;
+    opacity:1;
+    pointer-events:auto;
+  }
+  .storage-layout.storage-item-dragging.storage-placement-mode .storage-compartment-name {
+    top:0;
+    height:auto;
+    min-height:0;
+    padding:4px;
+    color:var(--text-primary);
+    font-size:12px;
+    text-align:center;
+  }
+  .storage-layout.storage-item-dragging.storage-placement-mode .storage-compartment-name::placeholder { color:var(--text-secondary); opacity:1; }
+  .storage-layout.storage-item-dragging.storage-placement-mode .storage-compartment-header .storage-count,
+  .storage-layout.storage-item-dragging.storage-placement-mode .storage-compartment-header button,
+  .storage-layout.storage-item-dragging.storage-placement-mode .storage-records { display:none !important; }
+  .storage-shelf.is-collapsed {
+    width:min(240px, calc(100vw - 48px));
+    max-width:calc(100vw - 48px);
+    min-width:0;
+    min-height:0;
+    height:max-content;
+    flex:0 0 min(240px, calc(100vw - 48px));
+  }
+  .storage-shelf.is-collapsed .storage-shelf-header { gap:0; margin-bottom:0; }
+  .storage-shelf.is-collapsed .storage-shelf-name-label { display:block; }
+  .storage-shelf.is-collapsed .storage-shelf-name,
+  .storage-shelf.is-collapsed .storage-shelf-count,
+  .storage-shelf.is-collapsed .storage-shelf-settings,
+  .storage-shelf.is-collapsed .storage-shelf-dimensions { display:none !important; }
+  .storage-shelf.is-collapsed .storage-compartments { display:none; }
+  .storage-shelf:not(.is-collapsed) .storage-shelf-drag-handle { display:inline-flex; }
+  .storage-shelf.dragging { opacity:.45; }
+  .storage-shelf.drop-target { outline:2px dashed var(--accent); outline-offset:2px; }
+  .storage-shelf-toggle svg { transition:transform .15s ease; }
+  .storage-shelf:not(.is-collapsed) .storage-shelf-toggle svg { transform:rotate(180deg); }
   .storage-pane-resizer { position:relative; width:8px; min-width:8px; cursor:col-resize; touch-action:none; }
   .storage-pane-resizer::after { content:''; position:absolute; top:0; bottom:0; left:3px; width:2px; background:var(--border-strong); }
   .storage-pane-resizer:hover::after, .storage-pane-resizer.active::after { background:var(--accent); }
@@ -1529,12 +1661,6 @@
   .storage-page #formSection { display: none !important; }
   .storage-page #collectionSearchRow { margin: 0 !important; }
   .storage-page #collectionFilterReleaseType { display: none !important; }
-  .storage-page .storage-shelves {
-    height: 100%;
-    min-height: 0;
-    align-items: stretch;
-    overflow: visible;
-  }
   .storage-page .storage-shelf {
     height: 100%;
     min-height: 0;
@@ -1545,8 +1671,12 @@
     height:max-content;
     align-self:flex-start;
   }
+  .storage-page .storage-shelf.is-collapsed {
+    height:max-content;
+    align-self:flex-start;
+  }
   .storage-page .storage-compartments {
-    min-height: 0;
+    min-height: 30px;
     flex: 1;
     overflow-y: auto;
     align-content: start;
@@ -2493,6 +2623,44 @@
     width: min(1100px, 96vw);
     max-width: 1100px;
   }
+  .storage-result-overlay { z-index: 115; }
+  .storage-result-box {
+    width: min(860px, calc(100vw - 24px));
+    max-width: 860px;
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
+  }
+  .storage-result-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+  .storage-result-header .modal-title { margin:0 0 4px; }
+  .storage-result-artist { margin:0; color:var(--text-secondary); font-size:14px; }
+  .storage-result-layout { display:grid; grid-template-columns:minmax(190px,.75fr) minmax(0,1.25fr); gap:24px; align-items:start; }
+  .storage-result-media { display:grid; justify-items:center; gap:16px; }
+  .storage-result-media-item { display:grid; justify-items:center; gap:6px; width:100%; }
+  .storage-result-media-label { margin:0; color:var(--text-muted); font-size:11px; }
+  .storage-result-cover { display:block; width:min(100%,260px); aspect-ratio:1; object-fit:cover; border:1px solid var(--border-strong); border-radius:8px; background:var(--surface-3); }
+  .storage-result-cover[hidden] { display:none; }
+  .storage-result-disc { width:min(100%,260px); max-width:260px; }
+  .storage-result-count { margin:0; color:var(--text-secondary); font-size:12px; text-align:center; }
+  .storage-result-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 16px; margin:0 0 18px; }
+  .storage-result-facts div { min-width:0; }
+  .storage-result-facts .wide { grid-column:1 / -1; }
+  .storage-result-facts dt { color:var(--text-muted); font-size:11px; }
+  .storage-result-facts dd { margin:2px 0 0; color:var(--text-primary); font-size:13px; overflow-wrap:anywhere; }
+  .storage-result-track-heading { margin:0 0 8px; font-size:13px; }
+  .storage-result-tracklist { display:grid; gap:4px; max-height:240px; overflow:auto; margin:0; padding:0 6px; list-style:none; color:var(--text-secondary); font-size:12px; }
+  .storage-result-tracklist li { padding:3px 4px; }
+  .storage-result-tracklist li span:last-child { float:right; margin-left:12px; color:var(--text-muted); }
+  .storage-result-footer { display:flex; justify-content:flex-end; margin-top:18px; }
+  .storage-result-reroll { min-width:150px; justify-content:center; }
+  .storage-result-reroll svg { width:16px; height:16px; }
+  @media (max-width:640px) {
+    .storage-result-box { padding:14px; }
+    .storage-result-layout { grid-template-columns:minmax(0,1fr); gap:18px; }
+    .storage-result-media { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-items:start; }
+    .storage-result-media-item { min-width:0; }
+    .storage-result-cover,
+    .storage-result-disc { width:min(100%,160px); }
+  }
   .modal-box.album-editor-box {
     width: min(680px, calc(100vw - 16px));
     max-width: 680px;
@@ -3291,6 +3459,10 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
               <span>Vinyl-Farben durchgehen</span>
             </button>
+            <button type="button" id="reviewOwnedAlbumsBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Alle Alben in deinem Besitz nacheinander bearbeiten">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 5h16v14H4zM8 9h8M8 13h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Besessene Alben durchgehen</span>
+            </button>
           </div>
           <hr class="settings-divider">
 
@@ -3405,7 +3577,10 @@
             <input type="text" id="fTitle" placeholder="Titel des Albums">
             <input type="text" id="fArtist" placeholder="Interpret">
             <div class="album-genre-row">
-              <input type="text" id="fGenre" placeholder="Genre">
+              <div class="genre-chip-input">
+                <div id="fGenreChips" class="genre-chip-list" aria-live="polite"></div>
+                <input type="text" id="fGenre" class="genre-chip-text" placeholder="Genre hinzufügen" aria-label="Genre hinzufügen">
+              </div>
               <button type="button" id="openCoverUrlBtn" class="icon-btn album-cover-url-btn" title="Cover-Bildlink kopieren oder ändern" aria-label="Cover-Bildlink kopieren oder ändern">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M10 13.5a4.5 4.5 0 0 0 6.36 0l3-3A4.5 4.5 0 0 0 13 4.14l-1.72 1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 10.5a4.5 4.5 0 0 0-6.36 0l-3 3A4.5 4.5 0 0 0 11 19.86l1.72-1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
@@ -3475,6 +3650,7 @@
 
       <div class="form-actions">
         <button id="cancelBtn">Abbrechen</button>
+        <button id="reviewOwnedSkipBtn" type="button" style="display:none;">Überspringen</button>
         <button id="saveBtn" class="primary">Speichern</button>
       </div>
     </div>
@@ -3732,6 +3908,48 @@
   </div>
 </div>
 
+<div class="modal-overlay storage-result-overlay" id="storageRandomResultOverlay" aria-modal="true" role="dialog" aria-labelledby="storageResultTitle">
+  <div class="modal-box storage-result-box">
+    <div class="storage-result-header">
+      <div>
+        <p class="modal-title" id="storageResultTitle"></p>
+        <p class="storage-result-artist" id="storageResultArtist"></p>
+      </div>
+      <button type="button" id="closeStorageRandomResultBtn" class="icon-btn" title="Schließen" aria-label="Ergebnis schließen">×</button>
+    </div>
+    <div class="storage-result-layout">
+      <section class="storage-result-media" aria-label="Cover und Vinyl">
+        <div class="storage-result-media-item">
+          <p class="storage-result-media-label">Cover</p>
+          <img id="storageResultCover" class="storage-result-cover" alt="">
+        </div>
+        <div class="storage-result-media-item">
+          <p class="storage-result-media-label">Vinyl</p>
+          <div id="storageResultDisc" class="vinyl-editor-disc storage-result-disc"></div>
+          <p class="storage-result-count" id="storageResultCount"></p>
+        </div>
+      </section>
+      <section>
+        <dl class="storage-result-facts">
+          <div class="wide"><dt>Lagerort</dt><dd id="storageResultLocation"></dd></div>
+          <div><dt>Jahr</dt><dd id="storageResultYear"></dd></div>
+          <div><dt>Genre</dt><dd id="storageResultGenre"></dd></div>
+          <div><dt>Format</dt><dd id="storageResultFormat"></dd></div>
+          <div><dt>Zustand</dt><dd id="storageResultCondition"></dd></div>
+        </dl>
+        <h3 class="storage-result-track-heading">Tracklist</h3>
+        <ol class="storage-result-tracklist" id="storageResultTracklist"></ol>
+      </section>
+    </div>
+    <div class="storage-result-footer">
+      <button type="button" id="rerollStorageResultBtn" class="primary storage-result-reroll">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 9a7 7 0 0 1 11.9-2L20 9M4 15l2.5 2a7 7 0 0 0 11.9-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Wiederholen
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="shelfLocationsOverlay">
   <div class="modal-box" style="width:min(560px, 94vw); max-height:85vh; overflow:auto;">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
@@ -3868,6 +4086,115 @@ let collectionFilterQuery = '';
 let collectionFilterReleaseType = 'all';
 let showSelectedOnly = false;
 let filterDebounceTimer = null;
+
+function restoreCollectionViewSettings(settings) {
+  settings = settings && typeof settings === 'object' ? settings : {};
+  if (activeView === 'storage') setView('grid', false);
+  collectionFilterQuery = '';
+  collectionFilterReleaseType = 'all';
+  activeFilter = 'all';
+  activeSort = 'newest';
+  activeSortDirection = 'desc';
+  activeView = 'grid';
+  viewBeforeStorage = 'grid';
+  filterBeforeStorage = 'all';
+  storageUnsortedCollapsed = false;
+  storageUnsortedAutoCollapsed = false;
+  storagePaneSplit = 0.67;
+  storagePlacementMode = false;
+  collapsedStorageShelfIds.clear();
+  initializedStorageShelfIds.clear();
+  expandedStorageShelfIds.clear();
+  const filterInput = document.getElementById('collectionFilter');
+  if (filterInput) filterInput.value = '';
+  const searchPanel = document.querySelector('.desktop-form-shell');
+  const searchToggle = document.getElementById('toggleSearchPanelBtn');
+  searchPanel?.classList.remove('search-collapsed');
+  if (searchToggle) {
+    searchToggle.title = 'Album-Suche einklappen';
+    searchToggle.setAttribute('aria-label', 'Album-Suche einklappen');
+    searchToggle.setAttribute('aria-expanded', 'true');
+  }
+  if (typeof settings.collectionFilterQuery === 'string') {
+    collectionFilterQuery = settings.collectionFilterQuery;
+    if (filterInput) filterInput.value = collectionFilterQuery;
+  }
+  if (typeof settings.activeSort === 'string'
+      && [...document.getElementById('sortSelect').options].some(option => option.value === settings.activeSort)) {
+    activeSort = settings.activeSort;
+  }
+  if (settings.activeSortDirection === 'asc' || settings.activeSortDirection === 'desc') {
+    activeSortDirection = settings.activeSortDirection;
+  }
+  if (['all', 'owned', 'wishlist'].includes(settings.activeFilter)) activeFilter = settings.activeFilter;
+  if (['all', 'owned', 'wishlist'].includes(settings.filterBeforeStorage)) filterBeforeStorage = settings.filterBeforeStorage;
+  if (typeof settings.collectionFilterReleaseType === 'string') {
+    collectionFilterReleaseType = settings.collectionFilterReleaseType;
+  }
+  if (typeof settings.storageUnsortedCollapsed === 'boolean') storageUnsortedCollapsed = settings.storageUnsortedCollapsed;
+  storageUnsortedAutoCollapsed = settings.storageUnsortedAutoCollapsed === true;
+  if (Number.isFinite(Number(settings.storagePaneSplit))) {
+    storagePaneSplit = Math.max(0.28, Math.min(0.78, Number(settings.storagePaneSplit)));
+  }
+  storagePlacementMode = settings.storagePlacementMode === true;
+  if (Array.isArray(settings.collapsedStorageShelfIds)) {
+    settings.collapsedStorageShelfIds.forEach(id => {
+      if (typeof id === 'string') collapsedStorageShelfIds.add(id);
+    });
+    shelfLocations.forEach(shelf => initializedStorageShelfIds.add(shelf.id));
+  }
+  if (Array.isArray(settings.expandedStorageShelfIds)) {
+    settings.expandedStorageShelfIds.forEach(id => {
+      if (typeof id === 'string') expandedStorageShelfIds.add(id);
+    });
+  }
+  if (typeof settings.albumSearchCollapsed === 'boolean') {
+    searchPanel?.classList.toggle('search-collapsed', settings.albumSearchCollapsed);
+    if (searchToggle) {
+      const label = settings.albumSearchCollapsed ? 'Album-Suche einblenden' : 'Album-Suche einklappen';
+      searchToggle.title = label;
+      searchToggle.setAttribute('aria-label', label);
+      searchToggle.setAttribute('aria-expanded', String(!settings.albumSearchCollapsed));
+    }
+  }
+  if (['grid', 'table'].includes(settings.viewBeforeStorage)) viewBeforeStorage = settings.viewBeforeStorage;
+  if (['all', 'owned', 'wishlist'].includes(settings.filterBeforeStorage)) filterBeforeStorage = settings.filterBeforeStorage;
+  const restoredView = settings.activeView === 'table'
+    ? 'table'
+    : settings.activeView === 'grid'
+      ? 'grid'
+      : viewBeforeStorage === 'table' ? 'table' : 'grid';
+  setView(restoredView, false);
+  const releaseTypeSelect = document.getElementById('collectionFilterReleaseType');
+  if (releaseTypeSelect && [...releaseTypeSelect.options].some(option => option.value === collectionFilterReleaseType)) {
+    releaseTypeSelect.value = collectionFilterReleaseType;
+  } else {
+    collectionFilterReleaseType = 'all';
+  }
+  const sortSelect = document.getElementById('sortSelect');
+  if (sortSelect) sortSelect.value = activeSort;
+  if (typeof updateSortButtons === 'function') updateSortButtons();
+}
+
+function getCollectionViewSettings() {
+  return {
+    collectionFilterQuery,
+    collectionFilterReleaseType,
+    activeFilter,
+    activeView: activeView === 'storage' ? viewBeforeStorage : activeView,
+    viewBeforeStorage,
+    filterBeforeStorage,
+    activeSort,
+    activeSortDirection,
+    collapsedStorageShelfIds: [...collapsedStorageShelfIds],
+    expandedStorageShelfIds: [...expandedStorageShelfIds],
+    storageUnsortedCollapsed,
+    storageUnsortedAutoCollapsed,
+    storagePaneSplit,
+    storagePlacementMode,
+    albumSearchCollapsed: document.querySelector('.desktop-form-shell')?.classList.contains('search-collapsed') || false
+  };
+}
 
 const authOverlay = document.getElementById('authOverlay');
 const appRoot = document.getElementById('appRoot');
@@ -4071,11 +4398,13 @@ async function loadCloudData(uid) {
   const storageRandomAnimationCheckbox = document.getElementById('storageRandomAnimationCheckbox');
   if (storageRandomAnimationCheckbox) storageRandomAnimationCheckbox.checked = storageRandomAnimation;
   shelfLocations = normalizeShelfLocations(data.settings?.shelves);
+  restoreCollectionViewSettings(data.settings?.collectionViewSettings);
   const titleDisplay = document.getElementById('collectionTitleDisplay');
   if (titleDisplay) titleDisplay.textContent = collectionTitle;
   try { if (typeof updateSortButtons === 'function') updateSortButtons(); } catch (e) {}
   try { if (typeof renderCollection === 'function') renderCollection(); } catch (e) {}
   try { if (typeof updateViewingInfo === 'function') updateViewingInfo(); } catch (e) {}
+  suppressNextCloudSave = false;
 }
 
 async function saveCloudDataNow() {
@@ -4093,7 +4422,7 @@ async function saveCloudDataNow() {
     const storageRandomFormats = [...document.querySelectorAll('#storageRandomFilterPanel [data-storage-random-format]:checked')]
       .map(input => input.dataset.storageRandomFormat);
     const storageRandomAnimation = document.getElementById('storageRandomAnimationCheckbox')?.checked !== false;
-    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations, storageRandomFormats, storageRandomAnimation }, ts ? { tableSettings: ts } : {});
+    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations, storageRandomFormats, storageRandomAnimation, collectionViewSettings: getCollectionViewSettings() }, ts ? { tableSettings: ts } : {});
 
     await db.collection('users').doc(currentUid).set({
       username: currentUsername,
@@ -4409,6 +4738,9 @@ albumEditorModalContent.appendChild(albumEditorFormSection);
 let vinylMigrationQueue = [];
 let vinylMigrationIndex = -1;
 let vinylMigrationActive = false;
+let ownedAlbumReviewQueue = [];
+let ownedAlbumReviewIndex = -1;
+let ownedAlbumReviewActive = false;
 
 async function enrichDiscogsPriceForItem(item) {
   if (!item || !item.discogsResourceUrl) return false;
@@ -5148,6 +5480,7 @@ function getVinylLayerLength(layer, random = createVinylRandom(layer.seed)) {
 
 let vinylEditorDesign = null;
 let activeVinylIndex = 0;
+let storageRandomResultItemId = null;
 
 function safeVinylColor(value, fallback = '#111111') {
   const color = normalizeColor(value);
@@ -5517,6 +5850,74 @@ function finishVinylMigration() {
 
 function abortVinylMigration() {
   finishVinylMigration();
+}
+
+function setOwnedAlbumReviewControls(active) {
+  const cancelButton = document.getElementById('cancelBtn');
+  const saveButton = document.getElementById('saveBtn');
+  const skipButton = document.getElementById('reviewOwnedSkipBtn');
+  cancelButton.textContent = active ? 'Durchlauf beenden' : 'Abbrechen';
+  saveButton.textContent = active ? 'Speichern & Weiter' : 'Speichern';
+  skipButton.style.display = active ? 'inline-flex' : 'none';
+  document.getElementById('albumEditorTitle').textContent = active ? 'Sammlung durchgehen' : 'Album bearbeiten';
+}
+
+function openOwnedAlbumReviewItem() {
+  while (ownedAlbumReviewIndex < ownedAlbumReviewQueue.length) {
+    const entry = collection.find(item => String(item.id) === ownedAlbumReviewQueue[ownedAlbumReviewIndex] && item.owned);
+    if (entry) {
+      currentDraft = JSON.parse(JSON.stringify(entry));
+      currentTracks = Array.isArray(entry.tracklist) ? entry.tracklist : [];
+      document.getElementById('albumEditorTitle').textContent =
+        `Album ${ownedAlbumReviewIndex + 1} von ${ownedAlbumReviewQueue.length} · ${entry.title || 'Ohne Titel'}`;
+      openForm();
+      renderTracklist();
+      return true;
+    }
+    ownedAlbumReviewIndex += 1;
+  }
+  finishOwnedAlbumReview(true);
+  return false;
+}
+
+function startOwnedAlbumReview() {
+  if (!viewingOwnCollection) {
+    showAlert('Wechsle zuerst zu deiner eigenen Sammlung, um Alben zu bearbeiten.');
+    return;
+  }
+  if (document.getElementById('formSection').classList.contains('editor-open')) {
+    showAlert('Speichere oder schließe zuerst das aktuell geöffnete Album.');
+    return;
+  }
+  ownedAlbumReviewQueue = collection.filter(item => item.owned).map(item => String(item.id));
+  if (ownedAlbumReviewQueue.length === 0) {
+    showAlert('In deiner Sammlung sind keine Alben als „Im Besitz“ markiert.');
+    return;
+  }
+  ownedAlbumReviewIndex = 0;
+  ownedAlbumReviewActive = true;
+  setOwnedAlbumReviewControls(true);
+  document.getElementById('settingsPanel').classList.remove('open');
+  openOwnedAlbumReviewItem();
+}
+
+function finishOwnedAlbumReview(completed = false) {
+  const total = ownedAlbumReviewQueue.length;
+  ownedAlbumReviewQueue = [];
+  ownedAlbumReviewIndex = -1;
+  ownedAlbumReviewActive = false;
+  setOwnedAlbumReviewControls(false);
+  document.getElementById('formSection').classList.remove('editor-open');
+  albumEditorOverlay.classList.remove('open');
+  currentDraft = null;
+  currentTracks = [];
+  if (completed) showAlert(`Durchlauf abgeschlossen. ${total} besessene Alben wurden geprüft.`);
+}
+
+function skipOwnedAlbumReviewItem() {
+  if (!ownedAlbumReviewActive) return;
+  ownedAlbumReviewIndex += 1;
+  openOwnedAlbumReviewItem();
 }
 
 function applyVinylEditorDesignToDraft() {
@@ -6087,6 +6488,7 @@ function restoreCollectionFilterAfterAdd() {
   collectionFilterBeforeAdd = null;
   const filter = document.getElementById('collectionFilter');
   if (filter) filter.value = collectionFilterQuery;
+  saveCloudDataDebounced();
   renderCollection();
 }
 
@@ -7155,6 +7557,122 @@ function renderTracklist() {
   ).join('');
 }
 
+function getGenreValues(value) {
+  const values = Array.isArray(value) ? value : String(value || '').split(',');
+  const genres = [];
+  const seen = new Set();
+  values.forEach(value => {
+    const genre = String(value || '').trim();
+    const key = genre.toLocaleLowerCase('de');
+    if (!genre || seen.has(key)) return;
+    seen.add(key);
+    genres.push(genre);
+  });
+  return genres;
+}
+
+function renderGenreChips(value, chipListId = 'fGenreChips', inputId = 'fGenre') {
+  const chipList = document.getElementById(chipListId);
+  const input = document.getElementById(inputId);
+  if (!chipList || !input) return;
+  chipList.replaceChildren();
+  getGenreValues(value).forEach(genre => {
+    const chip = document.createElement('span');
+    chip.className = 'genre-chip';
+    const label = document.createElement('span');
+    label.textContent = genre;
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'genre-chip-remove';
+    removeButton.textContent = '×';
+    removeButton.title = `${genre} entfernen`;
+    removeButton.setAttribute('aria-label', `${genre} entfernen`);
+    removeButton.addEventListener('click', () => {
+      chip.remove();
+      input.focus();
+    });
+    chip.append(label, removeButton);
+    chipList.appendChild(chip);
+  });
+}
+
+function getGenreChipValues(chipListId = 'fGenreChips') {
+  return [...document.querySelectorAll(`#${chipListId} .genre-chip > span:first-child`)]
+    .map(label => label.textContent);
+}
+
+function getGenreInputValues(inputId = 'fGenre', chipListId = 'fGenreChips') {
+  const input = document.getElementById(inputId);
+  const chipList = document.getElementById(chipListId);
+  if (!input || !chipList) {
+    console.error(`Genre-Eingabe nicht vollständig verfügbar (#${inputId}, #${chipListId}).`);
+    if (inputId === 'fGenre' && !chipList) {
+      return getGenreValues(currentDraft?.genre);
+    }
+    const chipValues = chipList ? getGenreChipValues(chipListId) : [];
+    return getGenreValues([...chipValues, input?.value || '']);
+  }
+  return getGenreValues([...getGenreChipValues(chipListId), input.value]);
+}
+
+function commitGenreInput(inputId = 'fGenre', chipListId = 'fGenreChips') {
+  const input = document.getElementById(inputId);
+  const pending = input.value.trim();
+  if (!pending) return;
+  renderGenreChips([...getGenreChipValues(chipListId), pending], chipListId, inputId);
+  input.value = '';
+}
+
+const genreInput = document.getElementById('fGenre');
+genreInput.addEventListener('input', () => {
+  const parts = genreInput.value.split(',');
+  if (parts.length < 2) return;
+  const pending = parts.pop();
+  renderGenreChips([...getGenreChipValues(), ...parts]);
+  genreInput.value = pending;
+});
+genreInput.addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    commitGenreInput();
+  } else if (event.key === 'Backspace' && !genreInput.value) {
+    const chips = document.querySelectorAll('#fGenreChips .genre-chip');
+    chips[chips.length - 1]?.remove();
+  }
+});
+genreInput.addEventListener('blur', () => commitGenreInput());
+document.querySelector('.genre-chip-input').addEventListener('click', event => {
+  if (event.target.closest('.genre-chip-remove')) return;
+  genreInput.focus();
+});
+
+function initializeBulkGenreInput() {
+  const input = document.getElementById('bulkGenre');
+  if (input.dataset.initialized) return;
+  input.dataset.initialized = 'true';
+  input.addEventListener('input', () => {
+    const parts = input.value.split(',');
+    if (parts.length < 2) return;
+    const pending = parts.pop();
+    renderGenreChips([...getGenreChipValues('bulkGenreChips'), ...parts], 'bulkGenreChips', 'bulkGenre');
+    input.value = pending;
+  });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitGenreInput('bulkGenre', 'bulkGenreChips');
+    } else if (event.key === 'Backspace' && !input.value) {
+      const chips = document.querySelectorAll('#bulkGenreChips .genre-chip');
+      chips[chips.length - 1]?.remove();
+    }
+  });
+  input.addEventListener('blur', () => commitGenreInput('bulkGenre', 'bulkGenreChips'));
+  document.querySelector('#bulkGenreChipInput').addEventListener('click', event => {
+    if (event.target.closest('.genre-chip-remove')) return;
+    if (!input.disabled) input.focus();
+  });
+}
+
 function openForm() {
   document.getElementById('formSection').classList.add('editor-open');
   albumEditorOverlay.classList.add('open');
@@ -7163,7 +7681,8 @@ function openForm() {
   document.getElementById('fTitle').value = currentDraft.title;
   document.getElementById('fArtist').value = currentDraft.artist;
   document.getElementById('fYear').value = currentDraft.year;
-  document.getElementById('fGenre').value = currentDraft.genre;
+  renderGenreChips(currentDraft.genre);
+  document.getElementById('fGenre').value = '';
   document.getElementById('fCoverUrl').value = currentDraft.coverUrl;
   document.getElementById('fDiscogsUrl').value = currentDraft.discogsResourceUrl || '';
   document.getElementById('fDiscogsUrlStatus').textContent = '';
@@ -7270,7 +7789,8 @@ document.getElementById('loadDiscogsUrlBtn').addEventListener('click', async () 
   document.getElementById('fTitle').value = currentDraft.title;
   document.getElementById('fArtist').value = currentDraft.artist;
   document.getElementById('fYear').value = currentDraft.year;
-  document.getElementById('fGenre').value = currentDraft.genre;
+  renderGenreChips(currentDraft.genre);
+  document.getElementById('fGenre').value = '';
   document.getElementById('fCoverUrl').value = currentDraft.coverUrl;
   document.getElementById('formCover').src = currentDraft.coverUrl;
   document.getElementById('fManualPrice').value = currentDraft.discogsLowestPrice ?? '';
@@ -7407,11 +7927,17 @@ document.getElementById('coverSearchOverlay')?.addEventListener('click', e => {
 });
 
 document.getElementById('cancelBtn').addEventListener('click', () => {
+  if (ownedAlbumReviewActive) {
+    finishOwnedAlbumReview(false);
+    return;
+  }
   document.getElementById('formSection').classList.remove('editor-open');
   albumEditorOverlay.classList.remove('open');
   currentDraft = null;
   restoreCollectionFilterAfterAdd();
 });
+document.getElementById('reviewOwnedSkipBtn').addEventListener('click', skipOwnedAlbumReviewItem);
+document.getElementById('reviewOwnedAlbumsBtn').addEventListener('click', startOwnedAlbumReview);
 document.getElementById('closeAlbumEditorBtn').addEventListener('click', () => document.getElementById('cancelBtn').click());
 albumEditorOverlay.addEventListener('click', event => {
   if (event.target === albumEditorOverlay) document.getElementById('cancelBtn').click();
@@ -7571,7 +8097,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   currentDraft.title = document.getElementById('fTitle').value.trim();
   currentDraft.artist = document.getElementById('fArtist').value.trim();
   currentDraft.year = document.getElementById('fYear').value.trim();
-  currentDraft.genre = document.getElementById('fGenre').value.trim();
+  currentDraft.genre = getGenreInputValues().join(', ');
   currentDraft.coverUrl = document.getElementById('fCoverUrl').value.trim();
   currentDraft.releaseType = document.getElementById('fReleaseType').value;
   currentDraft.condition = document.getElementById('fCondition').value;
@@ -7606,6 +8132,11 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   const existingIndex = collection.findIndex(c => c.id === currentDraft.id);
   if (existingIndex >= 0) { collection[existingIndex] = currentDraft; } else { collection.push(currentDraft); }
   saveCollection();
+  if (ownedAlbumReviewActive) {
+    ownedAlbumReviewIndex += 1;
+    openOwnedAlbumReviewItem();
+    return;
+  }
   document.getElementById('formSection').classList.remove('editor-open');
   albumEditorOverlay.classList.remove('open');
   const searchResults = document.getElementById('searchResults');
@@ -7769,6 +8300,16 @@ function toggleSelectAll() {
 
 function openBulkEditDialog() {
   if (selectedItemIds.size === 0) return;
+  initializeBulkGenreInput();
+  document.getElementById('bulkGenreMode').value = 'default';
+  document.getElementById('bulkGenreMode').onchange = event => {
+    document.getElementById('bulkGenreChipInput').style.opacity = event.target.value === 'set' ? '1' : '0.5';
+    document.getElementById('bulkGenre').disabled = event.target.value !== 'set';
+  };
+  document.getElementById('bulkGenre').disabled = true;
+  document.getElementById('bulkGenreChipInput').style.opacity = '0.5';
+  renderGenreChips('', 'bulkGenreChips', 'bulkGenre');
+  document.getElementById('bulkGenre').value = '';
   const bulkShelf = document.getElementById('bulkShelf');
   bulkShelf.innerHTML = '<option value="default">Nicht ändern</option><option value="none">Lagerort entfernen</option>' + shelfLocations.map(shelf =>
     `<option value="${escapeHtml(shelf.id)}">${escapeHtml(shelf.name)}</option>`
@@ -7812,7 +8353,8 @@ function saveBulkChanges() {
 
   const condition = document.getElementById('bulkCondition').value;
   const ownedValue = document.getElementById('bulkOwned').value;
-  const genre = document.getElementById('bulkGenre').value;
+  const genreMode = document.getElementById('bulkGenreMode').value;
+  const genre = getGenreInputValues('bulkGenre', 'bulkGenreChips').join(', ');
   const notes = document.getElementById('bulkNotes').value;
   const manualPrice = document.getElementById('bulkManualPrice').value;
   const shelfValue = document.getElementById('bulkShelf').value;
@@ -7821,6 +8363,10 @@ function saveBulkChanges() {
   const washedDate = document.getElementById('bulkLastWashed').value;
   if (washedMode === 'set' && !washedDate) {
     showAlert('Bitte ein Waschdatum auswählen.');
+    return;
+  }
+  if (genreMode === 'set' && !genre) {
+    showAlert('Bitte mindestens ein Genre hinzufügen oder „Genres entfernen“ auswählen.');
     return;
   }
 
@@ -7849,7 +8395,8 @@ function saveBulkChanges() {
       delete item.shelfCompartment;
       delete item.lastWashed;
     }
-    if (genre !== 'default' && genre !== '') item.genre = genre;
+    if (genreMode === 'set') item.genre = genre;
+    if (genreMode === 'clear') delete item.genre;
     if (notes !== 'default' && notes !== '') item.notes = notes;
     if (manualPrice !== '') item.discogsLowestPrice = parseFloat(manualPrice);
   });
@@ -7873,6 +8420,7 @@ function setFilter(filter) {
   });
   const map = { all: 'filterAll', owned: 'filterOwned', wishlist: 'filterWishlist' };
   document.getElementById(map[filter]).classList.add('toggle-active');
+  saveCloudDataDebounced();
   renderCollection();
 }
 
@@ -7884,12 +8432,14 @@ function setSort(sortValue) {
     activeSortDirection = 'asc';
   }
   updateSortButtons();
+  saveCloudDataDebounced();
   renderCollection();
 }
 
 function setSortDirection(direction) {
   activeSortDirection = direction;
   updateSortButtons();
+  saveCloudDataDebounced();
   renderCollection();
 }
 
@@ -7917,6 +8467,7 @@ if (toggleSearchPanelBtn && desktopFormShell) {
     toggleSearchPanelBtn.title = label;
     toggleSearchPanelBtn.setAttribute('aria-label', label);
     toggleSearchPanelBtn.setAttribute('aria-expanded', String(!collapsed));
+    saveCloudDataDebounced();
   });
 }
 
@@ -8007,6 +8558,7 @@ const collectionFilterReleaseTypeSelect = document.getElementById('collectionFil
 if (collectionFilterReleaseTypeSelect) {
   collectionFilterReleaseTypeSelect.addEventListener('change', (e) => {
     collectionFilterReleaseType = e.target.value;
+    saveCloudDataDebounced();
     renderCollection();
   });
 }
@@ -8032,7 +8584,7 @@ if (selectAllCheckbox) {
 }
 // Title editing removed from header; collection title is displayed but not editable here.
 
-function setView(view) {
+function setView(view, persist = true) {
   if (view === 'storage' && !viewingOwnCollection) return;
   const wrap = document.querySelector('.wrap');
   const collectionPanel = document.querySelector('.collection-panel');
@@ -8054,7 +8606,6 @@ function setView(view) {
     searchPanel.insertBefore(collectionSearchRow, searchPanel.querySelector('.toprow'));
   } else if (activeView === 'storage' && view !== 'storage') {
     activeFilter = filterBeforeStorage;
-    storageUnsortedCollapsed = false;
     wrap.classList.remove('storage-page');
     collectionPanel.appendChild(storageBoard);
     document.querySelector('.collection-header').insertBefore(collectionSearchRow, document.getElementById('bulkEditBar'));
@@ -8080,6 +8631,7 @@ function setView(view) {
     viewStorageBtn.title = view === 'storage' ? 'Zur Sammlung wechseln' : 'Lageransicht öffnen';
     viewStorageBtn.setAttribute('aria-label', viewStorageBtn.title);
   }
+  if (persist) saveCloudDataDebounced();
   renderCollection();
 }
 
@@ -8115,11 +8667,67 @@ function createStoredVinylTile(item) {
 let lastRandomStoredItemId = null;
 let randomHighlightedItemId = null;
 let storageRandomPickInProgress = false;
+const collapsedStorageShelfIds = new Set();
 
 function getStorageRandomFormats() {
   return [...document.querySelectorAll('#storageRandomFilterPanel [data-storage-random-format]:checked')]
     .map(input => input.dataset.storageRandomFormat);
 }
+
+function renderStorageRandomResult(item) {
+  if (!item) return;
+  storageRandomResultItemId = String(item.id);
+  const design = normalizeVinylDesign(item);
+  const record = design.records[0] || makeDefaultVinylRecord(item.color, item.colorSecondary);
+  const cover = document.getElementById('storageResultCover');
+  cover.hidden = !item.coverUrl;
+  cover.src = item.coverUrl || '';
+  cover.alt = item.coverUrl ? `Cover: ${item.title || 'Unbekanntes Album'}` : '';
+  cover.onerror = () => { cover.hidden = true; };
+  const disc = document.getElementById('storageResultDisc');
+  disc.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
+  disc.style.setProperty('--vinyl-label', record.labelColor);
+  disc.style.setProperty('--vinyl-art', getVinylSvgData(record));
+  disc.innerHTML = getVinylLiquidMarkup(record);
+  document.getElementById('storageResultTitle').textContent = item.title || 'Unbekanntes Album';
+  document.getElementById('storageResultArtist').textContent = item.artist || 'Unbekannter Interpret';
+  document.getElementById('storageResultCount').textContent = `${design.records.length} Vinyl${design.records.length === 1 ? '' : 's'}`;
+  document.getElementById('storageResultLocation').textContent = getStorageLabel(item) || 'Kein Lagerort hinterlegt';
+  document.getElementById('storageResultYear').textContent = item.year || '–';
+  document.getElementById('storageResultGenre').textContent = item.genre || '–';
+  document.getElementById('storageResultFormat').textContent = getReleaseType(item);
+  document.getElementById('storageResultCondition').textContent = item.condition || '–';
+  const tracklist = Array.isArray(item.tracklist) ? item.tracklist : [];
+  document.getElementById('storageResultTracklist').innerHTML = tracklist.length
+    ? tracklist.map((track, index) => {
+      const title = typeof track === 'string' ? track : track.title || 'Unbenannter Track';
+      const number = typeof track === 'string' ? index + 1 : track.number || index + 1;
+      const duration = typeof track === 'string' ? '' : track.duration || '';
+      return `<li><span>${escapeHtml(String(number))}. ${escapeHtml(title)}</span><span>${escapeHtml(duration)}</span></li>`;
+    }).join('')
+    : '<li>Keine Tracklist hinterlegt</li>';
+  document.getElementById('storageRandomResultOverlay').classList.add('open');
+}
+
+function closeStorageRandomResult() {
+  document.getElementById('storageRandomResultOverlay').classList.remove('open');
+  storageRandomResultItemId = null;
+}
+
+document.getElementById('closeStorageRandomResultBtn').addEventListener('click', closeStorageRandomResult);
+document.getElementById('storageRandomResultOverlay').addEventListener('click', event => {
+  if (event.target.id === 'storageRandomResultOverlay') closeStorageRandomResult();
+});
+document.getElementById('rerollStorageResultBtn').addEventListener('click', async () => {
+  if (storageRandomPickInProgress) return;
+  closeStorageRandomResult();
+  await showRandomStoredVinyl();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('storageRandomResultOverlay').classList.contains('open')) {
+    closeStorageRandomResult();
+  }
+});
 
 async function showRandomStoredVinyl() {
   if (storageRandomPickInProgress) return;
@@ -8165,6 +8773,13 @@ async function showRandomStoredVinyl() {
   const selectedItem = collection.find(item => String(item.id) === selectedTile.dataset.storageItem);
   if (!selectedItem) return;
 
+  const previousCollapsedShelfIds = new Set(collapsedStorageShelfIds);
+  const eligibleShelfIds = new Set(eligibleShelves.map(group => group.element.dataset.shelfId));
+  collapsedStorageShelfIds.clear();
+  shelfLocations.forEach(entry => {
+    if (!eligibleShelfIds.has(entry.id)) collapsedStorageShelfIds.add(entry.id);
+  });
+  updateStorageShelfCollapseControls(document.getElementById('storageBoard'));
   storageRandomPickInProgress = true;
   if (storageRandomPickBtn) storageRandomPickBtn.disabled = true;
   const shelf = selectedShelfGroup.element;
@@ -8240,18 +8855,25 @@ async function showRandomStoredVinyl() {
     shelf?.classList.remove('random-pick-shelf');
     compartment?.classList.remove('random-pick-compartment');
     selectedTile.classList.remove('random-pick-spinning');
+    collapsedStorageShelfIds.clear();
+    previousCollapsedShelfIds.forEach(id => collapsedStorageShelfIds.add(id));
+    updateStorageShelfCollapseControls(document.getElementById('storageBoard'));
     storageRandomPickInProgress = false;
     if (storageRandomPickBtn) storageRandomPickBtn.disabled = false;
   }
+  renderStorageRandomResult(selectedItem);
 }
 
 let storageUnsortedCollapsed = false;
+let storageUnsortedAutoCollapsed = false;
 let storagePaneSplit = 0.67;
 let storagePaneResize = null;
 let activeStorageLayout = null;
 let activeStoragePointerDrag = null;
 let activeStorageDropTarget = null;
 let suppressStorageClickUntil = 0;
+let draggedStorageShelfId = null;
+let storagePlacementMode = false;
 
 function applyStoragePaneLayout(layout) {
   if (!layout) return;
@@ -8293,6 +8915,7 @@ function bindStoragePaneResizer(layout, handle) {
     if (towardEnd) storagePaneSplit = Math.max(0.28, storagePaneSplit - 0.04);
     if (towardStart) storagePaneSplit = Math.min(0.78, storagePaneSplit + 0.04);
     applyStoragePaneLayout(layout);
+    saveCloudDataDebounced();
   });
 }
 
@@ -8312,12 +8935,69 @@ document.addEventListener('pointerup', event => {
   if (!storagePaneResize || storagePaneResize.pointerId !== event.pointerId) return;
   storagePaneResize.handle.classList.remove('active');
   storagePaneResize = null;
+  saveCloudDataDebounced();
 });
 
 window.addEventListener('resize', () => applyStoragePaneLayout(activeStorageLayout));
 
 function findStorageDropTargetAt(x, y) {
   return document.elementFromPoint(x, y)?.closest('.storage-compartment, [data-drop-unsorted]') || null;
+}
+
+function scrollStoragePanesNearPointer(x, y) {
+  const board = document.getElementById('storageBoard');
+  let element = document.elementFromPoint(x, y);
+  if (!board || !element) return;
+  const edgeSize = 52;
+  const maxSpeed = 14;
+  let scrolledX = false;
+  let scrolledY = false;
+  while (element && board.contains(element)) {
+    const bounds = element.getBoundingClientRect();
+    const overflow = getComputedStyle(element);
+    if (!scrolledX && ['auto', 'scroll', 'overlay'].includes(overflow.overflowX) && element.scrollWidth > element.clientWidth + 1) {
+      const distanceFromLeft = x - bounds.left;
+      const distanceFromRight = bounds.right - x;
+      let delta = distanceFromLeft < edgeSize
+        ? -Math.ceil(maxSpeed * (1 - Math.max(0, distanceFromLeft) / edgeSize))
+        : distanceFromRight < edgeSize
+          ? Math.ceil(maxSpeed * (1 - Math.max(0, distanceFromRight) / edgeSize))
+          : 0;
+      if (delta) {
+        const nextScrollLeft = Math.max(0, Math.min(element.scrollWidth - element.clientWidth, element.scrollLeft + delta));
+        if (nextScrollLeft !== element.scrollLeft) {
+          element.scrollLeft = nextScrollLeft;
+          scrolledX = true;
+        }
+      }
+    }
+    if (!scrolledY && ['auto', 'scroll', 'overlay'].includes(overflow.overflowY) && element.scrollHeight > element.clientHeight + 1) {
+      const distanceFromTop = y - bounds.top;
+      const distanceFromBottom = bounds.bottom - y;
+      let delta = distanceFromTop < edgeSize
+        ? -Math.ceil(maxSpeed * (1 - Math.max(0, distanceFromTop) / edgeSize))
+        : distanceFromBottom < edgeSize
+          ? Math.ceil(maxSpeed * (1 - Math.max(0, distanceFromBottom) / edgeSize))
+          : 0;
+      if (delta) {
+        const nextScrollTop = Math.max(0, Math.min(element.scrollHeight - element.clientHeight, element.scrollTop + delta));
+        if (nextScrollTop !== element.scrollTop) {
+          element.scrollTop = nextScrollTop;
+          scrolledY = true;
+        }
+      }
+    }
+    if (scrolledX && scrolledY) break;
+    element = element.parentElement;
+  }
+}
+
+function continueStoragePointerDrag() {
+  const drag = activeStoragePointerDrag;
+  if (!drag?.dragging) return;
+  scrollStoragePanesNearPointer(drag.x, drag.y);
+  setStoragePointerDropTarget(findStorageDropTargetAt(drag.x, drag.y));
+  drag.autoScrollFrame = requestAnimationFrame(continueStoragePointerDrag);
 }
 
 function setStoragePointerDropTarget(target) {
@@ -8330,8 +9010,10 @@ function setStoragePointerDropTarget(target) {
 function clearStoragePointerDrag() {
   activeStorageDropTarget?.classList.remove('drag-over');
   activeStorageDropTarget = null;
+  if (activeStoragePointerDrag?.autoScrollFrame) cancelAnimationFrame(activeStoragePointerDrag.autoScrollFrame);
   activeStoragePointerDrag?.preview?.remove();
   activeStoragePointerDrag?.source?.classList.remove('storage-pointer-source');
+  activeStorageLayout?.classList.remove('storage-item-dragging');
   activeStoragePointerDrag = null;
 }
 
@@ -8346,8 +9028,11 @@ function bindStorageItemPointerDrag(source, item) {
       source,
       startX: event.clientX,
       startY: event.clientY,
+      x: event.clientX,
+      y: event.clientY,
       dragging: false,
-      preview: null
+      preview: null,
+      autoScrollFrame: 0
     };
   });
 }
@@ -8355,16 +9040,20 @@ function bindStorageItemPointerDrag(source, item) {
 document.addEventListener('pointermove', event => {
   const drag = activeStoragePointerDrag;
   if (!drag || drag.pointerId !== event.pointerId) return;
+  drag.x = event.clientX;
+  drag.y = event.clientY;
   if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
   event.preventDefault();
   if (!drag.dragging) {
     drag.dragging = true;
     drag.source.classList.add('storage-pointer-source');
+    if (storagePlacementMode) activeStorageLayout?.classList.add('storage-item-dragging');
     drag.preview = document.createElement('img');
     drag.preview.className = 'storage-pointer-preview';
     drag.preview.src = drag.item.coverUrl || '';
     drag.preview.alt = '';
     document.body.appendChild(drag.preview);
+    drag.autoScrollFrame = requestAnimationFrame(continueStoragePointerDrag);
   }
   drag.preview.style.left = `${event.clientX}px`;
   drag.preview.style.top = `${event.clientY}px`;
@@ -8436,6 +9125,9 @@ async function removeShelf(shelf) {
     }
   });
   shelfLocations = shelfLocations.filter(entry => entry.id !== shelf.id);
+  collapsedStorageShelfIds.delete(shelf.id);
+  initializedStorageShelfIds.delete(shelf.id);
+  expandedStorageShelfIds.delete(shelf.id);
   saveShelfLayout();
 }
 
@@ -8459,9 +9151,48 @@ async function removeShelfCompartment(shelf, compartmentNumber) {
 }
 
 const expandedStorageShelfIds = new Set();
+const initializedStorageShelfIds = new Set();
+
+function updateStorageShelfCollapseControls(board) {
+  if (!board) return;
+  const collapsedShelves = board.querySelector('.storage-shelf-group-collapsed .storage-shelf-group-list');
+  const expandedShelves = board.querySelector('.storage-shelf-group-expanded .storage-shelf-group-list');
+  shelfLocations.forEach(shelf => {
+    const element = board.querySelector(`.storage-shelf[data-shelf-id="${CSS.escape(shelf.id)}"]`);
+    if (!element) return;
+    const collapsed = collapsedStorageShelfIds.has(shelf.id);
+    element.classList.toggle('is-collapsed', collapsed);
+    (collapsed ? collapsedShelves : expandedShelves)?.appendChild(element);
+    const button = element.querySelector('.storage-shelf-toggle');
+    if (button) {
+      button.setAttribute('aria-expanded', String(!collapsed));
+      button.title = collapsed ? 'Regal ausklappen' : 'Regal einklappen';
+      button.setAttribute('aria-label', `${button.title}: ${element.querySelector('.storage-shelf-name')?.value || 'Regal'}`);
+    }
+  });
+  board.querySelector('.storage-shelf-group-collapsed .storage-shelf-group-count').textContent =
+    String(shelfLocations.filter(shelf => collapsedStorageShelfIds.has(shelf.id)).length);
+  board.querySelector('.storage-shelf-group-expanded .storage-shelf-group-count').textContent =
+    String(shelfLocations.filter(shelf => !collapsedStorageShelfIds.has(shelf.id)).length);
+  const allExpanded = shelfLocations.length > 0 && shelfLocations.every(shelf => !collapsedStorageShelfIds.has(shelf.id));
+  const toggleAll = board.querySelector('.storage-shelves-toggle-all');
+  if (toggleAll) {
+    toggleAll.disabled = shelfLocations.length === 0;
+    toggleAll.setAttribute('aria-expanded', String(allExpanded));
+    toggleAll.title = allExpanded ? 'Alle Regale einklappen' : 'Alle Regale ausklappen';
+    toggleAll.setAttribute('aria-label', toggleAll.title);
+    toggleAll.querySelector('span').textContent = toggleAll.title;
+  }
+}
 
 function renderStorageBoard(visibleItems) {
   const board = document.getElementById('storageBoard');
+  shelfLocations.forEach(shelf => {
+    if (!initializedStorageShelfIds.has(shelf.id)) {
+      initializedStorageShelfIds.add(shelf.id);
+      collapsedStorageShelfIds.add(shelf.id);
+    }
+  });
   const ownedItems = visibleItems.filter(item => item.owned);
   const randomSelectedItem = ownedItems.find(item => item.id === randomHighlightedItemId);
   const randomSelectedShelf = randomSelectedItem ? shelfLocations.find(entry => entry.id === randomSelectedItem.shelfId) : null;
@@ -8473,7 +9204,18 @@ function renderStorageBoard(visibleItems) {
   const unsorted = collectionFilterQuery
     ? allUnsorted.filter(item => matchesCollectionQuery(item, collectionFilterQuery))
     : allUnsorted;
-  const sections = shelfLocations.map(shelf => {
+  const previousUnsortedCollapseState = `${storageUnsortedCollapsed}:${storageUnsortedAutoCollapsed}`;
+  if (allUnsorted.length === 0) {
+    storageUnsortedCollapsed = true;
+    storageUnsortedAutoCollapsed = true;
+  } else if (storageUnsortedAutoCollapsed) {
+    storageUnsortedCollapsed = false;
+    storageUnsortedAutoCollapsed = false;
+  }
+  if (previousUnsortedCollapseState !== `${storageUnsortedCollapsed}:${storageUnsortedAutoCollapsed}`) {
+    saveCloudDataDebounced();
+  }
+  const renderShelf = shelf => {
     const capacity = getShelfCapacity(shelf);
     const shelfWidth = shelf.mode === 'display'
       ? shelf.columns * 128 + Math.max(0, shelf.columns - 1) * 8 + 25
@@ -8493,11 +9235,19 @@ function renderStorageBoard(visibleItems) {
         <div class="storage-records" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}"></div>
       </section>`;
     }).join('');
-    return `<section class="storage-shelf${shelf.mode === 'display' ? ' display-mode' : ''}${expandedStorageShelfIds.has(shelf.id) ? ' settings-open' : ''}" data-shelf-id="${escapeHtml(shelf.id)}" style="--shelf-rows:${shelf.rows};--shelf-columns:${shelf.columns};--shelf-width:${shelfWidth}px;">
+    const isCollapsed = collapsedStorageShelfIds.has(shelf.id);
+    return `<section class="storage-shelf${shelf.mode === 'display' ? ' display-mode' : ''}${isCollapsed ? ' is-collapsed' : ''}${expandedStorageShelfIds.has(shelf.id) ? ' settings-open' : ''}" data-shelf-id="${escapeHtml(shelf.id)}" style="--shelf-rows:${shelf.rows};--shelf-columns:${shelf.columns};--shelf-width:${shelfWidth}px;">
       <header class="storage-shelf-header">
         <div class="storage-shelf-topline">
+          <span class="storage-shelf-name-label" draggable="true" title="Ziehen, um Regale umzuordnen" aria-label="Regal ${escapeHtml(shelf.name)} umordnen">${escapeHtml(shelf.name)}</span>
+          <button type="button" class="storage-shelf-drag-handle" draggable="true" title="Ziehen, um Regale umzuordnen" aria-label="Regal ${escapeHtml(shelf.name)} umordnen">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3" r="1"/><circle cx="11" cy="3" r="1"/><circle cx="5" cy="8" r="1"/><circle cx="11" cy="8" r="1"/><circle cx="5" cy="13" r="1"/><circle cx="11" cy="13" r="1"/></svg>
+          </button>
           <input type="text" class="storage-shelf-name" data-shelf-id="${escapeHtml(shelf.id)}" value="${escapeHtml(shelf.name)}" aria-label="Regalname ${escapeHtml(shelf.name)}">
           <span class="storage-count storage-shelf-count" title="${shelfItems.length} Album${shelfItems.length === 1 ? '' : 'e'} im Regal">${shelfItems.length}</span>
+          <button type="button" class="storage-shelf-toggle" aria-expanded="${!isCollapsed}" title="${isCollapsed ? 'Regal ausklappen' : 'Regal einklappen'}" aria-label="${isCollapsed ? 'Regal ausklappen' : 'Regal einklappen'}: ${escapeHtml(shelf.name)}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <button type="button" class="storage-shelf-settings" aria-expanded="${expandedStorageShelfIds.has(shelf.id)}" title="Maßeinstellungen öffnen" aria-label="Maßeinstellungen öffnen">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51-1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -8511,9 +9261,28 @@ function renderStorageBoard(visibleItems) {
       </header>
       <div class="storage-compartments">${compartmentMarkup}</div>
     </section>`;
-  }).join('');
-  board.innerHTML = `<div class="storage-layout">
-      <section class="storage-shelves-pane"><div class="storage-shelves">${sections}<button type="button" class="storage-add-shelf" title="Regal hinzufügen" aria-label="Regal hinzufügen">+</button></div></section>
+  };
+  const collapsedShelves = shelfLocations.filter(shelf => collapsedStorageShelfIds.has(shelf.id));
+  const expandedShelves = shelfLocations.filter(shelf => !collapsedStorageShelfIds.has(shelf.id));
+  const collapsedSections = collapsedShelves.map(renderShelf).join('');
+  const expandedSections = expandedShelves.map(renderShelf).join('');
+    board.innerHTML = `<div class="storage-layout">
+      <section class="storage-shelves-pane">
+        <div class="storage-shelves-toolbar">
+          <button type="button" class="storage-placement-mode-toggle" aria-pressed="${storagePlacementMode}" title="Fächer beim Ziehen als Ablageziele anzeigen">Fächer-Modus: ${storagePlacementMode ? 'An' : 'Aus'}</button>
+          <button type="button" class="storage-shelves-toggle-all" aria-expanded="false" title="Alle Regale ausklappen"><span>Alle Regale ausklappen</span></button>
+        </div>
+        <div class="storage-shelf-groups">
+          <section class="storage-shelf-group storage-shelf-group-collapsed">
+            <div class="storage-shelf-group-heading"><span>Eingeklappt</span><span class="storage-shelf-group-count">${collapsedShelves.length}</span></div>
+            <div class="storage-shelf-group-list">${collapsedSections}<button type="button" class="storage-add-shelf" title="Regal hinzufügen" aria-label="Regal hinzufügen">+</button></div>
+          </section>
+          <section class="storage-shelf-group storage-shelf-group-expanded">
+            <div class="storage-shelf-group-heading"><span>Ausgeklappt</span><span class="storage-shelf-group-count">${expandedShelves.length}</span></div>
+            <div class="storage-shelf-group-list">${expandedSections}</div>
+          </section>
+        </div>
+      </section>
       <div class="storage-pane-resizer" role="separator" tabindex="0" aria-label="Bereichsbreite anpassen" aria-orientation="vertical"></div>
       <aside class="storage-unsorted-pane" data-drop-unsorted>
         <header class="storage-unsorted-panel-header">
@@ -8530,14 +9299,38 @@ function renderStorageBoard(visibleItems) {
   const layout = board.querySelector('.storage-layout');
   activeStorageLayout = layout;
   applyStoragePaneLayout(layout);
+  layout.classList.toggle('storage-placement-mode', storagePlacementMode);
+  updateStorageShelfCollapseControls(board);
+  const placementModeToggle = layout.querySelector('.storage-placement-mode-toggle');
+  placementModeToggle.addEventListener('click', () => {
+    storagePlacementMode = !storagePlacementMode;
+    placementModeToggle.setAttribute('aria-pressed', String(storagePlacementMode));
+    placementModeToggle.textContent = `Fächer-Modus: ${storagePlacementMode ? 'An' : 'Aus'}`;
+    placementModeToggle.title = storagePlacementMode
+      ? 'Fächer beim Ziehen als Ablageziele anzeigen (aktiviert)'
+      : 'Fächer beim Ziehen als Ablageziele anzeigen';
+    layout.classList.toggle('storage-placement-mode', storagePlacementMode);
+    saveCloudDataDebounced();
+  });
+  layout.querySelector('.storage-shelves-toggle-all').addEventListener('click', () => {
+    const shouldExpand = shelfLocations.some(shelf => collapsedStorageShelfIds.has(shelf.id));
+    shelfLocations.forEach(shelf => {
+      if (shouldExpand) collapsedStorageShelfIds.delete(shelf.id);
+      else collapsedStorageShelfIds.add(shelf.id);
+    });
+    updateStorageShelfCollapseControls(board);
+    saveCloudDataDebounced();
+  });
   const resizer = layout.querySelector('.storage-pane-resizer');
   bindStoragePaneResizer(layout, resizer);
   layout.querySelector('.storage-unsorted-toggle').addEventListener('click', event => {
     storageUnsortedCollapsed = !storageUnsortedCollapsed;
+    storageUnsortedAutoCollapsed = false;
     event.currentTarget.setAttribute('aria-expanded', String(!storageUnsortedCollapsed));
     event.currentTarget.title = storageUnsortedCollapsed ? 'Unsortiert ausklappen' : 'Unsortiert einklappen';
     event.currentTarget.setAttribute('aria-label', event.currentTarget.title);
     applyStoragePaneLayout(layout);
+    saveCloudDataDebounced();
   });
   const unsortedList = layout.querySelector('.storage-unsorted-list');
   unsortedList.innerHTML = '';
@@ -8558,6 +9351,48 @@ function renderStorageBoard(visibleItems) {
   board.querySelectorAll('.storage-shelf').forEach(shelfElement => {
     const shelf = shelfLocations.find(entry => entry.id === shelfElement.dataset.shelfId);
     shelfElement.querySelector('.remove-shelf').addEventListener('click', () => removeShelf(shelf));
+    shelfElement.querySelectorAll('.storage-shelf-name-label, .storage-shelf-drag-handle').forEach(handle => {
+      handle.addEventListener('dragstart', event => {
+        draggedStorageShelfId = shelf.id;
+        event.dataTransfer?.setData('text/plain', shelf.id);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+        shelfElement.classList.add('dragging');
+      });
+      handle.addEventListener('dragend', () => {
+        draggedStorageShelfId = null;
+        board.querySelectorAll('.storage-shelf').forEach(element => element.classList.remove('dragging', 'drop-target'));
+      });
+    });
+    shelfElement.addEventListener('dragover', event => {
+      if (!draggedStorageShelfId || draggedStorageShelfId === shelf.id) return;
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+      shelfElement.classList.add('drop-target');
+    });
+    shelfElement.addEventListener('dragleave', event => {
+      if (!shelfElement.contains(event.relatedTarget)) shelfElement.classList.remove('drop-target');
+    });
+    shelfElement.addEventListener('drop', event => {
+      const sourceId = event.dataTransfer?.getData('text/plain') || draggedStorageShelfId;
+      if (!sourceId || sourceId === shelf.id) return;
+      event.preventDefault();
+      const sourceIndex = shelfLocations.findIndex(entry => entry.id === sourceId);
+      if (sourceIndex < 0) return;
+      const [movedShelf] = shelfLocations.splice(sourceIndex, 1);
+      const targetIndex = shelfLocations.findIndex(entry => entry.id === shelf.id);
+      if (targetIndex < 0) return;
+      const targetBounds = shelfElement.getBoundingClientRect();
+      const insertionIndex = targetIndex + Number(event.clientX >= targetBounds.left + targetBounds.width / 2);
+      shelfLocations.splice(insertionIndex, 0, movedShelf);
+      draggedStorageShelfId = null;
+      saveShelfLayout();
+    });
+    shelfElement.querySelector('.storage-shelf-toggle').addEventListener('click', () => {
+      if (collapsedStorageShelfIds.has(shelf.id)) collapsedStorageShelfIds.delete(shelf.id);
+      else collapsedStorageShelfIds.add(shelf.id);
+      updateStorageShelfCollapseControls(board);
+      saveCloudDataDebounced();
+    });
     const settingsButton = shelfElement.querySelector('.storage-shelf-settings');
     settingsButton.addEventListener('click', () => {
       const isOpen = shelfElement.classList.toggle('settings-open');
@@ -8566,6 +9401,7 @@ function renderStorageBoard(visibleItems) {
       settingsButton.setAttribute('aria-label', settingsButton.title);
       if (isOpen) expandedStorageShelfIds.add(shelf.id);
       else expandedStorageShelfIds.delete(shelf.id);
+      saveCloudDataDebounced();
     });
     shelfElement.querySelector('.storage-shelf-mode').addEventListener('change', event => {
       setShelfMode(shelf, event.target.value, event.target);
@@ -8813,8 +9649,8 @@ function renderCollection() {
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       }
       case 'genre': {
-        const gA = (a.genre || 'Ohne Genre').trim();
-        const gB = (b.genre || 'Ohne Genre').trim();
+        const gA = getGenreValues(a.genre).sort((x, y) => x.localeCompare(y, 'de')).join(', ') || 'Ohne Genre';
+        const gB = getGenreValues(b.genre).sort((x, y) => x.localeCompare(y, 'de')).join(', ') || 'Ohne Genre';
         const diff = gA.localeCompare(gB, 'de');
         if (diff !== 0) return directionMultiplier * diff;
         const artistDiff = (a.artist || '').localeCompare(b.artist || '', 'de');
@@ -8907,7 +9743,7 @@ function renderCollection() {
     if (activeSort === 'genre') {
       const groups = {};
       list.forEach(it => {
-        const g = (it.genre || 'Ohne Genre').trim() || 'Ohne Genre';
+        const g = getGenreValues(it.genre).sort((a, b) => a.localeCompare(b, 'de'))[0] || 'Ohne Genre';
         if (!groups[g]) groups[g] = [];
         groups[g].push(it);
       });
@@ -9396,6 +10232,7 @@ document.getElementById('collectionFilter').addEventListener('input', (e) => {
   clearTimeout(filterDebounceTimer);
   filterDebounceTimer = setTimeout(() => {
     collectionFilterQuery = v.trim();
+    saveCloudDataDebounced();
     renderCollection();
   }, 180);
 });
@@ -9449,6 +10286,7 @@ if (collectionFilterEl) {
       e.stopPropagation();
       // Option: bei Enter die Filter sofort anwenden
       collectionFilterQuery = (collectionFilterEl.value || '').trim();
+      saveCloudDataDebounced();
       renderCollection();
     }
   });
@@ -9682,8 +10520,16 @@ window.addEventListener('unhandledrejection', (ev) => {
 
   <div style="margin-bottom:16px;">
     <label style="display:block; font-size:12px; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase;">Genre</label>
-    <input type="text" id="bulkGenre" placeholder="z.B. Rock, Electronic..." style="width:100%; padding:8px; border:0.5px solid var(--border); border-radius:6px; background:var(--surface-1); color:var(--text-primary);">
-    <div style="margin-top:4px; font-size:11px; color:var(--text-secondary);">Leer lassen = unverändert</div>
+    <select id="bulkGenreMode" style="width:100%; margin-bottom:8px;">
+      <option value="default">Nicht ändern</option>
+      <option value="set">Genres ersetzen</option>
+      <option value="clear">Genres entfernen</option>
+    </select>
+    <div id="bulkGenreChipInput" class="genre-chip-input" style="opacity:0.5;">
+      <div id="bulkGenreChips" class="genre-chip-list" aria-live="polite"></div>
+      <input type="text" id="bulkGenre" class="genre-chip-text" placeholder="Genre hinzufügen" aria-label="Genre hinzufügen" disabled>
+    </div>
+    <div style="margin-top:4px; font-size:11px; color:var(--text-secondary);">Mit Komma oder Enter hinzufügen. „Genres ersetzen“ überschreibt die Genres bei allen ausgewählten Alben.</div>
   </div>
 
   <div style="margin-bottom:16px;">
