@@ -868,6 +868,15 @@
     #toggleSearchPanelBtn { display: inline-flex; }
     .collection-panel.storage-active #toggleSearchPanelBtn { display: none; }
   }
+  body.viewing-remote-collection .desktop-form-shell > .panel:first-child,
+  body.user-menu-open .desktop-form-shell > .panel:first-child { display: none !important; }
+  body.viewing-remote-collection .desktop-form-shell,
+  body.user-menu-open .desktop-form-shell { grid-template-columns: minmax(0, 1fr); }
+  body.viewing-remote-collection #copyWishlistBtn,
+  body.viewing-remote-collection #viewStorageBtn,
+  body.user-menu-open #copyWishlistBtn,
+  body.user-menu-open #viewStorageBtn { display: none !important; }
+  body.viewing-remote-collection #collectionSettingsContent { display: none !important; }
   .form-top { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
   .form-top img {
     width: 130px; height: 130px; object-fit: cover;
@@ -1791,6 +1800,11 @@
     pointer-events: none;
     overflow: hidden;
   }
+  .vinyl-card-preview.is-clear {
+    background-image: var(--vinyl-art, none), repeating-radial-gradient(circle, transparent 0 3px, rgba(0,0,0,.34) 3.5px 4px, rgba(255,255,255,.52) 4.5px 5px, transparent 5.5px 8px), linear-gradient(135deg, rgba(255,255,255,.28), transparent 24% 72%, rgba(0,0,0,.18));
+    border-color: rgba(255,255,255,.9);
+    box-shadow: 0 2px 12px rgba(0,0,0,.55), 0 0 0 1.5px rgba(255,255,255,.55), inset 0 0 0 1px rgba(255,255,255,.35);
+  }
   @keyframes liquidFlow {
     from { transform: translateX(-50%); }
     to { transform: translateX(0); }
@@ -2211,6 +2225,36 @@
     transform: translateY(-1px);
     background: #c14670;
   }
+  .collection-card-add-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    border: 0;
+    border-radius: 14px;
+    background: rgba(11,11,13,.18);
+    color: var(--text-primary);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .collection-card-add-overlay svg { width: 24px; height: 24px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.85)); }
+  .collection-card-add-overlay span { font-size: 12px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,.95); }
+  .collection-card-add-overlay:hover {
+    background: rgba(11,11,13,.18);
+    border-color: transparent;
+  }
+  .collection-card.remote-view:hover .collection-card-add-overlay,
+  .collection-card.remote-view:focus-within .collection-card-add-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
   .common-badge {
     display: inline-flex;
     margin-top: 10px;
@@ -2231,7 +2275,7 @@
   }
   .common-badge.remote-only,
   .common-pill.remote-only {
-    background: rgba(57, 134, 255, 0.14);
+    background: rgba(57, 134, 255, 0.20);
     color: #94b8ff;
     border: 1px solid rgba(57,134,255,0.22);
   }
@@ -2288,17 +2332,62 @@
     box-sizing: border-box;
     margin-bottom: 4px;
   }
-  .settings-panel-actions {
-    display: flex;
+  .settings-primary-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .settings-primary-actions > .icon-btn,
+  .settings-accent-button {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+  .settings-primary-actions > .icon-btn {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-secondary);
+  }
+  .settings-accent-button {
+    position: relative;
+    overflow: hidden;
+    border: 0.5px solid var(--accent-border);
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  .settings-accent-button svg { width: 18px; height: 18px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.55)); }
+  .settings-accent-button input[type="color"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .settings-panel-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
     margin-top: 8px;
   }
   .settings-panel-actions button {
-    flex: 1 1 calc(50% - 8px);
-    min-width: 140px;
-    max-width: calc(50% - 8px);
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 40px;
+    height: auto;
+    padding: 6px;
+    justify-content: flex-start;
+    gap: 4px;
+    text-align: left;
   }
+  .settings-panel-actions button svg { flex: 0 0 16px; width: 16px; height: 16px; margin-right: 0 !important; }
+  .settings-panel-actions button span { font-size: 10px; line-height: 1.2; white-space: normal; }
   .tooltip-btn {
     position: relative;
   }
@@ -3168,15 +3257,20 @@
             <span><strong id="currentUsernameLabel">–</strong></span>
             <button type="button" id="logoutBtn" title="Abmelden">Abmelden</button>
           </div>
-          <div class="settings-panel-actions">
+          <div id="collectionSettingsContent">
+          <div class="settings-primary-actions">
             <button type="button" id="exportBtn" class="icon-btn tooltip-btn" title="Exportieren" aria-label="Exportieren" data-tooltip="Exportieren">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 9l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 19h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-              <span>Export</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10m-4-4 4 4 4-4M6 19h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button type="button" id="importBtn" class="icon-btn tooltip-btn" title="Importieren" aria-label="Importieren" data-tooltip="Importieren">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 15l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 5h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-              <span>Import</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 21V11m-4 4 4-4 4 4M6 5h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
+            <label class="settings-accent-button tooltip-btn" for="accentColorInput" title="Akzentfarbe auswählen" aria-label="Akzentfarbe auswählen" data-tooltip="Akzentfarbe">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m14 6 4 4M4 20l4.5-1 9.8-9.8a2.8 2.8 0 0 0-4-4L4.5 15 4 20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="m12 8 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <input type="color" id="accentColorInput" value="#d4537e" title="Akzentfarbe auswählen" aria-label="Akzentfarbe auswählen">
+            </label>
+          </div>
+          <div class="settings-panel-actions">
             <button type="button" id="openFixToolBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Titel und Interpret reparieren">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:6px;"><path d="M4 20h4.5L20 8.5a2 2 0 0 0-4-4L4 16.5V20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 6l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 3l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Titel / Interpret</span>
@@ -3198,10 +3292,6 @@
               <span>Vinyl-Farben durchgehen</span>
             </button>
           </div>
-          <p class="settings-panel-title" style="margin-top:14px;">Akzentfarbe</p>
-          <div class="settings-color-row">
-            <input type="color" id="accentColorInput" value="#d4537e" title="Akzentfarbe auswählen" aria-label="Akzentfarbe auswählen">
-          </div>
           <hr class="settings-divider">
 
           <p class="settings-panel-title">Bildquelle</p>
@@ -3220,8 +3310,7 @@
             </label>
             <div class="toggle-text">
               <span class="toggle-title">Preise auch für Wunschlisten-Vinyls ermitteln</span>
-              <span class="toggle-hint">Aktiviere dies, wenn du Discogs-Preise auch für nicht besessene Einträge laden möchtest.</span>
-            </div>
+              </div>
           </div>
           <div class="settings-toggle-row">
             <label class="toggle-switch">
@@ -3230,7 +3319,6 @@
             </label>
             <div class="toggle-text">
               <span class="toggle-title">Vorhandene Preise beim URL-Abgleich erneuern</span>
-              <span class="toggle-hint">Überschreibt auch manuelle Preise. Für Wunschlisten gilt weiterhin der Schalter oben.</span>
             </div>
           </div>
 
@@ -3246,6 +3334,7 @@
           </select>
 
           <input type="file" id="importFile" accept="application/json">
+          </div>
         </div>
       </div>
     </div>
@@ -4118,6 +4207,7 @@ function renderUserList(users) {
 
 function updateViewingInfo() {
   if (!viewingInfoLabel) return;
+  document.body.classList.toggle('viewing-remote-collection', !viewingOwnCollection);
   // Show collection title in header (non-editable)
   const titleDisplay = document.getElementById('collectionTitleDisplay');
   if (titleDisplay) titleDisplay.textContent = collectionTitle || 'Vinyl-Sammlung';
@@ -4165,6 +4255,7 @@ async function viewRemoteCollection(uid, username) {
     viewedUid = uid;
     viewedUsername = username;
     if (userMenuPanel) userMenuPanel.classList.remove('open');
+    document.body.classList.remove('user-menu-open');
     updateViewingInfo();
     renderCollection();
   } catch (err) {
@@ -4230,6 +4321,7 @@ auth.onAuthStateChanged(async user => {
     setAuthLoading(false);
     await loadCloudData(user.uid);
     if (userMenuPanel) userMenuPanel.classList.remove('open');
+    document.body.classList.remove('user-menu-open');
   } else {
     currentUid = null;
     currentUsername = null;
@@ -4256,6 +4348,7 @@ async function showOwnCollection() {
   await saveCloudDataNow();
   await loadCloudData(currentUid);
   if (userMenuPanel) userMenuPanel.classList.remove('open');
+  document.body.classList.remove('user-menu-open');
 }
 
 if (showOwnCollectionBtn) {
@@ -4266,15 +4359,18 @@ if (toggleUserMenuBtn && userMenuPanel) {
   toggleUserMenuBtn.addEventListener('click', async () => {
     if (userMenuPanel.classList.contains('open')) {
       userMenuPanel.classList.remove('open');
+      document.body.classList.remove('user-menu-open');
       return;
     }
     await loadUserList();
     userMenuPanel.classList.add('open');
+    document.body.classList.add('user-menu-open');
   });
 }
 if (closeUserMenuBtn && userMenuPanel) {
   closeUserMenuBtn.addEventListener('click', () => {
     userMenuPanel.classList.remove('open');
+    document.body.classList.remove('user-menu-open');
   });
 }
 </script>
@@ -5553,11 +5649,20 @@ function getConditionOverlay(condition) {
   }
 }
 
+function getClearVinylBarColor(color) {
+  const normalized = safeVinylColor(color);
+  let hex = normalized.slice(1);
+  if (hex.length === 3) hex = hex.split('').map(digit => digit + digit).join('');
+  const channels = [0, 2, 4].map(index => parseInt(hex.slice(index, index + 2), 16));
+  const targetChannel = getReadableTextColor(normalized) === '#000' ? 0 : 255;
+  return '#' + channels.map(channel => Math.round(channel + (targetChannel - channel) * 0.35).toString(16).padStart(2, '0')).join('');
+}
+
 function getBarPatternStyle(item) {
   if (item?.vinylDesign?.records?.length) {
     const record = getVinylRecordForItem(item);
     return {
-      barColor: record.baseColor,
+      barColor: record.transparency > 0 ? getClearVinylBarColor(record.baseColor) : record.baseColor,
       barColorSolid: record.baseColor,
       barPattern: getVinylSvgData(record),
       barBgSize: 'cover',
@@ -8844,8 +8949,9 @@ function renderCollection() {
       const isCommon = !viewingOwnCollection && ownKeys.has(getAlbumComparisonKey(item));
       const commonBadgeHtml = !viewingOwnCollection ? `<span class="common-badge ${isCommon ? 'common' : 'remote-only'}">${isCommon ? 'Gemeinsam' : 'Nur bei ' + escapeHtml(viewedUsername || 'diesem Nutzer')}</span>` : '';
       const remoteAddButtonGrid = !ownKeys.has(getAlbumComparisonKey(item)) ? `
-            <button class="add-to-own" title="Zu eigener Sammlung hinzufügen" aria-label="Zu eigener Sammlung hinzufügen">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <button class="add-to-own collection-card-add-overlay" title="Zu eigener Sammlung hinzufügen" aria-label="Zu eigener Sammlung hinzufügen">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Zu meiner Sammlung</span>
             </button>
           ` : '';
       const actionButtons = allowEdit ? `
@@ -8858,12 +8964,10 @@ function renderCollection() {
             <button class="del" title="Löschen" aria-label="Löschen">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 6V4C8 3.44772 8.44772 3 9 3H15C15.5523 3 16 3.44772 16 4V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 6V20C19 20.5523 18.5523 21 18 21H6C5.44772 21 5 20.5523 5 20V6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
             </button>
-          ` : `
-            ${remoteAddButtonGrid}
-          `;
+          ` : '';
 
       card.innerHTML = `
-        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview" style="--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${vinylRecordPreview.labelColor};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="Vinyl-Design">${getVinylLiquidMarkup(vinylRecordPreview)}</div></div>
+        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 ? 'is-clear' : ''}" style="--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${vinylRecordPreview.labelColor};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="Vinyl-Design">${getVinylLiquidMarkup(vinylRecordPreview)}</div></div>
         ${selectModeActive ? `<div class="collection-card-checkbox" style="position:absolute;top:10px;left:10px;z-index:4;"><input type="checkbox" data-item-id="${item.id}" style="cursor:pointer; width:18px; height:18px;" ${selectedItemIds.has(item.id) ? 'checked' : ''}></div>` : ''}
         <div class="media">
           <img src="${item.coverUrl || ''}" alt="" loading="lazy" decoding="async">
@@ -8886,6 +8990,7 @@ ${actionButtons}
           ${commonBadgeHtml}
           ${showCollectionExtra && viewingOwnCollection && item.owned && (getStorageLabel(item) || item.lastWashed) ? `<div class="collection-extra">${getStorageLabel(item) ? `<span>${escapeHtml(getStorageLabel(item))}</span>` : ''}${item.lastWashed ? `<span>Gewaschen: ${escapeHtml(getWashedDateLabel(item))}</span>` : ''}</div>` : ''}
         </div>
+        ${remoteAddButtonGrid}
       `;
 
       if (allowEdit) {
@@ -8901,13 +9006,18 @@ ${actionButtons}
           });
         }
       } else {
-        const addBtn = card.querySelector('.add-to-own');
+        const addBtn = card.querySelector('.collection-card-add-overlay');
         if (addBtn) {
           addBtn.addEventListener('click', e => { e.stopPropagation(); addRemoteEntryToOwn(item.id); });
+          card.addEventListener('click', e => {
+            if (e.target.closest('button, a, input, select, textarea')) return;
+            addRemoteEntryToOwn(item.id);
+          });
+        } else {
+          card.querySelector('.media').addEventListener('click', () => {
+            showAlert('Dies ist eine schreibgeschützte Ansicht. Importiere die Sammlung in deine eigene, um sie zu bearbeiten.');
+          });
         }
-        card.querySelector('.media').addEventListener('click', () => {
-          showAlert('Dies ist eine schreibgeschützte Ansicht. Importiere die Sammlung in deine eigene, um sie zu bearbeiten.');
-        });
       }
       frag.appendChild(card);
     });
