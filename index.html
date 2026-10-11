@@ -8800,11 +8800,11 @@ async function searchSpotifyListening(item, content, controller) {
     return false;
   }
   const searchField = searchAlbums ? 'album' : 'track';
-  const query = `${searchField}:"${String(item.title || '').replace(/["\\]/g, ' ')}" artist:"${String(item.artist || '').replace(/["\\]/g, ' ')}"`;
+  const query = `${searchField}:"${String(item.title || '').replace(/["\\]/g, ' ').toLocaleLowerCase('de')}" artist:"${String(item.artist || '').replace(/["\\]/g, ' ').toLocaleLowerCase('de')}"`;
   const params = new URLSearchParams({
     q: query,
     type: searchAlbums ? 'album' : 'track',
-    limit: '3',
+    limit: '10',
     market: 'DE'
   });
   const response = await fetch(`https://api.spotify.com/v1/search?${params}`, {
@@ -8835,7 +8835,8 @@ async function searchSpotifyListening(item, content, controller) {
       score: calculateSearchScore(track.name, item.title) * 0.65
         + Math.max(...(track.artists || []).map(artist => calculateSearchScore(artist.name, item.artist)), 0) * 0.35
     }));
-  const rankedResults = results.filter(result => result.url).sort((a, b) => b.score - a.score).slice(0, 3);
+  const rankedResults = results.filter(result => result.url && result.score >= 0.6)
+    .sort((a, b) => b.score - a.score).slice(0, 3);
   if (controller.signal.aborted) return;
   if (!rankedResults.length) return false;
   appendListeningProviderResults(content, 'spotify', 'Spotify', rankedResults, item);
