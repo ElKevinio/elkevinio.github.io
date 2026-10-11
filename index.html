@@ -199,7 +199,7 @@
     color: var(--text-secondary);
     background: rgba(255,255,255,0.04);
     position: relative;
-    z-index: 2147483647; /* keep the button above the panel so it remains clickable */
+    z-index: 2147483648; /* keep the button above the panel so it remains clickable */
   }
   .settings-wrap .icon-btn:hover { color: var(--text-primary); }
   .settings-panel {
@@ -226,7 +226,7 @@
     left: auto;
     width: min(360px, 90vw);
     max-width: 360px;
-    z-index: 2147483646; /* slightly below the button z-index */
+    z-index: 2147483647;
   }
   .settings-panel-title {
     margin: 0 0 8px;
@@ -1293,7 +1293,7 @@
   .storage-records { display:flex; flex:1; flex-direction:column; gap:0; min-height:28px; overflow:auto; }
   .storage-record {
     display:grid;
-    grid-template-columns:24px minmax(0, 1fr);
+    grid-template-columns:24px minmax(0, 1fr) 24px;
     align-items:center;
     gap:6px;
     min-width: 0;
@@ -1311,31 +1311,319 @@
     background:var(--accent-bg);
     box-shadow:inset 0 0 0 1px var(--accent-border);
   }
-  .storage-shelf.random-pick-shelf { animation: storageShelfPick .55s ease-in-out; outline:2px solid var(--accent); outline-offset:2px; }
-  .storage-compartment.random-pick-compartment { animation: storageCompartmentPick .55s ease-in-out; outline:2px solid var(--accent); outline-offset:1px; z-index:2; }
-  .storage-record.random-pick-spinning { position:relative; z-index:3; animation: storageVinylPick .75s cubic-bezier(.2,.8,.2,1); }
-  .storage-record.random-pick-decoy { position:relative; z-index:2; background:var(--accent-bg); box-shadow:inset 0 0 0 1px var(--accent-border); }
-  @keyframes storageShelfPick { 50% { box-shadow:0 0 20px var(--accent); } }
-  @keyframes storageCompartmentPick { 50% { box-shadow:0 0 18px var(--accent); transform:scale(1.025); } }
-  @keyframes storageVinylPick { 0% { transform:perspective(280px) rotateY(0) scale(.88); } 65% { transform:perspective(280px) rotateY(390deg) scale(1.08); } 100% { transform:perspective(280px) rotateY(360deg) scale(1); } }
+  .storage-compartment.random-pick-compartment {
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+    box-shadow:0 0 14px var(--accent-border);
+    z-index:2;
+    transition:outline-color .2s ease, box-shadow .2s ease;
+  }
+  .storage-shelf.random-pick-shelf {
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+    box-shadow:0 0 18px var(--accent-border);
+    transition:outline-color .2s ease, box-shadow .2s ease;
+  }
+  .storage-case-view[hidden],
+  .storage-result-details[hidden] { display:none; }
+  .storage-case-view { text-align:center; }
+  .storage-case-heading { margin:0 0 4px; font-size:18px; font-weight:600; }
+  .storage-case-location { margin:0 0 22px; color:var(--text-secondary); font-size:13px; }
+  .storage-case-window {
+    position:relative;
+    width:100%;
+    overflow:hidden;
+    padding:18px 0;
+    border:1px solid var(--border-strong);
+    border-radius:10px;
+    background:linear-gradient(180deg, rgba(255,255,255,.035), rgba(0,0,0,.16)), var(--surface-1);
+  }
+  .storage-case-window::before,
+  .storage-case-window::after {
+    content:'';
+    position:absolute;
+    z-index:2;
+    top:0;
+    bottom:0;
+    width:12%;
+    pointer-events:none;
+  }
+  .storage-case-window::before { left:0; background:linear-gradient(90deg, var(--surface-1), transparent); }
+  .storage-case-window::after { right:0; background:linear-gradient(270deg, var(--surface-1), transparent); }
+  .storage-case-marker {
+    position:absolute;
+    z-index:3;
+    top:0;
+    bottom:0;
+    left:50%;
+    width:2px;
+    background:var(--accent);
+    box-shadow:0 0 12px var(--accent);
+    transform:translateX(-1px);
+  }
+  .storage-case-marker::before,
+  .storage-case-marker::after {
+    content:'';
+    position:absolute;
+    left:50%;
+    width:0;
+    height:0;
+    border-right:7px solid transparent;
+    border-left:7px solid transparent;
+    transform:translateX(-50%);
+  }
+  .storage-case-marker::before { top:0; border-top:9px solid var(--accent); }
+  .storage-case-marker::after { bottom:0; border-bottom:9px solid var(--accent); }
+  .storage-case-track {
+    position:relative;
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    width:max-content;
+    padding:0 20px;
+    transform:translateX(0);
+  }
+  .storage-case-track.rolling { transition:transform var(--storage-case-duration, 5.2s) cubic-bezier(.08,.72,.12,1); }
+  .storage-case-card {
+    flex:0 0 112px;
+    width:112px;
+    min-width:0;
+    overflow:hidden;
+    text-align:center;
+  }
+  .storage-case-card img {
+    display:block;
+    width:100%;
+    aspect-ratio:1;
+    object-fit:cover;
+    border:1px solid var(--border-strong);
+    border-radius:7px;
+    background:var(--surface-3);
+  }
+  .storage-case-card img[hidden] { display:none; }
+  .storage-case-card .storage-case-cover-placeholder {
+    display:grid;
+    width:100%;
+    aspect-ratio:1;
+    place-items:center;
+    border:1px solid var(--border-strong);
+    border-radius:7px;
+    background:var(--surface-3);
+    color:var(--text-muted);
+    font-size:28px;
+  }
+  .storage-case-card .storage-case-cover-placeholder[hidden] { display:none; }
+  .storage-case-card strong,
+  .storage-case-card span {
+    display:block;
+    overflow:hidden;
+    margin-top:6px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .storage-case-card strong { color:var(--text-primary); font-size:11px; }
+  .storage-case-card span { margin-top:2px; color:var(--text-secondary); font-size:10px; }
+  .storage-case-card.is-winner img,
+  .storage-case-card.is-winner .storage-case-cover-placeholder {
+    border-color:var(--accent);
+    box-shadow:0 0 16px var(--accent-border);
+  }
+  .storage-case-hint { margin:14px 0 0; color:var(--text-muted); font-size:12px; }
   .storage-random-filter-wrap { position:relative; flex:0 0 auto; }
   .storage-random-filter-panel {
     display:none;
     position:fixed;
     z-index:10080;
-    width:min(220px, calc(100vw - 16px));
+    width:min(380px, calc(100vw - 16px));
     padding:12px;
     border:1px solid var(--border-strong);
     border-radius:8px;
     background:var(--surface-2);
     box-shadow:var(--shadow);
   }
-  .storage-random-filter-panel.open { display:grid; gap:8px; }
-  .storage-random-filter-panel strong { font-size:12px; color:var(--text-secondary); }
-  .storage-random-filter-option { display:flex; align-items:center; gap:9px; font-size:13px; cursor:pointer; }
-  .storage-random-filter-option input { width:16px; height:16px; margin:0; accent-color:var(--accent); }
+  .storage-random-filter-panel.open { display:grid; gap:12px; }
+  .storage-random-filter-title { margin:0; font-size:12px; color:var(--text-secondary); }
+  .storage-random-criteria { display:grid; grid-template-columns:minmax(0,1fr) 96px 30px; align-items:center; gap:7px; }
+  .storage-random-field { display:grid; gap:4px; min-width:0; }
+  .storage-random-field > span { display:none; }
+  .storage-random-genre-input {
+    display:flex;
+    flex-wrap:nowrap;
+    width:100%;
+    min-height:36px;
+    box-sizing:border-box;
+    padding:3px 6px;
+    overflow:hidden;
+  }
+  .storage-random-genre-input .genre-chip-list {
+    display:flex;
+    flex:0 1 auto;
+    justify-content:flex-start;
+    flex-wrap:nowrap;
+    max-width:58%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:thin;
+    scrollbar-color:var(--text-muted) transparent;
+  }
+  .storage-random-genre-input .genre-chip-list::-webkit-scrollbar { height:4px; }
+  .storage-random-genre-input .genre-chip-list::-webkit-scrollbar-thumb { border-radius:4px; background:var(--text-muted); }
+  .storage-random-genre-input .genre-chip { flex:0 0 auto; }
+  .storage-random-genre-input .genre-chip-text { flex:1 0 96px; width:96px; min-width:80px; font-size:12px; }
+  .storage-random-genre-input .genre-chip-text:-webkit-autofill,
+  .storage-random-genre-input .genre-chip-text:autofill {
+    -webkit-box-shadow:0 0 0 1000px var(--surface-1) inset !important;
+    -webkit-text-fill-color:var(--text-primary) !important;
+    caret-color:var(--text-primary);
+  }
+  .storage-random-year-input { width:100%; min-width:0; padding:7px 9px; font-size:12px; }
+  .storage-random-year-input[aria-invalid="true"],
+  .storage-random-genre-input:has(.genre-chip-text[aria-invalid="true"]) { border-color:var(--danger); }
+  .storage-random-clear-btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    height:30px;
+    padding:0;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:var(--surface-1);
+    color:var(--text-secondary);
+    cursor:pointer;
+  }
+  .storage-random-clear-btn[hidden] { display:none; }
+  .storage-random-clear-btn:hover { border-color:var(--danger); color:var(--danger); }
+  .storage-random-clear-btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .storage-random-options { display:flex; flex-wrap:wrap; gap:6px; }
+  .storage-random-format-toggle {
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:42px;
+    height:30px;
+    padding:0 9px;
+    border:1px solid rgba(212,83,126,.55);
+    border-radius:6px;
+    background:#25171b;
+    color:#e0645f;
+    font-size:11px;
+    font-weight:700;
+    cursor:pointer;
+    user-select:none;
+  }
+  .storage-random-format-toggle input {
+    position:absolute;
+    width:1px;
+    height:1px;
+    opacity:0;
+  }
+  .storage-random-format-toggle:has(input:checked) {
+    border-color:#f2f2f2;
+    background:#f2f2f2;
+    color:#202020;
+  }
+  .storage-random-format-toggle:has(input:focus-visible) { outline:2px solid var(--accent); outline-offset:2px; }
+  .album-listen-track-list { display:grid; gap:6px; max-height:42vh; overflow:auto; margin-top:12px; }
+  .album-listen-track { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:7px; background:var(--surface-1); color:var(--text-primary); text-align:left; text-decoration:none; }
+  .album-listen-track:hover { border-color:var(--accent-border); background:var(--surface-3); }
+  .album-listen-track span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .album-listen-track small { flex:1; min-width:0; overflow:hidden; color:var(--text-secondary); text-overflow:ellipsis; white-space:nowrap; }
+  .album-listen-status { margin:8px 0; color:var(--text-secondary); font-size:13px; }
+  .modal-box.album-listening-box { width:min(620px, calc(100vw - 24px)); max-width:620px; max-height:calc(100dvh - 24px); overflow:auto; }
+  .album-listen-embed { display:block; width:100%; margin-top:12px; border:0; border-radius:12px; background:var(--surface-1); }
+  .album-listen-embed.spotify { height:352px; }
+  .album-listen-embed.apple { height:230px; }
+  .album-listen-embed.youtube { aspect-ratio:16 / 9; height:auto; }
+  .album-listen-open-platform {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    min-height:40px;
+    margin-top:12px;
+    padding:0 16px;
+    border:1px solid transparent;
+    border-radius:8px;
+    color:#fff;
+    font-size:14px;
+    font-weight:700;
+    line-height:1.2;
+    text-decoration:none;
+    transition:filter .15s ease, transform .15s ease;
+  }
+  .album-listen-open-platform:hover { filter:brightness(1.1); transform:translateY(-1px); }
+  .album-listen-open-platform:focus-visible { outline:2px solid var(--text-primary); outline-offset:3px; }
+  .album-listen-open-platform.apple { background:#d60017; border-color:#d60017; }
+  .album-listen-open-platform.spotify { background:#1db954; border-color:#1db954; color:#071b0e; }
+  .album-listen-open-platform.youtube { background:#f00; border-color:#f00; }
+  .album-listen-card-btn {
+    position:absolute;
+    left:10px;
+    bottom:10px;
+    z-index:3;
+    width:auto;
+    min-width:0;
+    height:32px;
+    min-height:32px;
+    padding:0 10px;
+    border-radius:8px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(4px);
+    transition:opacity .15s ease, transform .15s ease;
+  }
+  .collection-card:hover .album-listen-card-btn,
+  .collection-card:focus-within .album-listen-card-btn { opacity:1; pointer-events:auto; transform:none; }
+  .collection-card .media-info { transition:padding-bottom .15s ease; }
+  .collection-card:hover .media-info,
+  .collection-card:focus-within .media-info { padding-bottom:50px; }
+  .storage-record .listen { opacity:0; pointer-events:none; transition:opacity .15s ease; }
+  .storage-record:hover .listen,
+  .storage-record:focus-within .listen,
+  .storage-unsorted-card:hover .storage-unsorted-actions .listen,
+  .storage-unsorted-card:focus-within .storage-unsorted-actions .listen { opacity:1; pointer-events:auto; }
+  .storage-unsorted-actions .listen { opacity:0; pointer-events:none; transition:opacity .15s ease; }
+  @media (hover:none) {
+    .album-listen-card-btn,
+    .storage-record .listen,
+    .storage-unsorted-actions .listen { opacity:1; pointer-events:auto; transform:none; }
+  }
+  @media (min-width:1280px) {
+    .storage-random-filter-btn { display:none !important; }
+    .storage-random-filter-panel,
+    .storage-random-filter-panel.open {
+      position:static;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      width:auto;
+      max-width:none;
+      padding:0;
+      border:0;
+      border-radius:0;
+      background:transparent;
+      box-shadow:none;
+    }
+    .storage-random-filter-title { display:none; }
+    .storage-random-criteria { display:grid; grid-template-columns:minmax(210px, 250px) 96px 30px; align-items:center; gap:7px; }
+    .storage-random-field { display:block; }
+    .storage-random-genre-input { min-height:32px; }
+    .storage-random-year-input { height:32px; padding:5px 7px; }
+    .storage-random-options { flex-wrap:nowrap; gap:5px; }
+  }
+  @media (max-width:640px) {
+    .storage-case-track { gap:8px; padding:0 14px; }
+    .storage-case-track.rolling { transition-duration:var(--storage-case-duration, 4.2s); }
+    .storage-case-card { flex-basis:88px; width:88px; }
+    .storage-random-filter-panel.open { max-height:calc(100vh - 24px); overflow:auto; }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .storage-shelf.random-pick-shelf, .storage-compartment.random-pick-compartment, .storage-record.random-pick-spinning { animation:none; }
+    .storage-case-track.rolling { transition-duration:.01ms; }
   }
   .storage-record img { width:24px; height:24px; object-fit:cover; border-radius:3px; background:var(--surface-3); cursor:grab; touch-action:none; }
   .storage-shelf.display-mode .storage-compartment {
@@ -1433,7 +1721,7 @@
     line-height:1.25;
   }
   .storage-record-copy span::before { content:'· '; }
-  .storage-page [data-storage-item] { cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+  .storage-page [data-storage-item] { cursor:grab; touch-action:pan-x pan-y; user-select:none; -webkit-user-select:none; }
   .storage-page [data-storage-item] * { user-select:none; -webkit-user-select:none; }
   .storage-page [data-storage-item]:active { cursor:grabbing; user-select:none; -webkit-user-select:none; }
   .storage-pointer-source { opacity:0.45; }
@@ -1469,6 +1757,7 @@
   }
   .storage-record strong { flex:0 1 auto; }
   .storage-record span { flex:1 1 auto; color:var(--text-secondary); font-size:11px; }
+  .storage-record .listen { width:22px; min-width:22px; height:22px; min-height:22px; padding:0; font-size:10px; }
   .storage-unsorted-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -1487,18 +1776,20 @@
     min-height:0;
   }
   .storage-shelves-pane, .storage-unsorted-pane { min-width:0; min-height:0; background:var(--surface-1); }
-  .storage-shelves-pane { overflow:auto; padding-right:8px; }
+  .storage-shelves-pane { overflow:auto; padding-right:8px; touch-action:pan-x pan-y; }
   .storage-shelf-groups { display:flex; flex-direction:column; gap:12px; width:max-content; min-width:100%; height:calc(100% - 40px); min-height:calc(100% - 40px); }
   .storage-shelf-group { display:flex; flex-direction:column; align-items:flex-start; gap:8px; width:max-content; }
   .storage-shelf-group-heading { display:flex; align-items:center; gap:6px; color:var(--text-secondary); font-size:11px; font-weight:600; }
   .storage-shelf-group-count { color:var(--text-muted); font-weight:400; }
   .storage-shelf-group-list { display:flex; align-items:flex-start; gap:10px; width:max-content; min-width:100%; }
+  .storage-shelf-group-list { zoom:var(--storage-shelf-zoom, 1); }
   .storage-shelf-group-collapsed { padding:10px; border:0.5px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.025); }
   .storage-shelf-group-expanded { flex:1; min-height:0; }
   .storage-shelf-group-expanded .storage-shelf-group-list { align-items:stretch; height:100%; min-height:0; }
   .storage-shelves-toolbar { position:sticky; left:0; z-index:4; display:flex; justify-content:flex-end; gap:8px; width:100%; padding-bottom:8px; background:var(--surface-1); }
   .storage-shelves-toggle-all { min-height:32px; padding:5px 9px; font-size:12px; }
   .storage-placement-mode-toggle { min-height:32px; padding:5px 9px; font-size:12px; }
+  .storage-shelf-zoom-controls { display:none; }
   .storage-placement-mode-toggle[aria-pressed="true"] { color:var(--accent); border-color:var(--accent-border); background:var(--accent-bg); }
   .storage-layout.storage-item-dragging.storage-placement-mode .storage-shelf:not(.is-collapsed) {
     width:calc(var(--shelf-columns, 1) * 148px + 24px);
@@ -1685,6 +1976,12 @@
     .wrap.storage-page { padding: 0 8px 8px; }
     .storage-page > .storage-board { height: calc(100dvh - 250px); min-height: 320px; padding: 8px; }
     .storage-page .desktop-form-shell > .panel:first-child .toprow textarea { min-width: 100px; }
+    .storage-shelves-toolbar { flex-wrap:wrap; justify-content:flex-start; gap:5px; }
+    .storage-shelf-zoom-controls { display:flex; flex:0 0 100%; align-items:center; gap:4px; }
+    .storage-shelf-zoom-controls button { width:30px; min-width:30px; height:30px; min-height:30px; padding:0; justify-content:center; }
+    .storage-shelf-zoom-value { min-width:40px; color:var(--text-secondary); font-size:11px; text-align:center; }
+    .storage-shelves-toggle-all,
+    .storage-placement-mode-toggle { flex:1 1 0; min-width:0; min-height:30px; padding:4px 6px; font-size:11px; white-space:nowrap; }
   }
   .collection-table {
     width: 100%;
@@ -2265,6 +2562,8 @@
     position: absolute;
     left: 0; right: 0; bottom: 0;
     padding: 12px 10px 10px;
+    z-index:2;
+    padding-bottom:10px;
     background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.56) 100%);
     backdrop-filter: blur(6px);
     border-top: 0.5px solid rgba(255,255,255,0.08);
@@ -2276,7 +2575,14 @@
     display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .collection-card .artist {
-    margin: 3px 0 0; font-size: 11px; color: rgba(255,255,255,0.82);
+    display: block;
+    width: 100%;
+    margin: 3px 0 0;
+    font-size: 11px;
+    color: rgba(255,255,255,0.82);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .collection-card .collection-extra {
     display: grid;
@@ -3234,6 +3540,22 @@
     }
   }
 
+  @media (max-width: 720px) {
+    body.storage-page-active header .header-actions { width:222px; }
+    body.storage-page-active .header-actions > .icon-btn,
+    body.storage-page-active .header-actions > .storage-random-filter-wrap,
+    body.storage-page-active .header-actions > .settings-wrap { flex:0 0 32px; }
+    body.storage-page-active header .header-stats {
+      right:calc(12px + 222px + 4px);
+      max-width:calc(100% - 262px);
+    }
+    body.storage-page-active header .title-input {
+      flex-basis:calc(100% - 300px);
+      width:calc(100% - 300px);
+      max-width:calc(100% - 300px);
+    }
+  }
+
   /* Login / Account */
   #authOverlay {
     position: fixed;
@@ -3394,16 +3716,30 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>
       </button>
       <div class="storage-random-filter-wrap" id="storageRandomFilterWrap" style="display:none;">
-        <button id="storageRandomFilterBtn" class="icon-btn" type="button" title="Formate für Zufallsauswahl" aria-label="Formate für Zufallsauswahl" aria-expanded="false" aria-controls="storageRandomFilterPanel">
+        <button id="storageRandomFilterBtn" class="icon-btn storage-random-filter-btn" type="button" title="Einstellungen für Zufallsauswahl" aria-label="Einstellungen für Zufallsauswahl" aria-expanded="false" aria-controls="storageRandomFilterPanel">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M7 12h10m-7 5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="7" r="2" fill="var(--bar)" stroke="currentColor" stroke-width="1.6"/><circle cx="15" cy="12" r="2" fill="var(--bar)" stroke="currentColor" stroke-width="1.6"/></svg>
         </button>
-        <div class="storage-random-filter-panel" id="storageRandomFilterPanel" aria-label="Formate für Zufallsauswahl">
-          <strong>Formate einbeziehen</strong>
-          <label class="storage-random-filter-option"><input type="checkbox" id="storageRandomAnimationCheckbox" checked> Ziehanimation abspielen</label>
-          <label class="storage-random-filter-option"><input type="checkbox" data-storage-random-format="Album" checked> LP</label>
-          <label class="storage-random-filter-option"><input type="checkbox" data-storage-random-format="Maxi Single" checked> Maxi</label>
-          <label class="storage-random-filter-option"><input type="checkbox" data-storage-random-format="Single" checked> 7 Inch</label>
-          <label class="storage-random-filter-option"><input type="checkbox" data-storage-random-format="EP" checked> EP</label>
+        <div class="storage-random-filter-panel" id="storageRandomFilterPanel" aria-label="Einstellungen für Zufallsauswahl">
+          <p class="storage-random-filter-title">Zufallsauswahl-Einstellungen</p>
+          <div class="storage-random-criteria">
+            <label class="storage-random-field">
+              <div class="genre-chip-input storage-random-genre-input">
+                <div id="storageRandomGenreChips" class="genre-chip-list" aria-live="polite"></div>
+                <input type="text" id="storageRandomGenreInput" class="genre-chip-text" list="storageRandomGenreOptions" placeholder="Genre" aria-label="Genre für Zufallsauswahl hinzufügen" autocomplete="off">
+              </div>
+              <datalist id="storageRandomGenreOptions"></datalist>
+            </label>
+            <label class="storage-random-field">
+              <input type="text" id="storageRandomYearInput" class="storage-random-year-input" inputmode="numeric" placeholder="Jahr" aria-label="Jahr oder Jahresbereich">
+            </label>
+            <button type="button" id="storageRandomClearBtn" class="storage-random-clear-btn" aria-label="Genre- und Jahresfilter leeren" title="Genre und Jahr leeren" hidden>×</button>
+          </div>
+          <div class="storage-random-options">
+            <label class="storage-random-format-toggle"><input type="checkbox" data-storage-random-format="Album" checked aria-label="LP einbeziehen"><span>LP</span></label>
+            <label class="storage-random-format-toggle"><input type="checkbox" data-storage-random-format="Single" checked aria-label="7 Zoll einbeziehen"><span>7"</span></label>
+            <label class="storage-random-format-toggle"><input type="checkbox" data-storage-random-format="Maxi Single" checked aria-label="Maxi einbeziehen"><span>MAXI</span></label>
+            <label class="storage-random-format-toggle"><input type="checkbox" data-storage-random-format="EP" checked aria-label="EP einbeziehen"><span>EP</span></label>
+          </div>
         </div>
       </div>
       <button id="viewStorageBtn" class="icon-btn" title="Lageransicht öffnen" aria-label="Lageransicht öffnen" style="display:none;">
@@ -3493,6 +3829,34 @@
               <span class="toggle-title">Vorhandene Preise beim URL-Abgleich erneuern</span>
             </div>
           </div>
+          <div class="settings-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="storageRandomAnimationCheckbox" checked>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="toggle-text">
+              <span class="toggle-title">Ziehanimation bei Zufallsauswahl abspielen</span>
+            </div>
+          </div>
+
+          <hr class="settings-divider">
+
+          <p class="settings-panel-title">Album anhören</p>
+          <select id="albumListeningMode" aria-label="Bevorzugte Album-Wiedergabe">
+            <option value="auto">Automatisch (eingebetteten Player wählen)</option>
+            <option value="spotify">Spotify-Player bevorzugen</option>
+            <option value="apple">Apple-Music-Player bevorzugen</option>
+            <option value="youtube">YouTube-Player bevorzugen</option>
+          </select>
+          <p class="settings-panel-title" style="margin-top:14px;">Spotify-Suche</p>
+          <input type="text" id="spotifyClientIdInput" placeholder="Spotify Client ID" autocomplete="off" spellcheck="false">
+          <button type="button" id="spotifyConnectBtn" class="settings-fix-btn" style="width:100%; margin-top:8px;">Spotify verbinden</button>
+          <p class="settings-panel-hint" id="spotifyConnectionStatus" aria-live="polite"></p>
+          <p class="settings-panel-hint">Client ID aus dem Spotify Developer Dashboard. Hinterlege dort exakt diese Redirect-URI: <code id="spotifyRedirectUri"></code>. Kein Client Secret eintragen. Bei einer App im Entwicklungsmodus muss dein Spotify-Konto außerdem freigegeben sein.</p>
+          <p class="settings-panel-title" style="margin-top:14px;">YouTube-Suche</p>
+          <input type="password" id="youtubeApiKeyInput" placeholder="YouTube Data API v3-Schlüssel" autocomplete="off">
+          <p class="settings-panel-hint">Benötigt einen API-Schlüssel mit aktivierter YouTube Data API v3. Den Schlüssel im Google Cloud Console-Projekt auf deine Website einschränken.</p>
+          <p class="settings-panel-hint">Spotify-ID und YouTube-Schlüssel werden nur in diesem Browser gespeichert. Spotify-Tokens bleiben auf die aktuelle Sitzung beschränkt.</p>
 
           <hr class="settings-divider">
 
@@ -3579,8 +3943,9 @@
             <div class="album-genre-row">
               <div class="genre-chip-input">
                 <div id="fGenreChips" class="genre-chip-list" aria-live="polite"></div>
-                <input type="text" id="fGenre" class="genre-chip-text" placeholder="Genre hinzufügen" aria-label="Genre hinzufügen">
+                <input type="text" id="fGenre" class="genre-chip-text" list="knownGenreOptions" placeholder="Genre hinzufügen" aria-label="Genre hinzufügen" autocomplete="off">
               </div>
+              <datalist id="knownGenreOptions"></datalist>
               <button type="button" id="openCoverUrlBtn" class="icon-btn album-cover-url-btn" title="Cover-Bildlink kopieren oder ändern" aria-label="Cover-Bildlink kopieren oder ändern">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M10 13.5a4.5 4.5 0 0 0 6.36 0l3-3A4.5 4.5 0 0 0 13 4.14l-1.72 1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 10.5a4.5 4.5 0 0 0-6.36 0l-3 3A4.5 4.5 0 0 0 11 19.86l1.72-1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
@@ -3603,6 +3968,7 @@
             <button type="button" id="loadDiscogsUrlBtn" title="Diesen Discogs-Link nur für dieses Album laden">Laden</button>
           </div>
           <p id="fDiscogsUrlStatus" class="settings-panel-hint" aria-live="polite" style="margin:0;"></p>
+          <input type="url" id="fListeningUrl" placeholder="Spotify-, Apple-Music- oder YouTube-Link" aria-label="Spotify-, Apple-Music- oder YouTube-Link">
           <button type="button" id="searchDiscogsAlternativeBtn" class="settings-fix-btn" style="margin-top:8px; width:100%;">Discogs-Alternative suchen</button>
           <div id="discogsAlternativeResults" class="alternative-results"></div>
         </div>
@@ -3650,6 +4016,12 @@
 
       <div class="form-actions">
         <button id="cancelBtn">Abbrechen</button>
+        <div id="reviewOwnedNavigation" style="display:none; align-items:center; gap:6px;">
+          <button id="reviewOwnedPrevBtn" type="button" aria-label="Vorheriges Album">←</button>
+          <label for="reviewOwnedIndexInput" class="settings-panel-hint">Eintrag</label>
+          <input id="reviewOwnedIndexInput" type="number" min="1" step="1" style="width:72px;" aria-label="Eintragsnummer">
+          <button id="reviewOwnedGoBtn" type="button">Gehe zu</button>
+        </div>
         <button id="reviewOwnedSkipBtn" type="button" style="display:none;">Überspringen</button>
         <button id="saveBtn" class="primary">Speichern</button>
       </div>
@@ -3848,6 +4220,16 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="albumListeningOverlay" aria-modal="true" role="dialog" aria-labelledby="albumListeningTitle">
+  <div class="modal-box album-listening-box">
+    <div class="album-editor-heading">
+      <p class="modal-title" id="albumListeningTitle">Album anhören</p>
+      <button type="button" id="closeAlbumListeningBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+    <div id="albumListeningContent"></div>
+  </div>
+</div>
+
 <div class="modal-overlay cover-url-overlay" id="coverUrlOverlay" aria-modal="true" role="dialog" aria-labelledby="coverUrlTitle">
   <div class="modal-box cover-url-box">
     <div class="album-editor-heading">
@@ -3901,6 +4283,12 @@
       </section>
     </div>
     <div class="vinyl-editor-footer">
+      <div id="vinylMigrationNavigation" style="display:none; align-items:center; gap:6px;">
+        <button type="button" id="vinylMigrationPrevBtn" aria-label="Vorheriger Eintrag">←</button>
+        <label for="vinylMigrationIndexInput" class="settings-panel-hint">Eintrag</label>
+        <input id="vinylMigrationIndexInput" type="number" min="1" step="1" style="width:72px;" aria-label="Eintragsnummer">
+        <button type="button" id="vinylMigrationGoBtn">Gehe zu</button>
+      </div>
       <button type="button" id="cancelVinylEditorBtn">Abbrechen</button>
       <button type="button" id="saveVinylEditorBtn" class="primary">Übernehmen</button>
       <button type="button" id="vinylMigrationNextBtn" class="primary" style="display:none;">Weiter</button>
@@ -3910,42 +4298,53 @@
 
 <div class="modal-overlay storage-result-overlay" id="storageRandomResultOverlay" aria-modal="true" role="dialog" aria-labelledby="storageResultTitle">
   <div class="modal-box storage-result-box">
-    <div class="storage-result-header">
-      <div>
-        <p class="modal-title" id="storageResultTitle"></p>
-        <p class="storage-result-artist" id="storageResultArtist"></p>
+    <section class="storage-case-view" id="storageRandomCaseView" hidden aria-live="polite">
+      <h2 class="storage-case-heading">Zufallsauswahl</h2>
+      <p class="storage-case-location" id="storageCaseLocation"></p>
+      <div class="storage-case-window" id="storageCaseWindow" aria-label="Album-Auswahl">
+        <div class="storage-case-track" id="storageCaseTrack"></div>
+        <div class="storage-case-marker" aria-hidden="true"></div>
       </div>
-      <button type="button" id="closeStorageRandomResultBtn" class="icon-btn" title="Schließen" aria-label="Ergebnis schließen">×</button>
-    </div>
-    <div class="storage-result-layout">
-      <section class="storage-result-media" aria-label="Cover und Vinyl">
-        <div class="storage-result-media-item">
-          <p class="storage-result-media-label">Cover</p>
-          <img id="storageResultCover" class="storage-result-cover" alt="">
+      <p class="storage-case-hint">Das Album in der Mitte wird gezogen …</p>
+    </section>
+    <div class="storage-result-details" id="storageRandomResultDetails" hidden>
+      <div class="storage-result-header">
+        <div>
+          <p class="modal-title" id="storageResultTitle"></p>
+          <p class="storage-result-artist" id="storageResultArtist"></p>
         </div>
-        <div class="storage-result-media-item">
-          <p class="storage-result-media-label">Vinyl</p>
-          <div id="storageResultDisc" class="vinyl-editor-disc storage-result-disc"></div>
-          <p class="storage-result-count" id="storageResultCount"></p>
-        </div>
-      </section>
-      <section>
-        <dl class="storage-result-facts">
-          <div class="wide"><dt>Lagerort</dt><dd id="storageResultLocation"></dd></div>
-          <div><dt>Jahr</dt><dd id="storageResultYear"></dd></div>
-          <div><dt>Genre</dt><dd id="storageResultGenre"></dd></div>
-          <div><dt>Format</dt><dd id="storageResultFormat"></dd></div>
-          <div><dt>Zustand</dt><dd id="storageResultCondition"></dd></div>
-        </dl>
-        <h3 class="storage-result-track-heading">Tracklist</h3>
-        <ol class="storage-result-tracklist" id="storageResultTracklist"></ol>
-      </section>
-    </div>
-    <div class="storage-result-footer">
-      <button type="button" id="rerollStorageResultBtn" class="primary storage-result-reroll">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 9a7 7 0 0 1 11.9-2L20 9M4 15l2.5 2a7 7 0 0 0 11.9-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Wiederholen
-      </button>
+        <button type="button" id="closeStorageRandomResultBtn" class="icon-btn" title="Schließen" aria-label="Ergebnis schließen">×</button>
+      </div>
+      <div class="storage-result-layout">
+        <section class="storage-result-media" aria-label="Cover und Vinyl">
+          <div class="storage-result-media-item">
+            <p class="storage-result-media-label">Cover</p>
+            <img id="storageResultCover" class="storage-result-cover" alt="">
+          </div>
+          <div class="storage-result-media-item">
+            <p class="storage-result-media-label">Vinyl</p>
+            <div id="storageResultDisc" class="vinyl-editor-disc storage-result-disc"></div>
+            <p class="storage-result-count" id="storageResultCount"></p>
+          </div>
+        </section>
+        <section>
+          <dl class="storage-result-facts">
+            <div class="wide"><dt>Lagerort</dt><dd id="storageResultLocation"></dd></div>
+            <div><dt>Jahr</dt><dd id="storageResultYear"></dd></div>
+            <div><dt>Genre</dt><dd id="storageResultGenre"></dd></div>
+            <div><dt>Format</dt><dd id="storageResultFormat"></dd></div>
+            <div><dt>Zustand</dt><dd id="storageResultCondition"></dd></div>
+          </dl>
+          <h3 class="storage-result-track-heading">Tracklist</h3>
+          <ol class="storage-result-tracklist" id="storageResultTracklist"></ol>
+        </section>
+      </div>
+      <div class="storage-result-footer">
+        <button type="button" id="rerollStorageResultBtn" class="primary storage-result-reroll">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 9a7 7 0 0 1 11.9-2L20 9M4 15l2.5 2a7 7 0 0 0 11.9-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Wiederholen
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -3998,6 +4397,12 @@
     </div>
     <div class="modal-actions">
       <button id="closeDiscogsMatchBtn">Schließen</button>
+      <div id="discogsMatchNavigation" style="display:none; align-items:center; gap:6px;">
+        <button type="button" id="discogsMatchPrevBtn" aria-label="Vorheriger Eintrag">←</button>
+        <label for="discogsMatchIndexInput" class="settings-panel-hint">Eintrag</label>
+        <input id="discogsMatchIndexInput" type="number" min="1" step="1" style="width:72px;" aria-label="Eintragsnummer">
+        <button type="button" id="discogsMatchGoBtn">Gehe zu</button>
+      </div>
       <div class="match-manual-price" style="display:flex; align-items:center; gap:6px;">
         <input type="number" id="discogsMatchManualPrice" placeholder="Preis manuell" step="0.01" min="0" value="0" style="max-width:110px;">
         <select id="discogsMatchManualPriceCurrency" style="max-width:70px;">
@@ -4086,9 +4491,13 @@ let collectionFilterQuery = '';
 let collectionFilterReleaseType = 'all';
 let showSelectedOnly = false;
 let filterDebounceTimer = null;
+let editReviewProgress = {};
 
 function restoreCollectionViewSettings(settings) {
   settings = settings && typeof settings === 'object' ? settings : {};
+  editReviewProgress = settings.editReviewProgress && typeof settings.editReviewProgress === 'object'
+    ? settings.editReviewProgress
+    : {};
   if (activeView === 'storage') setView('grid', false);
   collectionFilterQuery = '';
   collectionFilterReleaseType = 'all';
@@ -4101,6 +4510,7 @@ function restoreCollectionViewSettings(settings) {
   storageUnsortedCollapsed = false;
   storageUnsortedAutoCollapsed = false;
   storagePaneSplit = 0.67;
+  storageShelfZoom = 1;
   storagePlacementMode = false;
   collapsedStorageShelfIds.clear();
   initializedStorageShelfIds.clear();
@@ -4135,6 +4545,9 @@ function restoreCollectionViewSettings(settings) {
   storageUnsortedAutoCollapsed = settings.storageUnsortedAutoCollapsed === true;
   if (Number.isFinite(Number(settings.storagePaneSplit))) {
     storagePaneSplit = Math.max(0.28, Math.min(0.78, Number(settings.storagePaneSplit)));
+  }
+  if (Number.isFinite(Number(settings.storageShelfZoom))) {
+    storageShelfZoom = Math.max(0.7, Math.min(1.8, Number(settings.storageShelfZoom)));
   }
   storagePlacementMode = settings.storagePlacementMode === true;
   if (Array.isArray(settings.collapsedStorageShelfIds)) {
@@ -4191,8 +4604,10 @@ function getCollectionViewSettings() {
     storageUnsortedCollapsed,
     storageUnsortedAutoCollapsed,
     storagePaneSplit,
+    storageShelfZoom,
     storagePlacementMode,
-    albumSearchCollapsed: document.querySelector('.desktop-form-shell')?.classList.contains('search-collapsed') || false
+    albumSearchCollapsed: document.querySelector('.desktop-form-shell')?.classList.contains('search-collapsed') || false,
+    editReviewProgress
   };
 }
 
@@ -4397,6 +4812,17 @@ async function loadCloudData(uid) {
   localStorage.setItem('storageRandomAnimationV1', storageRandomAnimation ? 'true' : 'false');
   const storageRandomAnimationCheckbox = document.getElementById('storageRandomAnimationCheckbox');
   if (storageRandomAnimationCheckbox) storageRandomAnimationCheckbox.checked = storageRandomAnimation;
+  const listeningMode = ['auto', 'spotify', 'apple', 'youtube'].includes(data.settings?.albumListeningMode)
+    ? data.settings.albumListeningMode
+    : 'auto';
+  localStorage.setItem('albumListeningModeV1', listeningMode);
+  const albumListeningModeSelect = document.getElementById('albumListeningMode');
+  if (albumListeningModeSelect) albumListeningModeSelect.value = listeningMode;
+  localStorage.removeItem('storageRandomGenresV1');
+  localStorage.removeItem('storageRandomYearV1');
+  if (typeof window.refreshStorageRandomFilterControls === 'function') {
+    window.refreshStorageRandomFilterControls();
+  }
   shelfLocations = normalizeShelfLocations(data.settings?.shelves);
   restoreCollectionViewSettings(data.settings?.collectionViewSettings);
   const titleDisplay = document.getElementById('collectionTitleDisplay');
@@ -4422,7 +4848,8 @@ async function saveCloudDataNow() {
     const storageRandomFormats = [...document.querySelectorAll('#storageRandomFilterPanel [data-storage-random-format]:checked')]
       .map(input => input.dataset.storageRandomFormat);
     const storageRandomAnimation = document.getElementById('storageRandomAnimationCheckbox')?.checked !== false;
-    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations, storageRandomFormats, storageRandomAnimation, collectionViewSettings: getCollectionViewSettings() }, ts ? { tableSettings: ts } : {});
+    const albumListeningMode = document.getElementById('albumListeningMode')?.value || 'auto';
+    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations, storageRandomFormats, storageRandomAnimation, albumListeningMode, collectionViewSettings: getCollectionViewSettings() }, ts ? { tableSettings: ts } : {});
 
     await db.collection('users').doc(currentUid).set({
       username: currentUsername,
@@ -4741,6 +5168,36 @@ let vinylMigrationActive = false;
 let ownedAlbumReviewQueue = [];
 let ownedAlbumReviewIndex = -1;
 let ownedAlbumReviewActive = false;
+let ownedAlbumReviewTargetIndex = null;
+
+function saveEditReviewProgress(type, queue, index, mode = '') {
+  if (!queue.length) return;
+  const safeIndex = Math.max(0, Math.min(index, queue.length - 1));
+  editReviewProgress[type] = {
+    itemIds: queue.map(item => String(typeof item === 'object' ? item.id : item)),
+    index: safeIndex,
+    itemId: String(typeof queue[safeIndex] === 'object' ? queue[safeIndex].id : queue[safeIndex]),
+    mode
+  };
+  saveCloudDataDebounced();
+}
+
+function getResumableReviewQueue(type, candidates, mode = '') {
+  const candidateById = new Map(candidates.map(item => [String(item.id), item]));
+  const saved = editReviewProgress[type];
+  const canResume = saved?.mode === mode && Array.isArray(saved.itemIds);
+  const savedQueue = canResume
+    ? saved.itemIds.map(id => candidateById.get(String(id))).filter(Boolean)
+    : [];
+  const savedIds = new Set(savedQueue.map(item => String(item.id)));
+  const queue = [...savedQueue, ...candidates.filter(item => !savedIds.has(String(item.id)))];
+  let index = 0;
+  if (queue.length && canResume) {
+    const itemIdIndex = queue.findIndex(item => String(item.id) === String(saved.itemId));
+    index = itemIdIndex >= 0 ? itemIdIndex : Math.max(0, Math.min(Number(saved.index) || 0, queue.length - 1));
+  }
+  return { queue, index };
+}
 
 async function enrichDiscogsPriceForItem(item) {
   if (!item || !item.discogsResourceUrl) return false;
@@ -4963,6 +5420,53 @@ if (defaultReleaseTypeSelect) {
     saveCloudDataDebounced();
   });
 }
+
+const albumListeningModeSelect = document.getElementById('albumListeningMode');
+if (albumListeningModeSelect) {
+  albumListeningModeSelect.value = localStorage.getItem('albumListeningModeV1') || 'auto';
+  albumListeningModeSelect.addEventListener('change', () => {
+    localStorage.setItem('albumListeningModeV1', albumListeningModeSelect.value);
+    saveCloudDataDebounced();
+  });
+}
+const SPOTIFY_CLIENT_ID_KEY = 'albumListeningSpotifyClientIdV1';
+const YOUTUBE_API_KEY_KEY = 'albumListeningYouTubeApiKeyV1';
+const SPOTIFY_TOKEN_KEY = 'albumListeningSpotifyTokenV1';
+const SPOTIFY_VERIFIER_KEY = 'albumListeningSpotifyVerifierV1';
+const SPOTIFY_STATE_KEY = 'albumListeningSpotifyStateV1';
+
+const spotifyClientIdInput = document.getElementById('spotifyClientIdInput');
+const youtubeApiKeyInput = document.getElementById('youtubeApiKeyInput');
+if (spotifyClientIdInput) {
+  spotifyClientIdInput.value = localStorage.getItem(SPOTIFY_CLIENT_ID_KEY) || '';
+  spotifyClientIdInput.addEventListener('change', () => {
+    const previousClientId = localStorage.getItem(SPOTIFY_CLIENT_ID_KEY) || '';
+    saveListeningCredentials();
+    if (previousClientId !== spotifyClientIdInput.value.trim()) {
+      sessionStorage.removeItem(SPOTIFY_TOKEN_KEY);
+      updateSpotifyConnectionStatus('Spotify Client ID geändert. Bitte erneut verbinden.');
+    }
+  });
+}
+if (youtubeApiKeyInput) {
+  youtubeApiKeyInput.value = localStorage.getItem(YOUTUBE_API_KEY_KEY) || '';
+  youtubeApiKeyInput.addEventListener('change', saveListeningCredentials);
+}
+const spotifyRedirectUriElement = document.getElementById('spotifyRedirectUri');
+if (spotifyRedirectUriElement) spotifyRedirectUriElement.textContent = getSpotifyRedirectUri() || 'Nicht verfügbar bei file://';
+document.getElementById('spotifyConnectBtn')?.addEventListener('click', () => {
+  const token = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
+  if (token?.accessToken && (Number(token.expiresAt) > Date.now() || token.refreshToken)) {
+    sessionStorage.removeItem(SPOTIFY_TOKEN_KEY);
+    updateSpotifyConnectionStatus('Spotify wurde getrennt.');
+    return;
+  }
+  connectSpotify().catch(error => {
+    console.error('Spotify-Verbindung konnte nicht gestartet werden:', error);
+    updateSpotifyConnectionStatus(`Spotify-Verbindung konnte nicht gestartet werden: ${error.message}`);
+  });
+});
+updateSpotifyConnectionStatus();
 
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
@@ -5341,6 +5845,29 @@ document.getElementById('closeDiscogsMatchBtn').addEventListener('click', closeD
 const discogsMatchSearchBtn = document.getElementById('discogsMatchSearchBtn');
 const discogsMatchQueryInput = document.getElementById('discogsMatchQueryInput');
 const skipDiscogsMatchBtn = document.getElementById('skipDiscogsMatchBtn');
+function saveDiscogsMatchManualPrice() {
+  const manualPriceInput = document.getElementById('discogsMatchManualPrice');
+  const manualPriceRaw = manualPriceInput ? manualPriceInput.value.trim() : '';
+  const manualPriceValue = manualPriceRaw !== '' ? Number(manualPriceRaw) : 0;
+  if (!manualPriceValue || Number.isNaN(manualPriceValue)) return;
+  const targetItem = discogsMatchCurrentItem || currentDraft;
+  if (!targetItem) return;
+  targetItem.discogsLowestPrice = manualPriceValue;
+  const currencySelect = document.getElementById('discogsMatchManualPriceCurrency');
+  targetItem.discogsCurrency = currencySelect ? currencySelect.value : (targetItem.discogsCurrency || '€');
+  targetItem.priceManual = true;
+  discogsMatchPriceSelectionMade = true;
+  if (targetItem === currentDraft) {
+    const formPriceField = document.getElementById('fManualPrice');
+    if (formPriceField) formPriceField.value = manualPriceValue;
+    const formCurrencyField = document.getElementById('fManualPriceCurrency');
+    if (formCurrencyField) formCurrencyField.value = targetItem.discogsCurrency;
+    formLoadedPrice = manualPriceValue;
+    formLoadedPriceManual = true;
+  }
+  if (discogsMatchQueue.length > 0) saveCollection();
+  else renderCollection();
+}
 if (discogsMatchSearchBtn && discogsMatchQueryInput) {
   discogsMatchSearchBtn.addEventListener('click', async () => {
     const input = (discogsMatchQueryInput.value || '').trim();
@@ -5371,32 +5898,7 @@ if (discogsMatchSearchBtn && discogsMatchQueryInput) {
 }
 if (skipDiscogsMatchBtn) {
   skipDiscogsMatchBtn.addEventListener('click', async () => {
-    const manualPriceInput = document.getElementById('discogsMatchManualPrice');
-    const manualPriceRaw = manualPriceInput ? manualPriceInput.value.trim() : '';
-    const manualPriceValue = manualPriceRaw !== '' ? Number(manualPriceRaw) : 0;
-    if (manualPriceValue && !Number.isNaN(manualPriceValue)) {
-      const targetItem = discogsMatchCurrentItem || currentDraft;
-      if (targetItem) {
-        targetItem.discogsLowestPrice = manualPriceValue;
-        const currencySelect = document.getElementById('discogsMatchManualPriceCurrency');
-        targetItem.discogsCurrency = currencySelect ? currencySelect.value : (targetItem.discogsCurrency || '€');
-        targetItem.priceManual = true;
-        discogsMatchPriceSelectionMade = true;
-        if (targetItem === currentDraft) {
-          const formPriceField = document.getElementById('fManualPrice');
-          if (formPriceField) formPriceField.value = manualPriceValue;
-          const formCurrencyField = document.getElementById('fManualPriceCurrency');
-          if (formCurrencyField) formCurrencyField.value = targetItem.discogsCurrency;
-          formLoadedPrice = manualPriceValue;
-          formLoadedPriceManual = true;
-        }
-        if (discogsMatchQueue.length > 0) {
-          saveCollection();
-        } else {
-          renderCollection();
-        }
-      }
-    }
+    saveDiscogsMatchManualPrice();
     if (discogsMatchQueue.length > 0) {
       const completedItem = discogsMatchQueue[discogsMatchQueueIndex] || discogsMatchCurrentItem;
       if (discogsMatchMode === 'price' && completedItem && discogsMatchPriceSelectionMade) {
@@ -5409,6 +5911,26 @@ if (skipDiscogsMatchBtn) {
     await closeDiscogsMatchOverlay();
   });
 }
+document.getElementById('discogsMatchPrevBtn').addEventListener('click', async () => {
+  if (discogsMatchQueueIndex <= 0) return;
+  saveDiscogsMatchManualPrice();
+  await processDiscogsQueueItem(discogsMatchQueueIndex - 1);
+});
+document.getElementById('discogsMatchGoBtn').addEventListener('click', async () => {
+  const requestedIndex = Number(document.getElementById('discogsMatchIndexInput').value);
+  if (!Number.isInteger(requestedIndex) || requestedIndex < 1 || requestedIndex > discogsMatchQueue.length) {
+    await showAlert(`Bitte eine Eintragsnummer zwischen 1 und ${discogsMatchQueue.length} eingeben.`);
+    return;
+  }
+  saveDiscogsMatchManualPrice();
+  await processDiscogsQueueItem(requestedIndex - 1);
+});
+document.getElementById('discogsMatchIndexInput').addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    document.getElementById('discogsMatchGoBtn').click();
+  }
+});
 
 document.getElementById('fixCancelBtn').addEventListener('click', () => {
   document.getElementById('fixModalOverlay').classList.remove('open');
@@ -5793,6 +6315,7 @@ function setVinylMigrationControls(active) {
   document.getElementById('cancelVinylEditorBtn').style.display = active ? 'inline-flex' : '';
   document.getElementById('saveVinylEditorBtn').style.display = active ? 'none' : '';
   document.getElementById('vinylMigrationNextBtn').style.display = active ? 'inline-flex' : 'none';
+  document.getElementById('vinylMigrationNavigation').style.display = active ? 'flex' : 'none';
   document.getElementById('closeVinylEditorBtn').title = active ? 'Speichern und schließen' : 'Schließen';
 }
 
@@ -5807,6 +6330,11 @@ function openVinylMigrationItem() {
       currentDraft = JSON.parse(JSON.stringify(entry));
       currentTracks = Array.isArray(entry.tracklist) ? entry.tracklist : [];
       document.getElementById('vinylMigrationProgress').textContent = `Album ${vinylMigrationIndex + 1} von ${vinylMigrationQueue.length}`;
+      const indexInput = document.getElementById('vinylMigrationIndexInput');
+      indexInput.value = String(vinylMigrationIndex + 1);
+      document.getElementById('vinylMigrationPrevBtn').disabled = vinylMigrationIndex === 0;
+      document.getElementById('vinylMigrationNextBtn').disabled = vinylMigrationIndex >= vinylMigrationQueue.length - 1;
+      saveEditReviewProgress('legacyVinyl', vinylMigrationQueue, vinylMigrationIndex);
       document.getElementById('vinylEditorAlbumTitle').textContent = [entry.artist, entry.title].filter(Boolean).join(' · ');
       openVinylEditor();
       return true;
@@ -5831,8 +6359,9 @@ function startLegacyVinylReview() {
     showAlert('Alle Alben haben bereits ein Vinyl-Design.');
     return;
   }
-  vinylMigrationQueue = entries.map(item => String(item.id));
-  vinylMigrationIndex = 0;
+  const resumable = getResumableReviewQueue('legacyVinyl', entries);
+  vinylMigrationQueue = resumable.queue.map(item => String(item.id));
+  vinylMigrationIndex = resumable.index;
   vinylMigrationActive = true;
   setVinylMigrationControls(true);
   openVinylMigrationItem();
@@ -5859,6 +6388,7 @@ function setOwnedAlbumReviewControls(active) {
   cancelButton.textContent = active ? 'Durchlauf beenden' : 'Abbrechen';
   saveButton.textContent = active ? 'Speichern & Weiter' : 'Speichern';
   skipButton.style.display = active ? 'inline-flex' : 'none';
+  document.getElementById('reviewOwnedNavigation').style.display = active ? 'flex' : 'none';
   document.getElementById('albumEditorTitle').textContent = active ? 'Sammlung durchgehen' : 'Album bearbeiten';
 }
 
@@ -5868,6 +6398,10 @@ function openOwnedAlbumReviewItem() {
     if (entry) {
       currentDraft = JSON.parse(JSON.stringify(entry));
       currentTracks = Array.isArray(entry.tracklist) ? entry.tracklist : [];
+      const indexInput = document.getElementById('reviewOwnedIndexInput');
+      indexInput.value = String(ownedAlbumReviewIndex + 1);
+      document.getElementById('reviewOwnedPrevBtn').disabled = ownedAlbumReviewIndex === 0;
+      saveEditReviewProgress('ownedAlbums', ownedAlbumReviewQueue, ownedAlbumReviewIndex);
       document.getElementById('albumEditorTitle').textContent =
         `Album ${ownedAlbumReviewIndex + 1} von ${ownedAlbumReviewQueue.length} · ${entry.title || 'Ohne Titel'}`;
       openForm();
@@ -5889,12 +6423,14 @@ function startOwnedAlbumReview() {
     showAlert('Speichere oder schließe zuerst das aktuell geöffnete Album.');
     return;
   }
-  ownedAlbumReviewQueue = collection.filter(item => item.owned).map(item => String(item.id));
-  if (ownedAlbumReviewQueue.length === 0) {
+  const entries = collection.filter(item => item.owned);
+  if (entries.length === 0) {
     showAlert('In deiner Sammlung sind keine Alben als „Im Besitz“ markiert.');
     return;
   }
-  ownedAlbumReviewIndex = 0;
+  const resumable = getResumableReviewQueue('ownedAlbums', entries);
+  ownedAlbumReviewQueue = resumable.queue.map(item => String(item.id));
+  ownedAlbumReviewIndex = resumable.index;
   ownedAlbumReviewActive = true;
   setOwnedAlbumReviewControls(true);
   document.getElementById('settingsPanel').classList.remove('open');
@@ -5906,6 +6442,7 @@ function finishOwnedAlbumReview(completed = false) {
   ownedAlbumReviewQueue = [];
   ownedAlbumReviewIndex = -1;
   ownedAlbumReviewActive = false;
+  ownedAlbumReviewTargetIndex = null;
   setOwnedAlbumReviewControls(false);
   document.getElementById('formSection').classList.remove('editor-open');
   albumEditorOverlay.classList.remove('open');
@@ -5917,7 +6454,16 @@ function finishOwnedAlbumReview(completed = false) {
 function skipOwnedAlbumReviewItem() {
   if (!ownedAlbumReviewActive) return;
   ownedAlbumReviewIndex += 1;
+  saveEditReviewProgress('ownedAlbums', ownedAlbumReviewQueue, Math.min(ownedAlbumReviewIndex, ownedAlbumReviewQueue.length - 1));
   openOwnedAlbumReviewItem();
+}
+
+function navigateOwnedAlbumReview(targetIndex) {
+  if (!ownedAlbumReviewActive || !Number.isInteger(targetIndex)
+      || targetIndex < 0 || targetIndex >= ownedAlbumReviewQueue.length
+      || targetIndex === ownedAlbumReviewIndex) return;
+  ownedAlbumReviewTargetIndex = targetIndex;
+  document.getElementById('saveBtn').click();
 }
 
 function applyVinylEditorDesignToDraft() {
@@ -5936,13 +6482,14 @@ function applyVinylEditorDesignToDraft() {
   delete currentDraft.isAnimated;
 }
 
-function commitVinylMigrationItem(continueReview) {
+function commitVinylMigrationItem(continueReview, targetIndex = null) {
   if (!vinylMigrationActive || !currentDraft) return;
   applyVinylEditorDesignToDraft();
   const existingIndex = collection.findIndex(item => String(item.id) === String(currentDraft.id));
   if (existingIndex >= 0) collection[existingIndex] = currentDraft;
   saveCollection();
-  vinylMigrationIndex += 1;
+  vinylMigrationIndex = targetIndex == null ? vinylMigrationIndex + 1 : targetIndex;
+  saveEditReviewProgress('legacyVinyl', vinylMigrationQueue, Math.min(vinylMigrationIndex, vinylMigrationQueue.length - 1));
   if (continueReview) {
     openVinylMigrationItem();
   } else {
@@ -7265,12 +7812,20 @@ function renderDiscogsTracklistPreview(tracklist) {
 
 async function processDiscogsQueueItem(index) {
   if (index >= discogsMatchQueue.length) {
+    if (discogsMatchQueue.length) saveEditReviewProgress('discogsMatch', discogsMatchQueue, discogsMatchQueue.length - 1, discogsMatchMode);
     discogsMatchQueue = [];
     discogsMatchQueueIndex = 0;
     discogsMatchCurrentItem = null;
+    document.getElementById('discogsMatchNavigation').style.display = 'none';
     return closeDiscogsMatchOverlay();
   }
+  if (index < 0) return;
   discogsMatchQueueIndex = index;
+  saveEditReviewProgress('discogsMatch', discogsMatchQueue, index, discogsMatchMode);
+  document.getElementById('discogsMatchNavigation').style.display = discogsMatchQueue.length > 1 ? 'flex' : 'none';
+  document.getElementById('discogsMatchIndexInput').value = String(index + 1);
+  document.getElementById('discogsMatchPrevBtn').disabled = index === 0;
+  document.getElementById('skipDiscogsMatchBtn').textContent = index >= discogsMatchQueue.length - 1 ? 'Fertig' : 'Weiter';
   const item = discogsMatchQueue[index];
   discogsMatchCurrentItem = item;
   discogsMatchPriceSelectionMade = false;
@@ -7292,13 +7847,15 @@ async function processDiscogsQueueItem(index) {
 }
 
 async function openDiscogsMatchQueue(items, mode = 'price') {
-  discogsMatchQueue = Array.isArray(items) ? items : [];
   discogsMatchMode = mode;
-  if (discogsMatchQueue.length === 0) {
+  const candidates = Array.isArray(items) ? items : [];
+  if (candidates.length === 0) {
     await showAlert('Keine Einträge zum Überprüfen gefunden.');
     return;
   }
-  await processDiscogsQueueItem(0);
+  const resumable = getResumableReviewQueue('discogsMatch', candidates, mode);
+  discogsMatchQueue = resumable.queue;
+  await processDiscogsQueueItem(resumable.index);
 }
 
 async function openDiscogsMatchOverlay(results, query, item = null, mode = 'price') {
@@ -7571,6 +8128,16 @@ function getGenreValues(value) {
   return genres;
 }
 
+function refreshKnownGenreOptions() {
+  const options = document.getElementById('knownGenreOptions');
+  if (!options) return;
+  options.replaceChildren(...getExistingStorageGenres().map(genre => {
+    const option = document.createElement('option');
+    option.value = genre;
+    return option;
+  }));
+}
+
 function renderGenreChips(value, chipListId = 'fGenreChips', inputId = 'fGenre') {
   const chipList = document.getElementById(chipListId);
   const input = document.getElementById(inputId);
@@ -7623,7 +8190,39 @@ function commitGenreInput(inputId = 'fGenre', chipListId = 'fGenreChips') {
   input.value = '';
 }
 
+function completeGenreInputFromSuggestions(input, commit) {
+  const parts = input.value.split(',');
+  const pending = parts.pop().trim();
+  if (!pending) return;
+  const genres = getExistingStorageGenres();
+  const match = genres.find(genre => genre.toLocaleLowerCase('de') === pending.toLocaleLowerCase('de'))
+    || genres.find(genre => genre.toLocaleLowerCase('de').startsWith(pending.toLocaleLowerCase('de')))
+    || genres.find(genre => genre.toLocaleLowerCase('de').includes(pending.toLocaleLowerCase('de')));
+  if (!match) return;
+  input.value = [...parts, match].join(', ');
+  commit();
+}
+
+function handleGenreInputTab(event, input, commit) {
+  if (event.key !== 'Tab') return false;
+  event.preventDefault();
+  if (event.altKey || event.ctrlKey) {
+    commit();
+    const focusableElements = [...document.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )].filter(element => element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden');
+    const currentIndex = focusableElements.indexOf(input);
+    const nextElement = focusableElements[currentIndex + (event.shiftKey ? -1 : 1)];
+    if (nextElement) nextElement.focus();
+    else input.blur();
+    return true;
+  }
+  completeGenreInputFromSuggestions(input, commit);
+  return true;
+}
+
 const genreInput = document.getElementById('fGenre');
+genreInput.addEventListener('focus', refreshKnownGenreOptions);
 genreInput.addEventListener('input', () => {
   const parts = genreInput.value.split(',');
   if (parts.length < 2) return;
@@ -7632,6 +8231,7 @@ genreInput.addEventListener('input', () => {
   genreInput.value = pending;
 });
 genreInput.addEventListener('keydown', event => {
+  if (handleGenreInputTab(event, genreInput, () => commitGenreInput())) return;
   if (event.key === 'Enter') {
     event.preventDefault();
     commitGenreInput();
@@ -7650,6 +8250,7 @@ function initializeBulkGenreInput() {
   const input = document.getElementById('bulkGenre');
   if (input.dataset.initialized) return;
   input.dataset.initialized = 'true';
+  input.addEventListener('focus', refreshKnownGenreOptions);
   input.addEventListener('input', () => {
     const parts = input.value.split(',');
     if (parts.length < 2) return;
@@ -7658,6 +8259,7 @@ function initializeBulkGenreInput() {
     input.value = pending;
   });
   input.addEventListener('keydown', event => {
+    if (handleGenreInputTab(event, input, () => commitGenreInput('bulkGenre', 'bulkGenreChips'))) return;
     if (event.key === 'Enter') {
       event.preventDefault();
       commitGenreInput('bulkGenre', 'bulkGenreChips');
@@ -7674,6 +8276,7 @@ function initializeBulkGenreInput() {
 }
 
 function openForm() {
+  refreshKnownGenreOptions();
   document.getElementById('formSection').classList.add('editor-open');
   albumEditorOverlay.classList.add('open');
   document.getElementById('fStorageFields').open = false;
@@ -7685,6 +8288,7 @@ function openForm() {
   document.getElementById('fGenre').value = '';
   document.getElementById('fCoverUrl').value = currentDraft.coverUrl;
   document.getElementById('fDiscogsUrl').value = currentDraft.discogsResourceUrl || '';
+  document.getElementById('fListeningUrl').value = currentDraft.listeningUrl || '';
   document.getElementById('fDiscogsUrlStatus').textContent = '';
   document.getElementById('formCover').src = currentDraft.coverUrl;
   document.getElementById('fReleaseType').value = currentDraft.releaseType || 'Album';
@@ -7704,6 +8308,573 @@ function openForm() {
   if (plausibilityHint) plausibilityHint.textContent = getPlausibilityHint(currentDraft);
   document.getElementById('formSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+function getSupportedListeningUrl(rawUrl) {
+  const value = String(rawUrl || '').trim();
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== 'https:') return null;
+    if (host === 'open.spotify.com' || host === 'spotify.com'
+      || host === 'music.apple.com' || host === 'apple.co'
+      || host === 'youtube.com' || host === 'www.youtube.com'
+      || host === 'm.youtube.com' || host === 'music.youtube.com'
+      || host === 'youtu.be' || host === 'www.youtu.be') return url.href;
+  } catch (error) {
+    return null;
+  }
+  return null;
+}
+
+function getSpotifyEmbedUrl(rawUrl) {
+  const safeUrl = getSupportedListeningUrl(rawUrl);
+  if (!safeUrl) return '';
+  const url = new URL(safeUrl);
+  if (!url.hostname.toLowerCase().endsWith('spotify.com') || url.hostname.toLowerCase() !== 'open.spotify.com') return '';
+  const match = url.pathname.match(/^\/(album|track)\/([A-Za-z0-9]+)\/?$/);
+  return match ? `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator&theme=0` : '';
+}
+
+function getAppleMusicEmbedUrl(rawUrl) {
+  const safeUrl = getSupportedListeningUrl(rawUrl);
+  if (!safeUrl) return '';
+  const url = new URL(safeUrl);
+  if (!['music.apple.com', 'apple.co'].includes(url.hostname.toLowerCase())) return '';
+  if (url.hostname.toLowerCase() === 'apple.co') return '';
+  url.hostname = 'embed.music.apple.com';
+  const trackId = url.searchParams.get('i');
+  url.search = trackId ? `?i=${encodeURIComponent(trackId)}` : '';
+  url.hash = '';
+  return url.href;
+}
+
+function getYouTubeEmbedUrl(rawUrl) {
+  const safeUrl = getSupportedListeningUrl(rawUrl);
+  if (!safeUrl) return '';
+  const url = new URL(safeUrl);
+  const host = url.hostname.toLowerCase();
+  const videoId = host === 'youtu.be'
+    ? url.pathname.split('/').filter(Boolean)[0]
+    : host.includes('youtube.com')
+      ? url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1]
+      : null;
+  return videoId && /^[A-Za-z0-9_-]{6,}$/.test(videoId)
+    ? `https://www.youtube-nocookie.com/embed/${videoId}`
+    : '';
+}
+
+let albumListeningRequest = null;
+
+function closeAlbumListening() {
+  albumListeningRequest?.abort();
+  albumListeningRequest = null;
+  document.getElementById('albumListeningOverlay').classList.remove('open');
+  document.getElementById('albumListeningContent').replaceChildren();
+}
+
+function mountListeningEmbed(container, url, title) {
+  const spotifyEmbed = getSpotifyEmbedUrl(url);
+  const appleEmbed = getAppleMusicEmbedUrl(url);
+  const youtubeEmbed = getYouTubeEmbedUrl(url);
+  const embedUrl = spotifyEmbed || appleEmbed || youtubeEmbed;
+  if (!embedUrl) return false;
+  const frame = document.createElement('iframe');
+  frame.className = `album-listen-embed ${spotifyEmbed ? 'spotify' : appleEmbed ? 'apple' : 'youtube'}`;
+  frame.src = embedUrl;
+  frame.title = `${title} Player`;
+  frame.allow = 'autoplay *; encrypted-media *; fullscreen *; clipboard-write';
+  frame.allowFullscreen = true;
+  frame.loading = 'lazy';
+  frame.style.pointerEvents = 'auto';
+  frame.style.position = 'relative';
+  frame.style.zIndex = '1';
+  container.appendChild(frame);
+  const platformLink = document.createElement('a');
+  const provider = spotifyEmbed ? 'spotify' : appleEmbed ? 'apple' : 'youtube';
+  platformLink.className = `album-listen-open-platform ${provider}`;
+  platformLink.href = url;
+  platformLink.target = '_blank';
+  platformLink.rel = 'noopener noreferrer';
+  platformLink.textContent = appleEmbed
+    ? '♫  In Apple Music öffnen  ↗'
+    : spotifyEmbed
+      ? '●  In Spotify öffnen  ↗'
+      : '▶  In YouTube öffnen  ↗';
+  container.appendChild(platformLink);
+  return true;
+}
+
+function getSpotifyRedirectUri() {
+  if (!['https:', 'http:'].includes(window.location.protocol)) return '';
+  if (window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname)) return '';
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+function updateSpotifyConnectionStatus(message = '') {
+  const status = document.getElementById('spotifyConnectionStatus');
+  if (!status) return;
+  const token = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
+  const connected = token?.accessToken
+    && (Number(token.expiresAt) > Date.now() || token.refreshToken);
+  status.textContent = message || (connected
+    ? 'Spotify ist für diese Sitzung verbunden.'
+    : 'Spotify ist nicht verbunden.');
+  const button = document.getElementById('spotifyConnectBtn');
+  if (button) button.textContent = connected ? 'Spotify trennen' : 'Spotify verbinden';
+}
+
+function saveListeningCredentials() {
+  const spotifyClientId = document.getElementById('spotifyClientIdInput')?.value.trim() || '';
+  const youtubeApiKey = document.getElementById('youtubeApiKeyInput')?.value.trim() || '';
+  if (spotifyClientId) localStorage.setItem(SPOTIFY_CLIENT_ID_KEY, spotifyClientId);
+  else localStorage.removeItem(SPOTIFY_CLIENT_ID_KEY);
+  if (youtubeApiKey) localStorage.setItem(YOUTUBE_API_KEY_KEY, youtubeApiKey);
+  else localStorage.removeItem(YOUTUBE_API_KEY_KEY);
+}
+
+function base64UrlEncode(bytes) {
+  let binary = '';
+  bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function connectSpotify() {
+  saveListeningCredentials();
+  const clientId = localStorage.getItem(SPOTIFY_CLIENT_ID_KEY);
+  const redirectUri = getSpotifyRedirectUri();
+  if (!clientId) {
+    updateSpotifyConnectionStatus('Bitte zuerst die Spotify Client ID eintragen.');
+    return;
+  }
+  if (!redirectUri) {
+    updateSpotifyConnectionStatus('Spotify-Anmeldung benötigt eine HTTPS-Adresse (oder localhost). Öffne die gehostete App und trage deren Redirect-URI in Spotify ein.');
+    return;
+  }
+  if (!window.crypto?.subtle || !window.crypto?.getRandomValues) {
+    updateSpotifyConnectionStatus('Dieser Browser unterstützt die sichere Spotify-Anmeldung nicht.');
+    return;
+  }
+  const random = new Uint8Array(64);
+  crypto.getRandomValues(random);
+  const verifier = base64UrlEncode(random);
+  const challengeBytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  const challenge = base64UrlEncode(new Uint8Array(challengeBytes));
+  const stateBytes = new Uint8Array(24);
+  crypto.getRandomValues(stateBytes);
+  const state = base64UrlEncode(stateBytes);
+  sessionStorage.setItem(SPOTIFY_VERIFIER_KEY, verifier);
+  sessionStorage.setItem(SPOTIFY_STATE_KEY, state);
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: redirectUri,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    state
+  });
+  window.location.assign(`https://accounts.spotify.com/authorize?${params}`);
+}
+
+async function exchangeSpotifyToken(values) {
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ ...values, client_id: localStorage.getItem(SPOTIFY_CLIENT_ID_KEY) || '' })
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error_description || data.error || `Spotify antwortete mit HTTP ${response.status}`);
+  return data;
+}
+
+async function completeSpotifyAuthCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const oauthError = params.get('error');
+  if (!code && !oauthError) return;
+  const state = params.get('state');
+  const expectedState = sessionStorage.getItem(SPOTIFY_STATE_KEY);
+  const verifier = sessionStorage.getItem(SPOTIFY_VERIFIER_KEY);
+  history.replaceState(history.state, '', `${window.location.pathname}${window.location.hash}`);
+  sessionStorage.removeItem(SPOTIFY_STATE_KEY);
+  sessionStorage.removeItem(SPOTIFY_VERIFIER_KEY);
+  if (oauthError) {
+    updateSpotifyConnectionStatus(oauthError === 'access_denied' ? 'Spotify-Anmeldung wurde abgebrochen.' : `Spotify-Anmeldung fehlgeschlagen: ${oauthError}`);
+    return;
+  }
+  if (!state || state !== expectedState || !verifier) {
+    updateSpotifyConnectionStatus('Spotify-Anmeldung abgelehnt: Der Sicherheitsstatus passt nicht. Bitte erneut verbinden.');
+    return;
+  }
+  try {
+    const data = await exchangeSpotifyToken({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: getSpotifyRedirectUri(),
+      code_verifier: verifier
+    });
+    sessionStorage.setItem(SPOTIFY_TOKEN_KEY, JSON.stringify({
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token || '',
+      expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000
+    }));
+    updateSpotifyConnectionStatus();
+  } catch (error) {
+    console.error('Spotify-Anmeldung fehlgeschlagen:', error);
+    updateSpotifyConnectionStatus(`Spotify-Anmeldung fehlgeschlagen: ${error.message}`);
+  }
+}
+
+async function getSpotifyAccessToken() {
+  const stored = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
+  if (!stored) return '';
+  if (Number(stored.expiresAt) > Date.now() + 60000) return stored.accessToken;
+  if (!stored.refreshToken) {
+    sessionStorage.removeItem(SPOTIFY_TOKEN_KEY);
+    updateSpotifyConnectionStatus('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.');
+    return '';
+  }
+  try {
+    const data = await exchangeSpotifyToken({ grant_type: 'refresh_token', refresh_token: stored.refreshToken });
+    const refreshed = {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token || stored.refreshToken,
+      expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000
+    };
+    sessionStorage.setItem(SPOTIFY_TOKEN_KEY, JSON.stringify(refreshed));
+    updateSpotifyConnectionStatus();
+    return refreshed.accessToken;
+  } catch (error) {
+    sessionStorage.removeItem(SPOTIFY_TOKEN_KEY);
+    updateSpotifyConnectionStatus(`Spotify-Sitzung konnte nicht erneuert werden: ${error.message}`);
+    return '';
+  }
+}
+
+function appendListeningProviderResults(content, provider, label, results, item) {
+  if (!results.length) return;
+  const section = document.createElement('section');
+  section.className = 'album-listen-provider-results';
+  const heading = document.createElement('p');
+  heading.className = 'album-listen-status';
+  heading.textContent = `${label} – passende Treffer:`;
+  const list = document.createElement('div');
+  list.className = 'album-listen-track-list';
+  results.forEach(result => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'album-listen-track';
+    const title = document.createElement('span');
+    title.textContent = result.title;
+    const subtitle = document.createElement('small');
+    subtitle.textContent = result.subtitle || '';
+    const play = document.createElement('span');
+    play.textContent = '▶';
+    button.append(title, subtitle, play);
+    button.addEventListener('click', () => {
+      content.querySelectorAll('.album-listen-provider-results, .album-listen-track-list, .album-listen-embed, .album-listen-open-platform')
+        .forEach(element => element.remove());
+      if (mountListeningEmbed(content, result.url, result.title || item.title || provider)) {
+        const status = content.querySelector('.album-listen-status');
+        if (status) status.textContent = `${label}: ${result.title}`;
+      }
+    });
+    list.appendChild(button);
+  });
+  section.append(heading, list);
+  content.appendChild(section);
+}
+
+function appendProviderSearchMessage(content, label, message) {
+  const node = document.createElement('p');
+  node.className = 'album-listen-status album-listen-provider-results';
+  node.textContent = `${label}: ${message}`;
+  content.appendChild(node);
+}
+
+function getSearchText(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('de').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+function calculateSearchScore(value, target) {
+  const normalizedValue = getSearchText(value);
+  const normalizedTarget = getSearchText(target);
+  if (!normalizedValue || !normalizedTarget) return 0;
+  if (normalizedValue === normalizedTarget) return 1;
+  if (normalizedValue.includes(normalizedTarget)) return 0.9;
+  const targetTokens = normalizedTarget.split(/\s+/).filter(token => token.length > 1);
+  const found = targetTokens.filter(token => normalizedValue.includes(token)).length;
+  return targetTokens.length ? found / targetTokens.length : 0;
+}
+
+async function searchSpotifyListening(item, content, controller) {
+  const clientId = localStorage.getItem(SPOTIFY_CLIENT_ID_KEY);
+  const token = await getSpotifyAccessToken();
+  if (!token) {
+    appendProviderSearchMessage(content, 'Spotify', clientId
+      ? 'Bitte in den Einstellungen mit Spotify verbinden.'
+      : 'Trage zuerst deine Spotify Client ID in den Einstellungen ein.');
+    return;
+  }
+  const query = `album:"${String(item.title || '').replace(/["\\]/g, ' ')}" artist:"${String(item.artist || '').replace(/["\\]/g, ' ')}"`;
+  const params = new URLSearchParams({ q: query, type: 'album,track', limit: '10', market: 'DE' });
+  const response = await fetch(`https://api.spotify.com/v1/search?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: controller.signal
+  });
+  if (response.status === 401) {
+    sessionStorage.removeItem(SPOTIFY_TOKEN_KEY);
+    updateSpotifyConnectionStatus('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.');
+    throw new Error('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.');
+  }
+  if (!response.ok) throw new Error(`Spotify antwortete mit HTTP ${response.status}`);
+  const data = await response.json();
+  const results = [
+    ...(data.albums?.items || []).map(album => ({
+      title: album.name,
+      subtitle: `${(album.artists || []).map(artist => artist.name).join(', ')}${album.release_date ? ` · ${album.release_date.slice(0, 4)}` : ''}`,
+      url: album.external_urls?.spotify,
+      score: calculateSearchScore(album.name, item.title) * 0.65
+        + Math.max(...(album.artists || []).map(artist => calculateSearchScore(artist.name, item.artist)), 0) * 0.35
+    })),
+    ...(data.tracks?.items || []).map(track => ({
+      title: track.name,
+      subtitle: `${(track.artists || []).map(artist => artist.name).join(', ')} · ${track.album?.name || ''}`,
+      url: track.external_urls?.spotify,
+      score: calculateSearchScore(track.album?.name, item.title) * 0.65
+        + Math.max(...(track.artists || []).map(artist => calculateSearchScore(artist.name, item.artist)), 0) * 0.35
+    }))
+  ].filter(result => result.url).sort((a, b) => b.score - a.score).slice(0, 8);
+  if (controller.signal.aborted) return;
+  if (!results.length) appendProviderSearchMessage(content, 'Spotify', 'Keine passenden Treffer gefunden.');
+  else appendListeningProviderResults(content, 'spotify', 'Spotify', results, item);
+}
+
+async function searchYouTubeListening(item, content, controller) {
+  const apiKey = localStorage.getItem(YOUTUBE_API_KEY_KEY);
+  if (!apiKey) {
+    appendProviderSearchMessage(content, 'YouTube', 'Trage zuerst einen YouTube Data API v3-Schlüssel in den Einstellungen ein.');
+    return;
+  }
+  const params = new URLSearchParams({
+    part: 'snippet',
+    type: 'video',
+    videoEmbeddable: 'true',
+    maxResults: '10',
+    q: `${item.artist || ''} ${item.title || ''}`.trim(),
+    key: apiKey
+  });
+  const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`, { signal: controller.signal });
+  const data = await response.json();
+  if (!response.ok) {
+    const apiMessage = data.error?.message || `YouTube antwortete mit HTTP ${response.status}`;
+    throw new Error(apiMessage);
+  }
+  const results = (data.items || []).map(video => ({
+    title: video.snippet?.title || 'YouTube-Video',
+    subtitle: video.snippet?.channelTitle || '',
+    url: `https://www.youtube.com/watch?v=${video.id?.videoId || ''}`,
+    score: calculateSearchScore(video.snippet?.title, item.title) * 0.65
+      + calculateSearchScore(video.snippet?.channelTitle, item.artist) * 0.35
+  })).filter(result => getYouTubeEmbedUrl(result.url))
+    .sort((a, b) => b.score - a.score).slice(0, 8);
+  if (controller.signal.aborted) return;
+  if (!results.length) appendProviderSearchMessage(content, 'YouTube', 'Keine einbettbaren Treffer gefunden.');
+  else appendListeningProviderResults(content, 'youtube', 'YouTube', results, item);
+}
+
+async function openAlbumListening(item) {
+  const overlay = document.getElementById('albumListeningOverlay');
+  const content = document.getElementById('albumListeningContent');
+  const spotifyUrl = getSupportedListeningUrl(item.listeningUrl);
+  if (item.listeningUrl && !spotifyUrl) {
+    await showAlert('Der gespeicherte Hörlink ist ungültig. Bitte verwende einen HTTPS-Link von Spotify, Apple Music oder YouTube.');
+    return;
+  }
+  closeAlbumListening();
+  document.getElementById('albumListeningTitle').textContent = `${item.title || 'Album'} anhören`;
+  overlay.classList.add('open');
+  const mode = albumListeningModeSelect?.value || localStorage.getItem('albumListeningModeV1') || 'auto';
+  const storedUrl = spotifyUrl || '';
+  const supportedEmbeddedUrl = mode === 'spotify'
+    ? (getSpotifyEmbedUrl(storedUrl) ? storedUrl : '')
+    : mode === 'apple'
+      ? (getAppleMusicEmbedUrl(storedUrl) ? storedUrl : '')
+      : mode === 'youtube'
+        ? (getYouTubeEmbedUrl(storedUrl) ? storedUrl : '')
+        : storedUrl;
+  if (supportedEmbeddedUrl && mountListeningEmbed(content, supportedEmbeddedUrl, item.title || 'Album')) return;
+  const status = document.createElement('p');
+  status.className = 'album-listen-status';
+  status.textContent = 'Suche nach passenden Playern …';
+  content.appendChild(status);
+  const controller = new AbortController();
+  albumListeningRequest = controller;
+  const searchApple = mode === 'auto' || mode === 'apple';
+  const providerTasks = [];
+  if (mode === 'auto' || mode === 'spotify') {
+    providerTasks.push(searchSpotifyListening(item, content, controller).catch(error => {
+      if (error.name !== 'AbortError') {
+        console.error('Spotify-Suche fehlgeschlagen:', error);
+        appendProviderSearchMessage(content, 'Spotify', error.message || 'Suche fehlgeschlagen.');
+      }
+    }));
+  }
+  if (mode === 'auto' || mode === 'youtube') {
+    providerTasks.push(searchYouTubeListening(item, content, controller).catch(error => {
+      if (error.name !== 'AbortError') {
+        console.error('YouTube-Suche fehlgeschlagen:', error);
+        appendProviderSearchMessage(content, 'YouTube', error.message || 'Suche fehlgeschlagen.');
+      }
+    }));
+  }
+  if (searchApple) status.textContent = 'Suche nach Apple-Music-Vorschauen und passenden Playern …';
+  try {
+    if (!searchApple) return;
+    const normalize = value => String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('de')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
+    const tokenOverlap = (first, second) => {
+      const firstTokens = new Set(normalize(first).split(/\s+/).filter(token => token.length > 1));
+      const secondTokens = new Set(normalize(second).split(/\s+/).filter(token => token.length > 1));
+      if (!firstTokens.size || !secondTokens.size) return 0;
+      const overlap = [...firstTokens].filter(token => secondTokens.has(token)).length;
+      return overlap / secondTokens.size;
+    };
+    const albumScore = (candidate, target) => {
+      const a = normalize(candidate);
+      const b = normalize(target);
+      if (!a || !b) return 0;
+      if (a === b) return 1;
+      return Math.max(tokenOverlap(candidate, target), a.includes(b) ? 0.85 : 0);
+    };
+    const artistScore = (candidate, target) => {
+      const a = normalize(candidate);
+      const b = normalize(target);
+      if (!a || !b) return 0;
+      if (a === b) return 1;
+      return Math.max(tokenOverlap(candidate, target), a.includes(b) ? 0.85 : 0);
+    };
+    const requestApple = async (endpoint, values) => {
+      const params = new URLSearchParams({ ...values, country:'DE' });
+      const response = await fetch(`https://itunes.apple.com/${endpoint}?${params}`, { signal:controller.signal });
+      if (!response.ok) throw new Error(`Apple-Suche antwortete mit HTTP ${response.status}`);
+      const data = await response.json();
+      return Array.isArray(data.results) ? data.results : [];
+    };
+    const wantedAlbum = item.title || '';
+    const wantedArtist = item.artist || '';
+    const searchResults = await requestApple('search', {
+      term:`${wantedArtist} ${wantedAlbum}`.trim(),
+      entity:'album',
+      limit:'50'
+    });
+    if (albumListeningRequest !== controller) return;
+    const candidates = searchResults
+      .map(album => ({
+        album,
+        score:albumScore(album.collectionName, wantedAlbum) * 0.58 + artistScore(album.artistName, wantedArtist) * 0.42
+      }))
+      .filter(entry => albumScore(entry.album.collectionName, wantedAlbum) >= 0.45
+        && artistScore(entry.album.artistName, wantedArtist) >= 0.4)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 1);
+    const tracksById = new Map();
+    for (const entry of candidates) {
+      const album = entry.album;
+      if (!album.collectionId) continue;
+      try {
+        const albumTracks = await requestApple('lookup', {
+          id:String(album.collectionId),
+          entity:'song',
+          limit:'200'
+        });
+        albumTracks.forEach(track => {
+          if (track.previewUrl && track.trackId) tracksById.set(track.trackId, track);
+        });
+      } catch (error) {
+        if (error.name === 'AbortError') throw error;
+        console.warn(`Trackvorschauen für „${album.collectionName || item.title}“ konnten nicht geladen werden:`, error);
+      }
+    }
+    let tracks = [...tracksById.values()];
+    if (!tracks.length) {
+      const songResults = await requestApple('search', {
+        term:`${wantedArtist} ${wantedAlbum}`.trim(),
+        entity:'song',
+        limit:'100'
+      });
+      tracks = songResults.filter(track => track.previewUrl
+        && albumScore(track.collectionName, wantedAlbum) >= 0.4
+        && artistScore(track.artistName, wantedArtist) >= 0.4);
+    }
+    if (albumListeningRequest !== controller) return;
+    tracks.sort((a, b) => {
+      const scoreA = albumScore(a.collectionName, wantedAlbum) * 0.58 + artistScore(a.artistName, wantedArtist) * 0.42;
+      const scoreB = albumScore(b.collectionName, wantedAlbum) * 0.58 + artistScore(b.artistName, wantedArtist) * 0.42;
+      return scoreB - scoreA || (Number(a.trackNumber) || 0) - (Number(b.trackNumber) || 0);
+    });
+    const uniqueTracks = new Map();
+    tracks.forEach(track => {
+      const key = normalize(track.trackName);
+      if (key && !uniqueTracks.has(key)) uniqueTracks.set(key, track);
+    });
+    tracks = [...uniqueTracks.values()].slice(0, 40);
+    if (!tracks.length) {
+      const albumUrl = candidates[0]?.album.collectionViewUrl;
+      if (albumUrl && mountListeningEmbed(content, albumUrl, item.title || 'Album')) {
+        status.textContent = 'Keine Trackvorschau verfügbar. Apple-Music-Player:';
+      } else {
+        status.textContent = 'Kein passender eingebetteter Player gefunden. Hinterlege einen Spotify-, Apple-Music- oder YouTube-Link im Album.';
+      }
+      return;
+    }
+    status.textContent = 'Vorschauen gefunden. Wähle einen Track, um ihn im eingebetteten Apple-Music-Player zu laden:';
+    const list = document.createElement('div');
+    list.className = 'album-listen-track-list';
+    tracks.forEach(track => {
+      const trackUrl = track.trackViewUrl || track.collectionViewUrl;
+      const embedUrl = getAppleMusicEmbedUrl(trackUrl);
+      if (!embedUrl) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'album-listen-track';
+      const title = document.createElement('span');
+      title.textContent = track.trackName || 'Track';
+      const play = document.createElement('span');
+      play.textContent = '▶';
+      button.append(title, play);
+      button.addEventListener('click', () => {
+        content.querySelector('.album-listen-embed')?.remove();
+        if (mountListeningEmbed(content, trackUrl, track.trackName || item.title || 'Track')) {
+          list.remove();
+          status.textContent = `Apple Music: ${track.trackName || item.title || 'Track'}`;
+        }
+      });
+      list.appendChild(button);
+    });
+    content.appendChild(list);
+  } catch (error) {
+    if (error.name === 'AbortError') return;
+    console.error('Apple-Vorschau konnte nicht geladen werden:', error);
+    status.textContent = 'Apple-Vorschauen konnten gerade nicht geladen werden. Prüfe die Internetverbindung oder öffne den Plattform-Link.';
+  } finally {
+    await Promise.all(providerTasks);
+    if (albumListeningRequest === controller) albumListeningRequest = null;
+  }
+}
+
+document.getElementById('closeAlbumListeningBtn').addEventListener('click', closeAlbumListening);
+document.getElementById('albumListeningOverlay').addEventListener('click', event => {
+  if (event.target.id === 'albumListeningOverlay') closeAlbumListening();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('albumListeningOverlay').classList.contains('open')) closeAlbumListening();
+});
 
 document.getElementById('manualBtn').addEventListener('click', () => {
   const def = getDefaultReleaseType();
@@ -7938,6 +9109,21 @@ document.getElementById('cancelBtn').addEventListener('click', () => {
 });
 document.getElementById('reviewOwnedSkipBtn').addEventListener('click', skipOwnedAlbumReviewItem);
 document.getElementById('reviewOwnedAlbumsBtn').addEventListener('click', startOwnedAlbumReview);
+document.getElementById('reviewOwnedPrevBtn').addEventListener('click', () => navigateOwnedAlbumReview(ownedAlbumReviewIndex - 1));
+document.getElementById('reviewOwnedGoBtn').addEventListener('click', async () => {
+  const requestedIndex = Number(document.getElementById('reviewOwnedIndexInput').value);
+  if (!Number.isInteger(requestedIndex) || requestedIndex < 1 || requestedIndex > ownedAlbumReviewQueue.length) {
+    await showAlert(`Bitte eine Eintragsnummer zwischen 1 und ${ownedAlbumReviewQueue.length} eingeben.`);
+    return;
+  }
+  navigateOwnedAlbumReview(requestedIndex - 1);
+});
+document.getElementById('reviewOwnedIndexInput').addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    document.getElementById('reviewOwnedGoBtn').click();
+  }
+});
 document.getElementById('closeAlbumEditorBtn').addEventListener('click', () => document.getElementById('cancelBtn').click());
 albumEditorOverlay.addEventListener('click', event => {
   if (event.target === albumEditorOverlay) document.getElementById('cancelBtn').click();
@@ -7953,6 +9139,23 @@ document.getElementById('cancelVinylEditorBtn').addEventListener('click', () => 
   else closeVinylEditor();
 });
 document.getElementById('vinylMigrationNextBtn').addEventListener('click', () => commitVinylMigrationItem(true));
+document.getElementById('vinylMigrationPrevBtn').addEventListener('click', () => {
+  if (vinylMigrationIndex > 0) commitVinylMigrationItem(true, vinylMigrationIndex - 1);
+});
+document.getElementById('vinylMigrationGoBtn').addEventListener('click', async () => {
+  const requestedIndex = Number(document.getElementById('vinylMigrationIndexInput').value);
+  if (!Number.isInteger(requestedIndex) || requestedIndex < 1 || requestedIndex > vinylMigrationQueue.length) {
+    await showAlert(`Bitte eine Eintragsnummer zwischen 1 und ${vinylMigrationQueue.length} eingeben.`);
+    return;
+  }
+  commitVinylMigrationItem(true, requestedIndex - 1);
+});
+document.getElementById('vinylMigrationIndexInput').addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    document.getElementById('vinylMigrationGoBtn').click();
+  }
+});
 document.getElementById('vinylEditorOverlay').addEventListener('click', event => {
   if (event.target.id !== 'vinylEditorOverlay') return;
   if (vinylMigrationActive) commitVinylMigrationItem(false);
@@ -8099,6 +9302,14 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   currentDraft.year = document.getElementById('fYear').value.trim();
   currentDraft.genre = getGenreInputValues().join(', ');
   currentDraft.coverUrl = document.getElementById('fCoverUrl').value.trim();
+  const listeningUrlInput = document.getElementById('fListeningUrl');
+  const listeningUrl = getSupportedListeningUrl(listeningUrlInput.value);
+  if (listeningUrl === null) {
+    await showAlert('Bitte einen HTTPS-Link von Spotify oder Apple Music eingeben.');
+    listeningUrlInput.focus();
+    return;
+  }
+  currentDraft.listeningUrl = listeningUrl;
   currentDraft.releaseType = document.getElementById('fReleaseType').value;
   currentDraft.condition = document.getElementById('fCondition').value;
   currentDraft.notes = document.getElementById('fNotes').value.trim();
@@ -8127,13 +9338,25 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     currentDraft.priceManual = formLoadedPriceManual;
   }
   currentDraft.tracklist = currentTracks;
-  if (!currentDraft.title) { await showAlert('Bitte einen Titel eingeben.'); return; }
+  if (!currentDraft.title) {
+    ownedAlbumReviewTargetIndex = null;
+    await showAlert('Bitte einen Titel eingeben.');
+    return;
+  }
 
   const existingIndex = collection.findIndex(c => c.id === currentDraft.id);
   if (existingIndex >= 0) { collection[existingIndex] = currentDraft; } else { collection.push(currentDraft); }
   saveCollection();
   if (ownedAlbumReviewActive) {
-    ownedAlbumReviewIndex += 1;
+    ownedAlbumReviewIndex = ownedAlbumReviewTargetIndex == null
+      ? ownedAlbumReviewIndex + 1
+      : ownedAlbumReviewTargetIndex;
+    ownedAlbumReviewTargetIndex = null;
+    saveEditReviewProgress('ownedAlbums', ownedAlbumReviewQueue, Math.min(ownedAlbumReviewIndex, ownedAlbumReviewQueue.length - 1));
+    if (ownedAlbumReviewIndex >= ownedAlbumReviewQueue.length) {
+      finishOwnedAlbumReview(true);
+      return;
+    }
     openOwnedAlbumReviewItem();
     return;
   }
@@ -8484,12 +9707,38 @@ const storageRandomFilterWrap = document.getElementById('storageRandomFilterWrap
 const storageRandomFilterBtn = document.getElementById('storageRandomFilterBtn');
 const storageRandomFilterPanel = document.getElementById('storageRandomFilterPanel');
 if (storageRandomFilterBtn && storageRandomFilterPanel) {
+  const randomFilterPanelParent = storageRandomFilterPanel.parentElement;
+  const randomFilterPanelNextSibling = storageRandomFilterPanel.nextSibling;
+  const closeStorageRandomFilterPanel = () => {
+    storageRandomFilterPanel.classList.remove('open');
+    if (randomFilterPanelParent && storageRandomFilterPanel.parentElement !== randomFilterPanelParent) {
+      randomFilterPanelParent.insertBefore(
+        storageRandomFilterPanel,
+        randomFilterPanelNextSibling?.parentElement === randomFilterPanelParent ? randomFilterPanelNextSibling : null
+      );
+    }
+    storageRandomFilterPanel.style.removeProperty('position');
+    storageRandomFilterPanel.style.removeProperty('z-index');
+    storageRandomFilterPanel.style.removeProperty('top');
+    storageRandomFilterPanel.style.removeProperty('right');
+    storageRandomFilterPanel.style.removeProperty('left');
+    storageRandomFilterBtn.setAttribute('aria-expanded', 'false');
+  };
   storageRandomFilterBtn.addEventListener('click', event => {
     event.stopPropagation();
     const opening = !storageRandomFilterPanel.classList.contains('open');
     if (opening) {
-      document.body.appendChild(storageRandomFilterPanel);
+      refreshStorageRandomGenreOptions();
+      if (window.innerWidth < 1280) {
+        document.body.appendChild(storageRandomFilterPanel);
+        storageRandomFilterPanel.style.position = 'fixed';
+        storageRandomFilterPanel.style.zIndex = '2147483647';
+      }
       storageRandomFilterPanel.classList.add('open');
+      requestAnimationFrame(() => {
+        const genreChips = document.getElementById('storageRandomGenreChips');
+        if (genreChips) genreChips.scrollLeft = genreChips.scrollWidth;
+      });
       const buttonRect = storageRandomFilterBtn.getBoundingClientRect();
       const panelRect = storageRandomFilterPanel.getBoundingClientRect();
       const top = Math.min(buttonRect.bottom + 8, window.innerHeight - panelRect.height - 8);
@@ -8498,7 +9747,7 @@ if (storageRandomFilterBtn && storageRandomFilterPanel) {
       storageRandomFilterPanel.style.right = `${right}px`;
       storageRandomFilterPanel.style.left = 'auto';
     } else {
-      storageRandomFilterPanel.classList.remove('open');
+      closeStorageRandomFilterPanel();
     }
     storageRandomFilterBtn.setAttribute('aria-expanded', String(opening));
   });
@@ -8508,19 +9757,71 @@ if (storageRandomFilterBtn && storageRandomFilterPanel) {
       localStorage.setItem('storageRandomFormatsV1', JSON.stringify(getStorageRandomFormats()));
       saveCloudDataDebounced();
     }
-    if (event.target.id === 'storageRandomAnimationCheckbox') {
-      localStorage.setItem('storageRandomAnimationV1', event.target.checked ? 'true' : 'false');
-      saveCloudDataDebounced();
+  });
+  storageRandomFilterPanel.addEventListener('input', event => {
+    if (event.target.id === 'storageRandomGenreInput') handleStorageRandomGenreInput(event.target);
+    if (event.target.id === 'storageRandomYearInput') validateStorageRandomYear(event.target.value);
+    if (event.target.id === 'storageRandomGenreInput' || event.target.id === 'storageRandomYearInput') {
+      updateStorageRandomClearButton();
     }
   });
+  storageRandomFilterPanel.addEventListener('keydown', event => {
+    if (event.target.id === 'storageRandomGenreInput') {
+      if (handleGenreInputTab(event, event.target, () => commitStorageRandomGenreInput(event.target))) return;
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commitStorageRandomGenreInput(event.target);
+      } else if (event.key === 'Backspace' && !event.target.value) {
+        const genres = getStorageRandomGenres();
+        genres.pop();
+        renderStorageRandomGenreChips(genres);
+        updateStorageRandomClearButton();
+      }
+    }
+    if (event.target.id === 'storageRandomYearInput' && event.key === 'Enter') {
+      event.preventDefault();
+      event.target.blur();
+    }
+  });
+  storageRandomFilterPanel.addEventListener('change', event => {
+    if (event.target.id === 'storageRandomYearInput') {
+      validateStorageRandomYear(event.target.value);
+      updateStorageRandomClearButton();
+    }
+    if (event.target.id === 'storageRandomGenreInput') commitStorageRandomGenreInput(event.target);
+  });
+  const storageRandomGenreInput = document.getElementById('storageRandomGenreInput');
+  const storageRandomGenreChips = document.getElementById('storageRandomGenreChips');
+  storageRandomGenreChips.addEventListener('wheel', event => {
+    if (storageRandomGenreChips.scrollWidth <= storageRandomGenreChips.clientWidth) return;
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      event.preventDefault();
+      storageRandomGenreChips.scrollLeft += event.deltaY;
+    }
+  }, { passive:false });
+  document.getElementById('storageRandomClearBtn').addEventListener('click', () => {
+    renderStorageRandomGenreChips([]);
+    storageRandomGenreInput.value = '';
+    storageRandomGenreInput.removeAttribute('aria-invalid');
+    document.getElementById('storageRandomYearInput').value = '';
+    validateStorageRandomYear('');
+    updateStorageRandomClearButton();
+    storageRandomGenreInput.focus();
+  });
+  storageRandomGenreInput.addEventListener('blur', event => commitStorageRandomGenreInput(event.target));
+  storageRandomGenreInput.closest('.storage-random-genre-input').addEventListener('click', event => {
+    if (!event.target.closest('.genre-chip-remove')) storageRandomGenreInput.focus();
+  });
+  document.getElementById('storageRandomYearInput').addEventListener('blur', event => {
+    validateStorageRandomYear(event.target.value);
+    updateStorageRandomClearButton();
+  });
   document.addEventListener('click', () => {
-    storageRandomFilterPanel.classList.remove('open');
-    storageRandomFilterBtn.setAttribute('aria-expanded', 'false');
+    closeStorageRandomFilterPanel();
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') {
-      storageRandomFilterPanel.classList.remove('open');
-      storageRandomFilterBtn.setAttribute('aria-expanded', 'false');
+      closeStorageRandomFilterPanel();
     }
   });
   try {
@@ -8532,8 +9833,21 @@ if (storageRandomFilterBtn && storageRandomFilterPanel) {
         input.checked = savedFormats.includes(input.dataset.storageRandomFormat);
       });
     }
+    localStorage.removeItem('storageRandomGenresV1');
+    localStorage.removeItem('storageRandomYearV1');
+    renderStorageRandomGenreChips([]);
+    document.getElementById('storageRandomYearInput').value = '';
+    updateStorageRandomClearButton();
   } catch (error) {
+    console.error('Zufallsfilter konnten nicht geladen werden:', error);
   }
+}
+const storageRandomAnimationCheckbox = document.getElementById('storageRandomAnimationCheckbox');
+if (storageRandomAnimationCheckbox) {
+  storageRandomAnimationCheckbox.addEventListener('change', () => {
+    localStorage.setItem('storageRandomAnimationV1', storageRandomAnimationCheckbox.checked ? 'true' : 'false');
+    saveCloudDataDebounced();
+  });
 }
 const selectModeBtn = document.getElementById('selectModeBtn');
 if (selectModeBtn) {
@@ -8624,7 +9938,17 @@ function setView(view, persist = true) {
   if (storageRandomPickBtn) storageRandomPickBtn.style.display = view === 'storage' && viewingOwnCollection ? 'inline-flex' : 'none';
   if (storageRandomFilterWrap) storageRandomFilterWrap.style.display = view === 'storage' && viewingOwnCollection ? 'block' : 'none';
   storageRandomFilterPanel?.classList.remove('open');
-  storageRandomFilterBtn?.setAttribute('aria-expanded', 'false');
+  if (storageRandomFilterBtn) {
+    storageRandomFilterBtn.setAttribute('aria-expanded', 'false');
+    if (storageRandomFilterPanel?.parentElement !== storageRandomFilterWrap) {
+      storageRandomFilterWrap?.appendChild(storageRandomFilterPanel);
+      storageRandomFilterPanel?.style.removeProperty('position');
+      storageRandomFilterPanel?.style.removeProperty('z-index');
+      storageRandomFilterPanel?.style.removeProperty('top');
+      storageRandomFilterPanel?.style.removeProperty('right');
+      storageRandomFilterPanel?.style.removeProperty('left');
+    }
+  }
   if (viewStorageBtn) {
     viewStorageBtn.style.display = viewingOwnCollection ? 'inline-flex' : 'none';
     viewStorageBtn.classList.toggle('toggle-active', view === 'storage');
@@ -8637,7 +9961,7 @@ function setView(view, persist = true) {
 
 function createUnsortedStorageCard(item) {
   const card = document.createElement('article');
-  card.className = 'collection-card owned';
+  card.className = 'collection-card owned storage-unsorted-card';
   card.dataset.storageItem = item.id;
   card.innerHTML = `
     <div class="media"><img class="storage-record-cover" src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" decoding="async" draggable="false"></div>
@@ -8645,11 +9969,16 @@ function createUnsortedStorageCard(item) {
       <p class="title">${escapeHtml(item.title || '')}</p>
       <p class="artist">${escapeHtml(item.artist || '')}</p>
       <div class="storage-unsorted-actions">
+        <button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶</button>
         <button type="button" class="edit" title="Bearbeiten" aria-label="Bearbeiten">✎</button>
         <button type="button" class="del" title="Löschen" aria-label="Löschen">×</button>
       </div>
     </div>`;
   bindStorageItemPointerDrag(card, item);
+  card.querySelector('.listen').addEventListener('click', event => {
+    event.stopPropagation();
+    openAlbumListening(item);
+  });
   return card;
 }
 
@@ -8658,8 +9987,12 @@ function createStoredVinylTile(item) {
   tile.className = 'storage-record';
   tile.dataset.storageItem = item.id;
   tile.title = `${item.title || ''} · ${item.artist || ''}`;
-  tile.innerHTML = `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(item.artist || '')}</span></div>`;
+  tile.innerHTML = `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(item.artist || '')}</span></div><button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶</button>`;
   bindStorageItemPointerDrag(tile, item);
+  tile.querySelector('.listen').addEventListener('click', event => {
+    event.stopPropagation();
+    openAlbumListening(item);
+  });
   tile.addEventListener('dblclick', () => editEntry(item.id));
   return tile;
 }
@@ -8674,9 +10007,156 @@ function getStorageRandomFormats() {
     .map(input => input.dataset.storageRandomFormat);
 }
 
+function getExistingStorageGenres() {
+  const genres = new Map();
+  collection.forEach(item => getGenreValues(item.genre).forEach(genre => {
+    const key = genre.toLocaleLowerCase('de');
+    if (!genres.has(key)) genres.set(key, genre);
+  }));
+  return [...genres.values()].sort((a, b) => a.localeCompare(b, 'de'));
+}
+
+function refreshStorageRandomGenreOptions() {
+  const options = document.getElementById('storageRandomGenreOptions');
+  if (options) options.replaceChildren(...getExistingStorageGenres().map(genre => {
+    const option = document.createElement('option');
+    option.value = genre;
+    return option;
+  }));
+  refreshKnownGenreOptions();
+}
+
+function getStorageRandomGenres() {
+  return getGenreChipValues('storageRandomGenreChips');
+}
+
+function renderStorageRandomGenreChips(genres) {
+  const list = document.getElementById('storageRandomGenreChips');
+  const input = document.getElementById('storageRandomGenreInput');
+  if (!list || !input) return;
+  const existingGenres = new Map(getExistingStorageGenres().map(genre => [genre.toLocaleLowerCase('de'), genre]));
+  list.replaceChildren();
+  getGenreValues(genres).forEach(genre => {
+    const canonicalGenre = existingGenres.get(genre.toLocaleLowerCase('de'));
+    if (!canonicalGenre) return;
+    const chip = document.createElement('span');
+    chip.className = 'genre-chip';
+    const label = document.createElement('span');
+    label.textContent = canonicalGenre;
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'genre-chip-remove';
+    removeButton.textContent = '×';
+    removeButton.title = `${canonicalGenre} entfernen`;
+    removeButton.setAttribute('aria-label', `${canonicalGenre} entfernen`);
+    removeButton.addEventListener('click', () => {
+      chip.remove();
+      updateStorageRandomClearButton();
+      input.focus();
+    });
+    chip.append(label, removeButton);
+    list.appendChild(chip);
+  });
+  list.scrollLeft = list.scrollWidth;
+  updateStorageRandomClearButton();
+}
+
+function addStorageRandomGenres(values, input) {
+  const existingGenres = new Map(getExistingStorageGenres().map(genre => [genre.toLocaleLowerCase('de'), genre]));
+  const currentGenres = getStorageRandomGenres();
+  const selected = new Set(currentGenres.map(genre => genre.toLocaleLowerCase('de')));
+  const invalid = [];
+  values.map(value => value.trim()).filter(Boolean).forEach(genre => {
+    const canonicalGenre = existingGenres.get(genre.toLocaleLowerCase('de'));
+    if (!canonicalGenre) {
+      invalid.push(genre);
+      return;
+    }
+    const key = canonicalGenre.toLocaleLowerCase('de');
+    if (!selected.has(key)) {
+      selected.add(key);
+      currentGenres.push(canonicalGenre);
+    }
+  });
+  renderStorageRandomGenreChips(currentGenres);
+  if (input && invalid.length) input.setAttribute('aria-invalid', 'true');
+  else input?.removeAttribute('aria-invalid');
+  updateStorageRandomClearButton();
+  return invalid.length === 0;
+}
+
+function handleStorageRandomGenreInput(input) {
+  const parts = input.value.split(',');
+  if (parts.length < 2) {
+    if (!parts[0].trim()) input.removeAttribute('aria-invalid');
+    else {
+      const genreExists = getExistingStorageGenres().some(genre =>
+        genre.toLocaleLowerCase('de') === parts[0].trim().toLocaleLowerCase('de'));
+      if (!genreExists) input.setAttribute('aria-invalid', 'true');
+      else input.removeAttribute('aria-invalid');
+    }
+    return;
+  }
+  addStorageRandomGenres(parts.slice(0, -1), input);
+  input.value = parts[parts.length - 1];
+}
+
+function commitStorageRandomGenreInput(input) {
+  const pending = input.value.trim();
+  if (!pending) return;
+  if (addStorageRandomGenres(pending.split(','), input)) input.value = '';
+}
+
+function validateStorageRandomYear(value) {
+  const input = document.getElementById('storageRandomYearInput');
+  const yearText = String(value || '').trim();
+  if (!yearText) {
+    input.removeAttribute('aria-invalid');
+    return true;
+  }
+  const match = yearText.match(/^(\d{4})(?:\s*-\s*(\d{4}))?$/);
+  if (!match || (match[2] && Number(match[2]) < Number(match[1]))) {
+    input.setAttribute('aria-invalid', 'true');
+    return false;
+  }
+  input.removeAttribute('aria-invalid');
+  return true;
+}
+
+function getStorageRandomYearRange(value) {
+  const match = String(value || '').trim().match(/^(\d{4})(?:\s*-\s*(\d{4}))?$/);
+  if (!match) return null;
+  return { from: Number(match[1]), to: Number(match[2] || match[1]) };
+}
+
+function updateStorageRandomClearButton() {
+  const button = document.getElementById('storageRandomClearBtn');
+  const genreInput = document.getElementById('storageRandomGenreInput');
+  const yearInput = document.getElementById('storageRandomYearInput');
+  if (!button || !genreInput || !yearInput) return;
+  button.hidden = getStorageRandomGenres().length === 0
+    && !genreInput.value.trim()
+    && !yearInput.value.trim();
+}
+
+window.refreshStorageRandomFilterControls = function() {
+  localStorage.removeItem('storageRandomGenresV1');
+  localStorage.removeItem('storageRandomYearV1');
+  renderStorageRandomGenreChips([]);
+  refreshStorageRandomGenreOptions();
+  const yearInput = document.getElementById('storageRandomYearInput');
+  yearInput.value = '';
+  validateStorageRandomYear('');
+  document.getElementById('storageRandomGenreInput').value = '';
+  document.getElementById('storageRandomGenreInput').removeAttribute('aria-invalid');
+  updateStorageRandomClearButton();
+};
+
 function renderStorageRandomResult(item) {
   if (!item) return;
   storageRandomResultItemId = String(item.id);
+  document.getElementById('storageRandomCaseView').hidden = true;
+  document.getElementById('storageRandomResultDetails').hidden = false;
   const design = normalizeVinylDesign(item);
   const record = design.records[0] || makeDefaultVinylRecord(item.color, item.colorSecondary);
   const cover = document.getElementById('storageResultCover');
@@ -8710,8 +10190,85 @@ function renderStorageRandomResult(item) {
 }
 
 function closeStorageRandomResult() {
+  if (storageRandomPickInProgress) return;
   document.getElementById('storageRandomResultOverlay').classList.remove('open');
+  document.getElementById('storageRandomCaseView').hidden = true;
   storageRandomResultItemId = null;
+}
+
+async function playStorageCaseRoll(items, winner, locationLabel) {
+  const overlay = document.getElementById('storageRandomResultOverlay');
+  const caseView = document.getElementById('storageRandomCaseView');
+  const track = document.getElementById('storageCaseTrack');
+  const viewport = document.getElementById('storageCaseWindow');
+  const winnerIndex = 42 + Math.floor(Math.random() * 38);
+  const reelLength = winnerIndex + 24 + Math.floor(Math.random() * 24);
+  const reelItems = Array.from({ length: reelLength }, () => items[Math.floor(Math.random() * items.length)]);
+  reelItems[winnerIndex] = winner;
+  const durationMs = 3600 + Math.floor(Math.random() * 4401);
+
+  document.getElementById('storageCaseLocation').textContent = locationLabel;
+  track.replaceChildren();
+  track.classList.remove('rolling');
+  track.style.removeProperty('--storage-case-duration');
+  track.style.transform = 'translateX(0)';
+  reelItems.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'storage-case-card';
+    const image = document.createElement('img');
+    const placeholder = document.createElement('div');
+    placeholder.className = 'storage-case-cover-placeholder';
+    placeholder.textContent = '♫';
+    if (item.coverUrl) {
+      image.src = item.coverUrl;
+      image.alt = `Cover: ${item.title || 'Unbekanntes Album'}`;
+      placeholder.hidden = true;
+      image.addEventListener('error', () => {
+        image.hidden = true;
+        placeholder.hidden = false;
+      }, { once: true });
+    } else {
+      image.hidden = true;
+    }
+    const title = document.createElement('strong');
+    title.textContent = item.title || 'Unbekanntes Album';
+    const artist = document.createElement('span');
+    artist.textContent = item.artist || 'Unbekannter Interpret';
+    card.append(image, placeholder, title, artist);
+    track.appendChild(card);
+  });
+  overlay.classList.add('open');
+  caseView.hidden = false;
+  document.getElementById('storageRandomResultDetails').hidden = true;
+
+  const cards = [...track.children];
+  const positionAtCenter = index => viewport.clientWidth / 2
+    - cards[index].offsetLeft
+    - cards[index].offsetWidth / 2;
+  track.style.transform = `translateX(${positionAtCenter(0)}px)`;
+  track.getBoundingClientRect();
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  await new Promise(resolve => {
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(fallback);
+      track.removeEventListener('transitionend', onTransitionEnd);
+      resolve();
+    };
+    const onTransitionEnd = event => {
+      if (event.target === track && event.propertyName === 'transform') finish();
+    };
+    const fallback = window.setTimeout(finish, durationMs + 300);
+    track.addEventListener('transitionend', onTransitionEnd);
+    track.style.setProperty('--storage-case-duration', `${durationMs}ms`);
+    track.classList.add('rolling');
+    track.style.transform = `translateX(${positionAtCenter(winnerIndex)}px)`;
+  });
+  track.classList.remove('rolling');
+  cards[winnerIndex].classList.add('is-winner');
 }
 
 document.getElementById('closeStorageRandomResultBtn').addEventListener('click', closeStorageRandomResult);
@@ -8721,10 +10278,13 @@ document.getElementById('storageRandomResultOverlay').addEventListener('click', 
 document.getElementById('rerollStorageResultBtn').addEventListener('click', async () => {
   if (storageRandomPickInProgress) return;
   closeStorageRandomResult();
+  document.getElementById('storageRandomResultDetails').hidden = true;
+  document.getElementById('storageRandomCaseView').hidden = true;
+  await new Promise(resolve => window.setTimeout(resolve, 0));
   await showRandomStoredVinyl();
 });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && document.getElementById('storageRandomResultOverlay').classList.contains('open')) {
+  if (event.key === 'Escape' && !storageRandomPickInProgress && document.getElementById('storageRandomResultOverlay').classList.contains('open')) {
     closeStorageRandomResult();
   }
 });
@@ -8736,13 +10296,30 @@ async function showRandomStoredVinyl() {
     await showAlert('Wähle mindestens ein Vinyl-Format für die Zufallsauswahl.');
     return;
   }
-  const storedTiles = [...document.querySelectorAll('#storageBoard .storage-record[data-storage-item]')]
+  refreshStorageRandomGenreOptions();
+  const genreInput = document.getElementById('storageRandomGenreInput');
+  const selectedGenres = genreInput.getAttribute('aria-invalid') === 'true'
+    ? []
+    : getStorageRandomGenres().map(genre => genre.toLocaleLowerCase('de'));
+  const yearInput = document.getElementById('storageRandomYearInput');
+  const yearIsValid = validateStorageRandomYear(yearInput.value);
+  const yearRange = yearIsValid ? getStorageRandomYearRange(yearInput.value) : null;
+  const matchingStoredTiles = [...document.querySelectorAll('#storageBoard .storage-record[data-storage-item]')]
     .filter(tile => {
       const item = collection.find(entry => String(entry.id) === tile.dataset.storageItem);
-      return item && selectedFormats.includes(getReleaseType(item));
+      if (!item || !selectedFormats.includes(getReleaseType(item))) return false;
+      if (selectedGenres.length && !getGenreValues(item.genre).some(genre => selectedGenres.includes(genre.toLocaleLowerCase('de')))) return false;
+      if (yearRange) {
+        const itemYear = Number(String(item.year || '').match(/\d{4}/)?.[0]);
+        if (!Number.isFinite(itemYear) || itemYear < yearRange.from || itemYear > yearRange.to) return false;
+      }
+      return true;
     });
+  const previousItemAlternatives = matchingStoredTiles.filter(tile =>
+    tile.dataset.storageItem !== String(lastRandomStoredItemId));
+  const storedTiles = previousItemAlternatives.length ? previousItemAlternatives : matchingStoredTiles;
   if (storedTiles.length === 0) {
-    await showAlert('Für die ausgewählten Formate sind keine Vinyls in Fächern einsortiert.');
+    await showAlert('Für die gewählten Formate, Genres und Jahre sind keine passenden Vinyls in Fächern einsortiert.');
     return;
   }
 
@@ -8766,98 +10343,68 @@ async function showRandomStoredVinyl() {
   const selectedShelfGroup = eligibleShelves[Math.floor(Math.random() * eligibleShelves.length)];
   const eligibleCompartments = [...selectedShelfGroup.compartments.values()];
   const selectedCompartmentGroup = eligibleCompartments[Math.floor(Math.random() * eligibleCompartments.length)];
-  const itemChoices = selectedCompartmentGroup.tiles.length > 1
+  const alternatives = selectedCompartmentGroup.tiles.length > 1
     ? selectedCompartmentGroup.tiles.filter(tile => tile.dataset.storageItem !== String(lastRandomStoredItemId))
-    : selectedCompartmentGroup.tiles;
+    : [];
+  const itemChoices = alternatives.length ? alternatives : selectedCompartmentGroup.tiles;
   const selectedTile = itemChoices[Math.floor(Math.random() * itemChoices.length)];
   const selectedItem = collection.find(item => String(item.id) === selectedTile.dataset.storageItem);
   if (!selectedItem) return;
 
-  const previousCollapsedShelfIds = new Set(collapsedStorageShelfIds);
-  const eligibleShelfIds = new Set(eligibleShelves.map(group => group.element.dataset.shelfId));
-  collapsedStorageShelfIds.clear();
-  shelfLocations.forEach(entry => {
-    if (!eligibleShelfIds.has(entry.id)) collapsedStorageShelfIds.add(entry.id);
-  });
-  updateStorageShelfCollapseControls(document.getElementById('storageBoard'));
   storageRandomPickInProgress = true;
   if (storageRandomPickBtn) storageRandomPickBtn.disabled = true;
   const shelf = selectedShelfGroup.element;
   const compartment = selectedCompartmentGroup.element;
-  const clearPickClasses = () => document.querySelectorAll('#storageBoard .random-pick-shelf, #storageBoard .random-pick-compartment, #storageBoard .random-pick-spinning, #storageBoard .random-pick-decoy, #storageBoard .random-highlight')
-    .forEach(element => element.classList.remove('random-pick-shelf', 'random-pick-compartment', 'random-pick-spinning', 'random-pick-decoy', 'random-highlight'));
-  clearPickClasses();
-  const pause = duration => new Promise(resolve => window.setTimeout(resolve, duration));
+  document.querySelectorAll('#storageBoard .random-pick-shelf, #storageBoard .random-pick-compartment, #storageBoard .random-highlight')
+    .forEach(element => element.classList.remove('random-pick-shelf', 'random-pick-compartment', 'random-highlight'));
   const playAnimation = document.getElementById('storageRandomAnimationCheckbox')?.checked !== false
     && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const clearStage = selector => document.querySelectorAll(selector).forEach(element => {
-    element.classList.remove('random-pick-shelf', 'random-pick-compartment', 'random-pick-decoy');
-  });
-
-  async function runRoulette(candidates, winner, className, phase) {
-    const decoys = candidates.filter(candidate => candidate !== winner);
-    const steps = 10;
+  const pause = duration => new Promise(resolve => window.setTimeout(resolve, duration));
+  const clearStage = () => document.querySelectorAll('#storageBoard .random-pick-shelf, #storageBoard .random-pick-compartment')
+    .forEach(element => element.classList.remove('random-pick-shelf', 'random-pick-compartment'));
+  const runRoulette = async (candidates, winner, className) => {
+    const alternatives = candidates.filter(candidate => candidate !== winner);
+    const steps = Math.min(12, Math.max(7, candidates.length + 3));
+    let previous = null;
     for (let index = 0; index < steps; index += 1) {
-      const current = index === steps - 1 || decoys.length === 0
+      const current = index === steps - 1 || alternatives.length === 0
         ? winner
-        : decoys[Math.floor(Math.random() * decoys.length)];
-      clearStage('.storage-shelf.random-pick-shelf, .storage-compartment.random-pick-compartment, .storage-record.random-pick-decoy');
+        : alternatives[Math.floor(Math.random() * alternatives.length)];
+      if (previous) previous.classList.remove(className);
       current.classList.add(className);
-      if (phase === 'shelf') {
-        const shelvesPane = document.querySelector('#storageBoard .storage-shelves-pane');
-        if (shelvesPane) shelvesPane.scrollTo({
-          left: current.offsetLeft - shelvesPane.clientWidth / 2 + current.offsetWidth / 2,
-          behavior: 'smooth'
-        });
-      } else {
-        current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
-      await pause(45 + index * 58);
+      previous = current;
+      await pause(55 + index * 35);
     }
-  }
+  };
 
   try {
     if (playAnimation) {
       if (eligibleShelves.length > 1) {
-        await runRoulette(eligibleShelves.map(group => group.element), shelf, 'random-pick-shelf', 'shelf');
+        await runRoulette(eligibleShelves.map(group => group.element), shelf, 'random-pick-shelf');
+        clearStage();
+        await pause(160);
       }
       if (eligibleCompartments.length > 1) {
-        await runRoulette(eligibleCompartments.map(group => group.element), compartment, 'random-pick-compartment', 'compartment');
+        await runRoulette(eligibleCompartments.map(group => group.element), compartment, 'random-pick-compartment');
+        await pause(220);
       }
+      clearStage();
       if (selectedCompartmentGroup.tiles.length > 1) {
-        await runRoulette(selectedCompartmentGroup.tiles, selectedTile, 'random-pick-decoy', 'vinyl');
+        const reelItems = selectedCompartmentGroup.tiles
+          .map(tile => collection.find(item => String(item.id) === tile.dataset.storageItem))
+          .filter(Boolean);
+        const shelfName = shelf.querySelector('.storage-shelf-name')?.value || 'Regal';
+        const compartmentName = compartment.querySelector('.storage-compartment-name')?.value.trim()
+          || `Fach ${compartment.dataset.dropCompartment}`;
+        await playStorageCaseRoll(reelItems, selectedItem, `${shelfName} · ${compartmentName}`);
       }
     }
-
-    document.querySelectorAll('#storageBoard .random-pick-shelf, #storageBoard .random-pick-compartment, #storageBoard .random-pick-decoy')
-      .forEach(element => element.classList.remove('random-pick-shelf', 'random-pick-compartment', 'random-pick-decoy'));
-    if (playAnimation) {
-      if (eligibleShelves.length > 1) {
-        shelf?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-        shelf?.classList.add('random-pick-shelf');
-        await pause(220);
-        shelf?.classList.remove('random-pick-shelf');
-      }
-      if (eligibleCompartments.length > 1) {
-        compartment?.classList.add('random-pick-compartment');
-        await pause(220);
-        compartment?.classList.remove('random-pick-compartment');
-      }
-    }
-    selectedTile.scrollIntoView({ behavior: playAnimation ? 'smooth' : 'auto', block: 'center', inline: 'center' });
     selectedTile.classList.add('random-highlight');
-    if (playAnimation) selectedTile.classList.add('random-pick-spinning');
+    compartment.classList.add('random-pick-compartment');
     randomHighlightedItemId = selectedItem.id;
     lastRandomStoredItemId = selectedItem.id;
-    if (playAnimation) await pause(760);
-    selectedTile.classList.remove('random-pick-spinning');
   } finally {
-    shelf?.classList.remove('random-pick-shelf');
-    compartment?.classList.remove('random-pick-compartment');
-    selectedTile.classList.remove('random-pick-spinning');
-    collapsedStorageShelfIds.clear();
-    previousCollapsedShelfIds.forEach(id => collapsedStorageShelfIds.add(id));
-    updateStorageShelfCollapseControls(document.getElementById('storageBoard'));
+    clearStage();
     storageRandomPickInProgress = false;
     if (storageRandomPickBtn) storageRandomPickBtn.disabled = false;
   }
@@ -8867,6 +10414,9 @@ async function showRandomStoredVinyl() {
 let storageUnsortedCollapsed = false;
 let storageUnsortedAutoCollapsed = false;
 let storagePaneSplit = 0.67;
+let storageShelfZoom = 1;
+let storagePinchState = null;
+const storagePinchPointers = new Map();
 let storagePaneResize = null;
 let activeStorageLayout = null;
 let activeStoragePointerDrag = null;
@@ -8891,6 +10441,53 @@ function applyStoragePaneLayout(layout) {
     layout.style.gridTemplateColumns = `minmax(0, ${storagePaneSplit}fr) 8px minmax(220px, ${1 - storagePaneSplit}fr)`;
     layout.style.gridTemplateRows = 'minmax(0, 1fr)';
   }
+}
+
+function applyStorageShelfZoom(board) {
+  if (!board) return;
+  const zoom = Math.max(0.7, Math.min(1.8, storageShelfZoom));
+  board.style.setProperty('--storage-shelf-zoom', String(zoom));
+  const value = board.querySelector('.storage-shelf-zoom-value');
+  if (value) value.textContent = `${Math.round(zoom * 100)}%`;
+  board.querySelectorAll('.storage-shelf-zoom-controls button').forEach(button => {
+    const direction = Number(button.dataset.zoomDelta);
+    button.disabled = direction < 0 ? zoom <= 0.7 : zoom >= 1.8;
+  });
+}
+
+function bindStorageShelfPinchZoom(pane, board) {
+  pane.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch') return;
+    pane.setPointerCapture(event.pointerId);
+    storagePinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (storagePinchPointers.size !== 2) return;
+    const [first, second] = [...storagePinchPointers.values()];
+    storagePinchState = {
+      distance: Math.hypot(second.x - first.x, second.y - first.y),
+      zoom: storageShelfZoom
+    };
+    clearStoragePointerDrag();
+  });
+  pane.addEventListener('pointermove', event => {
+    if (!storagePinchPointers.has(event.pointerId)) return;
+    storagePinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (!storagePinchState || storagePinchPointers.size !== 2) return;
+    event.preventDefault();
+    const [first, second] = [...storagePinchPointers.values()];
+    const distance = Math.hypot(second.x - first.x, second.y - first.y);
+    if (storagePinchState.distance <= 0) return;
+    storageShelfZoom = Math.max(0.7, Math.min(1.8, storagePinchState.zoom * distance / storagePinchState.distance));
+    applyStorageShelfZoom(board);
+  }, { passive:false });
+  const finishPinch = event => {
+    if (!storagePinchPointers.delete(event.pointerId)) return;
+    if (storagePinchState) {
+      storagePinchState = null;
+      saveCloudDataDebounced();
+    }
+  };
+  pane.addEventListener('pointerup', finishPinch);
+  pane.addEventListener('pointercancel', finishPinch);
 }
 
 function bindStoragePaneResizer(layout, handle) {
@@ -9011,6 +10608,7 @@ function clearStoragePointerDrag() {
   activeStorageDropTarget?.classList.remove('drag-over');
   activeStorageDropTarget = null;
   if (activeStoragePointerDrag?.autoScrollFrame) cancelAnimationFrame(activeStoragePointerDrag.autoScrollFrame);
+  if (activeStoragePointerDrag?.longPressTimer) clearTimeout(activeStoragePointerDrag.longPressTimer);
   activeStoragePointerDrag?.preview?.remove();
   activeStoragePointerDrag?.source?.classList.remove('storage-pointer-source');
   activeStorageLayout?.classList.remove('storage-item-dragging');
@@ -9022,17 +10620,32 @@ function bindStorageItemPointerDrag(source, item) {
   source.addEventListener('pointerdown', event => {
     if (event.button !== 0 || !item.owned) return;
     if (event.target.closest('button, input, textarea, select')) return;
+    const isTouch = event.pointerType === 'touch';
     activeStoragePointerDrag = {
       pointerId: event.pointerId,
       item,
       source,
+      isTouch,
       startX: event.clientX,
       startY: event.clientY,
       x: event.clientX,
       y: event.clientY,
       dragging: false,
       preview: null,
-      autoScrollFrame: 0
+      autoScrollFrame: 0,
+      longPressTimer: isTouch ? setTimeout(() => {
+        if (activeStoragePointerDrag?.pointerId !== event.pointerId) return;
+        activeStoragePointerDrag.dragging = true;
+        source.classList.add('storage-pointer-source');
+        if (storagePlacementMode) activeStorageLayout?.classList.add('storage-item-dragging');
+        activeStoragePointerDrag.preview = document.createElement('img');
+        activeStoragePointerDrag.preview.className = 'storage-pointer-preview';
+        activeStoragePointerDrag.preview.src = item.coverUrl || '';
+        activeStoragePointerDrag.preview.alt = '';
+        document.body.appendChild(activeStoragePointerDrag.preview);
+        activeStoragePointerDrag.autoScrollFrame = requestAnimationFrame(continueStoragePointerDrag);
+        source.setPointerCapture(event.pointerId);
+      }, 450) : 0
     };
   });
 }
@@ -9042,6 +10655,15 @@ document.addEventListener('pointermove', event => {
   if (!drag || drag.pointerId !== event.pointerId) return;
   drag.x = event.clientX;
   drag.y = event.clientY;
+  if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) >= 6) {
+    if (drag.isTouch) {
+      clearTimeout(drag.longPressTimer);
+      drag.longPressTimer = 0;
+      clearStoragePointerDrag();
+      return;
+    }
+  }
+  if (!drag.dragging && drag.isTouch) return;
   if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
   event.preventDefault();
   if (!drag.dragging) {
@@ -9081,6 +10703,9 @@ document.addEventListener('pointerup', event => {
 }, true);
 
 document.addEventListener('pointercancel', clearStoragePointerDrag, true);
+document.addEventListener('touchmove', event => {
+  if (activeStoragePointerDrag?.isTouch && activeStoragePointerDrag.dragging) event.preventDefault();
+}, { capture:true, passive:false });
 document.addEventListener('click', event => {
   if (Date.now() > suppressStorageClickUntil || !event.target.closest('[data-storage-item]')) return;
   event.preventDefault();
@@ -9269,6 +10894,11 @@ function renderStorageBoard(visibleItems) {
     board.innerHTML = `<div class="storage-layout">
       <section class="storage-shelves-pane">
         <div class="storage-shelves-toolbar">
+          <div class="storage-shelf-zoom-controls" role="group" aria-label="Regalansicht vergrößern oder verkleinern">
+            <button type="button" data-zoom-delta="-0.1" aria-label="Regale verkleinern" title="Regale verkleinern">−</button>
+            <span class="storage-shelf-zoom-value" aria-live="polite">100%</span>
+            <button type="button" data-zoom-delta="0.1" aria-label="Regale vergrößern" title="Regale vergrößern">+</button>
+          </div>
           <button type="button" class="storage-placement-mode-toggle" aria-pressed="${storagePlacementMode}" title="Fächer beim Ziehen als Ablageziele anzeigen">Fächer-Modus: ${storagePlacementMode ? 'An' : 'Aus'}</button>
           <button type="button" class="storage-shelves-toggle-all" aria-expanded="false" title="Alle Regale ausklappen"><span>Alle Regale ausklappen</span></button>
         </div>
@@ -9299,6 +10929,15 @@ function renderStorageBoard(visibleItems) {
   const layout = board.querySelector('.storage-layout');
   activeStorageLayout = layout;
   applyStoragePaneLayout(layout);
+  applyStorageShelfZoom(board);
+  board.querySelectorAll('.storage-shelf-zoom-controls button').forEach(button => {
+    button.addEventListener('click', () => {
+      storageShelfZoom = Math.round((storageShelfZoom + Number(button.dataset.zoomDelta)) * 10) / 10;
+      storageShelfZoom = Math.max(0.7, Math.min(1.8, storageShelfZoom));
+      applyStorageShelfZoom(board);
+      saveCloudDataDebounced();
+    });
+  });
   layout.classList.toggle('storage-placement-mode', storagePlacementMode);
   updateStorageShelfCollapseControls(board);
   const placementModeToggle = layout.querySelector('.storage-placement-mode-toggle');
@@ -9321,6 +10960,7 @@ function renderStorageBoard(visibleItems) {
     updateStorageShelfCollapseControls(board);
     saveCloudDataDebounced();
   });
+  bindStorageShelfPinchZoom(layout.querySelector('.storage-shelves-pane'), board);
   const resizer = layout.querySelector('.storage-pane-resizer');
   bindStoragePaneResizer(layout, resizer);
   layout.querySelector('.storage-unsorted-toggle').addEventListener('click', event => {
@@ -9823,6 +11463,7 @@ ${actionButtons}
               <span class="release-badge ${badge.className}">${escapeHtml(badge.label)}</span>
             </div>
           </div>
+          <button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album ${escapeHtml(item.title)} anhören"><span aria-hidden="true">▶</span><span>Anhören</span></button>
           ${commonBadgeHtml}
           ${showCollectionExtra && viewingOwnCollection && item.owned && (getStorageLabel(item) || item.lastWashed) ? `<div class="collection-extra">${getStorageLabel(item) ? `<span>${escapeHtml(getStorageLabel(item))}</span>` : ''}${item.lastWashed ? `<span>Gewaschen: ${escapeHtml(getWashedDateLabel(item))}</span>` : ''}</div>` : ''}
         </div>
@@ -9855,6 +11496,10 @@ ${actionButtons}
           });
         }
       }
+      card.querySelector('.album-listen-card-btn').addEventListener('click', event => {
+        event.stopPropagation();
+        openAlbumListening(item);
+      });
       frag.appendChild(card);
     });
     grid.appendChild(frag);
@@ -10449,6 +12094,10 @@ document.getElementById('copyWishlistBtn').addEventListener('click', copyWishlis
 // Initialisierung
 updateSortButtons();
 renderCollection();
+completeSpotifyAuthCallback().catch(error => {
+  console.error('Spotify-Rückmeldung konnte nicht verarbeitet werden:', error);
+  updateSpotifyConnectionStatus(`Spotify-Rückmeldung konnte nicht verarbeitet werden: ${error.message}`);
+});
 // Hinweis: Der automatische Discogs-Preisabgleich beim Laden wurde entfernt,
 // da er bei jedem Seitenaufruf für alle Einträge ohne Preis parallel Discogs-Requests
 // auslöste und so schnell das Rate Limit sprengte. Preise stehen bereits in Firebase
@@ -10527,7 +12176,7 @@ window.addEventListener('unhandledrejection', (ev) => {
     </select>
     <div id="bulkGenreChipInput" class="genre-chip-input" style="opacity:0.5;">
       <div id="bulkGenreChips" class="genre-chip-list" aria-live="polite"></div>
-      <input type="text" id="bulkGenre" class="genre-chip-text" placeholder="Genre hinzufügen" aria-label="Genre hinzufügen" disabled>
+      <input type="text" id="bulkGenre" class="genre-chip-text" list="knownGenreOptions" placeholder="Genre hinzufügen" aria-label="Genre hinzufügen" autocomplete="off" disabled>
     </div>
     <div style="margin-top:4px; font-size:11px; color:var(--text-secondary);">Mit Komma oder Enter hinzufügen. „Genres ersetzen“ überschreibt die Genres bei allen ausgewählten Alben.</div>
   </div>
