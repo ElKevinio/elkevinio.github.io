@@ -2947,8 +2947,8 @@
   }
   .storage-result-overlay { z-index: 115; }
   .storage-result-box {
-    width: min(860px, calc(100vw - 24px));
-    max-width: 860px;
+    width: min(1220px, calc(100vw - 24px));
+    max-width: 1220px;
     max-height: calc(100dvh - 24px);
     overflow: auto;
   }
@@ -2973,10 +2973,18 @@
   .storage-result-tracklist li { padding:3px 4px; }
   .storage-result-tracklist li span:last-child { float:right; margin-left:12px; color:var(--text-muted); }
   .storage-result-footer { display:flex; justify-content:flex-end; margin-top:18px; }
+  .storage-result-content-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,360px); gap:22px; align-items:start; }
+  .storage-result-listening { min-width:0; padding-left:18px; border-left:1px solid var(--border); }
+  .storage-result-listening h3 { margin:0 0 10px; font-size:14px; }
+  .storage-result-listening-mobile { display:none; }
+  .storage-result-listening-content { min-width:0; }
   .storage-result-reroll { min-width:150px; justify-content:center; }
   .storage-result-reroll svg { width:16px; height:16px; }
-  @media (max-width:640px) {
+  @media (max-width:900px) {
     .storage-result-box { padding:14px; }
+    .storage-result-content-layout { grid-template-columns:minmax(0,1fr); gap:0; }
+    .storage-result-listening { display:none; }
+    .storage-result-listening-mobile { display:inline-flex; }
     .storage-result-layout { grid-template-columns:minmax(0,1fr); gap:18px; }
     .storage-result-media { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-items:start; }
     .storage-result-media-item { min-width:0; }
@@ -4361,31 +4369,38 @@
         </div>
         <button type="button" id="closeStorageRandomResultBtn" class="icon-btn" title="Schließen" aria-label="Ergebnis schließen">×</button>
       </div>
-      <div class="storage-result-layout">
-        <section class="storage-result-media" aria-label="Cover und Vinyl">
-          <div class="storage-result-media-item">
-            <p class="storage-result-media-label">Cover</p>
-            <img id="storageResultCover" class="storage-result-cover" alt="">
-          </div>
-          <div class="storage-result-media-item">
-            <p class="storage-result-media-label">Vinyl</p>
-            <div id="storageResultDisc" class="vinyl-editor-disc storage-result-disc"></div>
-            <p class="storage-result-count" id="storageResultCount"></p>
-          </div>
-        </section>
-        <section>
-          <dl class="storage-result-facts">
-            <div class="wide"><dt>Lagerort</dt><dd id="storageResultLocation"></dd></div>
-            <div><dt>Jahr</dt><dd id="storageResultYear"></dd></div>
-            <div><dt>Genre</dt><dd id="storageResultGenre"></dd></div>
-            <div><dt>Format</dt><dd id="storageResultFormat"></dd></div>
-            <div><dt>Zustand</dt><dd id="storageResultCondition"></dd></div>
-          </dl>
-          <h3 class="storage-result-track-heading">Tracklist</h3>
-          <ol class="storage-result-tracklist" id="storageResultTracklist"></ol>
-        </section>
+      <div class="storage-result-content-layout">
+        <div class="storage-result-layout">
+          <section class="storage-result-media" aria-label="Cover und Vinyl">
+            <div class="storage-result-media-item">
+              <p class="storage-result-media-label">Cover</p>
+              <img id="storageResultCover" class="storage-result-cover" alt="">
+            </div>
+            <div class="storage-result-media-item">
+              <p class="storage-result-media-label">Vinyl</p>
+              <div id="storageResultDisc" class="vinyl-editor-disc storage-result-disc"></div>
+              <p class="storage-result-count" id="storageResultCount"></p>
+            </div>
+          </section>
+          <section>
+            <dl class="storage-result-facts">
+              <div class="wide"><dt>Lagerort</dt><dd id="storageResultLocation"></dd></div>
+              <div><dt>Jahr</dt><dd id="storageResultYear"></dd></div>
+              <div><dt>Genre</dt><dd id="storageResultGenre"></dd></div>
+              <div><dt>Format</dt><dd id="storageResultFormat"></dd></div>
+              <div><dt>Zustand</dt><dd id="storageResultCondition"></dd></div>
+            </dl>
+            <h3 class="storage-result-track-heading">Tracklist</h3>
+            <ol class="storage-result-tracklist" id="storageResultTracklist"></ol>
+          </section>
+        </div>
+        <aside class="storage-result-listening" aria-label="Album anhören">
+          <h3>Album anhören</h3>
+          <div class="storage-result-listening-content" id="storageRandomInlineListening"></div>
+        </aside>
       </div>
       <div class="storage-result-footer">
+        <button type="button" id="storageRandomMobileListenBtn" class="storage-result-listening-mobile">▶ Anhören</button>
         <button type="button" id="rerollStorageResultBtn" class="primary storage-result-reroll">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 9a7 7 0 0 1 11.9-2L20 9M4 15l2.5 2a7 7 0 0 0 11.9-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Wiederholen
@@ -6153,6 +6168,7 @@ function getVinylLayerLength(layer, random = createVinylRandom(layer.seed)) {
 let vinylEditorDesign = null;
 let activeVinylIndex = 0;
 let storageRandomResultItemId = null;
+let storageRandomCurrentItem = null;
 
 function safeVinylColor(value, fallback = '#111111') {
   const color = normalizeColor(value);
@@ -8515,10 +8531,13 @@ function getYouTubeEmbedUrl(rawUrl) {
 }
 
 let albumListeningRequest = null;
+let albumListeningInlineTarget = null;
 
 function closeAlbumListening() {
   albumListeningRequest?.abort();
   albumListeningRequest = null;
+  albumListeningInlineTarget?.replaceChildren();
+  albumListeningInlineTarget = null;
   document.getElementById('albumListeningOverlay').classList.remove('open');
   document.getElementById('albumListeningContent').replaceChildren();
 }
@@ -8971,17 +8990,20 @@ async function searchAppleListening(item, content, controller, status) {
   return true;
 }
 
-async function openAlbumListening(item) {
+async function openAlbumListening(item, inlineTarget = null) {
   const overlay = document.getElementById('albumListeningOverlay');
-  const content = document.getElementById('albumListeningContent');
+  closeAlbumListening();
+  const content = inlineTarget || document.getElementById('albumListeningContent');
   const storedUrl = getSupportedListeningUrl(item.listeningUrl);
   if (item.listeningUrl && !storedUrl) {
     await showAlert('Der gespeicherte Hörlink ist ungültig. Bitte verwende einen HTTPS-Link von Spotify, Apple Music oder YouTube.');
     return;
   }
-  closeAlbumListening();
-  document.getElementById('albumListeningTitle').textContent = `${item.title || 'Album'} anhören`;
-  overlay.classList.add('open');
+  albumListeningInlineTarget = inlineTarget;
+  if (!inlineTarget) {
+    document.getElementById('albumListeningTitle').textContent = `${item.title || 'Album'} anhören`;
+    overlay.classList.add('open');
+  }
   if (storedUrl && mountListeningEmbed(content, storedUrl, item.title || 'Album')) return;
 
   const status = document.createElement('p');
@@ -9005,21 +9027,24 @@ async function openAlbumListening(item) {
     spotify: () => searchSpotifyListening(item, content, controller),
     youtube: () => searchYouTubeListening(item, content, controller)
   };
-  for (const provider of enabledProviders) {
-    if (controller.signal.aborted || albumListeningRequest !== controller) return;
-    status.textContent = `Suche bei ${provider === 'apple' ? 'Apple Music' : provider === 'spotify' ? 'Spotify' : 'YouTube'} …`;
-    try {
-      const found = await providerSearches[provider]();
-      if (found) return;
-    } catch (error) {
-      if (error.name === 'AbortError') return;
-      console.error(`${provider} Suche fehlgeschlagen:`, error);
-      appendProviderSearchMessage(content, provider === 'apple' ? 'Apple Music' : provider === 'spotify' ? 'Spotify' : 'YouTube', error.message || 'Suche fehlgeschlagen.');
+  try {
+    for (const provider of enabledProviders) {
+      if (controller.signal.aborted || albumListeningRequest !== controller) return;
+      status.textContent = `Suche bei ${provider === 'apple' ? 'Apple Music' : provider === 'spotify' ? 'Spotify' : 'YouTube'} …`;
+      try {
+        const found = await providerSearches[provider]();
+        if (found) return;
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        console.error(`${provider} Suche fehlgeschlagen:`, error);
+        appendProviderSearchMessage(content, provider === 'apple' ? 'Apple Music' : provider === 'spotify' ? 'Spotify' : 'YouTube', error.message || 'Suche fehlgeschlagen.');
+      }
     }
-  }
-  if (!controller.signal.aborted && albumListeningRequest === controller) {
-    status.textContent = 'Bei den aktivierten Suchdiensten wurden keine passenden Treffer gefunden.';
-    albumListeningRequest = null;
+    if (!controller.signal.aborted && albumListeningRequest === controller) {
+      status.textContent = 'Bei den aktivierten Suchdiensten wurden keine passenden Treffer gefunden.';
+    }
+  } finally {
+    if (albumListeningRequest === controller) albumListeningRequest = null;
   }
 }
 
@@ -10309,6 +10334,8 @@ window.refreshStorageRandomFilterControls = function() {
 
 function renderStorageRandomResult(item) {
   if (!item) return;
+  closeAlbumListening();
+  storageRandomCurrentItem = item;
   storageRandomResultItemId = String(item.id);
   document.getElementById('storageRandomCaseView').hidden = true;
   document.getElementById('storageRandomResultDetails').hidden = false;
@@ -10342,14 +10369,23 @@ function renderStorageRandomResult(item) {
     }).join('')
     : '<li>Keine Tracklist hinterlegt</li>';
   document.getElementById('storageRandomResultOverlay').classList.add('open');
+  if (window.matchMedia('(min-width: 901px)').matches) {
+    openAlbumListening(item, document.getElementById('storageRandomInlineListening'));
+  }
 }
 
 function closeStorageRandomResult() {
   if (storageRandomPickInProgress) return;
+  closeAlbumListening();
   document.getElementById('storageRandomResultOverlay').classList.remove('open');
   document.getElementById('storageRandomCaseView').hidden = true;
   storageRandomResultItemId = null;
+  storageRandomCurrentItem = null;
 }
+
+document.getElementById('storageRandomMobileListenBtn').addEventListener('click', () => {
+  if (storageRandomCurrentItem) openAlbumListening(storageRandomCurrentItem);
+});
 
 async function playStorageCaseRoll(items, winner, locationLabel) {
   const overlay = document.getElementById('storageRandomResultOverlay');
