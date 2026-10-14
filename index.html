@@ -8766,7 +8766,7 @@ function formatListeningTime(seconds) {
   return `${Math.floor(wholeSeconds / 60)}:${String(wholeSeconds % 60).padStart(2, '0')}`;
 }
 
-function buildSpotifyMiniPlayer(container, embedUrl, originalUrl, item, title) {
+function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   spotifyMiniController?.destroy();
   spotifyMiniController = null;
   spotifyMiniTracklistRequest?.abort();
@@ -8988,6 +8988,8 @@ function buildSpotifyMiniPlayer(container, embedUrl, originalUrl, item, title) {
     if (spotifyMiniController) spotifyMiniController.seek(Number(seek.value));
   });
   const albumId = new URL(originalUrl).pathname.match(/^\/album\/([A-Za-z0-9]+)\/?$/)?.[1];
+  const spotifyContent = new URL(originalUrl).pathname.match(/^\/(album|track)\/([A-Za-z0-9]+)\/?$/);
+  const spotifyUri = spotifyContent ? `spotify:${spotifyContent[1]}:${spotifyContent[2]}` : '';
   if (albumId) {
     const request = new AbortController();
     spotifyMiniTracklistRequest = request;
@@ -9020,7 +9022,8 @@ function buildSpotifyMiniPlayer(container, embedUrl, originalUrl, item, title) {
 
   loadSpotifyIframeApi().then(api => {
     if (!host.isConnected) return;
-    api.createController(controllerTarget, { url: embedUrl, width: '152', height: '152' }, controller => {
+    if (!spotifyUri) throw new Error('Die Spotify-Adresse enthält keine unterstützte Album- oder Titel-ID.');
+    api.createController(controllerTarget, { uri: spotifyUri, width: '152', height: '152' }, controller => {
       if (!host.isConnected) {
         controller.destroy();
         return;
@@ -9073,7 +9076,7 @@ function mountListeningEmbed(container, url, title, item = null) {
     document.getElementById('albumListeningDock').hidden = false;
   }
   if (spotifyEmbed) {
-    buildSpotifyMiniPlayer(playerContainer, embedUrl, url, item, title);
+    buildSpotifyMiniPlayer(playerContainer, url, item, title);
   } else {
     const frame = document.createElement('iframe');
     frame.className = `album-listen-embed ${appleEmbed ? 'apple' : 'youtube'}`;
