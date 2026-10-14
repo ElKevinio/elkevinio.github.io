@@ -1473,7 +1473,7 @@
   .storage-random-genre-input .genre-chip-text:-webkit-autofill,
   .storage-random-genre-input .genre-chip-text:autofill {
     -webkit-box-shadow:0 0 0 1000px var(--surface-1) inset !important;
-    -webkit-text-fill-color:var(--text-primary) !important;
+kann    -webkit-text-fill-color:var(--text-primary) !important;
     caret-color:var(--text-primary);
   }
   .storage-random-year-input { width:100%; min-width:0; padding:7px 9px; font-size:12px; }
@@ -1552,6 +1552,58 @@
   .album-listen-embed.spotify { height:352px; }
   .album-listen-embed.apple { height:230px; }
   .album-listen-embed.youtube { aspect-ratio:16 / 9; height:auto; }
+  .album-listening-dock {
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:2147483647;
+    width:min(360px, calc(100vw - 24px));
+    padding:10px;
+    border:1px solid var(--border-strong);
+    border-radius:12px;
+    background:var(--surface-2);
+    box-shadow:0 8px 32px rgba(0,0,0,.65);
+  }
+  .album-listening-dock[hidden] { display:none; }
+  .album-listening-dock-header {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:2px;
+  }
+  .album-listening-dock-title {
+    flex:1;
+    min-width:0;
+    overflow:hidden;
+    color:var(--text-primary);
+    font-size:13px;
+    font-weight:600;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .album-listening-dock-close {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    height:30px;
+    min-width:30px;
+    padding:0;
+    color:var(--text-secondary);
+  }
+  #albumListeningDockContent .album-listen-embed { margin-top:6px; }
+  #albumListeningDockContent .album-listen-embed.spotify { height:152px; }
+  #albumListeningDockContent .album-listen-embed.apple { height:150px; }
+  #albumListeningDockContent .album-listen-embed.youtube { height:auto; aspect-ratio:16 / 9; }
+  #albumListeningDockContent .album-listen-open-platform {
+    min-height:32px;
+    margin-top:6px;
+    padding:0 10px;
+    font-size:12px;
+  }
+  @media (max-width:480px) {
+    .album-listening-dock { right:12px; bottom:12px; }
+  }
   .album-listen-open-platform {
     display:inline-flex;
     align-items:center;
@@ -4283,6 +4335,13 @@
     <div id="albumListeningContent"></div>
   </div>
 </div>
+<aside id="albumListeningDock" class="album-listening-dock" aria-label="Mini-Player" hidden>
+  <div class="album-listening-dock-header">
+    <strong id="albumListeningDockTitle" class="album-listening-dock-title"></strong>
+    <button type="button" id="closeAlbumListeningDockBtn" class="icon-btn album-listening-dock-close" title="Wiedergabe beenden" aria-label="Wiedergabe beenden">×</button>
+  </div>
+  <div id="albumListeningDockContent"></div>
+</aside>
 
 <div class="modal-overlay cover-url-overlay" id="coverUrlOverlay" aria-modal="true" role="dialog" aria-labelledby="coverUrlTitle">
   <div class="modal-box cover-url-box">
@@ -8533,13 +8592,18 @@ function getYouTubeEmbedUrl(rawUrl) {
 let albumListeningRequest = null;
 let albumListeningInlineTarget = null;
 
-function closeAlbumListening() {
+function closeAlbumListening(keepPlayer = false) {
   albumListeningRequest?.abort();
   albumListeningRequest = null;
   albumListeningInlineTarget?.replaceChildren();
   albumListeningInlineTarget = null;
   document.getElementById('albumListeningOverlay').classList.remove('open');
   document.getElementById('albumListeningContent').replaceChildren();
+  if (!keepPlayer) {
+    document.getElementById('albumListeningDockContent').replaceChildren();
+    document.getElementById('albumListeningDock').hidden = true;
+    document.getElementById('albumListeningDockTitle').textContent = '';
+  }
 }
 
 function mountListeningEmbed(container, url, title) {
@@ -8548,6 +8612,15 @@ function mountListeningEmbed(container, url, title) {
   const youtubeEmbed = getYouTubeEmbedUrl(url);
   const embedUrl = spotifyEmbed || appleEmbed || youtubeEmbed;
   if (!embedUrl) return false;
+  const isDialogPlayer = container === document.getElementById('albumListeningContent');
+  const playerContainer = isDialogPlayer
+    ? document.getElementById('albumListeningDockContent')
+    : container;
+  if (isDialogPlayer) {
+    playerContainer.replaceChildren();
+    document.getElementById('albumListeningDockTitle').textContent = title || 'Album anhören';
+    document.getElementById('albumListeningDock').hidden = false;
+  }
   const frame = document.createElement('iframe');
   frame.className = `album-listen-embed ${spotifyEmbed ? 'spotify' : appleEmbed ? 'apple' : 'youtube'}`;
   frame.src = embedUrl;
@@ -8558,7 +8631,7 @@ function mountListeningEmbed(container, url, title) {
   frame.style.pointerEvents = 'auto';
   frame.style.position = 'relative';
   frame.style.zIndex = '1';
-  container.appendChild(frame);
+  playerContainer.appendChild(frame);
   const platformLink = document.createElement('a');
   const provider = spotifyEmbed ? 'spotify' : appleEmbed ? 'apple' : 'youtube';
   platformLink.className = `album-listen-open-platform ${provider}`;
@@ -8570,7 +8643,7 @@ function mountListeningEmbed(container, url, title) {
     : spotifyEmbed
       ? '●  In Spotify öffnen  ↗'
       : '▶  In YouTube öffnen  ↗';
-  container.appendChild(platformLink);
+  playerContainer.appendChild(platformLink);
   return true;
 }
 
@@ -9072,12 +9145,13 @@ async function openAlbumListening(item, inlineTarget = null) {
   }
 }
 
-document.getElementById('closeAlbumListeningBtn').addEventListener('click', closeAlbumListening);
+document.getElementById('closeAlbumListeningBtn').addEventListener('click', () => closeAlbumListening(true));
+document.getElementById('closeAlbumListeningDockBtn').addEventListener('click', () => closeAlbumListening());
 document.getElementById('albumListeningOverlay').addEventListener('click', event => {
-  if (event.target.id === 'albumListeningOverlay') closeAlbumListening();
+  if (event.target.id === 'albumListeningOverlay') closeAlbumListening(true);
 });
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && document.getElementById('albumListeningOverlay').classList.contains('open')) closeAlbumListening();
+  if (event.key === 'Escape' && document.getElementById('albumListeningOverlay').classList.contains('open')) closeAlbumListening(true);
 });
 
 document.getElementById('manualBtn').addEventListener('click', () => {
