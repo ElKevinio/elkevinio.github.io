@@ -5427,6 +5427,10 @@ auth.onAuthStateChanged(async user => {
     await loadCloudData(user.uid);
     await loadListeningCredentials(user.uid);
     await restoreListeningSession();
+    await completeSpotifyAuthCallback().catch(error => {
+      console.error('Spotify-Rückmeldung konnte nicht verarbeitet werden:', error);
+      updateSpotifyConnectionStatus(`Spotify-Rückmeldung konnte nicht verarbeitet werden: ${error.message}`);
+    });
     if (userMenuPanel) userMenuPanel.classList.remove('open');
     document.body.classList.remove('user-menu-open');
   } else {
@@ -13624,10 +13628,6 @@ document.getElementById('copyWishlistBtn').addEventListener('click', copyWishlis
 // Initialisierung
 updateSortButtons();
 renderCollection();
-completeSpotifyAuthCallback().catch(error => {
-  console.error('Spotify-Rückmeldung konnte nicht verarbeitet werden:', error);
-  updateSpotifyConnectionStatus(`Spotify-Rückmeldung konnte nicht verarbeitet werden: ${error.message}`);
-});
 // Hinweis: Der automatische Discogs-Preisabgleich beim Laden wurde entfernt,
 // da er bei jedem Seitenaufruf für alle Einträge ohne Preis parallel Discogs-Requests
 // auslöste und so schnell das Rate Limit sprengte. Preise stehen bereits in Firebase
