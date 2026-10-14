@@ -1614,7 +1614,8 @@
     white-space:nowrap;
   }
   .album-listening-dock.has-spotify-mini .album-listening-dock-title { display:none; }
-  .album-listening-dock.has-spotify-mini .album-listening-dock-header { justify-content:flex-end; }
+  .album-listening-dock.has-spotify-mini .album-listening-dock-header { display:none; }
+  .album-mini-topbar { display:flex; justify-content:flex-end; min-height:30px; margin:0 0 4px; }
   .album-listening-dock-close {
     position:relative;
     z-index:4;
@@ -8740,6 +8741,7 @@ let spotifyMiniController = null;
 let spotifyMiniTracklistRequest = null;
 
 function closeAlbumListening(keepPlayer = false) {
+  const dockCloseButton = document.getElementById('closeAlbumListeningDockBtn');
   albumListeningRequest?.abort();
   albumListeningRequest = null;
   albumListeningInlineTarget?.replaceChildren();
@@ -8757,6 +8759,9 @@ function closeAlbumListening(keepPlayer = false) {
     document.getElementById('albumListeningDock').classList.remove('has-spotify-mini');
     document.getElementById('albumListeningDockExpandHandle')?.setAttribute('aria-expanded', 'false');
     document.getElementById('albumListeningDockTitle').textContent = '';
+    if (dockCloseButton) {
+      document.querySelector('#albumListeningDock .album-listening-dock-header')?.append(dockCloseButton);
+    }
   }
 }
 
@@ -8820,6 +8825,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   next.setAttribute('aria-label', 'Nächster Titel');
   previous.disabled = true;
   next.disabled = true;
+  toggle.disabled = true;
+  const topbar = document.createElement('div');
+  topbar.className = 'album-mini-topbar';
+  const closeButton = document.getElementById('closeAlbumListeningDockBtn');
+  topbar.append(closeButton);
   const trackList = document.createElement('ol');
   trackList.className = 'album-mini-tracklist';
   const progress = document.createElement('div');
@@ -8844,7 +8854,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   meta.append(currentTrack, artist, controls);
   main.append(cover, meta);
   progress.append(seek);
-  player.append(expandHandle, trackList, main, host, message, progress);
+  player.append(expandHandle, topbar, trackList, main, host, message, progress);
   container.append(player);
 
   const setExpanded = expanded => {
@@ -8916,6 +8926,16 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   let currentIndex = -1;
   let playbackDuration = 0;
   let playingUri = '';
+  let controllerReady = false;
+  let playbackIsPaused = true;
+  const updateControls = () => {
+    toggle.disabled = !controllerReady;
+    previous.disabled = !controllerReady || tracks.length < 2 || !tracks.some(track => track.uri);
+    next.disabled = previous.disabled;
+    trackList.querySelectorAll('.album-mini-track').forEach((button, index) => {
+      button.disabled = !controllerReady || !tracks[index]?.uri;
+    });
+  };
   const updateCurrentTrack = () => {
     currentIndex = tracks.findIndex(track => track.uri === playingUri);
     if (currentIndex >= 0) currentTrack.textContent = tracks[currentIndex].title;
@@ -8931,7 +8951,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'album-mini-track';
-      button.disabled = !track.uri;
+      button.disabled = !controllerReady || !track.uri;
       const number = document.createElement('span');
       number.className = 'album-mini-track-number';
       number.textContent = String(index + 1).padStart(2, '0');
@@ -8945,16 +8965,22 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
         : /^\d+:\d{2}$/.test(track.duration || '') ? track.duration : '';
       button.append(number, name, length);
       button.addEventListener('click', () => {
-        if (!track.uri || !spotifyMiniController) return;
-        spotifyMiniController.loadUri(track.uri);
-        spotifyMiniController.play();
+        if (!track.uri || !spotifyMiniController || !controllerReady) return;
+        try {
+          spotifyMiniController.loadUri(track.uri);
+          spotifyMiniController.play();
+        } catch (error) {
+          console.error('Spotify-Titel konnte nicht gestartet werden:', error);
+          message.hidden = false;
+          message.textContent = 'Der Titel konnte nicht gestartet werden. Bitte versuche es erneut.';
+          return;
+        }
         setExpanded(false);
       });
       row.append(button);
       trackList.append(row);
     });
-    previous.disabled = tracks.length < 2 || !tracks.some(track => track.uri);
-    next.disabled = previous.disabled;
+    updateControls();
     message.textContent = '';
     message.hidden = true;
     updateCurrentTrack();
@@ -8966,17 +8992,30 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   }));
   renderTracks(fallbackTracks);
   toggle.addEventListener('click', () => {
-    if (!spotifyMiniController) return;
-    spotifyMiniController.togglePlay();
+    if (!spotifyMiniController || !controllerReady) return;
+    try {
+      if (playbackIsPaused) spotifyMiniController.resume();
+      else spotifyMiniController.pause();
+    } catch (error) {
+      console.error('Spotify-Wiedergabe konnte nicht umgeschaltet werden:', error);
+      message.hidden = false;
+      message.textContent = 'Die Spotify-Wiedergabe konnte nicht gesteuert werden. Bitte versuche es erneut.';
+    }
   });
   const changeTrack = direction => {
-    if (!spotifyMiniController || !tracks.length) return;
+    if (!spotifyMiniController || !controllerReady || !tracks.length) return;
     const startIndex = currentIndex < 0 ? (direction > 0 ? -1 : 0) : currentIndex;
     const nextIndex = (startIndex + direction + tracks.length) % tracks.length;
     const track = tracks[nextIndex];
     if (!track.uri) return;
-    spotifyMiniController.loadUri(track.uri);
-    spotifyMiniController.play();
+    try {
+      spotifyMiniController.loadUri(track.uri);
+      spotifyMiniController.play();
+    } catch (error) {
+      console.error('Spotify-Titel konnte nicht gewechselt werden:', error);
+      message.hidden = false;
+      message.textContent = 'Der Titel konnte nicht gewechselt werden. Bitte versuche es erneut.';
+    }
   };
   previous.addEventListener('click', () => changeTrack(-1));
   next.addEventListener('click', () => changeTrack(1));
@@ -8985,7 +9024,14 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
     progress.style.setProperty('--progress', `${percentage}%`);
   });
   seek.addEventListener('change', () => {
-    if (spotifyMiniController) spotifyMiniController.seek(Number(seek.value));
+    if (!spotifyMiniController || !controllerReady) return;
+    try {
+      spotifyMiniController.seek(Number(seek.value));
+    } catch (error) {
+      console.error('Spotify-Wiedergabeposition konnte nicht geändert werden:', error);
+      message.hidden = false;
+      message.textContent = 'Die Wiedergabeposition konnte nicht geändert werden. Bitte versuche es erneut.';
+    }
   });
   const albumId = new URL(originalUrl).pathname.match(/^\/album\/([A-Za-z0-9]+)\/?$/)?.[1];
   const spotifyContent = new URL(originalUrl).pathname.match(/^\/(album|track)\/([A-Za-z0-9]+)\/?$/);
@@ -9029,13 +9075,20 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
         return;
       }
       spotifyMiniController = controller;
-      controller.addListener('ready', () => controller.play());
+      controller.addListener('ready', () => {
+        controllerReady = true;
+        updateControls();
+        controller.play();
+      });
       controller.addListener('playback_started', event => {
         playingUri = event.data?.playingURI || '';
+        playbackIsPaused = false;
         updateCurrentTrack();
       });
       controller.addListener('playback_update', event => {
         const state = event.data || {};
+        playbackIsPaused = state.isPaused !== false;
+        toggle.disabled = false;
         playbackDuration = (Number(state.duration) || 0) / 1000;
         const position = (Number(state.position) || 0) / 1000;
         toggle.textContent = state.isPaused ? '▶' : '⏸';
