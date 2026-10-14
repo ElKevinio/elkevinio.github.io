@@ -1732,6 +1732,27 @@
   .album-listening-dock.is-resizing .album-mini-tracklist { user-select:none; }
   .album-mini-platform-link { display:inline-flex; margin-top:8px; color:var(--text-muted); font-size:11px; text-decoration:none; }
   .album-mini-platform-link:hover { color:var(--text-primary); text-decoration:underline; }
+  .album-queue-controls { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; padding-top:9px; border-top:1px solid var(--border); }
+  .album-queue-controls[hidden] { display:none; }
+  .album-queue-status { min-width:0; overflow:hidden; color:var(--text-secondary); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+  .album-queue-next { flex:0 0 auto; min-height:30px; padding:0 9px; font-size:11px; }
+  .album-queue-card-btn {
+    position:absolute;
+    left:108px;
+    bottom:10px;
+    z-index:3;
+    width:32px;
+    min-width:32px;
+    height:32px;
+    min-height:32px;
+    padding:0;
+    border-radius:8px;
+    opacity:0;
+    pointer-events:none;
+    transform:translateY(4px);
+    transition:opacity .15s ease, transform .15s ease;
+    font-size:18px;
+  }
   @media (max-width:480px) {
     .album-listening-dock { right:12px; bottom:12px; }
   }
@@ -1777,7 +1798,9 @@
     transition:opacity .15s ease, transform .15s ease;
   }
   .collection-card:hover .album-listen-card-btn,
-  .collection-card:focus-within .album-listen-card-btn { opacity:1; pointer-events:auto; transform:none; }
+  .collection-card:focus-within .album-listen-card-btn,
+  .collection-card:hover .album-queue-card-btn,
+  .collection-card:focus-within .album-queue-card-btn { opacity:1; pointer-events:auto; transform:none; }
   .collection-card .media-info { transition:padding-bottom .15s ease; }
   .collection-card:hover .media-info,
   .collection-card:focus-within .media-info { padding-bottom:50px; }
@@ -1789,6 +1812,7 @@
   .storage-unsorted-actions .listen { opacity:0; pointer-events:none; transition:opacity .15s ease; }
   @media (hover:none) {
     .album-listen-card-btn,
+    .album-queue-card-btn,
     .storage-record .listen,
     .storage-unsorted-actions .listen { opacity:1; pointer-events:auto; transform:none; }
   }
@@ -4473,6 +4497,10 @@
     <button type="button" id="closeAlbumListeningDockBtn" class="icon-btn album-listening-dock-close" title="Wiedergabe beenden" aria-label="Wiedergabe beenden">×</button>
   </div>
   <div id="albumListeningDockContent"></div>
+  <div id="albumQueueControls" class="album-queue-controls" hidden>
+    <span id="albumQueueStatus" class="album-queue-status">Warteschlange leer</span>
+    <button type="button" id="playNextQueuedAlbumBtn" class="album-queue-next" disabled>Nächstes Album</button>
+  </div>
 </aside>
 
 <div class="modal-overlay cover-url-overlay" id="coverUrlOverlay" aria-modal="true" role="dialog" aria-labelledby="coverUrlTitle">
@@ -8833,6 +8861,41 @@ let spotifyMiniController = null;
 let spotifyMiniTracklistRequest = null;
 let youtubeMiniController = null;
 let youtubeMiniProgressTimer = null;
+const listeningAlbumQueue = [];
+
+function updateAlbumQueueControls() {
+  const dock = document.getElementById('albumListeningDock');
+  const controls = document.getElementById('albumQueueControls');
+  const status = document.getElementById('albumQueueStatus');
+  const nextButton = document.getElementById('playNextQueuedAlbumBtn');
+  if (!dock || !controls || !status || !nextButton) return;
+  const hasPlayer = !dock.hidden && !!document.getElementById('albumListeningDockContent').childElementCount;
+  controls.hidden = !hasPlayer && listeningAlbumQueue.length === 0;
+  nextButton.disabled = listeningAlbumQueue.length === 0;
+  if (listeningAlbumQueue.length) {
+    const nextTitle = listeningAlbumQueue[0].title || 'Album';
+    status.textContent = `${listeningAlbumQueue.length} ${listeningAlbumQueue.length === 1 ? 'Album' : 'Alben'} · als Nächstes: ${nextTitle}`;
+  } else {
+    status.textContent = 'Warteschlange leer';
+  }
+}
+
+function queueAlbumForListening(item) {
+  listeningAlbumQueue.push({ ...item });
+  const dock = document.getElementById('albumListeningDock');
+  if (dock.hidden) {
+    dock.hidden = false;
+    document.getElementById('albumListeningDockTitle').textContent = 'Album-Warteschlange';
+  }
+  updateAlbumQueueControls();
+}
+
+function playNextQueuedAlbum() {
+  const item = listeningAlbumQueue.shift();
+  if (!item) return;
+  updateAlbumQueueControls();
+  openAlbumListening(item);
+}
 
 function closeAlbumListening(keepPlayer = false) {
   const dockCloseButton = document.getElementById('closeAlbumListeningDockBtn');
@@ -8852,16 +8915,19 @@ function closeAlbumListening(keepPlayer = false) {
     if (youtubeMiniProgressTimer) window.clearInterval(youtubeMiniProgressTimer);
     youtubeMiniProgressTimer = null;
     document.getElementById('albumListeningDockContent').replaceChildren();
-    document.getElementById('albumListeningDock').hidden = true;
+    document.getElementById('albumListeningDock').hidden = listeningAlbumQueue.length === 0;
     document.getElementById('albumListeningDock').classList.remove('is-expanded');
     document.getElementById('albumListeningDock').classList.remove('has-custom-mini');
     document.getElementById('albumListeningDockExpandHandle')?.setAttribute('aria-expanded', 'false');
-    document.getElementById('albumListeningDockTitle').textContent = '';
+    document.getElementById('albumListeningDockTitle').textContent = listeningAlbumQueue.length ? 'Album-Warteschlange' : '';
     if (dockCloseButton) {
       document.querySelector('#albumListeningDock .album-listening-dock-header')?.append(dockCloseButton);
     }
+    updateAlbumQueueControls();
   }
 }
+
+document.getElementById('playNextQueuedAlbumBtn').addEventListener('click', playNextQueuedAlbum);
 
 function formatListeningTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -8999,6 +9065,9 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title) {
           toggle.textContent = isPlaying ? '⏸' : '▶';
           toggle.setAttribute('aria-label', isPlaying ? 'Wiedergabe pausieren' : 'Wiedergabe starten');
           updateProgress();
+          if (event.data === YT.PlayerState.ENDED && listeningAlbumQueue.length) {
+            playNextQueuedAlbum();
+          }
         },
         onError: event => {
           console.error('YouTube-Video konnte nicht eingebettet werden:', event.data);
@@ -9068,9 +9137,16 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   next.className = 'album-mini-control';
   next.textContent = '⏭';
   next.setAttribute('aria-label', 'Nächster Titel');
+  const favorite = document.createElement('button');
+  favorite.type = 'button';
+  favorite.className = 'album-mini-control';
+  favorite.textContent = '♡';
+  favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzufügen');
+  favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzufügen';
   previous.disabled = true;
   next.disabled = true;
   toggle.disabled = true;
+  favorite.disabled = true;
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
   const closeButton = document.getElementById('closeAlbumListeningDockBtn');
@@ -9095,7 +9171,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   const message = document.createElement('p');
   message.className = 'album-mini-message';
   message.textContent = 'Die Titelliste wird geladen …';
-  controls.append(previous, toggle, next);
+  controls.append(previous, toggle, next, favorite);
   meta.append(currentTrack, artist, controls);
   main.append(cover, meta);
   progress.append(seek);
@@ -9171,22 +9247,36 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   let currentIndex = -1;
   let playbackDuration = 0;
   let playingUri = '';
+  let favoriteTrackUri = '';
   let controllerReady = false;
   let playbackIsPaused = true;
+  let lastTrackEndTriggered = false;
   const updateControls = () => {
     toggle.disabled = !controllerReady;
     previous.disabled = !controllerReady || tracks.length < 2 || !tracks.some(track => track.uri);
     next.disabled = previous.disabled;
+    favorite.disabled = !controllerReady || !/^spotify:track:/.test(tracks[currentIndex]?.uri || playingUri);
     trackList.querySelectorAll('.album-mini-track').forEach((button, index) => {
       button.disabled = !controllerReady || !tracks[index]?.uri;
     });
   };
   const updateCurrentTrack = () => {
-    currentIndex = tracks.findIndex(track => track.uri === playingUri);
-    if (currentIndex >= 0) currentTrack.textContent = tracks[currentIndex].title;
+    const matchingIndex = tracks.findIndex(track => track.uri === playingUri);
+    if (matchingIndex >= 0) currentIndex = matchingIndex;
+    if (currentIndex >= 0 && tracks[currentIndex]) {
+      const activeUri = tracks[currentIndex].uri;
+      currentTrack.textContent = tracks[currentIndex].title;
+      if (activeUri !== favoriteTrackUri) {
+        favoriteTrackUri = activeUri;
+        favorite.textContent = '♡';
+        favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzufügen');
+        favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzufügen';
+      }
+    }
     trackList.querySelectorAll('.album-mini-track').forEach((button, index) => {
       button.classList.toggle('is-current', index === currentIndex);
     });
+    updateControls();
   };
   const renderTracks = entries => {
     tracks = entries;
@@ -9212,6 +9302,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
       button.addEventListener('click', () => {
         if (!track.uri || !spotifyMiniController || !controllerReady) return;
         try {
+          currentIndex = index;
+          playingUri = track.uri;
+          lastTrackEndTriggered = false;
+          updateCurrentTrack();
           spotifyMiniController.loadUri(track.uri);
           spotifyMiniController.play();
         } catch (error) {
@@ -9254,6 +9348,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
     const track = tracks[nextIndex];
     if (!track.uri) return;
     try {
+      currentIndex = nextIndex;
+      playingUri = track.uri;
+      lastTrackEndTriggered = false;
+      updateCurrentTrack();
       spotifyMiniController.loadUri(track.uri);
       spotifyMiniController.play();
     } catch (error) {
@@ -9264,6 +9362,40 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   };
   previous.addEventListener('click', () => changeTrack(-1));
   next.addEventListener('click', () => changeTrack(1));
+  favorite.addEventListener('click', async () => {
+    const trackUri = tracks[currentIndex]?.uri || playingUri;
+    const trackId = trackUri.match(/^spotify:track:([A-Za-z0-9]+)$/)?.[1];
+    if (!trackId) return;
+    favorite.disabled = true;
+    try {
+      const token = await getSpotifyAccessToken();
+      if (!token) {
+        throw new Error('Bitte verbinde Spotify zuerst in den Einstellungen.');
+      }
+      const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${encodeURIComponent(trackId)}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 403) {
+          throw new Error('Spotify benötigt die Berechtigung für Lieblingssongs. Bitte Spotify trennen und erneut verbinden.');
+        }
+        throw new Error(data.error?.message || `Spotify antwortete mit HTTP ${response.status}`);
+      }
+      favorite.textContent = '♥';
+      favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzugefügt');
+      favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzugefügt';
+      message.hidden = false;
+      message.textContent = 'Zu deinen Spotify-Lieblingssongs hinzugefügt.';
+    } catch (error) {
+      console.error('Spotify-Lieblingssong konnte nicht gespeichert werden:', error);
+      message.hidden = false;
+      message.textContent = error.message || 'Der Titel konnte nicht zu deinen Spotify-Lieblingssongs hinzugefügt werden.';
+    } finally {
+      updateControls();
+    }
+  });
   seek.addEventListener('input', () => {
     const percentage = playbackDuration > 0 ? Number(seek.value) / playbackDuration * 100 : 0;
     progress.style.setProperty('--progress', `${percentage}%`);
@@ -9322,12 +9454,16 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
       spotifyMiniController = controller;
       controller.addListener('ready', () => {
         controllerReady = true;
+        if (albumId && currentIndex < 0) currentIndex = 0;
+        updateCurrentTrack();
         updateControls();
         controller.play();
       });
       controller.addListener('playback_started', event => {
-        playingUri = event.data?.playingURI || '';
+        if (event.data?.playingURI) playingUri = event.data.playingURI;
+        if (albumId && currentIndex < 0) currentIndex = 0;
         playbackIsPaused = false;
+        lastTrackEndTriggered = false;
         updateCurrentTrack();
       });
       controller.addListener('playback_update', event => {
@@ -9342,6 +9478,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
         if (!seek.matches(':active')) {
           seek.value = String(Math.min(position, playbackDuration));
           progress.style.setProperty('--progress', `${playbackDuration > 0 ? Math.min(position / playbackDuration * 100, 100) : 0}%`);
+        }
+        if (albumId && listeningAlbumQueue.length && currentIndex === tracks.length - 1
+          && playbackDuration > 0 && position >= playbackDuration - 0.5 && !lastTrackEndTriggered) {
+          lastTrackEndTriggered = true;
+          playNextQueuedAlbum();
         }
       });
     });
@@ -9388,6 +9529,7 @@ function mountListeningEmbed(container, url, title, item = null) {
     if (!videoId) return false;
     buildYouTubeMiniPlayer(playerContainer, videoId, url, item, title);
   }
+  updateAlbumQueueControls();
   if (shouldUseDock) closeAlbumListening(true);
   return true;
 }
@@ -9474,6 +9616,7 @@ async function connectSpotify() {
     client_id: clientId,
     response_type: 'code',
     redirect_uri: redirectUri,
+    scope: 'user-library-modify',
     code_challenge_method: 'S256',
     code_challenge: challenge,
     state
@@ -12525,6 +12668,7 @@ ${actionButtons}
             </div>
           </div>
           <button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album ${escapeHtml(item.title)} anhören"><span aria-hidden="true">▶</span><span>Anhören</span></button>
+          <button type="button" class="album-queue-card-btn" title="Album in die Warteschlange" aria-label="Album ${escapeHtml(item.title)} in die Warteschlange">+</button>
           ${commonBadgeHtml}
           ${showCollectionExtra && viewingOwnCollection && item.owned && (getStorageLabel(item) || item.lastWashed) ? `<div class="collection-extra">${getStorageLabel(item) ? `<span>${escapeHtml(getStorageLabel(item))}</span>` : ''}${item.lastWashed ? `<span>Gewaschen: ${escapeHtml(getWashedDateLabel(item))}</span>` : ''}</div>` : ''}
         </div>
@@ -12560,6 +12704,10 @@ ${actionButtons}
       card.querySelector('.album-listen-card-btn').addEventListener('click', event => {
         event.stopPropagation();
         openAlbumListening(item);
+      });
+      card.querySelector('.album-queue-card-btn').addEventListener('click', event => {
+        event.stopPropagation();
+        queueAlbumForListening(item);
       });
       frag.appendChild(card);
     });
