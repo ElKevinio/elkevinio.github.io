@@ -1613,8 +1613,8 @@
     text-overflow:ellipsis;
     white-space:nowrap;
   }
-  .album-listening-dock.has-spotify-mini .album-listening-dock-title { display:none; }
-  .album-listening-dock.has-spotify-mini .album-listening-dock-header { display:none; }
+  .album-listening-dock.has-custom-mini .album-listening-dock-title { display:none; }
+  .album-listening-dock.has-custom-mini .album-listening-dock-header { display:none; }
   .album-mini-topbar { display:flex; justify-content:flex-end; min-height:30px; margin:0 0 4px; }
   .album-listening-dock-close {
     position:relative;
@@ -8706,6 +8706,13 @@ function getAppleMusicEmbedUrl(rawUrl) {
 }
 
 function getYouTubeEmbedUrl(rawUrl) {
+  const videoId = getYouTubeVideoId(rawUrl);
+  return videoId
+    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1`
+    : '';
+}
+
+function getYouTubeVideoId(rawUrl) {
   const safeUrl = getSupportedListeningUrl(rawUrl);
   if (!safeUrl) return '';
   const url = new URL(safeUrl);
@@ -8715,9 +8722,7 @@ function getYouTubeEmbedUrl(rawUrl) {
     : host.includes('youtube.com')
       ? url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts)\/([^/]+)/)?.[1]
       : null;
-  return videoId && /^[A-Za-z0-9_-]{6,}$/.test(videoId)
-    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&playsinline=1`
-    : '';
+  return videoId && /^[A-Za-z0-9_-]{6,}$/.test(videoId) ? videoId : '';
 }
 
 let spotifyIframeApiPromise = null;
@@ -8735,10 +8740,36 @@ function loadSpotifyIframeApi() {
   return spotifyIframeApiPromise;
 }
 
+let youtubeIframeApiPromise = null;
+
+function loadYouTubeIframeApi() {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (youtubeIframeApiPromise) return youtubeIframeApiPromise;
+  youtubeIframeApiPromise = new Promise((resolve, reject) => {
+    const previousCallback = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      previousCallback?.();
+      if (window.YT?.Player) resolve(window.YT);
+      else reject(new Error('YouTube IFrame API wurde nicht initialisiert.'));
+    };
+    const script = document.createElement('script');
+    script.src = 'https://www.youtube.com/iframe_api';
+    script.async = true;
+    script.onerror = () => {
+      youtubeIframeApiPromise = null;
+      reject(new Error('YouTube IFrame API konnte nicht geladen werden.'));
+    };
+    document.head.appendChild(script);
+  });
+  return youtubeIframeApiPromise;
+}
+
 let albumListeningRequest = null;
 let albumListeningInlineTarget = null;
 let spotifyMiniController = null;
 let spotifyMiniTracklistRequest = null;
+let youtubeMiniController = null;
+let youtubeMiniProgressTimer = null;
 
 function closeAlbumListening(keepPlayer = false) {
   const dockCloseButton = document.getElementById('closeAlbumListeningDockBtn');
@@ -8753,10 +8784,14 @@ function closeAlbumListening(keepPlayer = false) {
     spotifyMiniTracklistRequest = null;
     spotifyMiniController?.destroy();
     spotifyMiniController = null;
+    youtubeMiniController?.destroy();
+    youtubeMiniController = null;
+    if (youtubeMiniProgressTimer) window.clearInterval(youtubeMiniProgressTimer);
+    youtubeMiniProgressTimer = null;
     document.getElementById('albumListeningDockContent').replaceChildren();
     document.getElementById('albumListeningDock').hidden = true;
     document.getElementById('albumListeningDock').classList.remove('is-expanded');
-    document.getElementById('albumListeningDock').classList.remove('has-spotify-mini');
+    document.getElementById('albumListeningDock').classList.remove('has-custom-mini');
     document.getElementById('albumListeningDockExpandHandle')?.setAttribute('aria-expanded', 'false');
     document.getElementById('albumListeningDockTitle').textContent = '';
     if (dockCloseButton) {
@@ -8769,6 +8804,153 @@ function formatListeningTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const wholeSeconds = Math.floor(seconds);
   return `${Math.floor(wholeSeconds / 60)}:${String(wholeSeconds % 60).padStart(2, '0')}`;
+}
+
+function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title) {
+  youtubeMiniController?.destroy();
+  youtubeMiniController = null;
+  if (youtubeMiniProgressTimer) window.clearInterval(youtubeMiniProgressTimer);
+  youtubeMiniProgressTimer = null;
+  const dock = document.getElementById('albumListeningDock');
+  const player = document.createElement('div');
+  player.className = 'album-mini-player youtube-mini-player';
+  const topbar = document.createElement('div');
+  topbar.className = 'album-mini-topbar';
+  topbar.append(document.getElementById('closeAlbumListeningDockBtn'));
+  const main = document.createElement('div');
+  main.className = 'album-mini-main';
+  const cover = document.createElement('img');
+  cover.className = 'album-mini-cover';
+  cover.alt = item?.coverUrl ? `Cover: ${title}` : '';
+  cover.hidden = !item?.coverUrl;
+  if (item?.coverUrl) {
+    cover.src = item.coverUrl;
+    cover.addEventListener('error', () => { cover.hidden = true; }, { once: true });
+  }
+  const meta = document.createElement('div');
+  meta.className = 'album-mini-meta';
+  const currentTrack = document.createElement('strong');
+  currentTrack.className = 'album-mini-track-title';
+  currentTrack.textContent = title || 'YouTube-Video';
+  const artist = document.createElement('span');
+  artist.className = 'album-mini-artist';
+  artist.textContent = item?.artist || 'YouTube';
+  const controls = document.createElement('div');
+  controls.className = 'album-mini-controls';
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'album-mini-control primary';
+  toggle.textContent = '▶';
+  toggle.setAttribute('aria-label', 'Wiedergabe starten');
+  toggle.disabled = true;
+  controls.append(toggle);
+  meta.append(currentTrack, artist, controls);
+  main.append(cover, meta);
+  const progress = document.createElement('div');
+  progress.className = 'album-mini-progress';
+  const seek = document.createElement('input');
+  seek.className = 'album-mini-seek';
+  seek.type = 'range';
+  seek.min = '0';
+  seek.max = '0';
+  seek.value = '0';
+  seek.disabled = true;
+  seek.setAttribute('aria-label', 'Wiedergabeposition');
+  progress.append(seek);
+  const host = document.createElement('div');
+  host.className = 'album-mini-controller-host';
+  host.setAttribute('aria-hidden', 'true');
+  const target = document.createElement('div');
+  host.append(target);
+  const message = document.createElement('p');
+  message.className = 'album-mini-message';
+  message.textContent = 'YouTube wird geladen …';
+  const link = document.createElement('a');
+  link.className = 'album-mini-platform-link';
+  link.href = originalUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = '▶  In YouTube öffnen  ↗';
+  player.append(topbar, main, host, message, progress, link);
+  container.replaceChildren(player);
+
+  let ready = false;
+  let duration = 0;
+  const updateProgress = () => {
+    if (!ready || !youtubeMiniController) return;
+    duration = Number(youtubeMiniController.getDuration()) || duration;
+    const currentTime = Number(youtubeMiniController.getCurrentTime()) || 0;
+    seek.max = String(duration);
+    if (!seek.matches(':active')) {
+      seek.value = String(Math.min(currentTime, duration));
+      progress.style.setProperty('--progress', `${duration > 0 ? Math.min(currentTime / duration * 100, 100) : 0}%`);
+    }
+  };
+  toggle.addEventListener('click', () => {
+    if (!ready || !youtubeMiniController) return;
+    const state = youtubeMiniController.getPlayerState();
+    if (state === window.YT.PlayerState.PLAYING) {
+      youtubeMiniController.pauseVideo();
+    } else {
+      youtubeMiniController.playVideo();
+    }
+  });
+  seek.addEventListener('input', () => {
+    const percentage = duration > 0 ? Number(seek.value) / duration * 100 : 0;
+    progress.style.setProperty('--progress', `${percentage}%`);
+  });
+  seek.addEventListener('change', () => {
+    if (ready && youtubeMiniController) youtubeMiniController.seekTo(Number(seek.value), true);
+  });
+
+  loadYouTubeIframeApi().then(YT => {
+    if (!host.isConnected) return;
+    youtubeMiniController = new YT.Player(target, {
+      width: '152',
+      height: '152',
+      videoId,
+      playerVars: {
+        autoplay: 1,
+        controls: 0,
+        enablejsapi: 1,
+        origin: window.location.origin,
+        playsinline: 1
+      },
+      events: {
+        onReady: event => {
+          if (!host.isConnected) {
+            event.target.destroy();
+            return;
+          }
+          youtubeMiniController = event.target;
+          ready = true;
+          toggle.disabled = false;
+          seek.disabled = false;
+          message.hidden = true;
+          event.target.playVideo();
+          updateProgress();
+          youtubeMiniProgressTimer = window.setInterval(updateProgress, 500);
+        },
+        onStateChange: event => {
+          const isPlaying = event.data === YT.PlayerState.PLAYING;
+          toggle.textContent = isPlaying ? '⏸' : '▶';
+          toggle.setAttribute('aria-label', isPlaying ? 'Wiedergabe pausieren' : 'Wiedergabe starten');
+          updateProgress();
+        },
+        onError: event => {
+          console.error('YouTube-Video konnte nicht eingebettet werden:', event.data);
+          message.hidden = false;
+          message.textContent = 'Dieses YouTube-Video kann nicht eingebettet werden. Öffne es direkt bei YouTube.';
+          toggle.disabled = true;
+          seek.disabled = true;
+        }
+      }
+    });
+  }).catch(error => {
+    console.error('YouTube IFrame API konnte nicht geladen werden:', error);
+    message.hidden = false;
+    message.textContent = 'YouTube-Player konnte nicht geladen werden. Öffne das Video direkt bei YouTube.';
+  });
 }
 
 function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
@@ -9112,50 +9294,36 @@ function mountListeningEmbed(container, url, title, item = null) {
   const spotifyEmbed = getSpotifyEmbedUrl(url);
   const appleEmbed = getAppleMusicEmbedUrl(url);
   const youtubeEmbed = getYouTubeEmbedUrl(url);
-  const embedUrl = spotifyEmbed || appleEmbed || youtubeEmbed;
+  const embedUrl = spotifyEmbed || youtubeEmbed;
+  if (appleEmbed) {
+    appendAppleMusicChoice(container, url, title);
+    return true;
+  }
   if (!embedUrl) return false;
   const isDialogPlayer = container === document.getElementById('albumListeningContent');
-  const shouldUseDock = isDialogPlayer || !!spotifyEmbed;
+  const shouldUseDock = isDialogPlayer || !!spotifyEmbed || !!youtubeEmbed;
   const playerContainer = shouldUseDock
     ? document.getElementById('albumListeningDockContent')
     : container;
   if (shouldUseDock) {
     spotifyMiniController?.destroy();
     spotifyMiniController = null;
+    youtubeMiniController?.destroy();
+    youtubeMiniController = null;
+    if (youtubeMiniProgressTimer) window.clearInterval(youtubeMiniProgressTimer);
+    youtubeMiniProgressTimer = null;
     spotifyMiniTracklistRequest?.abort();
     playerContainer.replaceChildren();
-    document.getElementById('albumListeningDock').classList.toggle('has-spotify-mini', !!spotifyEmbed);
+    document.getElementById('albumListeningDock').classList.toggle('has-custom-mini', !!spotifyEmbed || !!youtubeEmbed);
     document.getElementById('albumListeningDockTitle').textContent = title || 'Album anhören';
     document.getElementById('albumListeningDock').hidden = false;
   }
   if (spotifyEmbed) {
     buildSpotifyMiniPlayer(playerContainer, url, item, title);
-  } else {
-    const frame = document.createElement('iframe');
-    frame.className = `album-listen-embed ${appleEmbed ? 'apple' : 'youtube'}`;
-    frame.src = embedUrl;
-    frame.title = `${title} Player`;
-    frame.allow = 'autoplay *; encrypted-media *; fullscreen *; clipboard-write';
-    frame.allowFullscreen = true;
-    frame.loading = 'lazy';
-    frame.style.pointerEvents = 'auto';
-    frame.style.position = 'relative';
-    frame.style.zIndex = '1';
-    playerContainer.appendChild(frame);
-  }
-  const platformLink = document.createElement('a');
-  const provider = spotifyEmbed ? 'spotify' : appleEmbed ? 'apple' : 'youtube';
-  platformLink.className = `album-listen-open-platform ${provider}`;
-  platformLink.href = url;
-  platformLink.target = '_blank';
-  platformLink.rel = 'noopener noreferrer';
-  platformLink.textContent = appleEmbed
-    ? '♫  In Apple Music öffnen  ↗'
-    : spotifyEmbed
-      ? '●  In Spotify öffnen  ↗'
-      : '▶  In YouTube öffnen  ↗';
-  if (!spotifyEmbed) {
-    playerContainer.appendChild(platformLink);
+  } else if (youtubeEmbed) {
+    const videoId = getYouTubeVideoId(url);
+    if (!videoId) return false;
+    buildYouTubeMiniPlayer(playerContainer, videoId, url, item, title);
   }
   if (shouldUseDock) closeAlbumListening(true);
   return true;
@@ -9339,6 +9507,10 @@ function appendListeningProviderResults(content, provider, label, results, item)
     play.textContent = '▶';
     button.append(title, subtitle, type, play);
     button.addEventListener('click', () => {
+      if (provider === 'apple') {
+        window.open(result.url, '_blank', 'noopener,noreferrer');
+        return;
+      }
       content.querySelectorAll('.album-listen-provider-results, .album-listen-track-list, .album-listen-embed, .album-listen-open-platform')
         .forEach(element => element.remove());
       if (mountListeningEmbed(content, result.url, result.title || item.title || provider, item)) {
@@ -9357,6 +9529,25 @@ function appendProviderSearchMessage(content, label, message) {
   node.className = 'album-listen-status album-listen-provider-results';
   node.textContent = `${label}: ${message}`;
   content.appendChild(node);
+}
+
+function appendAppleMusicChoice(content, url, title) {
+  const status = document.createElement('p');
+  status.className = 'album-listen-status';
+  status.textContent = 'Apple Music lässt sich hier nicht als eigener Mini-Player steuern. Öffne den Treffer direkt in Apple Music:';
+  const link = document.createElement('a');
+  link.className = 'album-listen-track album-listen-apple-link';
+  link.href = url;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  const label = document.createElement('span');
+  label.className = 'album-listen-result-title';
+  label.textContent = title || 'In Apple Music öffnen';
+  const action = document.createElement('span');
+  action.className = 'album-listen-result-play';
+  action.textContent = '♫  ↗';
+  link.append(label, action);
+  content.append(status, link);
 }
 
 function getSearchText(value) {
@@ -9537,8 +9728,14 @@ async function searchAppleListening(item, content, controller, status) {
         && similarity(entry.album.artistName, wantedArtist) >= 0.4)
       .sort((a, b) => b.score - a.score)[0]?.album;
     const albumUrl = candidate?.collectionViewUrl;
-    if (!albumUrl || !mountListeningEmbed(content, albumUrl, candidate.collectionName || wantedTitle || 'Album', item)) return false;
-    status.textContent = `Apple Music · ${releaseType}: ${candidate.collectionName || wantedTitle}`;
+    if (!albumUrl) return false;
+    appendListeningProviderResults(content, 'apple', 'Apple Music', [{
+      title: candidate.collectionName || wantedTitle || 'Album',
+      kind: releaseType,
+      subtitle: candidate.artistName || wantedArtist,
+      url: albumUrl
+    }], item);
+    status.textContent = `Apple Music · ${releaseType}: Wähle den passenden Treffer:`;
     return true;
   }
 
@@ -9565,39 +9762,12 @@ async function searchAppleListening(item, content, controller, status) {
   const results = [...uniqueTracks.values()].slice(0, 40);
   if (!results.length) return false;
   status.textContent = `Apple Music · ${releaseType}: Wähle den passenden Titel:`;
-  const list = document.createElement('div');
-  list.className = 'album-listen-track-list';
-  results.forEach(track => {
-    const trackUrl = track.trackViewUrl;
-    if (!getAppleMusicEmbedUrl(trackUrl)) return;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'album-listen-track';
-    const title = document.createElement('span');
-    title.className = 'album-listen-result-title';
-    title.textContent = track.trackName || 'Track';
-    const subtitle = document.createElement('small');
-    subtitle.className = 'album-listen-result-subtitle';
-    subtitle.textContent = track.artistName || '';
-    const type = document.createElement('small');
-    type.className = 'album-listen-result-type';
-    type.textContent = 'Track';
-    const play = document.createElement('span');
-    play.className = 'album-listen-result-play';
-    play.textContent = '▶';
-    button.append(title, subtitle, type, play);
-    button.addEventListener('click', () => {
-      content.querySelector('.album-listen-embed')?.remove();
-      content.querySelector('.album-listen-open-platform')?.remove();
-      if (mountListeningEmbed(content, trackUrl, track.trackName || wantedTitle || 'Track', item)) {
-        list.remove();
-        status.textContent = `Apple Music · ${releaseType}: ${track.trackName || wantedTitle || 'Track'}`;
-      }
-    });
-    list.appendChild(button);
-  });
-  if (!list.childElementCount) return false;
-  content.appendChild(list);
+  appendListeningProviderResults(content, 'apple', 'Apple Music', results.map(track => ({
+    title: track.trackName || 'Track',
+    kind: 'Track',
+    subtitle: track.artistName || '',
+    url: track.trackViewUrl
+  })), item);
   return true;
 }
 
