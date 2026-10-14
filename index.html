@@ -1537,6 +1537,9 @@
   .album-listen-track .album-listen-result-subtitle { grid-column:1; min-width:0; overflow:hidden; color:var(--text-secondary); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
   .album-listen-track .album-listen-result-type { grid-column:1; color:var(--text-secondary); font-size:11px; }
   .album-listen-track .album-listen-result-play { grid-column:2; grid-row:1 / span 3; color:var(--text-secondary); }
+  .album-listen-choice { display:grid; grid-template-columns:minmax(0,1fr) 40px; gap:6px; }
+  .album-listen-choice .album-listen-track { width:100%; }
+  .album-listen-queue-btn { width:40px; min-width:40px; height:auto; padding:0; border-radius:7px; font-size:20px; }
   .album-listen-status { margin:8px 0; color:var(--text-secondary); font-size:13px; }
   .listening-provider-list { display:grid; gap:7px; margin:10px 0; }
   .listening-provider-row { display:flex; align-items:center; gap:10px; min-height:42px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; background:var(--surface-1); }
@@ -1736,22 +1739,38 @@
   .album-queue-controls[hidden] { display:none; }
   .album-queue-status { min-width:0; overflow:hidden; color:var(--text-secondary); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
   .album-queue-next { flex:0 0 auto; min-height:30px; padding:0 9px; font-size:11px; }
-  .album-queue-card-btn {
+  .album-queue-toggle { width:30px; min-width:30px; height:30px; min-height:30px; padding:0; }
+  .album-queue-panel {
     position:absolute;
-    left:108px;
-    bottom:10px;
-    z-index:3;
-    width:32px;
-    min-width:32px;
-    height:32px;
-    min-height:32px;
-    padding:0;
-    border-radius:8px;
-    opacity:0;
-    pointer-events:none;
-    transform:translateY(4px);
-    transition:opacity .15s ease, transform .15s ease;
-    font-size:18px;
+    right:calc(100% + 12px);
+    bottom:0;
+    z-index:5;
+    width:min(320px, calc(100vw - 440px));
+    min-width:250px;
+    max-height:min(70vh, 520px);
+    overflow:auto;
+    padding:12px;
+    border:1px solid var(--border-strong);
+    border-radius:12px;
+    background:var(--surface-2);
+    box-shadow:0 8px 32px rgba(0,0,0,.65);
+  }
+  .album-queue-panel[hidden] { display:none; }
+  .album-queue-heading { margin:0 0 9px; color:var(--text-primary); font-size:13px; font-weight:650; }
+  .album-queue-list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+  .album-queue-item { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px; padding:7px; border:1px solid var(--border); border-radius:8px; background:var(--surface-1); }
+  .album-queue-item-main { display:flex; align-items:center; gap:8px; min-width:0; }
+  .album-queue-cover { width:36px; height:36px; flex:0 0 auto; border-radius:4px; background:var(--surface-3); object-fit:cover; }
+  .album-queue-item-copy { min-width:0; }
+  .album-queue-item-title, .album-queue-item-artist { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .album-queue-item-title { color:var(--text-primary); font-size:12px; font-weight:600; }
+  .album-queue-item-artist { color:var(--text-secondary); font-size:11px; }
+  .album-queue-item-actions { display:flex; gap:3px; }
+  .album-queue-item-actions button { width:27px; min-width:27px; height:27px; min-height:27px; padding:0; }
+  .album-queue-item-actions button:disabled { opacity:.35; cursor:not-allowed; }
+  .album-queue-empty { margin:0; color:var(--text-secondary); font-size:12px; }
+  @media (max-width:760px) {
+    .album-queue-panel { right:0; bottom:calc(100% + 12px); width:min(400px, calc(100vw - 24px)); min-width:0; max-height:55vh; }
   }
   @media (max-width:480px) {
     .album-listening-dock { right:12px; bottom:12px; }
@@ -1799,8 +1818,6 @@
   }
   .collection-card:hover .album-listen-card-btn,
   .collection-card:focus-within .album-listen-card-btn,
-  .collection-card:hover .album-queue-card-btn,
-  .collection-card:focus-within .album-queue-card-btn { opacity:1; pointer-events:auto; transform:none; }
   .collection-card .media-info { transition:padding-bottom .15s ease; }
   .collection-card:hover .media-info,
   .collection-card:focus-within .media-info { padding-bottom:50px; }
@@ -1812,7 +1829,6 @@
   .storage-unsorted-actions .listen { opacity:0; pointer-events:none; transition:opacity .15s ease; }
   @media (hover:none) {
     .album-listen-card-btn,
-    .album-queue-card-btn,
     .storage-record .listen,
     .storage-unsorted-actions .listen { opacity:1; pointer-events:auto; transform:none; }
   }
@@ -4494,9 +4510,14 @@
 <aside id="albumListeningDock" class="album-listening-dock" aria-label="Mini-Player" hidden>
   <div class="album-listening-dock-header">
     <strong id="albumListeningDockTitle" class="album-listening-dock-title"></strong>
+    <button type="button" id="albumQueueHeaderToggle" class="album-queue-toggle" title="Album-Warteschlange öffnen" aria-label="Album-Warteschlange öffnen" aria-expanded="false">☷</button>
     <button type="button" id="closeAlbumListeningDockBtn" class="icon-btn album-listening-dock-close" title="Wiedergabe beenden" aria-label="Wiedergabe beenden">×</button>
   </div>
   <div id="albumListeningDockContent"></div>
+  <section id="albumQueuePanel" class="album-queue-panel" aria-label="Album-Warteschlange" hidden>
+    <h2 class="album-queue-heading">Warteschlange</h2>
+    <ol id="albumQueueList" class="album-queue-list"></ol>
+  </section>
   <div id="albumQueueControls" class="album-queue-controls" hidden>
     <span id="albumQueueStatus" class="album-queue-status">Warteschlange leer</span>
     <button type="button" id="playNextQueuedAlbumBtn" class="album-queue-next" disabled>Nächstes Album</button>
@@ -8863,6 +8884,104 @@ let youtubeMiniController = null;
 let youtubeMiniProgressTimer = null;
 const listeningAlbumQueue = [];
 
+function setAlbumQueuePanelOpen(isOpen) {
+  const panel = document.getElementById('albumQueuePanel');
+  if (!panel) return;
+  panel.hidden = !isOpen;
+  document.querySelectorAll('#albumQueueHeaderToggle, .album-queue-toggle').forEach(button => {
+    button.setAttribute('aria-expanded', String(isOpen));
+    button.title = isOpen ? 'Album-Warteschlange schließen' : 'Album-Warteschlange öffnen';
+    button.setAttribute('aria-label', button.title);
+  });
+}
+
+function createAlbumQueueToggle() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'album-queue-toggle';
+  button.textContent = '☷';
+  button.title = 'Album-Warteschlange öffnen';
+  button.setAttribute('aria-label', button.title);
+  button.setAttribute('aria-expanded', String(!document.getElementById('albumQueuePanel').hidden));
+  button.addEventListener('click', () => {
+    setAlbumQueuePanelOpen(document.getElementById('albumQueuePanel').hidden);
+  });
+  return button;
+}
+
+function renderListeningAlbumQueue() {
+  const list = document.getElementById('albumQueueList');
+  if (!list) return;
+  list.replaceChildren();
+  if (!listeningAlbumQueue.length) {
+    const empty = document.createElement('li');
+    empty.className = 'album-queue-empty';
+    empty.textContent = 'Noch keine Alben in der Warteschlange.';
+    list.append(empty);
+    return;
+  }
+  listeningAlbumQueue.forEach((item, index) => {
+    const row = document.createElement('li');
+    row.className = 'album-queue-item';
+    const main = document.createElement('div');
+    main.className = 'album-queue-item-main';
+    if (item.coverUrl) {
+      const cover = document.createElement('img');
+      cover.className = 'album-queue-cover';
+      cover.src = item.coverUrl;
+      cover.alt = '';
+      cover.addEventListener('error', () => cover.remove(), { once: true });
+      main.append(cover);
+    }
+    const copy = document.createElement('div');
+    copy.className = 'album-queue-item-copy';
+    const title = document.createElement('strong');
+    title.className = 'album-queue-item-title';
+    title.textContent = item.title || 'Album';
+    const artist = document.createElement('span');
+    artist.className = 'album-queue-item-artist';
+    artist.textContent = item.artist || 'Unbekannter Interpret';
+    copy.append(title, artist);
+    main.append(copy);
+    const actions = document.createElement('div');
+    actions.className = 'album-queue-item-actions';
+    const moveUp = document.createElement('button');
+    moveUp.type = 'button';
+    moveUp.textContent = '↑';
+    moveUp.title = 'Album nach oben verschieben';
+    moveUp.setAttribute('aria-label', moveUp.title);
+    moveUp.disabled = index === 0;
+    moveUp.addEventListener('click', () => moveQueuedAlbum(index, -1));
+    const moveDown = document.createElement('button');
+    moveDown.type = 'button';
+    moveDown.textContent = '↓';
+    moveDown.title = 'Album nach unten verschieben';
+    moveDown.setAttribute('aria-label', moveDown.title);
+    moveDown.disabled = index === listeningAlbumQueue.length - 1;
+    moveDown.addEventListener('click', () => moveQueuedAlbum(index, 1));
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = '×';
+    remove.title = 'Album aus der Warteschlange entfernen';
+    remove.setAttribute('aria-label', remove.title);
+    remove.addEventListener('click', () => {
+      listeningAlbumQueue.splice(index, 1);
+      updateAlbumQueueControls();
+    });
+    actions.append(moveUp, moveDown, remove);
+    row.append(main, actions);
+    list.append(row);
+  });
+}
+
+function moveQueuedAlbum(index, direction) {
+  const targetIndex = index + direction;
+  if (targetIndex < 0 || targetIndex >= listeningAlbumQueue.length) return;
+  [listeningAlbumQueue[index], listeningAlbumQueue[targetIndex]] =
+    [listeningAlbumQueue[targetIndex], listeningAlbumQueue[index]];
+  updateAlbumQueueControls();
+}
+
 function updateAlbumQueueControls() {
   const dock = document.getElementById('albumListeningDock');
   const controls = document.getElementById('albumQueueControls');
@@ -8878,16 +8997,24 @@ function updateAlbumQueueControls() {
   } else {
     status.textContent = 'Warteschlange leer';
   }
+  renderListeningAlbumQueue();
 }
 
-function queueAlbumForListening(item) {
-  listeningAlbumQueue.push({ ...item });
+function queueAlbumForListening(item, listeningUrl) {
+  const safeUrl = getSupportedListeningUrl(listeningUrl);
+  if (!safeUrl || !getSpotifyEmbedUrl(safeUrl)
+    || !new URL(safeUrl).pathname.match(/^\/album\/[A-Za-z0-9]+\/?$/)) {
+    console.error('Album konnte nicht eingereiht werden: Kein gültiger Spotify-Albumlink vorhanden.');
+    return false;
+  }
+  listeningAlbumQueue.push({ ...item, listeningUrl: safeUrl });
   const dock = document.getElementById('albumListeningDock');
   if (dock.hidden) {
     dock.hidden = false;
     document.getElementById('albumListeningDockTitle').textContent = 'Album-Warteschlange';
   }
   updateAlbumQueueControls();
+  return true;
 }
 
 function playNextQueuedAlbum() {
@@ -8928,6 +9055,10 @@ function closeAlbumListening(keepPlayer = false) {
 }
 
 document.getElementById('playNextQueuedAlbumBtn').addEventListener('click', playNextQueuedAlbum);
+document.getElementById('albumQueueHeaderToggle').addEventListener('click', () => {
+  setAlbumQueuePanelOpen(document.getElementById('albumQueuePanel').hidden);
+});
+renderListeningAlbumQueue();
 
 function formatListeningTime(seconds) {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -8945,6 +9076,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title) {
   player.className = 'album-mini-player youtube-mini-player';
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
+  topbar.append(createAlbumQueueToggle());
   topbar.append(document.getElementById('closeAlbumListeningDockBtn'));
   const main = document.createElement('div');
   main.className = 'album-mini-main';
@@ -9150,7 +9282,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
   const closeButton = document.getElementById('closeAlbumListeningDockBtn');
-  topbar.append(closeButton);
+  topbar.append(createAlbumQueueToggle(), closeButton);
   const trackList = document.createElement('ol');
   trackList.className = 'album-mini-tracklist';
   const progress = document.createElement('div');
@@ -9714,6 +9846,8 @@ function appendListeningProviderResults(content, provider, label, results, item)
   const list = document.createElement('div');
   list.className = 'album-listen-track-list';
   results.forEach(result => {
+    const choice = document.createElement('div');
+    choice.className = 'album-listen-choice';
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'album-listen-track';
@@ -9742,7 +9876,30 @@ function appendListeningProviderResults(content, provider, label, results, item)
         if (status) status.textContent = `${label} · ${result.kind || 'Treffer'}: ${result.title}`;
       }
     });
-    list.appendChild(button);
+    choice.appendChild(button);
+    if (provider === 'spotify' && ['Album', 'EP'].includes(result.kind)) {
+      const queueButton = document.createElement('button');
+      queueButton.type = 'button';
+      queueButton.className = 'album-listen-queue-btn';
+      queueButton.textContent = '+';
+      queueButton.title = 'Album in die Warteschlange';
+      queueButton.setAttribute('aria-label', `${result.title || item.title} in die Warteschlange`);
+      queueButton.addEventListener('click', () => {
+        const queued = queueAlbumForListening({
+          ...item,
+          title: result.title || item.title,
+          artist: result.subtitle?.split(' · ')[0] || item.artist
+        }, result.url);
+        if (queued) {
+          queueButton.textContent = '✓';
+          queueButton.disabled = true;
+          const status = content.querySelector(':scope > .album-listen-status');
+          if (status) status.textContent = `${result.title || item.title} wurde in die Warteschlange gelegt.`;
+        }
+      });
+      choice.appendChild(queueButton);
+    }
+    list.appendChild(choice);
   });
   section.append(heading, list);
   content.appendChild(section);
@@ -12668,7 +12825,6 @@ ${actionButtons}
             </div>
           </div>
           <button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album ${escapeHtml(item.title)} anhören"><span aria-hidden="true">▶</span><span>Anhören</span></button>
-          <button type="button" class="album-queue-card-btn" title="Album in die Warteschlange" aria-label="Album ${escapeHtml(item.title)} in die Warteschlange">+</button>
           ${commonBadgeHtml}
           ${showCollectionExtra && viewingOwnCollection && item.owned && (getStorageLabel(item) || item.lastWashed) ? `<div class="collection-extra">${getStorageLabel(item) ? `<span>${escapeHtml(getStorageLabel(item))}</span>` : ''}${item.lastWashed ? `<span>Gewaschen: ${escapeHtml(getWashedDateLabel(item))}</span>` : ''}</div>` : ''}
         </div>
@@ -12704,10 +12860,6 @@ ${actionButtons}
       card.querySelector('.album-listen-card-btn').addEventListener('click', event => {
         event.stopPropagation();
         openAlbumListening(item);
-      });
-      card.querySelector('.album-queue-card-btn').addEventListener('click', event => {
-        event.stopPropagation();
-        queueAlbumForListening(item);
       });
       frag.appendChild(card);
     });
