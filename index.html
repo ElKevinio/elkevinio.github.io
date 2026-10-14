@@ -9657,6 +9657,12 @@ function getListeningSearchArtist(artist) {
     .trim();
 }
 
+function getListeningSearchTitle(title) {
+  const value = String(title || '').trim();
+  const sides = value.split(/[=＝]/).map(side => side.trim()).filter(Boolean);
+  return sides[0] || value;
+}
+
 async function searchSpotifyListening(item, content, controller) {
   const releaseType = getReleaseType(item);
   const searchAlbums = releaseType === 'Album' || releaseType === 'EP';
@@ -9670,11 +9676,12 @@ async function searchSpotifyListening(item, content, controller) {
   }
   const searchField = searchAlbums ? 'album' : 'track';
   const searchArtist = getListeningSearchArtist(item.artist);
-  const cleanTitle = String(item.title || '').replace(/["\\]/g, ' ').trim();
+  const searchTitle = getListeningSearchTitle(item.title);
+  const cleanTitle = searchTitle.replace(/["\\]/g, ' ').trim();
   const cleanArtist = searchArtist.replace(/["\\]/g, ' ').trim();
   const queries = [
     `${searchField}:"${cleanTitle}" artist:"${cleanArtist}"`,
-    `${getSearchText(item.title)} ${getSearchText(searchArtist)}`.trim()
+    `${getSearchText(searchTitle)} ${getSearchText(searchArtist)}`.trim()
   ];
   let results = [];
   let matchingResults = [];
@@ -9702,7 +9709,7 @@ async function searchSpotifyListening(item, content, controller) {
       kind: releaseType,
       subtitle: `${(album.artists || []).map(artist => artist.name).join(', ')}${album.release_date ? ` · ${album.release_date.slice(0, 4)}` : ''}`,
       url: album.external_urls?.spotify,
-      score: calculateSearchScore(album.name, item.title) * 0.65
+      score: calculateSearchScore(album.name, searchTitle) * 0.65
         + Math.max(...(album.artists || []).map(artist => calculateSearchScore(artist.name, searchArtist)), 0) * 0.35
     }))
     : (data.tracks?.items || []).map(track => ({
@@ -9710,7 +9717,7 @@ async function searchSpotifyListening(item, content, controller) {
       kind: 'Track',
       subtitle: `${(track.artists || []).map(artist => artist.name).join(', ')} · ${track.album?.name || ''}`,
       url: track.external_urls?.spotify,
-      score: calculateSearchScore(track.name, item.title) * 0.65
+      score: calculateSearchScore(track.name, searchTitle) * 0.65
         + Math.max(...(track.artists || []).map(artist => calculateSearchScore(artist.name, searchArtist)), 0) * 0.35
     }));
   matchingResults = results.filter(result => result.url && result.score >= 0.6)
@@ -9736,7 +9743,7 @@ async function searchYouTubeListening(item, content, controller) {
     type: 'video',
     videoEmbeddable: 'true',
     maxResults: '3',
-    q: `${getListeningSearchArtist(item.artist)} ${item.title || ''}`.trim(),
+    q: `${getListeningSearchArtist(item.artist)} ${getListeningSearchTitle(item.title)}`.trim(),
     key: apiKey
   });
   const response = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`, { signal: controller.signal });
@@ -9750,7 +9757,7 @@ async function searchYouTubeListening(item, content, controller) {
     kind: 'Einbettbares Video',
     subtitle: video.snippet?.channelTitle || '',
     url: `https://www.youtube.com/watch?v=${video.id?.videoId || ''}`,
-    score: calculateSearchScore(video.snippet?.title, item.title) * 0.65
+    score: calculateSearchScore(video.snippet?.title, getListeningSearchTitle(item.title)) * 0.65
       + calculateSearchScore(video.snippet?.channelTitle, getListeningSearchArtist(item.artist)) * 0.35
   })).filter(result => getYouTubeEmbedUrl(result.url))
     .sort((a, b) => b.score - a.score).slice(0, 3);
@@ -9788,7 +9795,7 @@ async function searchAppleListening(item, content, controller, status) {
     const data = await response.json();
     return Array.isArray(data.results) ? data.results : [];
   };
-  const wantedTitle = item.title || '';
+  const wantedTitle = getListeningSearchTitle(item.title);
   const wantedArtist = getListeningSearchArtist(item.artist);
   const releaseType = getReleaseType(item);
   const searchAlbums = releaseType === 'Album' || releaseType === 'EP';
