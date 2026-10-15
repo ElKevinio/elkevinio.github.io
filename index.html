@@ -981,7 +981,7 @@
   .form-cover-search-btn:hover { background: var(--accent); border-color: var(--accent); color: #2b0f19; }
   .form-cover-results {
     display: none;
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    grid-template-columns: repeat(auto-fill, 96px);
     gap: 8px;
     margin: -4px 0 14px;
     max-height: 220px;
@@ -996,13 +996,15 @@
   .form-cover-results img,
   .cover-search-card img {
     width: 100%;
-    aspect-ratio: 1;
+    height: 100%;
     object-fit: cover;
     border-radius: 6px;
     background: var(--surface-3);
     display: block;
   }
   .form-cover-results img {
+    width: 96px;
+    height: 96px;
     cursor: pointer;
     border: 1.5px solid transparent;
     transition: border-color 0.15s, transform 0.1s;
@@ -3582,7 +3584,7 @@
   }
   .cover-search-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, 152px);
     gap: 12px;
     margin-top: 18px;
     width: 100%;
@@ -3597,10 +3599,12 @@
     font-size: 13px;
   }
   .cover-search-card {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    gap: 10px;
-    padding: 10px;
+    display: block;
+    width: 152px;
+    height: 152px;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
     border: 0.5px solid var(--border);
     border-radius: 14px;
     background: var(--surface-2);
@@ -3608,7 +3612,6 @@
     text-align: left;
     cursor: pointer;
     transition: border-color 0.15s, transform 0.1s, background 0.15s;
-    min-height: 220px;
   }
   .cover-search-card:hover {
     border-color: var(--accent-border);
@@ -3617,9 +3620,10 @@
   }
   .cover-search-card img {
     width: 100%;
-    aspect-ratio: 1;
+    height: 100%;
     object-fit: cover;
-    border-radius: 12px;
+    aspect-ratio: auto;
+    border-radius: 0;
     display: block;
   }
   .cover-search-card .cover-info {
@@ -4876,10 +4880,12 @@
       <button type="button" id="closeCoverUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
     </div>
     <input type="url" id="coverUrlModalInput" aria-label="Cover-Bildlink" placeholder="https://…">
+    <p class="settings-panel-hint" id="coverUrlResolutionMessage" aria-live="polite"></p>
     <div class="cover-url-actions">
       <button type="button" id="copyCoverUrlBtn" class="icon-btn" title="Bildlink kopieren" aria-label="Bildlink kopieren">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.8"/></svg>
       </button>
+      <button type="button" id="increaseCoverResolutionBtn" title="Discogs-Bildauflösung von 150 auf 600 Pixel erhöhen">150 → 600 px</button>
       <button type="button" id="applyCoverUrlBtn" class="primary">Übernehmen</button>
     </div>
   </div>
@@ -8832,6 +8838,18 @@ function normalizeDiscogsImageUrl(url) {
   return '';
 }
 
+function getDiscogsCoverUrl(source, allowThumbnail = true) {
+  const fullSize = [
+    ...(Array.isArray(source?.images) ? source.images.map(image => image?.uri) : []),
+    source?.cover_image
+  ].map(normalizeDiscogsImageUrl).find(Boolean);
+  if (fullSize || !allowThumbnail) return fullSize || '';
+  return [
+    source?.thumb,
+    ...(Array.isArray(source?.images) ? source.images.map(image => image?.uri150) : [])
+  ].map(normalizeDiscogsImageUrl).find(Boolean) || '';
+}
+
 function splitDiscogsSearchResult(result) {
   const rawTitle = String(result?.title || '').trim();
   const rawArtist = String(result?.artist || '').trim();
@@ -8852,21 +8870,21 @@ async function getCoverFromDiscogs(query) {
     const results = data?.results || [];
     if (results.length === 0) return '';
 
-    const direct = results.find(r => normalizeDiscogsImageUrl(r?.cover_image || r?.thumb));
-    if (direct) return normalizeDiscogsImageUrl(direct.cover_image || direct.thumb);
+    const direct = results.map(result => getDiscogsCoverUrl(result, false)).find(Boolean);
+    if (direct) return direct;
 
     for (const result of results) {
       if (!result?.resource_url) continue;
       try {
         const detailRes = await fetch(result.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
         const detailData = await detailRes.json();
-        const thumb = normalizeDiscogsImageUrl(detailData?.thumb || detailData?.cover_image || detailData?.images?.[0]?.uri150 || detailData?.images?.[0]?.uri);
-        if (thumb) return thumb;
+        const cover = getDiscogsCoverUrl(detailData);
+        if (cover) return cover;
       } catch (e) {
       }
     }
 
-    return '';
+    return results.map(result => getDiscogsCoverUrl(result)).find(Boolean) || '';
   } catch (e) {
     return '';
   }
@@ -8896,18 +8914,14 @@ async function resolveCoverForAlbum(album, provider, initialCover) {
 
 function getAlbumCoverUrl(album) {
   const candidates = [
-    album?.artworkUrl100,
     album?.artworkUrl600,
+    album?.artworkUrl100,
     album?.artworkUrl60,
     album?.artworkUrl
   ];
   const raw = (candidates.find(Boolean) || '').trim();
   if (!raw) return '';
-  return raw
-    .replace('100x100bb', '600x600bb')
-    .replace('60x60bb', '600x600bb')
-    .replace('200x200bb', '600x600bb')
-    .replace('400x400bb', '600x600bb');
+  return raw.replace(/\d+x\d+bb/i, '600x600bb');
 }
 
 let searchResultCards = [];
@@ -9157,7 +9171,7 @@ async function searchAlbums() {
             try {
               const detailRes = await fetch(result.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
               const detailData = await detailRes.json();
-              cover = normalizeDiscogsImageUrl(detailData?.thumb || detailData?.cover_image || detailData?.images?.[0]?.uri150 || detailData?.images?.[0]?.uri) || cover;
+              cover = getDiscogsCoverUrl(detailData, false) || cover;
               if (lowestPrice == null && detailData?.lowest_price != null) {
                 lowestPrice = Number(detailData.lowest_price) || null;
               }
@@ -9420,7 +9434,7 @@ async function searchDiscogsReleases(query, limit = 8) {
           const detailRes = await fetch(result.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
           const detailData = await detailRes.json();
           metadata = normalizeDiscogsReleaseDetail(detailData);
-          cover = normalizeDiscogsImageUrl(detailData?.thumb || detailData?.cover_image || detailData?.images?.[0]?.uri150 || detailData?.images?.[0]?.uri) || cover;
+          cover = getDiscogsCoverUrl(detailData, false) || cover;
           if (lowestPrice == null && detailData?.lowest_price != null) {
             lowestPrice = Number(detailData.lowest_price) || null;
           }
@@ -9581,7 +9595,7 @@ function normalizeDiscogsReleaseDetail(detail) {
   const artist = Array.isArray(detail.artists)
     ? detail.artists.map(a => a.name).filter(Boolean).join(', ')
     : detail.artist || '';
-  const cover = normalizeDiscogsImageUrl(detail.cover_image || detail.thumb || detail.images?.[0]?.uri150 || detail.images?.[0]?.uri || '');
+  const cover = getDiscogsCoverUrl(detail);
   const lowestPrice = detail.lowest_price != null ? Number(detail.lowest_price) || null : null;
   const averagePrice = detail.average_price != null ? Number(detail.average_price) || null : null;
   const priceCurrency = detail.currency || detail.community?.currency || '€';
@@ -11976,6 +11990,7 @@ document.getElementById('fCoverUrl').addEventListener('input', e => {
 const coverUrlOverlay = document.getElementById('coverUrlOverlay');
 document.getElementById('openCoverUrlBtn').addEventListener('click', () => {
   document.getElementById('coverUrlModalInput').value = document.getElementById('fCoverUrl').value;
+  document.getElementById('coverUrlResolutionMessage').textContent = '';
   coverUrlOverlay.classList.add('open');
   document.getElementById('coverUrlModalInput').focus();
 });
@@ -11992,6 +12007,35 @@ document.getElementById('copyCoverUrlBtn').addEventListener('click', async () =>
     input.select();
     document.execCommand('copy');
   }
+});
+document.getElementById('increaseCoverResolutionBtn').addEventListener('click', () => {
+  const input = document.getElementById('coverUrlModalInput');
+  const status = document.getElementById('coverUrlResolutionMessage');
+  let url;
+  try {
+    url = new URL(input.value.trim());
+  } catch {
+    status.textContent = 'Bitte zuerst einen gültigen Bildlink eintragen.';
+    return;
+  }
+  if (!/(^|\.)discogs\.com$/i.test(url.hostname)) {
+    status.textContent = 'Die automatische Auflösungsänderung funktioniert nur bei Discogs-Bildlinks.';
+    return;
+  }
+  let changed = false;
+  url.pathname = url.pathname.replace(/(^|\/)(h|w)[:.]150(?=\/|$)/gi, (match, separator, dimension) => {
+    changed = true;
+    return `${separator}${dimension}:600`;
+  });
+  if (!changed) {
+    status.textContent = 'Im Link wurde kein h:150- oder w:150-Wert gefunden.';
+    return;
+  }
+  input.value = url.href;
+  document.getElementById('fCoverUrl').value = url.href;
+  document.getElementById('formCover').src = url.href;
+  if (currentDraft) currentDraft.coverUrl = url.href;
+  status.textContent = 'Die 150-Pixel-Begrenzung wurde im Link auf 600 Pixel erhöht; der übrige Link blieb unverändert.';
 });
 document.getElementById('applyCoverUrlBtn').addEventListener('click', () => {
   const coverUrl = document.getElementById('coverUrlModalInput').value.trim();
@@ -12069,7 +12113,7 @@ async function searchCoverCandidates(query) {
           try {
             const detailRes = await fetch(r.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
             const detailData = await detailRes.json();
-            cover = normalizeDiscogsImageUrl(detailData?.thumb || detailData?.cover_image || detailData?.images?.[0]?.uri150 || detailData?.images?.[0]?.uri);
+            cover = getDiscogsCoverUrl(detailData);
           } catch (e) {
           }
         }
