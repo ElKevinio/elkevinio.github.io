@@ -1640,8 +1640,32 @@
   .album-listening-dock.has-custom-mini .album-listening-dock-header { display:none; }
   .album-listening-dock.is-collapsed .album-listening-dock-header { display:flex; }
   .album-listening-dock.is-collapsed .album-listening-dock-title { display:block; }
-  .album-listening-dock.is-collapsed #albumListeningDockContent { display:none; }
+  .album-listening-dock.is-collapsed #albumListeningDockContent { display:block; }
   .album-listening-dock.is-collapsed { width:min(340px, calc(100vw - 24px)); padding:8px 10px; }
+  .album-listening-dock.is-collapsed .album-mini-topbar,
+  .album-listening-dock.is-collapsed .album-mini-cover,
+  .album-listening-dock.is-collapsed .album-mini-track-title,
+  .album-listening-dock.is-collapsed .album-mini-artist,
+  .album-listening-dock.is-collapsed .album-mini-tracklist,
+  .album-listening-dock.is-collapsed .album-mini-progress,
+  .album-listening-dock.is-collapsed .album-mini-message,
+  .album-listening-dock.is-collapsed .album-mini-platform-link { display:none; }
+  .album-listening-dock.is-collapsed .album-mini-main { grid-template-columns:minmax(0,1fr); gap:0; }
+  .album-listening-dock.is-collapsed .album-mini-controls { justify-content:center; gap:6px; margin-top:0; }
+  .album-listening-dock.is-collapsed .album-mini-control {
+    width:26px;
+    height:26px;
+    min-width:26px;
+    font-size:13px;
+  }
+  .album-listening-dock.is-collapsed .album-mini-control.primary {
+    width:30px;
+    height:30px;
+    min-width:30px;
+    font-size:15px;
+  }
+  .album-listening-dock.is-collapsed .album-mini-control svg { width:14px; height:14px; }
+  .album-listening-dock.is-collapsed .youtube-mini-player .album-mini-controls { margin:0; }
   .album-mini-topbar { display:flex; justify-content:flex-end; min-height:30px; margin:0 0 4px; }
   .album-listening-dock-close {
     position:relative;
