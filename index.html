@@ -1542,7 +1542,18 @@
   .album-listen-track .album-listen-result-play { grid-column:2; grid-row:1 / span 3; color:var(--text-secondary); }
   .album-listen-choice { display:grid; grid-template-columns:minmax(0,1fr) 40px; gap:6px; }
   .album-listen-choice .album-listen-track { width:100%; }
-  .album-listen-queue-btn { width:40px; min-width:40px; height:auto; padding:0; border-radius:7px; font-size:20px; }
+  .album-listen-queue-btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:40px;
+    min-width:40px;
+    height:100%;
+    min-height:42px;
+    padding:0;
+    border-radius:7px;
+    line-height:1;
+  }
   .album-listen-status { margin:8px 0; color:var(--text-secondary); font-size:13px; }
   .listening-provider-list { display:grid; gap:7px; margin:10px 0; }
   .listening-provider-row { display:flex; align-items:center; gap:10px; min-height:42px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; background:var(--surface-1); }
@@ -1629,8 +1640,7 @@
   .album-listening-dock.has-custom-mini .album-listening-dock-header { display:none; }
   .album-listening-dock.is-collapsed .album-listening-dock-header { display:flex; }
   .album-listening-dock.is-collapsed .album-listening-dock-title { display:block; }
-  .album-listening-dock.is-collapsed #albumListeningDockContent,
-  .album-listening-dock.is-collapsed #albumQueueControls { display:none; }
+  .album-listening-dock.is-collapsed #albumListeningDockContent { display:none; }
   .album-listening-dock.is-collapsed { width:min(340px, calc(100vw - 24px)); padding:8px 10px; }
   .album-mini-topbar { display:flex; justify-content:flex-end; min-height:30px; margin:0 0 4px; }
   .album-listening-dock-close {
@@ -1749,12 +1759,26 @@
   .album-listening-dock.is-resizing .album-mini-tracklist { user-select:none; }
   .album-mini-platform-link { display:inline-flex; margin-top:8px; color:var(--text-muted); font-size:11px; text-decoration:none; }
   .album-mini-platform-link:hover { color:var(--text-primary); text-decoration:underline; }
-  .album-queue-controls { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; padding-top:9px; border-top:1px solid var(--border); }
-  .album-queue-controls[hidden] { display:none; }
-  .album-queue-status { min-width:0; overflow:hidden; color:var(--text-secondary); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
-  .album-queue-next { flex:0 0 auto; min-height:30px; padding:0 9px; font-size:11px; }
-  .album-queue-toggle { width:30px; min-width:30px; height:30px; min-height:30px; padding:0; }
-  .album-dock-toggle { width:30px; min-width:30px; height:30px; min-height:30px; padding:0; }
+  .album-queue-toggle,
+  .album-dock-toggle {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:30px;
+    min-width:30px;
+    height:30px;
+    min-height:30px;
+    padding:0;
+    line-height:1;
+  }
+  .album-queue-toggle svg,
+  .album-dock-toggle svg,
+  .album-listen-queue-btn svg {
+    display:block;
+    width:17px;
+    height:17px;
+    flex:0 0 auto;
+  }
   .album-queue-panel {
     position:absolute;
     right:calc(100% + 12px);
@@ -4739,8 +4763,8 @@
 <aside id="albumListeningDock" class="album-listening-dock" aria-label="Mini-Player" hidden>
   <div class="album-listening-dock-header">
     <strong id="albumListeningDockTitle" class="album-listening-dock-title"></strong>
-    <button type="button" id="albumQueueHeaderToggle" class="album-queue-toggle" title="Album-Warteschlange öffnen" aria-label="Album-Warteschlange öffnen" aria-expanded="false">☷</button>
-    <button type="button" id="albumDockHeaderToggle" class="album-dock-toggle" title="Mini-Player öffnen" aria-label="Mini-Player öffnen" aria-expanded="false">⌃</button>
+    <button type="button" id="albumQueueHeaderToggle" class="album-queue-toggle" title="Album-Warteschlange öffnen" aria-label="Album-Warteschlange öffnen" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button type="button" id="albumDockHeaderToggle" class="album-dock-toggle" title="Mini-Player öffnen" aria-label="Mini-Player öffnen" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 10 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button type="button" id="closeAlbumListeningDockBtn" class="icon-btn album-listening-dock-close" title="Wiedergabe beenden" aria-label="Wiedergabe beenden">×</button>
   </div>
   <div id="albumListeningDockContent"></div>
@@ -4748,10 +4772,6 @@
     <h2 class="album-queue-heading">Warteschlange</h2>
     <ol id="albumQueueList" class="album-queue-list"></ol>
   </section>
-  <div id="albumQueueControls" class="album-queue-controls" hidden>
-    <span id="albumQueueStatus" class="album-queue-status">Warteschlange leer</span>
-    <button type="button" id="playNextQueuedAlbumBtn" class="album-queue-next" disabled>Nächstes Album</button>
-  </div>
 </aside>
 
 <div class="modal-overlay cover-url-overlay" id="coverUrlOverlay" aria-modal="true" role="dialog" aria-labelledby="coverUrlTitle">
@@ -9590,7 +9610,9 @@ function updateAlbumDockToggle() {
   if (!dock) return;
   const isCollapsed = dock.classList.contains('is-collapsed');
   document.querySelectorAll('#albumDockHeaderToggle, .album-dock-toggle').forEach(button => {
-    button.textContent = isCollapsed ? '⌃' : '⌄';
+    button.innerHTML = isCollapsed
+      ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 10 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     button.title = isCollapsed ? 'Mini-Player öffnen' : 'Mini-Player minimieren';
     button.setAttribute('aria-label', button.title);
     button.setAttribute('aria-expanded', String(!isCollapsed));
@@ -9612,6 +9634,10 @@ function createAlbumDockToggle() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'album-dock-toggle';
+  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 10 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  button.title = 'Mini-Player minimieren';
+  button.setAttribute('aria-label', button.title);
+  button.setAttribute('aria-expanded', 'true');
   button.addEventListener('click', toggleAlbumDockCollapsed);
   return button;
 }
@@ -9624,6 +9650,7 @@ function setAlbumQueuePanelOpen(isOpen) {
     button.setAttribute('aria-expanded', String(isOpen));
     button.title = isOpen ? 'Album-Warteschlange schließen' : 'Album-Warteschlange öffnen';
     button.setAttribute('aria-label', button.title);
+    button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   });
   persistListeningSession();
 }
@@ -9632,7 +9659,7 @@ function createAlbumQueueToggle() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'album-queue-toggle';
-  button.textContent = '☷';
+  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   button.title = 'Album-Warteschlange öffnen';
   button.setAttribute('aria-label', button.title);
   button.setAttribute('aria-expanded', String(!document.getElementById('albumQueuePanel').hidden));
@@ -9717,19 +9744,7 @@ function moveQueuedAlbum(index, direction) {
 
 function updateAlbumQueueControls() {
   const dock = document.getElementById('albumListeningDock');
-  const controls = document.getElementById('albumQueueControls');
-  const status = document.getElementById('albumQueueStatus');
-  const nextButton = document.getElementById('playNextQueuedAlbumBtn');
-  if (!dock || !controls || !status || !nextButton) return;
-  const hasPlayer = !dock.hidden && !!document.getElementById('albumListeningDockContent').childElementCount;
-  controls.hidden = !hasPlayer && listeningAlbumQueue.length === 0;
-  nextButton.disabled = listeningAlbumQueue.length === 0;
-  if (listeningAlbumQueue.length) {
-    const nextTitle = listeningAlbumQueue[0].title || 'Album';
-    status.textContent = `${listeningAlbumQueue.length} ${listeningAlbumQueue.length === 1 ? 'Album' : 'Alben'} · als Nächstes: ${nextTitle}`;
-  } else {
-    status.textContent = 'Warteschlange leer';
-  }
+  if (!dock) return;
   renderListeningAlbumQueue();
   updateAlbumMiniPlayerButton();
   persistListeningSession();
@@ -9793,13 +9808,13 @@ function closeAlbumListening(keepPlayer = false) {
   }
 }
 
-document.getElementById('playNextQueuedAlbumBtn').addEventListener('click', playNextQueuedAlbum);
 document.getElementById('albumQueueHeaderToggle').addEventListener('click', () => {
   setAlbumQueuePanelOpen(document.getElementById('albumQueuePanel').hidden);
 });
 document.getElementById('albumDockHeaderToggle').addEventListener('click', toggleAlbumDockCollapsed);
 document.getElementById('showAlbumMiniPlayerBtn').addEventListener('click', showAlbumMiniPlayer);
 renderListeningAlbumQueue();
+updateAlbumDockToggle();
 updateAlbumMiniPlayerButton();
 
 function formatListeningTime(seconds) {
@@ -10071,12 +10086,13 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     trackList.classList.toggle('is-open', expanded);
     if (!expanded) trackList.style.height = '0px';
     expandHandle.setAttribute('aria-expanded', String(expanded));
-    expandHandle.setAttribute('aria-label', expanded ? 'Titelliste durch Herunterziehen verkleinern' : 'Titelliste durch Hochziehen öffnen');
-    expandHandle.title = 'Titelliste durch Ziehen in der Größe ändern';
+    expandHandle.setAttribute('aria-label', expanded ? 'Titelliste schließen' : 'Titelliste öffnen');
+    expandHandle.title = 'Titelliste durch Klicken oder Ziehen öffnen und schließen';
   };
   setExpanded(false);
   let dragStartY = null;
   let dragStartHeight = 0;
+  let suppressExpandClick = false;
   const getMaxTracklistHeight = () => {
     const previousHeight = trackList.style.height;
     const previousMaxHeight = trackList.style.maxHeight;
@@ -10105,6 +10121,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     if (event.button !== 0 && event.pointerType === 'mouse') return;
     dragStartY = event.clientY;
     dragStartHeight = trackList.getBoundingClientRect().height;
+    suppressExpandClick = false;
     dock.classList.add('is-resizing');
     expandHandle.setPointerCapture(event.pointerId);
     event.preventDefault();
@@ -10113,6 +10130,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     if (dragStartY === null) return;
     const distance = dragStartY - event.clientY;
     if (Math.abs(distance) >= 3) {
+      suppressExpandClick = true;
       setTracklistHeight(dragStartHeight + distance);
     }
   };
@@ -10120,9 +10138,23 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     if (dragStartY === null) return;
     dragStartY = null;
     dock.classList.remove('is-resizing');
+    if (suppressExpandClick) {
+      window.setTimeout(() => { suppressExpandClick = false; }, 300);
+    }
   };
   expandHandle.onpointerup = finishHandleDrag;
   expandHandle.onpointercancel = finishHandleDrag;
+  expandHandle.addEventListener('click', () => {
+    if (suppressExpandClick) {
+      suppressExpandClick = false;
+      return;
+    }
+    if (player.classList.contains('is-expanded')) {
+      setTracklistHeight(0);
+    } else {
+      setTracklistHeight(getMaxTracklistHeight());
+    }
+  });
   expandHandle.onkeydown = event => {
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     event.preventDefault();
@@ -10682,7 +10714,7 @@ function appendListeningProviderResults(content, provider, label, results, item)
       const queueButton = document.createElement('button');
       queueButton.type = 'button';
       queueButton.className = 'album-listen-queue-btn';
-      queueButton.textContent = '+';
+      queueButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
       queueButton.title = 'Album in die Warteschlange';
       queueButton.setAttribute('aria-label', `${result.title || item.title} in die Warteschlange`);
       queueButton.addEventListener('click', () => {
@@ -10692,7 +10724,7 @@ function appendListeningProviderResults(content, provider, label, results, item)
           artist: result.subtitle?.split(' · ')[0] || item.artist
         }, result.url);
         if (queued) {
-          queueButton.textContent = '✓';
+          queueButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
           queueButton.disabled = true;
           const status = content.querySelector(':scope > .album-listen-status');
           if (status) status.textContent = `${result.title || item.title} wurde in die Warteschlange gelegt.`;
