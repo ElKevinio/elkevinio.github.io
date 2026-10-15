@@ -1638,11 +1638,11 @@
   }
   .album-listening-dock.has-custom-mini .album-listening-dock-title { display:none; }
   .album-listening-dock.has-custom-mini .album-listening-dock-header { display:none; }
-  .album-listening-dock.is-collapsed .album-listening-dock-header { display:flex; }
-  .album-listening-dock.is-collapsed .album-listening-dock-title { display:none; }
+  .album-listening-dock.is-collapsed .album-listening-dock-header { display:none; }
   .album-listening-dock.is-collapsed #albumListeningDockContent { display:block; }
   .album-listening-dock.is-collapsed { width:min(340px, calc(100vw - 24px)); padding:8px 10px; }
   .album-listening-dock.is-collapsed .album-mini-topbar,
+  .album-listening-dock.is-collapsed .album-listening-dock-expand-handle,
   .album-listening-dock.is-collapsed .album-mini-cover,
   .album-listening-dock.is-collapsed .album-mini-track-title,
   .album-listening-dock.is-collapsed .album-mini-artist,
@@ -1650,24 +1650,37 @@
   .album-listening-dock.is-collapsed .album-mini-progress,
   .album-listening-dock.is-collapsed .album-mini-message,
   .album-listening-dock.is-collapsed .album-mini-platform-link { display:none; }
-  .album-listening-dock.is-collapsed .album-listening-dock-title,
   .album-listening-dock.is-collapsed #albumQueueHeaderToggle { display:none; }
+  .album-mini-collapsed-title { display:none; }
+  .album-listening-dock.is-collapsed .album-mini-collapsed-title {
+    display:block;
+    flex:1 1 auto;
+    min-width:0;
+    overflow:hidden;
+    color:var(--text-primary);
+    font-size:12px;
+    font-weight:600;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
   .album-listening-dock.is-collapsed .album-mini-queue-next,
   .album-listening-dock.is-collapsed .album-mini-controls .album-mini-control[aria-label="Zu deinen Spotify-Lieblingssongs hinzufügen"],
   .album-listening-dock.is-collapsed .album-mini-controls .album-mini-control[aria-label="Zu deinen Spotify-Lieblingssongs hinzugefügt"] { display:none; }
-  .album-listening-dock.is-collapsed .album-mini-main { grid-template-columns:minmax(0,1fr); gap:0; }
-  .album-listening-dock.is-collapsed .album-mini-controls { justify-content:center; gap:6px; margin-top:0; }
+  .album-listening-dock.is-collapsed .album-mini-main { display:block; }
+  .album-listening-dock.is-collapsed .album-mini-controls { justify-content:flex-end; gap:4px; margin-top:0; white-space:nowrap; }
+  .album-listening-dock.is-collapsed .album-mini-controls .album-dock-toggle,
+  .album-listening-dock.is-collapsed .album-mini-controls .album-listening-dock-close { display:inline-flex; }
   .album-listening-dock.is-collapsed .album-mini-control {
+    width:24px;
+    height:24px;
+    min-width:24px;
+    font-size:12px;
+  }
+  .album-listening-dock.is-collapsed .album-mini-control.primary {
     width:26px;
     height:26px;
     min-width:26px;
-    font-size:13px;
-  }
-  .album-listening-dock.is-collapsed .album-mini-control.primary {
-    width:30px;
-    height:30px;
-    min-width:30px;
-    font-size:15px;
+    font-size:14px;
   }
   .album-listening-dock.is-collapsed .album-mini-control svg { width:14px; height:14px; }
   .album-listening-dock.is-collapsed .youtube-mini-player .album-mini-controls { margin:0; }
@@ -1710,6 +1723,8 @@
     width:34px; height:34px; min-width:34px; padding:0; border-radius:50%;
     color:var(--text-primary); background:var(--surface-3);
   }
+  .album-mini-controls .album-dock-toggle,
+  .album-mini-controls .album-listening-dock-close { display:none; }
   .album-mini-control.primary { width:42px; height:42px; min-width:42px; background:var(--text-primary); color:var(--bg); font-size:19px; }
   .album-mini-control:disabled { opacity:.35; cursor:not-allowed; }
   .album-mini-control:hover:not(:disabled) { border-color:var(--accent-border); color:var(--accent); }
@@ -9868,8 +9883,6 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
   topbar.append(createAlbumQueueToggle());
-  topbar.append(createAlbumDockToggle());
-  topbar.append(document.getElementById('closeAlbumListeningDockBtn'));
   const main = document.createElement('div');
   main.className = 'album-mini-main';
   const cover = document.createElement('img');
@@ -9890,13 +9903,16 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   artist.textContent = item?.artist || 'YouTube';
   const controls = document.createElement('div');
   controls.className = 'album-mini-controls';
+  const collapsedTitle = document.createElement('span');
+  collapsedTitle.className = 'album-mini-collapsed-title';
+  collapsedTitle.textContent = title || 'YouTube-Video';
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'album-mini-control primary';
   toggle.textContent = '▶';
   toggle.setAttribute('aria-label', 'Wiedergabe starten');
   toggle.disabled = true;
-  controls.append(toggle);
+  controls.append(collapsedTitle, toggle, createAlbumDockToggle(), document.getElementById('closeAlbumListeningDockBtn'));
   meta.append(currentTrack, artist, controls);
   main.append(cover, meta);
   const progress = document.createElement('div');
@@ -10058,6 +10074,9 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   artist.textContent = item?.artist || 'Spotify';
   const controls = document.createElement('div');
   controls.className = 'album-mini-controls';
+  const collapsedTitle = document.createElement('span');
+  collapsedTitle.className = 'album-mini-collapsed-title';
+  collapsedTitle.textContent = title || 'Album';
   const previous = document.createElement('button');
   previous.type = 'button';
   previous.className = 'album-mini-control';
@@ -10094,8 +10113,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   favorite.disabled = true;
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  const closeButton = document.getElementById('closeAlbumListeningDockBtn');
-  topbar.append(createAlbumQueueToggle(), createAlbumDockToggle(), closeButton);
+  topbar.append(createAlbumQueueToggle());
   const trackList = document.createElement('ol');
   trackList.className = 'album-mini-tracklist';
   const progress = document.createElement('div');
@@ -10116,7 +10134,16 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const message = document.createElement('p');
   message.className = 'album-mini-message';
   message.textContent = 'Die Titelliste wird geladen …';
-  controls.append(previous, toggle, next, favorite, nextQueued);
+  controls.append(
+    collapsedTitle,
+    previous,
+    toggle,
+    next,
+    favorite,
+    nextQueued,
+    createAlbumDockToggle(),
+    document.getElementById('closeAlbumListeningDockBtn')
+  );
   meta.append(currentTrack, artist, controls);
   main.append(cover, meta);
   progress.append(seek);
