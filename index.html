@@ -1291,6 +1291,7 @@
   .storage-compartment-name:focus { color:var(--text-primary); }
   .storage-compartment-index { flex:0 0 auto; color:var(--text-muted); font-size:9px; line-height:1; }
   .storage-compartment-header button { width: 20px; min-width: 20px; height: 20px; min-height:20px; padding:0; }
+  .storage-compartment-header .storage-order-button { width:20px; min-width:20px; color:var(--text-secondary); }
   .storage-compartment-header .wash-compartment-button { width:18px; min-width:18px; height:18px; min-height:18px; color:var(--accent); }
   .storage-compartment-header .wash-compartment-button:disabled { opacity:.35; cursor:not-allowed; }
   .storage-records { display:flex; flex:1; flex-direction:column; gap:0; min-height:28px; overflow:auto; }
@@ -2005,6 +2006,7 @@
   }
   .storage-shelf.display-mode .storage-compartment-header .remove-compartment { position:absolute; right:0; width:18px; min-width:18px; height:18px; min-height:18px; }
   .storage-shelf.display-mode .storage-compartment-header .wash-compartment-button { position:absolute; right:20px; width:18px; min-width:18px; height:18px; min-height:18px; }
+  .storage-shelf.display-mode .storage-compartment-header .storage-order-button { position:absolute; right:40px; }
   .storage-shelf.display-mode .storage-shelf-topline { gap:3px; }
   .storage-shelf.display-mode .storage-shelf-name { min-width:24px; }
   .storage-shelf.display-mode .storage-shelf-topline button { width:22px; min-width:22px; height:22px; padding:0; }
@@ -3255,6 +3257,21 @@
   }
   .storage-result-overlay { z-index: 115; }
   .wash-mode-overlay { z-index: 99; }
+  .storage-order-overlay { z-index: 101; }
+  .storage-order-box { width:min(560px, calc(100vw - 24px)); max-width:560px; max-height:calc(100dvh - 24px); overflow:auto; }
+  .storage-order-header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .storage-order-header .modal-title { margin:0; }
+  .storage-order-mode { display:grid; gap:5px; margin:14px 0; color:var(--text-secondary); font-size:12px; }
+  .storage-order-list { display:grid; gap:6px; max-height:50vh; overflow:auto; margin:0; padding:0; list-style:none; }
+  .storage-order-item { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; min-height:44px; padding:6px 8px; border:1px solid var(--border); border-radius:7px; background:var(--surface-1); }
+  .storage-order-item-copy { min-width:0; }
+  .storage-order-item-title,.storage-order-item-meta { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .storage-order-item-title { color:var(--text-primary); font-size:12px; font-weight:600; }
+  .storage-order-item-meta { margin-top:2px; color:var(--text-muted); font-size:11px; }
+  .storage-order-item-actions { display:flex; gap:4px; }
+  .storage-order-item-actions button { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; min-width:28px; min-height:28px; padding:0; }
+  .storage-order-item-actions button:disabled { opacity:.35; cursor:not-allowed; }
+  .storage-order-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
   .wash-mode-box {
     width: min(680px, calc(100vw - 24px));
     max-width: 680px;
@@ -5015,6 +5032,27 @@
   </div>
 </div>
 
+<div class="modal-overlay storage-order-overlay" id="storageOrderOverlay" aria-modal="true" role="dialog" aria-labelledby="storageOrderTitle">
+  <div class="modal-box storage-order-box">
+    <div class="storage-order-header">
+      <p class="modal-title" id="storageOrderTitle">Fachsortierung</p>
+      <button type="button" id="closeStorageOrderBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+    <p class="settings-panel-hint" id="storageOrderLocation"></p>
+    <label class="storage-order-mode">Sortierung
+      <select id="storageOrderMode">
+        <option value="artist-year">Interpret A–Z, Jahr neu–alt</option>
+        <option value="custom">Manuelle Reihenfolge</option>
+      </select>
+    </label>
+    <ol class="storage-order-list" id="storageOrderList"></ol>
+    <div class="storage-order-actions">
+      <button type="button" id="cancelStorageOrderBtn">Abbrechen</button>
+      <button type="button" id="saveStorageOrderBtn" class="primary">Speichern</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="discogsMatchOverlay">
   <div class="modal-box discogs-match-box">
     <div class="discogs-match-content">
@@ -6356,6 +6394,26 @@ function normalizeShelfLocations(shelves) {
         }
       });
     }
+    const compartmentSortModes = {};
+    if (shelf.compartmentSortModes && typeof shelf.compartmentSortModes === 'object' && !Array.isArray(shelf.compartmentSortModes)) {
+      Object.entries(shelf.compartmentSortModes).forEach(([key, value]) => {
+        const number = Number(key);
+        if (Number.isInteger(number) && number >= 1 && number <= capacity
+          && !removedCompartments.includes(number) && value === 'custom') {
+          compartmentSortModes[number] = 'custom';
+        }
+      });
+    }
+    const compartmentSortOrders = {};
+    if (shelf.compartmentSortOrders && typeof shelf.compartmentSortOrders === 'object' && !Array.isArray(shelf.compartmentSortOrders)) {
+      Object.entries(shelf.compartmentSortOrders).forEach(([key, value]) => {
+        const number = Number(key);
+        if (Number.isInteger(number) && number >= 1 && number <= capacity
+          && !removedCompartments.includes(number) && Array.isArray(value)) {
+          compartmentSortOrders[number] = [...new Set(value.map(String).filter(Boolean))];
+        }
+      });
+    }
     return {
       id: String(shelf.id),
       name: String(shelf.name),
@@ -6364,6 +6422,8 @@ function normalizeShelfLocations(shelves) {
       columns,
       removedCompartments,
       compartmentNames,
+      compartmentSortModes,
+      compartmentSortOrders,
       compartments: capacity - removedCompartments.length
     };
   });
@@ -6377,6 +6437,46 @@ function isValidShelfCompartment(shelf, compartmentNumber) {
   const number = Number(compartmentNumber);
   return Number.isInteger(number) && number >= 1 && number <= getShelfCapacity(shelf)
     && !(shelf.removedCompartments || []).includes(number);
+}
+
+function compareStorageArtistYear(first, second) {
+  const artistComparison = String(first.artist || '').localeCompare(String(second.artist || ''), 'de', { sensitivity: 'base' });
+  if (artistComparison !== 0) return artistComparison;
+  const firstYear = Number(String(first.year || '').trim().slice(0, 4));
+  const secondYear = Number(String(second.year || '').trim().slice(0, 4));
+  const validFirstYear = Number.isFinite(firstYear) && firstYear > 0 ? firstYear : 0;
+  const validSecondYear = Number.isFinite(secondYear) && secondYear > 0 ? secondYear : 0;
+  if (validFirstYear !== validSecondYear) {
+    if (!validFirstYear) return 1;
+    if (!validSecondYear) return -1;
+    return validSecondYear - validFirstYear;
+  }
+  return String(first.title || '').localeCompare(String(second.title || ''), 'de', { sensitivity: 'base' });
+}
+
+function getStorageItemsForCompartment(shelf, compartmentNumber) {
+  const items = collection.filter(item => item.owned && item.shelfId === shelf.id
+    && Number(item.shelfCompartment) === Number(compartmentNumber));
+  if (shelf.compartmentSortModes?.[compartmentNumber] !== 'custom') {
+    return items.sort(compareStorageArtistYear);
+  }
+
+  return getCustomOrderedStorageItems(items, shelf.compartmentSortOrders?.[compartmentNumber] || []);
+}
+
+function getCustomOrderedStorageItems(items, order) {
+  const itemsById = new Map(items.map(item => [String(item.id), item]));
+  const customItems = order
+    .map(id => itemsById.get(String(id)))
+    .filter(Boolean);
+  const orderedIds = new Set(customItems.map(item => String(item.id)));
+  const newItems = items.filter(item => !orderedIds.has(String(item.id))).sort(compareStorageArtistYear);
+  newItems.forEach(item => {
+    const insertionIndex = customItems.findIndex(existing => compareStorageArtistYear(item, existing) < 0);
+    if (insertionIndex < 0) customItems.push(item);
+    else customItems.splice(insertionIndex, 0, item);
+  });
+  return customItems;
 }
 
 async function setShelfMode(shelf, mode, select) {
@@ -12999,6 +13099,90 @@ function saveShelfLayout() {
   saveCloudDataNow();
 }
 
+let activeStorageOrderEditor = null;
+
+function renderStorageOrderEditor() {
+  const list = document.getElementById('storageOrderList');
+  const mode = document.getElementById('storageOrderMode').value;
+  const { shelfId, compartmentNumber, order } = activeStorageOrderEditor;
+  const shelf = shelfLocations.find(entry => entry.id === shelfId);
+  if (!shelf) return;
+  const items = collection.filter(item => item.owned && item.shelfId === shelfId
+    && Number(item.shelfCompartment) === compartmentNumber);
+  const orderedItems = mode === 'custom'
+    ? getCustomOrderedStorageItems(items, order)
+    : items.sort(compareStorageArtistYear);
+  list.innerHTML = orderedItems.length
+    ? orderedItems.map((item, index) => `<li class="storage-order-item" data-item-id="${escapeHtml(item.id)}">
+        <span class="storage-order-item-copy"><span class="storage-order-item-title">${escapeHtml(item.title || 'Ohne Titel')}</span><span class="storage-order-item-meta">${escapeHtml(item.artist || 'Unbekannter Interpret')}${item.year ? ` · ${escapeHtml(item.year)}` : ''}</span></span>
+        <span class="storage-order-item-actions"><button type="button" data-order-move="-1" aria-label="Nach oben verschieben"${mode !== 'custom' || index === 0 ? ' disabled' : ''}>↑</button><button type="button" data-order-move="1" aria-label="Nach unten verschieben"${mode !== 'custom' || index === orderedItems.length - 1 ? ' disabled' : ''}>↓</button></span>
+      </li>`).join('')
+    : '<li class="settings-panel-hint">In diesem Fach sind keine Vinyls.</li>';
+}
+
+function openStorageOrderEditor(shelf, compartmentNumber) {
+  if (!isValidShelfCompartment(shelf, compartmentNumber)) return;
+  const currentItems = getStorageItemsForCompartment(shelf, compartmentNumber);
+  activeStorageOrderEditor = {
+    shelfId: shelf.id,
+    compartmentNumber,
+    order: currentItems.map(item => String(item.id))
+  };
+  document.getElementById('storageOrderLocation').textContent = getShelfCompartmentLabel(shelf, compartmentNumber);
+  document.getElementById('storageOrderMode').value = shelf.compartmentSortModes?.[compartmentNumber] === 'custom'
+    ? 'custom'
+    : 'artist-year';
+  renderStorageOrderEditor();
+  document.getElementById('storageOrderOverlay').classList.add('open');
+}
+
+function closeStorageOrderEditor() {
+  document.getElementById('storageOrderOverlay').classList.remove('open');
+  activeStorageOrderEditor = null;
+}
+
+document.getElementById('storageOrderMode').addEventListener('change', renderStorageOrderEditor);
+document.getElementById('storageOrderList').addEventListener('click', event => {
+  const button = event.target.closest('button[data-order-move]');
+  if (!button || !activeStorageOrderEditor || button.disabled) return;
+  const itemElement = button.closest('[data-item-id]');
+  const index = activeStorageOrderEditor.order.indexOf(String(itemElement?.dataset.itemId));
+  const destination = index + Number(button.dataset.orderMove);
+  if (index < 0 || destination < 0 || destination >= activeStorageOrderEditor.order.length) return;
+  [activeStorageOrderEditor.order[index], activeStorageOrderEditor.order[destination]] =
+    [activeStorageOrderEditor.order[destination], activeStorageOrderEditor.order[index]];
+  renderStorageOrderEditor();
+});
+document.getElementById('closeStorageOrderBtn').addEventListener('click', closeStorageOrderEditor);
+document.getElementById('cancelStorageOrderBtn').addEventListener('click', closeStorageOrderEditor);
+document.getElementById('storageOrderOverlay').addEventListener('click', event => {
+  if (event.target.id === 'storageOrderOverlay') closeStorageOrderEditor();
+});
+document.getElementById('saveStorageOrderBtn').addEventListener('click', () => {
+  if (!activeStorageOrderEditor) return;
+  const { shelfId, compartmentNumber, order } = activeStorageOrderEditor;
+  const shelf = shelfLocations.find(entry => entry.id === shelfId);
+  if (!shelf || !isValidShelfCompartment(shelf, compartmentNumber)) {
+    closeStorageOrderEditor();
+    return;
+  }
+  shelf.compartmentSortModes ||= {};
+  shelf.compartmentSortOrders ||= {};
+  if (document.getElementById('storageOrderMode').value === 'custom') {
+    shelf.compartmentSortModes[compartmentNumber] = 'custom';
+    shelf.compartmentSortOrders[compartmentNumber] = getCustomOrderedStorageItems(
+      collection.filter(item => item.owned && item.shelfId === shelfId
+        && Number(item.shelfCompartment) === compartmentNumber),
+      order
+    ).map(item => String(item.id));
+  } else {
+    delete shelf.compartmentSortModes[compartmentNumber];
+  }
+  closeStorageOrderEditor();
+  saveShelfLayout();
+  renderCollection();
+});
+
 function addStorageShelf() {
   const shelf = {
     id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -13139,7 +13323,7 @@ function renderStorageBoard(visibleItems) {
       const compartmentName = shelf.compartmentNames?.[number] || '';
       const compartmentLabel = getShelfCompartmentLabel(shelf, number);
       return `<section class="storage-compartment${hasSearchMatch ? ' search-match' : ''}" style="grid-row:${rowNumber};grid-column:${columnNumber};" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}">
-        <header class="storage-compartment-header"><span class="storage-compartment-index" aria-hidden="true">${number}</span><input type="text" class="storage-compartment-name" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" value="${escapeHtml(compartmentName)}" placeholder="Name" aria-label="Name für Fach ${number}"><span class="storage-count" title="${compartmentCount} Album${compartmentCount === 1 ? '' : 'e'}">${compartmentCount}</span><button type="button" class="wash-compartment-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `${escapeHtml(compartmentLabel)} waschen` : `Keine Vinyls in Fach ${number}`}" aria-label="${escapeHtml(compartmentLabel)} waschen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 4l1 2M12 3v2M18 4l-1 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
+        <header class="storage-compartment-header"><span class="storage-compartment-index" aria-hidden="true">${number}</span><input type="text" class="storage-compartment-name" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" value="${escapeHtml(compartmentName)}" placeholder="Name" aria-label="Name für Fach ${number}"><span class="storage-count" title="${compartmentCount} Album${compartmentCount === 1 ? '' : 'e'}">${compartmentCount}</span><button type="button" class="storage-order-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fachsortierung bearbeiten" aria-label="Sortierung von ${escapeHtml(compartmentLabel)} bearbeiten"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h10M4 12h7M4 18h4M17 4v16m0 0-3-3m3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" class="wash-compartment-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `${escapeHtml(compartmentLabel)} waschen` : `Keine Vinyls in Fach ${number}`}" aria-label="${escapeHtml(compartmentLabel)} waschen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 4l1 2M12 3v2M18 4l-1 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
         <div class="storage-records" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}"></div>
       </section>`;
     }).join('');
@@ -13259,16 +13443,20 @@ function renderStorageBoard(visibleItems) {
   unsortedList.innerHTML = '';
   if (unsorted.length === 0) unsortedList.innerHTML = `<p class="settings-panel-hint">${collectionFilterQuery && allUnsorted.length ? 'Keine passenden unsortierten Vinyls.' : 'Keine unsortierten Vinyls.'}</p>`;
   unsorted.forEach(item => unsortedList.appendChild(createUnsortedStorageCard(item)));
-  ownedItems.forEach(item => {
-    const shelf = shelfLocations.find(entry => entry.id === item.shelfId);
-    if (!isValidShelfCompartment(shelf, item.shelfCompartment)) return;
-    const target = board.querySelector(`[data-drop-shelf="${CSS.escape(item.shelfId)}"][data-drop-compartment="${Number(item.shelfCompartment)}"] .storage-records`)
-      || board.querySelector(`.storage-records[data-drop-shelf="${CSS.escape(item.shelfId)}"][data-drop-compartment="${Number(item.shelfCompartment)}"]`);
-    if (target) {
-      const tile = createStoredVinylTile(item);
-      if (item.id === randomHighlightedItemId) tile.classList.add('random-highlight');
-      target.appendChild(tile);
-    }
+  shelfLocations.forEach(shelf => {
+    Array.from({ length: getShelfCapacity(shelf) }, (_, index) => index + 1)
+      .filter(number => isValidShelfCompartment(shelf, number))
+      .forEach(number => {
+        const target = board.querySelector(`.storage-records[data-drop-shelf="${CSS.escape(shelf.id)}"][data-drop-compartment="${number}"]`);
+        if (!target) return;
+        getStorageItemsForCompartment(shelf, number)
+          .filter(item => ownedItems.includes(item))
+          .forEach(item => {
+            const tile = createStoredVinylTile(item);
+            if (item.id === randomHighlightedItemId) tile.classList.add('random-highlight');
+            target.appendChild(tile);
+          });
+      });
   });
 
   board.querySelectorAll('.storage-shelf').forEach(shelfElement => {
@@ -13370,6 +13558,9 @@ function renderStorageBoard(visibleItems) {
       button.addEventListener('click', () => {
         openWashModeForCompartment(shelf.id, Number(button.dataset.compartment));
       });
+    });
+    shelfElement.querySelectorAll('.storage-order-button').forEach(button => {
+      button.addEventListener('click', () => openStorageOrderEditor(shelf, Number(button.dataset.compartment)));
     });
   });
   layout.querySelector('.storage-add-shelf').addEventListener('click', addStorageShelf);
