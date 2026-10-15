@@ -1289,7 +1289,10 @@
     line-height:normal;
   }
   .storage-compartment-name:focus { color:var(--text-primary); }
+  .storage-compartment-index { flex:0 0 auto; color:var(--text-muted); font-size:9px; line-height:1; }
   .storage-compartment-header button { width: 20px; min-width: 20px; height: 20px; min-height:20px; padding:0; }
+  .storage-compartment-header .wash-compartment-button { width:18px; min-width:18px; height:18px; min-height:18px; color:var(--accent); }
+  .storage-compartment-header .wash-compartment-button:disabled { opacity:.35; cursor:not-allowed; }
   .storage-records { display:flex; flex:1; flex-direction:column; gap:0; min-height:28px; overflow:auto; }
   .storage-record {
     display:grid;
@@ -1931,7 +1934,8 @@
     align-self:center;
     text-align:center;
   }
-  .storage-shelf.display-mode .storage-compartment-header button { position:absolute; right:0; width:18px; min-width:18px; height:18px; min-height:18px; }
+  .storage-shelf.display-mode .storage-compartment-header .remove-compartment { position:absolute; right:0; width:18px; min-width:18px; height:18px; min-height:18px; }
+  .storage-shelf.display-mode .storage-compartment-header .wash-compartment-button { position:absolute; right:20px; width:18px; min-width:18px; height:18px; min-height:18px; }
   .storage-shelf.display-mode .storage-shelf-topline { gap:3px; }
   .storage-shelf.display-mode .storage-shelf-name { min-width:24px; }
   .storage-shelf.display-mode .storage-shelf-topline button { width:22px; min-width:22px; height:22px; padding:0; }
@@ -3181,6 +3185,196 @@
     max-width: 1100px;
   }
   .storage-result-overlay { z-index: 115; }
+  .wash-mode-overlay { z-index: 99; }
+  .wash-mode-box {
+    width: min(680px, calc(100vw - 24px));
+    max-width: 680px;
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
+  }
+  .wash-mode-overlay [hidden] { display:none !important; }
+  .wash-mode-header,
+  .wash-mode-actions {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .wash-mode-header { margin-bottom:14px; }
+  .wash-mode-header .modal-title { margin:0; }
+  .wash-mode-selectors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .wash-mode-selectors label { display:grid; gap:5px; color:var(--text-secondary); font-size:12px; }
+  .wash-mode-message { color:var(--text-secondary); font-size:13px; }
+  .wash-current-vinyl { display:grid; justify-items:center; text-align:center; gap:8px; padding:18px 12px; }
+  .wash-cleaner-stage {
+    position:relative;
+    width:min(260px, 64vw);
+    height:min(260px, 64vw);
+    margin:0 auto;
+    isolation:isolate;
+  }
+  .wash-current-disc {
+    position:absolute;
+    top:calc(64% - var(--wash-label-offset, 143px));
+    left:50%;
+    z-index:0;
+    width:var(--wash-disc-size, 220px);
+    height:var(--wash-disc-size, 220px);
+    margin-left:calc(var(--wash-disc-size, 220px) / -2);
+    max-width:none;
+    max-height:none;
+    animation:washDiscTurns 12s linear infinite;
+    will-change:transform;
+  }
+  .wash-record-surface,
+  .wash-record-dirt {
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    pointer-events:none;
+  }
+  .wash-record-surface {
+    z-index:3;
+    overflow:hidden;
+    background:linear-gradient(115deg, transparent 27%, rgba(180,225,255,.12) 44%, rgba(255,255,255,.035) 51%, transparent 65%);
+  }
+  .wash-record-surface svg {
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    opacity:var(--wash-scratch-opacity, .1);
+  }
+  .wash-record-surface path { fill:none; stroke:rgba(255,255,255,.9); stroke-linecap:round; stroke-width:var(--wash-scratch-width,.14); }
+  .wash-record-surface .dark-scratch { stroke:rgba(0,0,0,.92); }
+  .vinyl-card-preview .wash-record-surface { z-index:1; }
+  .vinyl-card-preview .wash-record-dirt { z-index:1; }
+  .vinyl-card-preview.is-dirty .wash-record-dirt { opacity:.8; }
+  .wash-record-dirt {
+    z-index:4;
+    opacity:0;
+    background-image:
+      radial-gradient(ellipse at 22% 33%, rgba(139,92,49,.48) 0 2%, transparent 9%),
+      radial-gradient(ellipse at 72% 22%, rgba(113,76,42,.4) 0 1.5%, transparent 8%),
+      radial-gradient(ellipse at 68% 74%, rgba(148,107,62,.4) 0 2%, transparent 10%),
+      radial-gradient(ellipse at 36% 70%, rgba(90,65,42,.38) 0 1.5%, transparent 8%),
+      radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(110,78,45,.1) 58%, transparent 72%);
+    transition:opacity .2s ease;
+  }
+  .wash-cleaner-stage.is-dirty .wash-record-dirt { opacity:.8; }
+  .wash-cleaner-stage::before,
+  .wash-cleaner-stage::after {
+    content:'';
+    position:absolute;
+    z-index:2;
+    top:57%;
+    width:42px;
+    height:54px;
+    opacity:0;
+    pointer-events:none;
+    background:
+      var(--wash-splash-pattern, radial-gradient(ellipse at 52% 80%, rgba(177,227,255,.95) 0 4%, transparent 7%));
+    filter:drop-shadow(0 0 3px rgba(123,203,255,.65));
+    animation-duration:12s;
+    animation-timing-function:linear;
+    animation-iteration-count:infinite;
+  }
+  .wash-cleaner-stage::after { display:none; }
+  .wash-cleaner-stage::before {
+    left:-30px;
+    animation-name:washSplashLeft;
+    background:var(--wash-splash-pattern-left, var(--wash-splash-pattern));
+  }
+  .wash-cleaner-stage::after {
+    right:-30px;
+    animation-name:washSplashRight;
+    background:var(--wash-splash-pattern-right, var(--wash-splash-pattern));
+  }
+  @keyframes washSplashLeft {
+    0%, 84%, 100% { opacity:0; transform:translate(0,0) scale(.3); }
+    4% { opacity:.95; transform:translate(-4px,-8px) scale(.66); }
+    10% { opacity:.8; transform:translate(-12px,-23px) scale(1); }
+    16% { opacity:0; transform:translate(-20px,-39px) scale(.75); }
+    20% { opacity:.9; transform:translate(-3px,-7px) scale(.55); }
+    26% { opacity:.85; transform:translate(-11px,-21px) scale(.92); }
+    32% { opacity:0; transform:translate(-20px,-38px) scale(.65); }
+    37% { opacity:.9; transform:translate(-5px,-8px) scale(.62); }
+    43% { opacity:.8; transform:translate(-13px,-25px) scale(1); }
+    49% { opacity:0; transform:translate(-22px,-41px) scale(.72); }
+    54% { opacity:.9; transform:translate(-3px,-7px) scale(.55); }
+    60% { opacity:.85; transform:translate(-11px,-21px) scale(.92); }
+    66% { opacity:0; transform:translate(-20px,-38px) scale(.65); }
+    71% { opacity:.9; transform:translate(-5px,-8px) scale(.62); }
+    77% { opacity:.8; transform:translate(-13px,-25px) scale(1); }
+  }
+  @keyframes washSplashRight {
+    0%, 50%, 100% { opacity:0; transform:translate(0,0) scale(.3); }
+    53% { opacity:.95; transform:translate(4px,-8px) scale(.66); }
+    58% { opacity:.8; transform:translate(12px,-23px) scale(1); }
+    63% { opacity:0; transform:translate(20px,-39px) scale(.75); }
+    66% { opacity:.9; transform:translate(3px,-7px) scale(.55); }
+    71% { opacity:.85; transform:translate(11px,-21px) scale(.92); }
+    76% { opacity:0; transform:translate(20px,-38px) scale(.65); }
+    79% { opacity:.9; transform:translate(5px,-8px) scale(.62); }
+    84% { opacity:.8; transform:translate(13px,-25px) scale(1); }
+    89% { opacity:0; transform:translate(22px,-41px) scale(.72); }
+  }
+  .wash-cleaner-housing {
+    position:absolute;
+    z-index:3;
+    top:64%;
+    right:-8%;
+    bottom:-3px;
+    left:-8%;
+    overflow:hidden;
+    border:1px solid #37373d;
+    border-radius:14px 14px 7px 7px;
+    background:linear-gradient(180deg, #242428 0, #101012 16%, #070708 45%, #030304 100%);
+    box-shadow:0 8px 18px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.1);
+  }
+  .wash-cleaner-housing::before {
+    content:'';
+    position:absolute;
+    top:0;
+    right:0;
+    left:0;
+    height:7px;
+    border-bottom:1px solid #080809;
+    background:linear-gradient(180deg, #55555b, #202024);
+    box-shadow:0 2px 5px rgba(0,0,0,.8);
+  }
+  .wash-cleaner-housing::after {
+    content:'';
+    position:absolute;
+    top:14px;
+    right:15%;
+    left:15%;
+    height:2px;
+    border-radius:2px;
+    background:rgba(255,255,255,.07);
+    box-shadow:0 0 8px rgba(255,255,255,.05);
+  }
+  @keyframes washDiscTurns {
+    0% { transform:rotate(0deg); animation-timing-function:cubic-bezier(.42,0,1,1); }
+    82% { transform:rotate(1800deg); animation-timing-function:cubic-bezier(.2,.8,.3,1); }
+    100% { transform:rotate(2160deg); }
+  }
+  .wash-mode-title { margin:4px 0 0; font-size:18px; font-weight:600; }
+  .wash-mode-artist { margin:0; color:var(--text-secondary); }
+  .wash-mode-progress { margin:0; color:var(--text-muted); font-size:12px; }
+  .wash-condition-control { display:grid; justify-items:center; gap:4px; width:min(280px,100%); color:var(--text-secondary); font-size:12px; }
+  .wash-condition-control select { width:100%; }
+  .wash-mode-actions { justify-content:flex-end; flex-wrap:wrap; margin-top:14px; }
+  @media (max-width: 600px) {
+    .wash-mode-box { padding:14px; }
+    .wash-mode-selectors { grid-template-columns:minmax(0,1fr); }
+    .wash-cleaner-stage { width:min(260px, 64vw); height:min(260px, 64vw); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wash-current-disc,
+    .wash-cleaner-stage::before,
+    .wash-cleaner-stage::after { animation:none; }
+  }
   .storage-result-box {
     width: min(1220px, calc(100vw - 24px));
     max-width: 1220px;
@@ -4035,6 +4229,10 @@
             </label>
           </div>
           <div class="settings-panel-actions">
+            <button type="button" id="startWashModeBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Besessene Vinyls fachweise reinigen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 19h14M7 4l1 2M12 3v2M17 4l-1 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              <span>Waschmodus</span>
+            </button>
             <button type="button" id="openFixToolBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Titel und Interpret reparieren">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:6px;"><path d="M4 20h4.5L20 8.5a2 2 0 0 0-4-4L4 16.5V20Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 6l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 3l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Titel / Interpret</span>
@@ -4096,6 +4294,24 @@
             </label>
             <div class="toggle-text">
               <span class="toggle-title">Ziehanimation bei Zufallsauswahl abspielen</span>
+            </div>
+          </div>
+          <div class="settings-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="washDirtEffectCheckbox" checked>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="toggle-text">
+              <span class="toggle-title">Schmutz-Effekt für länger als ein Jahr ungewaschene Vinyls</span>
+            </div>
+          </div>
+          <div class="settings-toggle-row">
+            <label class="toggle-switch">
+              <input type="checkbox" id="collectionVinylEffectsCheckbox" checked>
+              <span class="toggle-slider"></span>
+            </label>
+            <div class="toggle-text">
+              <span class="toggle-title">Zustands- und Schmutzeffekte auf Vinyls in der Sammlung anzeigen</span>
             </div>
           </div>
 
@@ -4601,6 +4817,60 @@
       <button type="button" id="saveVinylEditorBtn" class="primary">Übernehmen</button>
       <button type="button" id="vinylMigrationNextBtn" class="primary" style="display:none;">Weiter</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay wash-mode-overlay" id="washModeOverlay" aria-modal="true" role="dialog" aria-labelledby="washModeTitle">
+  <div class="modal-box wash-mode-box">
+    <div class="wash-mode-header">
+      <p class="modal-title" id="washModeTitle">Waschmodus</p>
+      <button type="button" id="closeWashModeBtn" class="icon-btn" title="Waschen beenden" aria-label="Waschen beenden">×</button>
+    </div>
+    <section id="washModeSelection">
+      <p class="wash-mode-message">Wähle das Regal und Fach, das du jetzt wäschst.</p>
+      <div class="wash-mode-selectors">
+        <label for="washShelfSelect">Regal
+          <select id="washShelfSelect"><option value="">Regal auswählen</option></select>
+        </label>
+        <label for="washCompartmentSelect">Fach
+          <select id="washCompartmentSelect" disabled><option value="">Fach auswählen</option></select>
+        </label>
+      </div>
+      <p class="wash-mode-message" id="washModeSelectionMessage" aria-live="polite"></p>
+      <div class="wash-mode-actions">
+        <button type="button" id="startWashCompartmentBtn" class="primary" disabled>Fach auswählen</button>
+        <button type="button" id="endWashModeFromSelectionBtn">Waschen beenden</button>
+      </div>
+    </section>
+    <section id="washModeSession" hidden aria-live="polite">
+      <p class="wash-mode-message" id="washModeLocation"></p>
+      <div class="wash-current-vinyl" id="washCurrentVinyl">
+        <div class="wash-cleaner-stage" id="washCleanerStage">
+          <div id="washCurrentDisc" class="vinyl-editor-disc wash-current-disc"></div>
+          <div class="wash-cleaner-housing" aria-hidden="true"></div>
+        </div>
+        <p class="wash-mode-title" id="washCurrentTitle"></p>
+        <p class="wash-mode-artist" id="washCurrentArtist"></p>
+        <p class="wash-mode-progress" id="washModeProgress"></p>
+        <label class="wash-condition-control" for="washConditionSelect">Zustand der Vinyl
+          <select id="washConditionSelect">
+            <option value="Neu">Neu</option>
+            <option value="Wie neu">Wie neu</option>
+            <option value="Sehr gut">Sehr gut</option>
+            <option value="Gut">Gut</option>
+            <option value="Gebraucht">Gebraucht</option>
+            <option value="Akzeptabel">Akzeptabel</option>
+            <option value="Schlecht">Schlecht</option>
+          </select>
+        </label>
+      </div>
+      <p class="wash-mode-message" id="washModeSessionMessage" aria-live="polite"></p>
+      <div class="wash-mode-actions">
+        <button type="button" id="switchWashCompartmentBtn" hidden>Fach wechseln</button>
+        <button type="button" id="markVinylWashedBtn" class="primary">Gewaschen</button>
+        <button type="button" id="endWashModeBtn">Waschen beenden</button>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -5127,6 +5397,16 @@ async function loadCloudData(uid) {
   localStorage.setItem('storageRandomAnimationV1', storageRandomAnimation ? 'true' : 'false');
   const storageRandomAnimationCheckbox = document.getElementById('storageRandomAnimationCheckbox');
   if (storageRandomAnimationCheckbox) storageRandomAnimationCheckbox.checked = storageRandomAnimation;
+  const washDirtEffect = data.settings?.washDirtEffect !== false;
+  localStorage.setItem('washDirtEffectV1', washDirtEffect ? 'true' : 'false');
+  const washDirtEffectCheckbox = document.getElementById('washDirtEffectCheckbox');
+  if (washDirtEffectCheckbox) washDirtEffectCheckbox.checked = washDirtEffect;
+  const collectionVinylEffects = data.settings?.collectionVinylEffects !== undefined
+    ? data.settings.collectionVinylEffects !== false
+    : localStorage.getItem('collectionVinylEffectsV1') !== 'false';
+  localStorage.setItem('collectionVinylEffectsV1', collectionVinylEffects ? 'true' : 'false');
+  const collectionVinylEffectsCheckbox = document.getElementById('collectionVinylEffectsCheckbox');
+  if (collectionVinylEffectsCheckbox) collectionVinylEffectsCheckbox.checked = collectionVinylEffects;
   const storedListeningProviders = data.settings?.albumListeningProviders;
   const localListeningProviders = (() => {
     try { return JSON.parse(localStorage.getItem('albumListeningProvidersV1') || 'null'); } catch (error) { return null; }
@@ -5184,6 +5464,8 @@ async function saveCloudDataNow() {
     const storageRandomFormats = [...document.querySelectorAll('#storageRandomFilterPanel [data-storage-random-format]:checked')]
       .map(input => input.dataset.storageRandomFormat);
     const storageRandomAnimation = document.getElementById('storageRandomAnimationCheckbox')?.checked !== false;
+    const washDirtEffect = document.getElementById('washDirtEffectCheckbox')?.checked !== false;
+    const collectionVinylEffects = document.getElementById('collectionVinylEffectsCheckbox')?.checked !== false;
     const albumListeningProviders = {
       apple: document.getElementById('listeningProviderApple')?.checked !== false,
       spotify: document.getElementById('listeningProviderSpotify')?.checked !== false,
@@ -5191,7 +5473,7 @@ async function saveCloudDataNow() {
     };
     const albumListeningOrder = [...document.querySelectorAll('#listeningProviderList [data-provider]')]
       .map(row => row.dataset.provider).join(',') || 'apple,spotify,youtube';
-    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations, storageRandomFormats, storageRandomAnimation, albumListeningProviders, albumListeningOrder, collectionViewSettings: getCollectionViewSettings() }, ts ? { tableSettings: ts } : {});
+    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations, storageRandomFormats, storageRandomAnimation, washDirtEffect, collectionVinylEffects, albumListeningProviders, albumListeningOrder, collectionViewSettings: getCollectionViewSettings() }, ts ? { tableSettings: ts } : {});
 
     await db.collection('users').doc(currentUid).set({
       username: currentUsername,
@@ -6084,6 +6366,12 @@ function getStorageLabel(item) {
     : '';
 }
 
+function getShelfCompartmentLabel(shelf, compartmentNumber) {
+  const number = Number(compartmentNumber);
+  const name = shelf?.compartmentNames?.[number];
+  return `Fach ${number}${name ? ` · ${name}` : ''}`;
+}
+
 function getDiscogsPriceCheckedDateLabel(item) {
   if (!item?.discogsPriceCheckedAt) return '';
   const checkedAt = new Date(item.discogsPriceCheckedAt);
@@ -6093,6 +6381,275 @@ function getDiscogsPriceCheckedDateLabel(item) {
 function getWashedDateLabel(item) {
   return viewingOwnCollection && item?.owned && item?.lastWashed ? item.lastWashed.split('-').reverse().join('.') : '';
 }
+
+let washQueue = [];
+let washQueueIndex = 0;
+let washSessionCount = 0;
+let washShelfId = '';
+let washCompartmentNumber = '';
+let washSaveInProgress = false;
+let washSplashItemId = null;
+
+function updateWashCompartmentOptions() {
+  const shelfId = document.getElementById('washShelfSelect').value;
+  const compartmentSelect = document.getElementById('washCompartmentSelect');
+  populateCompartmentSelect(compartmentSelect, shelfId, '', 'Fach auswählen');
+  const shelf = shelfLocations.find(entry => entry.id === shelfId);
+  const selectionMessage = document.getElementById('washModeSelectionMessage');
+  if (!shelf) {
+    selectionMessage.textContent = shelfLocations.length
+      ? 'Wähle zuerst ein Regal.'
+      : 'Lege zuerst unter „Lagerorte“ Regale und Fächer an.';
+  } else {
+    selectionMessage.textContent = '';
+  }
+  document.getElementById('startWashCompartmentBtn').disabled = true;
+}
+
+function getWashQueue(shelfId, compartmentNumber) {
+  return collection
+    .filter(item => item.owned && item.shelfId === shelfId
+      && Number(item.shelfCompartment) === Number(compartmentNumber))
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const dateA = a.item.lastWashed || '';
+      const dateB = b.item.lastWashed || '';
+      if (!dateA && dateB) return 1;
+      if (dateA && !dateB) return -1;
+      return dateA.localeCompare(dateB) || a.index - b.index;
+    })
+    .map(entry => entry.item);
+}
+
+function wasVinylLastWashedOverYearAgo(item) {
+  if (!item?.lastWashed) return true;
+  const match = String(item.lastWashed).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const lastWashed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (Number.isNaN(lastWashed.getTime())) return false;
+  const oneYearLater = new Date(lastWashed);
+  oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+  return new Date() >= oneYearLater;
+}
+
+function getWashScratchSettings(condition) {
+  const settings = {
+    Neu: [0, 0.14],
+    'Wie neu': [0, 0.14],
+    'Sehr gut': [0.06, 0.14],
+    Gut: [0.35, 0.3],
+    Gebraucht: [0.68, 0.58],
+    Akzeptabel: [0.9, 0.9],
+    Schlecht: [1, 1.3]
+  };
+  return settings[normalizeConditionName(condition)] || settings['Sehr gut'];
+}
+
+function getWashScratchOverlayMarkup(condition) {
+  const [opacity, width] = getWashScratchSettings(condition);
+  if (!opacity) return '';
+  return `<div class="wash-record-surface" style="--wash-scratch-opacity:${opacity};--wash-scratch-width:${width}"><svg viewBox="0 0 100 100" aria-hidden="true">
+    <path d="M18 29q2-3 5-4m9-6q2-1 4 0m27-1q4 0 6 3m8 5q2 2 3 4M12 57q0 4 3 7m5 6q2 2 4 3m36 9q3-1 5-4m7-7q2-2 2-4M29 15q-2 3-2 5m47 39q-1 3-3 5M39 85q3 1 5 1m38-50q1 3 0 5M13 48q2-2 4-1m9 9q2 1 3 3m43-11q2-2 4-1m-9 12q2 2 4 2m-30-8q2-2 4-1m18-6q2 1 4 0m-34 0q2 1 3 3m41-5q2 2 4 1" />
+    <path d="M21 42q2-2 4-2m38 37q2-1 3-4M45 18q2-1 4 0m-34 49q0 2 2 3m54-45q2 1 3 3M48 75q2-2 4-2m-24 8q1 1 3 1m39-59q2 1 3 2M10 40q2-1 3-3m50 45q2-2 2-5m12-54q2 2 2 4m-53 4q2-2 5-3m-9 36q1 3 3 4M83 62q-1 3-3 5m-59-8q2-1 3-3m35-5q2-1 4 1m-20 8q2-1 4 0m21-3q2 2 4 1m-48-9q2 1 4-1" />
+    <path class="dark-scratch" d="M23 51q2-2 4-1m26 5q2-1 4-3m18 1q2-1 4 0m-49 5q2 1 3 3m15-12q2 1 4 0m-8 10q2-1 4-2m28-7q2 2 4 1m-51-6q2-1 3-3" />
+  </svg></div>`;
+}
+
+function renderWashCurrentVinyl() {
+  const item = washQueue[washQueueIndex];
+  const currentVinyl = document.getElementById('washCurrentVinyl');
+  const markButton = document.getElementById('markVinylWashedBtn');
+  const switchButton = document.getElementById('switchWashCompartmentBtn');
+  const sessionMessage = document.getElementById('washModeSessionMessage');
+  if (!item) {
+    currentVinyl.hidden = true;
+    markButton.hidden = true;
+    switchButton.hidden = false;
+    const washedInCompartment = washQueue.length;
+    sessionMessage.textContent = washedInCompartment
+      ? `Fach fertig: ${washedInCompartment} Vinyl(s) wurden in diesem Fach gewaschen.`
+      : 'In diesem Fach sind keine Vinyls im Besitz zugeordnet.';
+    return;
+  }
+
+  currentVinyl.hidden = false;
+  markButton.hidden = false;
+  markButton.disabled = washSaveInProgress;
+  switchButton.hidden = true;
+  sessionMessage.textContent = item.lastWashed
+    ? `Zuletzt gewaschen: ${getWashedDateLabel(item)}`
+    : 'Dieses Vinyl wurde noch nicht gewaschen.';
+  document.getElementById('washCurrentTitle').textContent = item.title || 'Unbekanntes Album';
+  document.getElementById('washCurrentArtist').textContent = item.artist || 'Unbekannter Interpret';
+  document.getElementById('washModeProgress').textContent =
+    `Vinyl ${washQueueIndex + 1} von ${washQueue.length} · ${washSessionCount} in dieser Session gewaschen`;
+  const conditionSelect = document.getElementById('washConditionSelect');
+  conditionSelect.value = normalizeConditionName(item.condition);
+
+  const design = normalizeVinylDesign(item);
+  const record = design.records[0] || makeDefaultVinylRecord(item.color, item.colorSecondary);
+  const disc = document.getElementById('washCurrentDisc');
+  const stage = document.getElementById('washCleanerStage');
+  const formatSizes = { Single: 148, 'Maxi Single': 196, EP: 178, Album: 236 };
+  const discSize = formatSizes[getReleaseType(item)] || formatSizes.Album;
+  disc.style.setProperty('--wash-disc-size', `${discSize}px`);
+  disc.style.setProperty('--wash-label-offset', `${discSize * 0.65}px`);
+  disc.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
+  disc.style.setProperty('--vinyl-label', record.labelColor);
+  disc.style.setProperty('--vinyl-art', getVinylSvgData(record));
+  const [scratchOpacity, scratchWidth] = getWashScratchSettings(conditionSelect.value);
+  disc.style.setProperty('--wash-scratch-opacity', scratchOpacity);
+  disc.style.setProperty('--wash-scratch-width', `${scratchWidth}px`);
+  stage.classList.toggle(
+    'is-dirty',
+    document.getElementById('washDirtEffectCheckbox').checked && wasVinylLastWashedOverYearAgo(item)
+  );
+  if (washSplashItemId !== String(item.id)) {
+    stage.style.setProperty('--wash-splash-pattern-left', createWashSplashPattern());
+    washSplashItemId = String(item.id);
+  }
+  disc.innerHTML = `${getVinylLiquidMarkup(record)}${getWashScratchOverlayMarkup(conditionSelect.value)}<div class="wash-record-dirt"></div>`;
+}
+
+function createWashSplashPattern() {
+  return Array.from({ length: 9 }, () => {
+    const x = 10 + Math.random() * 80;
+    const y = 10 + Math.random() * 80;
+    const size = 1.5 + Math.random() * 3.5;
+    const color = Math.random() < 0.5 ? '177,227,255' : '204,241,255';
+    return `radial-gradient(ellipse at ${x.toFixed(1)}% ${y.toFixed(1)}%, rgba(${color},${(0.72 + Math.random() * 0.27).toFixed(2)}) 0 ${size.toFixed(1)}%, transparent ${(size + 2 + Math.random() * 2).toFixed(1)}%)`;
+  }).join(',');
+}
+
+function startWashCompartment() {
+  const shelfId = document.getElementById('washShelfSelect').value;
+  const compartmentNumber = Number(document.getElementById('washCompartmentSelect').value);
+  const shelf = shelfLocations.find(entry => entry.id === shelfId);
+  if (!shelf || !isValidShelfCompartment(shelf, compartmentNumber)) return;
+
+  washShelfId = shelfId;
+  washCompartmentNumber = compartmentNumber;
+  washQueue = getWashQueue(washShelfId, washCompartmentNumber);
+  washQueueIndex = 0;
+  const label = getShelfCompartmentLabel(shelf, compartmentNumber);
+  document.getElementById('washModeLocation').textContent = `${shelf.name} · ${label}`;
+  document.getElementById('washModeSelection').hidden = true;
+  document.getElementById('washModeSession').hidden = false;
+  renderWashCurrentVinyl();
+}
+
+function openWashMode() {
+  if (!viewingOwnCollection) return;
+  washQueue = [];
+  washQueueIndex = 0;
+  washSessionCount = 0;
+  washShelfId = '';
+  washCompartmentNumber = '';
+  const shelfSelect = document.getElementById('washShelfSelect');
+  shelfSelect.innerHTML = '<option value="">Regal auswählen</option>' + shelfLocations.map(shelf =>
+    `<option value="${escapeHtml(shelf.id)}">${escapeHtml(shelf.name)}</option>`
+  ).join('');
+  document.getElementById('washModeSelection').hidden = false;
+  document.getElementById('washModeSession').hidden = true;
+  document.getElementById('washCompartmentSelect').innerHTML = '<option value="">Fach auswählen</option>';
+  document.getElementById('washCompartmentSelect').disabled = true;
+  document.getElementById('washModeSelectionMessage').textContent = shelfLocations.length
+    ? 'Wähle zuerst ein Regal.'
+    : 'Lege zuerst unter „Lagerorte“ Regale und Fächer an.';
+  document.getElementById('startWashCompartmentBtn').disabled = true;
+  washSplashItemId = null;
+  document.getElementById('washModeOverlay').classList.add('open');
+}
+
+function openWashModeForCompartment(shelfId, compartmentNumber) {
+  openWashMode();
+  const shelf = shelfLocations.find(entry => entry.id === shelfId);
+  if (!shelf || !isValidShelfCompartment(shelf, compartmentNumber)
+      || getWashQueue(shelfId, compartmentNumber).length === 0) return;
+  const shelfSelect = document.getElementById('washShelfSelect');
+  shelfSelect.value = shelfId;
+  updateWashCompartmentOptions();
+  const compartmentSelect = document.getElementById('washCompartmentSelect');
+  compartmentSelect.value = String(compartmentNumber);
+  compartmentSelect.dispatchEvent(new Event('change'));
+  startWashCompartment();
+}
+
+function endWashMode() {
+  document.getElementById('washModeOverlay').classList.remove('open');
+  washQueue = [];
+  washQueueIndex = 0;
+  washSaveInProgress = false;
+}
+
+document.getElementById('startWashModeBtn').addEventListener('click', openWashMode);
+document.getElementById('closeWashModeBtn').addEventListener('click', endWashMode);
+document.getElementById('endWashModeFromSelectionBtn').addEventListener('click', endWashMode);
+document.getElementById('endWashModeBtn').addEventListener('click', endWashMode);
+document.getElementById('washModeOverlay').addEventListener('click', event => {
+  if (event.target.id === 'washModeOverlay') endWashMode();
+});
+document.getElementById('washShelfSelect').addEventListener('change', updateWashCompartmentOptions);
+document.getElementById('washCompartmentSelect').addEventListener('change', event => {
+  const shelf = shelfLocations.find(entry => entry.id === document.getElementById('washShelfSelect').value);
+  const compartmentNumber = Number(event.target.value);
+  const count = shelf && isValidShelfCompartment(shelf, compartmentNumber)
+    ? getWashQueue(shelf.id, compartmentNumber).length
+    : 0;
+  document.getElementById('startWashCompartmentBtn').disabled = count === 0;
+  document.getElementById('washModeSelectionMessage').textContent = count
+    ? `${count} Vinyl(s) in diesem Fach. Ältere Waschdaten kommen zuerst, ungewaschene danach.`
+    : 'In diesem Fach sind keine Vinyls im Besitz zugeordnet.';
+});
+const washDirtEffectCheckbox = document.getElementById('washDirtEffectCheckbox');
+washDirtEffectCheckbox.checked = localStorage.getItem('washDirtEffectV1') !== 'false';
+washDirtEffectCheckbox.addEventListener('change', () => {
+  localStorage.setItem('washDirtEffectV1', washDirtEffectCheckbox.checked ? 'true' : 'false');
+  if (washQueue[washQueueIndex]) renderWashCurrentVinyl();
+  saveCloudDataDebounced();
+});
+const collectionVinylEffectsCheckbox = document.getElementById('collectionVinylEffectsCheckbox');
+collectionVinylEffectsCheckbox.checked = localStorage.getItem('collectionVinylEffectsV1') !== 'false';
+collectionVinylEffectsCheckbox.addEventListener('change', () => {
+  localStorage.setItem('collectionVinylEffectsV1', collectionVinylEffectsCheckbox.checked ? 'true' : 'false');
+  renderCollection();
+  saveCloudDataDebounced();
+});
+document.getElementById('washConditionSelect').addEventListener('change', event => {
+  const item = washQueue[washQueueIndex];
+  if (!item) return;
+  item.condition = event.target.value;
+  renderWashCurrentVinyl();
+  saveCollection();
+});
+document.getElementById('startWashCompartmentBtn').addEventListener('click', startWashCompartment);
+document.getElementById('switchWashCompartmentBtn').addEventListener('click', () => {
+  washQueue = [];
+  washQueueIndex = 0;
+  document.getElementById('washModeSession').hidden = true;
+  document.getElementById('washModeSelection').hidden = false;
+  document.getElementById('washShelfSelect').value = '';
+  updateWashCompartmentOptions();
+});
+document.getElementById('markVinylWashedBtn').addEventListener('click', async () => {
+  if (washSaveInProgress || !washQueue[washQueueIndex]) return;
+  washSaveInProgress = true;
+  document.getElementById('markVinylWashedBtn').disabled = true;
+  const today = new Date();
+  washQueue[washQueueIndex].lastWashed = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0')
+  ].join('-');
+  saveCollection();
+  washSessionCount += 1;
+  washQueueIndex += 1;
+  washSaveInProgress = false;
+  renderWashCurrentVinyl();
+  if (washSessionCount % 50 === 0) {
+    await showAlert('Du hast 50 Vinyls in dieser Session gewaschen. Es wäre Zeit, das Wasser im Cleaner zu wechseln.');
+  }
+});
 
 function populateShelfSelect(select, selectedValue = '') {
   if (!select) return;
@@ -6109,7 +6666,9 @@ function populateCompartmentSelect(select, shelfId, selectedValue, defaultLabel 
   if (shelf) {
     for (let number = 1; number <= getShelfCapacity(shelf); number += 1) {
       if (!isValidShelfCompartment(shelf, number)) continue;
-      select.insertAdjacentHTML('beforeend', `<option value="${number}">Fach ${number}</option>`);
+      const compartmentName = shelf.compartmentNames?.[number];
+      const label = compartmentName ? `Fach ${number} · ${compartmentName}` : `Fach ${number}`;
+      select.insertAdjacentHTML('beforeend', `<option value="${number}">${escapeHtml(label)}</option>`);
     }
   }
   select.disabled = !shelf;
@@ -12389,8 +12948,10 @@ function renderStorageBoard(visibleItems) {
       const compartmentCount = shelfItems.filter(item => Number(item.shelfCompartment) === number).length;
       const hasSearchMatch = !!collectionFilterQuery && ownedItems.some(item => item.shelfId === shelf.id
         && Number(item.shelfCompartment) === number && matchesCollectionQuery(item, collectionFilterQuery));
+      const compartmentName = shelf.compartmentNames?.[number] || '';
+      const compartmentLabel = getShelfCompartmentLabel(shelf, number);
       return `<section class="storage-compartment${hasSearchMatch ? ' search-match' : ''}" style="grid-row:${rowNumber};grid-column:${columnNumber};" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}">
-        <header class="storage-compartment-header"><input type="text" class="storage-compartment-name" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" value="${escapeHtml(shelf.compartmentNames?.[number] || '')}" placeholder="Fach ${number}" aria-label="Name für Fach ${number}"><span class="storage-count" title="${compartmentCount} Album${compartmentCount === 1 ? '' : 'e'}">${compartmentCount}</span><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
+        <header class="storage-compartment-header"><span class="storage-compartment-index" aria-hidden="true">${number}</span><input type="text" class="storage-compartment-name" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" value="${escapeHtml(compartmentName)}" placeholder="Name" aria-label="Name für Fach ${number}"><span class="storage-count" title="${compartmentCount} Album${compartmentCount === 1 ? '' : 'e'}">${compartmentCount}</span><button type="button" class="wash-compartment-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `${escapeHtml(compartmentLabel)} waschen` : `Keine Vinyls in Fach ${number}`}" aria-label="${escapeHtml(compartmentLabel)} waschen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 4l1 2M12 3v2M18 4l-1 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
         <div class="storage-records" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}"></div>
       </section>`;
     }).join('');
@@ -12616,6 +13177,11 @@ function renderStorageBoard(visibleItems) {
     });
     shelfElement.querySelectorAll('.remove-compartment').forEach(button => {
       button.addEventListener('click', () => removeShelfCompartment(shelf, Number(button.dataset.compartment)));
+    });
+    shelfElement.querySelectorAll('.wash-compartment-button').forEach(button => {
+      button.addEventListener('click', () => {
+        openWashModeForCompartment(shelf.id, Number(button.dataset.compartment));
+      });
     });
   });
   layout.querySelector('.storage-add-shelf').addEventListener('click', addStorageShelf);
@@ -12953,6 +13519,12 @@ function renderCollection() {
       const genreLabel = item.genre ? escapeHtml(item.genre) : '';
       const barStyle = getBarPatternStyle(item);
       const vinylRecordPreview = getVinylRecordForItem(item);
+      const showCollectionVinylEffects = viewingOwnCollection && item.owned
+        && document.getElementById('collectionVinylEffectsCheckbox')?.checked !== false;
+      const collectionVinylEffectsMarkup = showCollectionVinylEffects
+        ? `${getWashScratchOverlayMarkup(item.condition)}<div class="wash-record-dirt"></div>`
+        : '';
+      const isCollectionVinylDirty = showCollectionVinylEffects && wasVinylLastWashedOverYearAgo(item);
       const priceTextColor = getReadableTextColor(barStyle.barColorSolid || barStyle.barColor);
       const discogsPriceValue = Number(item.discogsLowestPrice) || 0;
       const discogsPriceText = discogsPriceValue > 0 ? `Preis: ${discogsPriceValue.toFixed(2).replace(/\.00$/, '')} ${escapeHtml(item.discogsCurrency || '€')}` : '';
@@ -12977,7 +13549,7 @@ function renderCollection() {
           ` : '';
 
       card.innerHTML = `
-        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 ? 'is-clear' : ''}" style="--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${vinylRecordPreview.labelColor};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="Vinyl-Design">${getVinylLiquidMarkup(vinylRecordPreview)}</div></div>
+        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 ? 'is-clear' : ''} ${isCollectionVinylDirty ? 'is-dirty' : ''}" style="--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${vinylRecordPreview.labelColor};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="Vinyl-Design">${getVinylLiquidMarkup(vinylRecordPreview)}${collectionVinylEffectsMarkup}</div></div>
         ${selectModeActive ? `<div class="collection-card-checkbox" style="position:absolute;top:10px;left:10px;z-index:4;"><input type="checkbox" data-item-id="${item.id}" style="cursor:pointer; width:18px; height:18px;" ${selectedItemIds.has(item.id) ? 'checked' : ''}></div>` : ''}
         <div class="media">
           <img src="${item.coverUrl || ''}" alt="" loading="lazy" decoding="async">
