@@ -9464,6 +9464,15 @@ const listeningAlbumQueue = [];
 let currentListeningAlbum = null;
 let restoredListeningSessionKey = '';
 const LISTENING_SESSION_KEY_PREFIX = 'albumListeningSessionV1:';
+let listeningPlaybackState = { trackUri: '', positionSeconds: 0 };
+let lastListeningPlaybackPersistAt = 0;
+
+function persistListeningPlaybackProgress(force = false) {
+  const now = Date.now();
+  if (!force && now - lastListeningPlaybackPersistAt < 5000) return;
+  lastListeningPlaybackPersistAt = now;
+  persistListeningSession();
+}
 
 function getListeningSessionStorageKey() {
   return `${LISTENING_SESSION_KEY_PREFIX}${currentUid || 'guest'}`;
@@ -9483,6 +9492,7 @@ function persistListeningSession() {
   const session = {
     currentAlbum: currentListeningAlbum,
     queue: listeningAlbumQueue,
+    playback: listeningPlaybackState,
     minimized: dock?.classList.contains('is-collapsed') || false,
     hidden: dock?.classList.contains('is-hidden') || false,
     queueOpen: !document.getElementById('albumQueuePanel')?.hidden
@@ -9493,6 +9503,11 @@ function persistListeningSession() {
     console.error('Wiedergabesitzung konnte nicht gespeichert werden:', error);
   }
 }
+
+window.addEventListener('pagehide', () => persistListeningSession());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') persistListeningSession();
+});
 
 async function restoreListeningSession() {
   const key = getListeningSessionStorageKey();
@@ -9516,6 +9531,11 @@ async function restoreListeningSession() {
   const savedCurrentUrl = getSupportedListeningUrl(saved.currentAlbum?.listeningUrl);
   const hasCurrentAlbum = savedCurrentUrl && (getSpotifyEmbedUrl(savedCurrentUrl) || getYouTubeEmbedUrl(savedCurrentUrl));
   if (hasCurrentAlbum) currentListeningAlbum = { ...saved.currentAlbum, listeningUrl: savedCurrentUrl };
+  const savedPlayback = saved.playback && typeof saved.playback === 'object' ? saved.playback : {};
+  listeningPlaybackState = {
+    trackUri: typeof savedPlayback.trackUri === 'string' ? savedPlayback.trackUri : '',
+    positionSeconds: Math.max(0, Number(savedPlayback.positionSeconds) || 0)
+  };
   const dock = document.getElementById('albumListeningDock');
   if (dock && (currentListeningAlbum || listeningAlbumQueue.length)) {
     dock.hidden = false;
@@ -9526,7 +9546,7 @@ async function restoreListeningSession() {
     updateAlbumQueueControls();
     setAlbumQueuePanelOpen(saved.queueOpen === true && saved.hidden !== true && saved.minimized !== true);
     if (currentListeningAlbum) {
-      await openAlbumListening(currentListeningAlbum);
+      await openAlbumListening(currentListeningAlbum, null, { restorePlayback: true });
       dock.classList.toggle('is-hidden', saved.hidden === true);
       dock.classList.toggle('is-collapsed', saved.minimized === true);
       updateAlbumDockToggle();
@@ -9552,7 +9572,7 @@ function hideAlbumMiniPlayer() {
   dock.classList.remove('is-collapsed');
   updateAlbumDockToggle();
   updateAlbumMiniPlayerButton();
-  persistListeningSession();
+  persistListeningPlaybackProgress(true);
 }
 
 function showAlbumMiniPlayer() {
@@ -9788,7 +9808,7 @@ function formatListeningTime(seconds) {
   return `${Math.floor(wholeSeconds / 60)}:${String(wholeSeconds % 60).padStart(2, '0')}`;
 }
 
-function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title) {
+function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, restorePlayback = false) {
   youtubeMiniController?.destroy();
   youtubeMiniController = null;
   if (youtubeMiniProgressTimer) window.clearInterval(youtubeMiniProgressTimer);
@@ -9864,6 +9884,8 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title) {
     if (!ready || !youtubeMiniController) return;
     duration = Number(youtubeMiniController.getDuration()) || duration;
     const currentTime = Number(youtubeMiniController.getCurrentTime()) || 0;
+    listeningPlaybackState = { trackUri: `youtube:${videoId}`, positionSeconds: currentTime };
+    persistListeningPlaybackProgress();
     seek.max = String(duration);
     if (!seek.matches(':active')) {
       seek.value = String(Math.min(currentTime, duration));
@@ -9894,7 +9916,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title) {
       height: '152',
       videoId,
       playerVars: {
-        autoplay: 1,
+        autoplay: restorePlayback ? 0 : 1,
         controls: 0,
         enablejsapi: 1,
         origin: window.location.origin,
@@ -9911,12 +9933,22 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title) {
           toggle.disabled = false;
           seek.disabled = false;
           message.hidden = true;
-          event.target.playVideo();
-          updateProgress();
+          if (restorePlayback) {
+            event.target.cueVideoById({ videoId, startSeconds: listeningPlaybackState.positionSeconds });
+          } else {
+            listeningPlaybackState = { trackUri: `youtube:${videoId}`, positionSeconds: 0 };
+            event.target.playVideo();
+          }
+          if (!restorePlayback) updateProgress();
           youtubeMiniProgressTimer = window.setInterval(updateProgress, 500);
         },
         onStateChange: event => {
           const isPlaying = event.data === YT.PlayerState.PLAYING;
+          listeningPlaybackState = {
+            trackUri: `youtube:${videoId}`,
+            positionSeconds: Number(youtubeMiniController?.getCurrentTime()) || 0
+          };
+          persistListeningPlaybackProgress(event.data !== YT.PlayerState.PLAYING);
           toggle.textContent = isPlaying ? '⏸' : '▶';
           toggle.setAttribute('aria-label', isPlaying ? 'Wiedergabe pausieren' : 'Wiedergabe starten');
           updateProgress();
@@ -9940,7 +9972,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title) {
   });
 }
 
-function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
+function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlayback = false) {
   spotifyMiniController?.destroy();
   spotifyMiniController = null;
   spotifyMiniTracklistRequest?.abort();
@@ -10106,6 +10138,13 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   let controllerReady = false;
   let playbackIsPaused = true;
   let lastTrackEndTriggered = false;
+  let pendingRestoredTrackUri = '';
+  let restoringPausedTrack = false;
+  if (restorePlayback && /^spotify:track:[A-Za-z0-9]+$/.test(listeningPlaybackState.trackUri)) {
+    playingUri = listeningPlaybackState.trackUri;
+    pendingRestoredTrackUri = playingUri;
+    restoringPausedTrack = true;
+  }
   const updateControls = () => {
     toggle.disabled = !controllerReady;
     previous.disabled = !controllerReady || tracks.length < 2 || !tracks.some(track => track.uri);
@@ -10159,6 +10198,9 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
         try {
           currentIndex = index;
           playingUri = track.uri;
+          pendingRestoredTrackUri = '';
+          restoringPausedTrack = false;
+          listeningPlaybackState = { trackUri: track.uri, positionSeconds: 0 };
           lastTrackEndTriggered = false;
           updateCurrentTrack();
           spotifyMiniController.loadUri(track.uri);
@@ -10188,7 +10230,15 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   toggle.addEventListener('click', () => {
     if (!spotifyMiniController || !controllerReady) return;
     try {
-      if (playbackIsPaused) spotifyMiniController.resume();
+      if (playbackIsPaused && pendingRestoredTrackUri) {
+        spotifyMiniController.loadUri(pendingRestoredTrackUri);
+        if (listeningPlaybackState.positionSeconds > 0) {
+          spotifyMiniController.seek(listeningPlaybackState.positionSeconds * 1000);
+        }
+        pendingRestoredTrackUri = '';
+        restoringPausedTrack = false;
+        spotifyMiniController.play();
+      } else if (playbackIsPaused) spotifyMiniController.resume();
       else spotifyMiniController.pause();
     } catch (error) {
       console.error('Spotify-Wiedergabe konnte nicht umgeschaltet werden:', error);
@@ -10205,6 +10255,9 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
     try {
       currentIndex = nextIndex;
       playingUri = track.uri;
+      pendingRestoredTrackUri = '';
+      restoringPausedTrack = false;
+      listeningPlaybackState = { trackUri: track.uri, positionSeconds: 0 };
       lastTrackEndTriggered = false;
       updateCurrentTrack();
       spotifyMiniController.loadUri(track.uri);
@@ -10312,18 +10365,36 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
         if (albumId && currentIndex < 0) currentIndex = 0;
         updateCurrentTrack();
         updateControls();
-        controller.play();
+        if (restorePlayback) {
+          playbackIsPaused = true;
+          updateControls();
+          persistListeningPlaybackProgress(true);
+        } else {
+          controller.play();
+        }
       });
       controller.addListener('playback_started', event => {
         if (event.data?.playingURI) playingUri = event.data.playingURI;
         if (albumId && currentIndex < 0) currentIndex = 0;
         playbackIsPaused = false;
         lastTrackEndTriggered = false;
+        restoringPausedTrack = false;
+        listeningPlaybackState = { trackUri: playingUri, positionSeconds: 0 };
+        persistListeningSession();
         updateCurrentTrack();
       });
       controller.addListener('playback_update', event => {
         const state = event.data || {};
         playbackIsPaused = state.isPaused !== false;
+        if (state.playingURI) playingUri = state.playingURI;
+        if (!restoringPausedTrack || !playbackIsPaused) {
+          listeningPlaybackState = {
+            trackUri: playingUri || listeningPlaybackState.trackUri,
+            positionSeconds: Math.max(0, Number(state.position) || 0) / 1000
+          };
+          persistListeningPlaybackProgress(state.isPaused);
+        }
+        updateCurrentTrack();
         toggle.disabled = false;
         playbackDuration = (Number(state.duration) || 0) / 1000;
         const position = (Number(state.position) || 0) / 1000;
@@ -10349,7 +10420,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title) {
   return true;
 }
 
-function mountListeningEmbed(container, url, title, item = null) {
+function mountListeningEmbed(container, url, title, item = null, restorePlayback = false) {
   const spotifyEmbed = getSpotifyEmbedUrl(url);
   const appleEmbed = getAppleMusicEmbedUrl(url);
   const youtubeEmbed = getYouTubeEmbedUrl(url);
@@ -10384,11 +10455,11 @@ function mountListeningEmbed(container, url, title, item = null) {
     persistListeningSession();
   }
   if (spotifyEmbed) {
-    buildSpotifyMiniPlayer(playerContainer, url, item, title);
+    buildSpotifyMiniPlayer(playerContainer, url, item, title, restorePlayback);
   } else if (youtubeEmbed) {
     const videoId = getYouTubeVideoId(url);
     if (!videoId) return false;
-    buildYouTubeMiniPlayer(playerContainer, videoId, url, item, title);
+    buildYouTubeMiniPlayer(playerContainer, videoId, url, item, title, restorePlayback);
   }
   updateAlbumQueueControls();
   if (shouldUseDock) closeAlbumListening(true);
@@ -10889,15 +10960,17 @@ async function searchAppleListening(item, content, controller, status) {
   return true;
 }
 
-async function openAlbumListening(item, inlineTarget = null) {
+async function openAlbumListening(item, inlineTarget = null, options = {}) {
   const overlay = document.getElementById('albumListeningOverlay');
   const storedUrl = getSupportedListeningUrl(item.listeningUrl);
+  const restorePlayback = options.restorePlayback === true;
   if (item.listeningUrl && !storedUrl) {
     await showAlert('Der gespeicherte Hörlink ist ungültig. Bitte verwende einen HTTPS-Link von Spotify, Apple Music oder YouTube.');
     return;
   }
   const startsEmbeddedPlayback = storedUrl
     && (getSpotifyEmbedUrl(storedUrl) || getYouTubeEmbedUrl(storedUrl));
+  if (!restorePlayback) listeningPlaybackState = { trackUri: '', positionSeconds: 0 };
   closeAlbumListening(!startsEmbeddedPlayback);
   const content = inlineTarget || document.getElementById('albumListeningContent');
   albumListeningInlineTarget = inlineTarget;
@@ -10905,7 +10978,7 @@ async function openAlbumListening(item, inlineTarget = null) {
     document.getElementById('albumListeningTitle').textContent = `${item.title || 'Album'} anhören`;
     overlay.classList.add('open');
   }
-  if (storedUrl && mountListeningEmbed(content, storedUrl, item.title || 'Album', item)) return;
+  if (storedUrl && mountListeningEmbed(content, storedUrl, item.title || 'Album', item, restorePlayback)) return;
 
   const status = document.createElement('p');
   status.className = 'album-listen-status';
