@@ -1684,6 +1684,7 @@
   .album-mini-control.primary { width:42px; height:42px; min-width:42px; background:var(--text-primary); color:var(--bg); font-size:19px; }
   .album-mini-control:disabled { opacity:.35; cursor:not-allowed; }
   .album-mini-control:hover:not(:disabled) { border-color:var(--accent-border); color:var(--accent); }
+  .album-mini-queue-next[hidden] { display:none; }
   .album-mini-tracklist {
     position:static;
     flex:0 0 auto;
@@ -9745,6 +9746,10 @@ function moveQueuedAlbum(index, direction) {
 function updateAlbumQueueControls() {
   const dock = document.getElementById('albumListeningDock');
   if (!dock) return;
+  document.querySelectorAll('.album-mini-queue-next').forEach(button => {
+    button.hidden = listeningAlbumQueue.length === 0;
+    button.disabled = listeningAlbumQueue.length === 0;
+  });
   renderListeningAlbumQueue();
   updateAlbumMiniPlayerButton();
   persistListeningSession();
@@ -10045,6 +10050,15 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   favorite.textContent = '♡';
   favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzufügen');
   favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzufügen';
+  const nextQueued = document.createElement('button');
+  nextQueued.type = 'button';
+  nextQueued.className = 'album-mini-control album-mini-queue-next';
+  nextQueued.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5v14l11-7L5 5Zm12 0v14h2V5h-2Z" fill="currentColor"/></svg>';
+  nextQueued.setAttribute('aria-label', 'Nächstes Album aus der Warteschlange abspielen');
+  nextQueued.title = 'Nächstes Album abspielen';
+  nextQueued.hidden = listeningAlbumQueue.length === 0;
+  nextQueued.disabled = listeningAlbumQueue.length === 0;
+  nextQueued.addEventListener('click', playNextQueuedAlbum);
   previous.disabled = true;
   next.disabled = true;
   toggle.disabled = true;
@@ -10073,7 +10087,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const message = document.createElement('p');
   message.className = 'album-mini-message';
   message.textContent = 'Die Titelliste wird geladen …';
-  controls.append(previous, toggle, next, favorite);
+  controls.append(previous, toggle, next, favorite, nextQueued);
   meta.append(currentTrack, artist, controls);
   main.append(cover, meta);
   progress.append(seek);
