@@ -1639,7 +1639,7 @@
   .album-listening-dock.has-custom-mini .album-listening-dock-title { display:none; }
   .album-listening-dock.has-custom-mini .album-listening-dock-header { display:none; }
   .album-listening-dock.is-collapsed .album-listening-dock-header { display:flex; }
-  .album-listening-dock.is-collapsed .album-listening-dock-title { display:block; }
+  .album-listening-dock.is-collapsed .album-listening-dock-title { display:none; }
   .album-listening-dock.is-collapsed #albumListeningDockContent { display:block; }
   .album-listening-dock.is-collapsed { width:min(340px, calc(100vw - 24px)); padding:8px 10px; }
   .album-listening-dock.is-collapsed .album-mini-topbar,
@@ -1650,6 +1650,11 @@
   .album-listening-dock.is-collapsed .album-mini-progress,
   .album-listening-dock.is-collapsed .album-mini-message,
   .album-listening-dock.is-collapsed .album-mini-platform-link { display:none; }
+  .album-listening-dock.is-collapsed .album-listening-dock-title,
+  .album-listening-dock.is-collapsed #albumQueueHeaderToggle { display:none; }
+  .album-listening-dock.is-collapsed .album-mini-queue-next,
+  .album-listening-dock.is-collapsed .album-mini-controls .album-mini-control[aria-label="Zu deinen Spotify-Lieblingssongs hinzufügen"],
+  .album-listening-dock.is-collapsed .album-mini-controls .album-mini-control[aria-label="Zu deinen Spotify-Lieblingssongs hinzugefügt"] { display:none; }
   .album-listening-dock.is-collapsed .album-mini-main { grid-template-columns:minmax(0,1fr); gap:0; }
   .album-listening-dock.is-collapsed .album-mini-controls { justify-content:center; gap:6px; margin-top:0; }
   .album-listening-dock.is-collapsed .album-mini-control {
