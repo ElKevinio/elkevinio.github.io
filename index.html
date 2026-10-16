@@ -3299,7 +3299,10 @@
   .storage-order-setting select { min-width:0; }
   .storage-order-direction { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; min-width:32px; min-height:32px; padding:0; font-size:17px; }
   .storage-order-list { display:grid; gap:6px; max-height:50vh; overflow:auto; margin:0; padding:0; list-style:none; }
-  .storage-order-item { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; min-height:44px; padding:6px 8px; border:1px solid var(--border); border-radius:7px; background:var(--surface-1); }
+  .storage-order-item { display:grid; grid-template-columns:24px minmax(0,1fr) auto; align-items:center; gap:8px; min-height:44px; padding:6px 8px; border:1px solid var(--border); border-radius:7px; background:var(--surface-1); }
+  .storage-order-item.is-dragging { opacity:.4; }
+  .storage-order-drag-handle { display:inline-flex; align-items:center; justify-content:center; width:24px; height:32px; padding:0; border:0; background:transparent; color:var(--text-muted); cursor:grab; touch-action:none; user-select:none; }
+  .storage-order-drag-handle:active { cursor:grabbing; }
   .storage-order-item-copy { min-width:0; }
   .storage-order-item-title,.storage-order-item-meta { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .storage-order-item-title { color:var(--text-primary); font-size:12px; font-weight:600; }
@@ -13845,6 +13848,7 @@ function saveShelfLayout() {
 }
 
 let activeStorageOrderEditor = null;
+let activeStorageOrderDrag = null;
 
 function renderStorageOrderEditor() {
   const list = document.getElementById('storageOrderList');
@@ -13866,6 +13870,7 @@ function renderStorageOrderEditor() {
   secondaryDirectionButton.title = settings.secondaryDirection === 'asc' ? 'Aufsteigend sortieren' : 'Absteigend sortieren';
   list.innerHTML = orderedItems.length
     ? orderedItems.map((item, index) => `<li class="storage-order-item" data-item-id="${escapeHtml(item.id)}">
+        <button type="button" class="storage-order-drag-handle" aria-label="Album ziehen zum Umordnen" title="Ziehen zum Umordnen">⠿</button>
         <span class="storage-order-item-copy"><span class="storage-order-item-title">${escapeHtml(item.title || 'Ohne Titel')}</span><span class="storage-order-item-meta">${escapeHtml(item.artist || 'Unbekannter Interpret')}${item.year ? ` · ${escapeHtml(item.year)}` : ''}</span></span>
         <span class="storage-order-item-actions"><button type="button" data-order-move="-1" aria-label="Nach oben verschieben"${index === 0 ? ' disabled' : ''}>↑</button><button type="button" data-order-move="1" aria-label="Nach unten verschieben"${index === orderedItems.length - 1 ? ' disabled' : ''}>↓</button></span>
       </li>`).join('')
@@ -13915,6 +13920,7 @@ document.getElementById('storageOrderSecondaryDirection').addEventListener('clic
   updateStorageEditorSort();
 });
 document.getElementById('storageOrderList').addEventListener('click', event => {
+  if (event.target.closest('.storage-order-drag-handle')) return;
   const button = event.target.closest('button[data-order-move]');
   if (!button || !activeStorageOrderEditor || button.disabled) return;
   const itemElement = button.closest('[data-item-id]');
@@ -13926,6 +13932,51 @@ document.getElementById('storageOrderList').addEventListener('click', event => {
   activeStorageOrderEditor.manual = true;
   renderStorageOrderEditor();
 });
+document.getElementById('storageOrderList').addEventListener('pointerdown', event => {
+  const handle = event.target.closest('.storage-order-drag-handle');
+  if (!handle || !activeStorageOrderEditor || (event.pointerType === 'mouse' && event.button !== 0)) return;
+  const item = handle.closest('.storage-order-item');
+  if (!item) return;
+  event.preventDefault();
+  activeStorageOrderDrag = {
+    pointerId: event.pointerId,
+    item,
+    list: event.currentTarget,
+    startX: event.clientX,
+    startY: event.clientY,
+    moved: false
+  };
+  handle.setPointerCapture(event.pointerId);
+});
+document.addEventListener('pointermove', event => {
+  const drag = activeStorageOrderDrag;
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  if (!drag.moved && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 5) return;
+  event.preventDefault();
+  drag.moved = true;
+  drag.item.classList.add('is-dragging');
+  const listRect = drag.list.getBoundingClientRect();
+  if (event.clientY < listRect.top + 28) drag.list.scrollTop -= 12;
+  else if (event.clientY > listRect.bottom - 28) drag.list.scrollTop += 12;
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.storage-order-item');
+  if (!target || target === drag.item || target.parentElement !== drag.list) return;
+  const targetRect = target.getBoundingClientRect();
+  const insertAfter = event.clientY > targetRect.top + targetRect.height / 2;
+  drag.list.insertBefore(drag.item, insertAfter ? target.nextSibling : target);
+}, { capture:true, passive:false });
+function finishStorageOrderDrag(event) {
+  const drag = activeStorageOrderDrag;
+  if (!drag || drag.pointerId !== event.pointerId) return;
+  activeStorageOrderDrag = null;
+  drag.item.classList.remove('is-dragging');
+  if (!drag.moved || !activeStorageOrderEditor) return;
+  activeStorageOrderEditor.order = [...drag.list.querySelectorAll('.storage-order-item')]
+    .map(item => String(item.dataset.itemId));
+  activeStorageOrderEditor.manual = true;
+  renderStorageOrderEditor();
+}
+document.addEventListener('pointerup', finishStorageOrderDrag, true);
+document.addEventListener('pointercancel', finishStorageOrderDrag, true);
 document.getElementById('closeStorageOrderBtn').addEventListener('click', closeStorageOrderEditor);
 document.getElementById('cancelStorageOrderBtn').addEventListener('click', closeStorageOrderEditor);
 document.getElementById('storageOrderOverlay').addEventListener('click', event => {
