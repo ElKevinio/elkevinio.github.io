@@ -10516,6 +10516,17 @@ function createCollapsedDockCloseButton() {
   return button;
 }
 
+function createExpandedDockCloseButton() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'icon-btn album-listening-dock-close album-mini-control album-mini-expanded-close';
+  button.textContent = '×';
+  button.title = 'Wiedergabe beenden';
+  button.setAttribute('aria-label', 'Wiedergabe beenden');
+  button.addEventListener('click', hideAlbumMiniPlayer);
+  return button;
+}
+
 function setAlbumQueuePanelOpen(isOpen) {
   const panel = document.getElementById('albumQueuePanel');
   if (!panel) return;
@@ -10748,8 +10759,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   toggle.textContent = '▶';
   toggle.setAttribute('aria-label', 'Wiedergabe starten');
   toggle.disabled = true;
-  const expandedClose = document.getElementById('closeAlbumListeningDockBtn');
-  expandedClose.className = 'icon-btn album-listening-dock-close album-mini-control album-mini-expanded-close';
+  const expandedClose = createExpandedDockCloseButton();
   controls.append(collapsedTitle, toggle, expandedClose, createAlbumDockToggle(), createCollapsedDockCloseButton());
   meta.append(currentTrack, artist, controls);
   main.append(cover, meta);
@@ -10972,8 +10982,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const message = document.createElement('p');
   message.className = 'album-mini-message';
   message.textContent = 'Die Titelliste wird geladen …';
-  const expandedClose = document.getElementById('closeAlbumListeningDockBtn');
-  expandedClose.className = 'icon-btn album-listening-dock-close album-mini-control album-mini-expanded-close';
+  const expandedClose = createExpandedDockCloseButton();
   controls.append(
     collapsedTitle,
     previous,
