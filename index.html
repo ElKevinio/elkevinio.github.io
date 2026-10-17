@@ -1696,6 +1696,7 @@
     white-space:nowrap;
   }
   .album-listening-dock.is-collapsed .album-mini-queue-next,
+  .album-listening-dock.is-collapsed .album-mini-controls .album-mini-expanded-close,
   .album-listening-dock.is-collapsed .album-mini-controls .album-mini-control[aria-label="Zu deinen Spotify-Lieblingssongs hinzufügen"],
   .album-listening-dock.is-collapsed .album-mini-controls .album-mini-control[aria-label="Zu deinen Spotify-Lieblingssongs hinzugefügt"] { display:none; }
   .album-listening-dock.is-collapsed .album-mini-main { display:block; }
@@ -1918,7 +1919,7 @@
     position:absolute;
     left:10px;
     bottom:10px;
-    z-index:3;
+    z-index:6;
     width:auto;
     min-width:0;
     height:32px;
@@ -10678,6 +10679,7 @@ function closeAlbumListening(keepPlayer = false) {
     document.getElementById('albumListeningDockTitle').textContent = listeningAlbumQueue.length ? 'Album-Warteschlange' : '';
     if (dockCloseButton) {
       document.querySelector('#albumListeningDock .album-listening-dock-header')?.append(dockCloseButton);
+      dockCloseButton.className = 'icon-btn album-listening-dock-close';
     }
     updateAlbumQueueControls();
     updateAlbumMiniPlayerButton();
@@ -10700,6 +10702,12 @@ function formatListeningTime(seconds) {
   return `${Math.floor(wholeSeconds / 60)}:${String(wholeSeconds % 60).padStart(2, '0')}`;
 }
 
+function getListeningDisplayText(value, fallback) {
+  if (typeof value !== 'string') return fallback;
+  const text = value.trim();
+  return !text || /^(?:null|undefined)$/i.test(text) ? fallback : text;
+}
+
 function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, restorePlayback = false) {
   youtubeMiniController?.destroy();
   youtubeMiniController = null;
@@ -10710,7 +10718,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   player.className = 'album-mini-player youtube-mini-player';
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), createAlbumDockToggle(), document.getElementById('closeAlbumListeningDockBtn'));
+  topbar.append(createAlbumQueueToggle(), createAlbumDockToggle());
   const main = document.createElement('div');
   main.className = 'album-mini-main';
   const cover = document.createElement('img');
@@ -10725,22 +10733,24 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   meta.className = 'album-mini-meta';
   const currentTrack = document.createElement('strong');
   currentTrack.className = 'album-mini-track-title';
-  currentTrack.textContent = title || 'YouTube-Video';
+  currentTrack.textContent = getListeningDisplayText(title, 'YouTube-Video');
   const artist = document.createElement('span');
   artist.className = 'album-mini-artist';
-  artist.textContent = item?.artist || 'YouTube';
+  artist.textContent = getListeningDisplayText(item?.artist, 'YouTube');
   const controls = document.createElement('div');
   controls.className = 'album-mini-controls';
   const collapsedTitle = document.createElement('span');
   collapsedTitle.className = 'album-mini-collapsed-title';
-  collapsedTitle.textContent = title || 'YouTube-Video';
+  collapsedTitle.textContent = getListeningDisplayText(title, 'YouTube-Video');
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'album-mini-control primary';
   toggle.textContent = '▶';
   toggle.setAttribute('aria-label', 'Wiedergabe starten');
   toggle.disabled = true;
-  controls.append(collapsedTitle, toggle, createAlbumDockToggle(), createCollapsedDockCloseButton());
+  const expandedClose = document.getElementById('closeAlbumListeningDockBtn');
+  expandedClose.className = 'icon-btn album-listening-dock-close album-mini-control album-mini-expanded-close';
+  controls.append(collapsedTitle, toggle, expandedClose, createAlbumDockToggle(), createCollapsedDockCloseButton());
   meta.append(currentTrack, artist, controls);
   main.append(cover, meta);
   const progress = document.createElement('div');
@@ -10896,15 +10906,15 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   meta.className = 'album-mini-meta';
   const currentTrack = document.createElement('strong');
   currentTrack.className = 'album-mini-track-title';
-  currentTrack.textContent = title || 'Album';
+  currentTrack.textContent = getListeningDisplayText(title, 'Album');
   const artist = document.createElement('span');
   artist.className = 'album-mini-artist';
-  artist.textContent = item?.artist || 'Spotify';
+  artist.textContent = getListeningDisplayText(item?.artist, 'Spotify');
   const controls = document.createElement('div');
   controls.className = 'album-mini-controls';
   const collapsedTitle = document.createElement('span');
   collapsedTitle.className = 'album-mini-collapsed-title';
-  collapsedTitle.textContent = title || 'Album';
+  collapsedTitle.textContent = getListeningDisplayText(title, 'Album');
   const previous = document.createElement('button');
   previous.type = 'button';
   previous.className = 'album-mini-control';
@@ -10941,7 +10951,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   favorite.disabled = true;
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), createAlbumDockToggle(), document.getElementById('closeAlbumListeningDockBtn'));
+  topbar.append(createAlbumQueueToggle(), createAlbumDockToggle());
   const trackList = document.createElement('ol');
   trackList.className = 'album-mini-tracklist';
   const progress = document.createElement('div');
@@ -10962,6 +10972,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const message = document.createElement('p');
   message.className = 'album-mini-message';
   message.textContent = 'Die Titelliste wird geladen …';
+  const expandedClose = document.getElementById('closeAlbumListeningDockBtn');
+  expandedClose.className = 'icon-btn album-listening-dock-close album-mini-control album-mini-expanded-close';
   controls.append(
     collapsedTitle,
     previous,
@@ -10969,6 +10981,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     next,
     favorite,
     nextQueued,
+    expandedClose,
     createAlbumDockToggle(),
     createCollapsedDockCloseButton()
   );
@@ -11089,7 +11102,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     if (matchingIndex >= 0) currentIndex = matchingIndex;
     if (currentIndex >= 0 && tracks[currentIndex]) {
       const activeUri = tracks[currentIndex].uri;
-      currentTrack.textContent = tracks[currentIndex].title;
+      currentTrack.textContent = getListeningDisplayText(tracks[currentIndex].title, `Track ${currentIndex + 1}`);
       if (activeUri !== favoriteTrackUri) {
         favoriteTrackUri = activeUri;
         favorite.textContent = '♡';
@@ -11152,7 +11165,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     updateCurrentTrack();
   };
   const fallbackTracks = (Array.isArray(item?.tracklist) ? item.tracklist : []).map(track => ({
-    title: typeof track === 'string' ? track : track.title || 'Unbenannter Track',
+    title: typeof track === 'string' ? getListeningDisplayText(track, 'Unbenannter Track') : getListeningDisplayText(track.title, 'Unbenannter Track'),
     duration: typeof track === 'string' ? '' : track.duration || '',
     uri: typeof track === 'string' ? '' : track.uri || track.spotifyUri || ''
   }));
@@ -11266,7 +11279,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       if (!host.isConnected || request.signal.aborted) return;
       const spotifyTracks = (data.items || []).map(track => ({
         uri: track.uri,
-        title: track.name,
+        title: getListeningDisplayText(track.name, 'Unbenannter Track'),
         duration_ms: track.duration_ms
       }));
       if (spotifyTracks.length) renderTracks(spotifyTracks);
@@ -13269,7 +13282,7 @@ window.refreshStorageRandomFilterControls = function() {
 
 function renderStorageRandomResult(item) {
   if (!item) return;
-  closeAlbumListening();
+  closeAlbumListening(true);
   storageRandomCurrentItem = item;
   storageRandomResultItemId = String(item.id);
   document.getElementById('storageRandomCaseView').hidden = true;
@@ -13311,7 +13324,7 @@ function renderStorageRandomResult(item) {
 
 function closeStorageRandomResult() {
   if (storageRandomPickInProgress) return;
-  closeAlbumListening();
+  closeAlbumListening(true);
   document.getElementById('storageRandomResultOverlay').classList.remove('open');
   document.getElementById('storageRandomCaseView').hidden = true;
   storageRandomResultItemId = null;
