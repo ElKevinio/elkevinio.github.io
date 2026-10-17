@@ -2929,6 +2929,7 @@
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
   }
+  .collection-card.remote-view .media-info { z-index:6; }
   .collection-card .title {
     margin: 0; font-size: 13px; font-weight: 600; color: var(--text-primary);
     display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -9237,6 +9238,36 @@ let bulkImportLines = [];
 let bulkImportIndex = 0;
 
 async function searchBulkImportCandidates(query) {
+  const directDiscogsInput = parseDiscogsInput(query);
+  if (directDiscogsInput?.type === 'release' || directDiscogsInput?.type === 'master') {
+    const release = await fetchDiscogsInput(directDiscogsInput);
+    if (!release) {
+      searchBulkImportCandidates.lastError =
+        fetchDiscogsReleaseById.lastError || 'Der Discogs-Link konnte nicht geladen werden.';
+      return [];
+    }
+    searchBulkImportCandidates.lastError = '';
+    return [{
+      source: 'discogs',
+      album: {
+        title: release.title,
+        artist: release.artist,
+        year: release.year,
+        genre: release.genre ? [release.genre] : [],
+        discogsResourceUrl: release.discogsResourceUrl
+      },
+      title: release.title,
+      artist: release.artist,
+      year: release.year,
+      cover: release.cover || '',
+      discogsResourceUrl: release.discogsResourceUrl,
+      discogsLowestPrice: release.discogsLowestPrice,
+      discogsAveragePrice: release.discogsAveragePrice,
+      discogsCurrency: release.discogsCurrency || '€',
+      tracklist: release.tracklist || []
+    }];
+  }
+  searchBulkImportCandidates.lastError = '';
   const cards = [];
   const provider = getCoverProvider();
   const sources = provider === 'itunes' ? ['itunes'] : provider === 'discogs' ? ['discogs'] : ['itunes', 'discogs'];
@@ -9347,7 +9378,8 @@ async function showBulkImportLine() {
   results.innerHTML = '<p class="hint">Suche läuft...</p>';
   const candidates = await searchBulkImportCandidates(query);
   if (candidates.length === 0) {
-    status.textContent = 'Keine Treffer gefunden. Ändere den Suchbegriff oben und suche erneut.';
+    status.textContent = searchBulkImportCandidates.lastError
+      || 'Keine Treffer gefunden. Ändere den Suchbegriff oben und suche erneut.';
     results.innerHTML = '<button type="button" id="bulkImportManualBtn" class="manual-btn">Manuell hinzufügen</button>';
     document.getElementById('bulkImportManualBtn').addEventListener('click', () => {
       closeBulkImport();
@@ -15101,7 +15133,8 @@ function getSortIndicator(col) {
 
 document.getElementById('searchBtn').addEventListener('click', searchAlbums);
 document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  const isMobileSearch = window.matchMedia('(max-width: 760px), (hover: none) and (pointer: coarse)').matches;
+  if (e.key === 'Enter' && !e.shiftKey && !isMobileSearch) {
     e.preventDefault();
     searchAlbums();
   }
