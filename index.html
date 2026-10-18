@@ -484,6 +484,65 @@
     margin-bottom: 12px;
     flex-wrap: wrap;
   }
+  .user-search-input { width:100%; margin-bottom:12px; }
+  .user-card-grid { grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px; }
+  .user-card { --ua:var(--accent); position:relative; display:flex; flex-direction:column; gap:12px; min-height:300px; padding:16px; border:2px solid var(--ua); border-radius:16px; background:color-mix(in srgb, var(--ua) 14%, var(--surface-2)); box-shadow:var(--shadow); cursor:pointer; transition:transform .15s ease, border-color .15s ease; }
+  .user-card:hover { transform:translateY(-2px); box-shadow:0 0 0 1px var(--ua), var(--shadow); }
+  .user-card.is-favorite { background:linear-gradient(180deg, color-mix(in srgb, var(--ua) 24%, var(--surface-2)), color-mix(in srgb, var(--ua) 12%, var(--surface-2)) 60%); }
+  .user-card-head { display:flex; flex-direction:column; gap:3px; min-width:0; padding-right:34px; }
+  .user-card-title { font-size:17px; font-weight:700; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .user-card-owner { font-size:13px; color:var(--text-secondary); }
+  .user-card-uid { font-size:11px; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .user-card-fav { position:absolute; top:10px; right:10px; width:30px; min-width:30px; height:30px; min-height:30px; padding:0; justify-content:center; font-size:16px; }
+  .user-card-fav.active { color:#f5c451; }
+  .user-card-stats { flex:1; display:grid; grid-template-columns:1fr 1fr; gap:8px; align-content:start; }
+  .user-card-stat { padding:8px 10px; border-radius:10px; background:var(--surface-1); display:flex; flex-direction:column; gap:2px; }
+  .user-card-stat span { font-size:11px; color:var(--text-muted); }
+  .user-card-stat strong { font-size:15px; color:var(--text-primary); }
+  .user-card-actions { display:flex; gap:8px; }
+  .user-card-actions .view-btn { flex:1; }
+  .user-card-actions button { min-width:0; }
+  .user-card-loading { grid-column:1 / -1; color:var(--text-muted); font-size:12px; }
+  .user-group-label { grid-column:1 / -1; margin:6px 0 -4px; font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+  .compare-close-row { position:absolute; top:12px; right:12px; z-index:2; }
+  .modal-box.compare-box { position:relative; width:min(900px, 96vw); max-width:900px; max-height:calc(100dvh - 40px); overflow:auto; }
+  @media (min-width:1100px) { .modal-box.compare-box { width:min(1180px, 92vw); max-width:1180px; } }
+  .compare-head { padding-right:44px; display:grid; grid-template-columns:1fr 1fr; gap:16px; padding-bottom:6px; }
+  .compare-head > div { display:flex; flex-direction:column; min-width:0; }
+  .compare-head .right { text-align:right; align-items:flex-end; }
+  .compare-head small { color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+  .compare-section { margin-top:26px; padding-top:14px; border-top:0.5px solid var(--border); font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); text-align:center; }
+  .compare-row { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:6px 12px; padding:12px 0 4px; }
+  .compare-val { font-size:16px; font-weight:700; }
+  .compare-val.left { justify-self:start; }
+  .compare-val.right { justify-self:end; text-align:right; }
+  .compare-label { font-size:12px; color:var(--text-secondary); text-align:center; }
+  .compare-bars { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .compare-track { height:8px; border-radius:999px; background:var(--surface-3); display:flex; overflow:hidden; }
+  .compare-track.left { justify-content:flex-end; }
+  .compare-track span { display:block; height:100%; border-radius:999px; }
+  .compare-track.left span { background:var(--ca); }
+  .compare-track.right span { background:var(--cb); }
+  .compare-head .left strong { color:var(--ca); }
+  .compare-head .right strong { color:var(--cb); }
+  .compare-row.wide { grid-template-columns:1fr; }
+  .compare-wide-cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .compare-chips.center { justify-content:center; }
+  .compare-top { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:8px 12px; align-items:center; padding-top:10px; }
+  .compare-top .compare-label { text-align:center; font-size:12px; color:var(--text-secondary); }
+  .compare-top .l { justify-self:start; min-width:0; font-size:13px; }
+  .compare-top .r { justify-self:end; text-align:right; min-width:0; font-size:13px; }
+  .compare-top .rk { color:var(--text-muted); font-size:12px; text-align:center; }
+  .compare-top small { color:var(--text-muted); }
+  .compare-top .l, .compare-top .r { padding:3px 10px; border:1.5px solid transparent; border-radius:999px; }
+  .compare-top .shared, .compare-chip.shared { border:1.5px solid transparent; background:linear-gradient(var(--surface-2), var(--surface-2)) padding-box, linear-gradient(90deg, var(--ca), var(--cb)) border-box; color:var(--text-primary); }
+  .compare-top.price .l, .compare-top.price .r { border-radius:12px; padding:0; }
+  .compare-item { display:flex; align-items:center; gap:10px; min-width:0; }
+  .compare-top .r .compare-item { flex-direction:row-reverse; text-align:right; }
+  .compare-item img, .compare-item .noimg { flex:0 0 auto; width:56px; height:56px; border-radius:6px; object-fit:cover; background:var(--surface-3); }
+  .compare-item span { min-width:0; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .compare-chips { display:flex; flex-wrap:wrap; gap:8px; padding-top:8px; }
+  .compare-chip { padding:3px 10px; border-radius:999px; background:var(--surface-3); font-size:11px; }
   .user-menu-header .panel-title {
     margin-bottom: 0;
   }
@@ -4871,7 +4930,8 @@
         ✕
       </button>
     </div>
-    <div id="userList" class="user-list"></div>
+    <input type="search" id="userSearchInput" class="user-search-input" placeholder="Nutzer oder Sammlung suchen…" aria-label="Nutzer suchen" autocomplete="off">
+    <div id="userList" class="user-list user-card-grid"></div>
     <p class="hint" id="userListHint">Wähle hier einen anderen Benutzer, um seine Sammlung anzusehen oder zu importieren.</p>
   </div>
 
@@ -5090,6 +5150,7 @@
 <li><b>Album suchen</b> (links bzw. oben): Suchen, Barcode scannen, Link einfügen, manuell anlegen.</li>
 <li><b>Sammlung</b>: Raster, Tabelle oder Lageransicht. Oben Filter (Alle / Besitze ich / Wunschliste) und Sortierung.</li>
 <li><b>Einstellungen</b> (Zahnrad): Konto, Export/Import, Werkzeuge, Discogs- und Streaming-Zugänge.</li>
+<li><b>?</b> in der Kopfleiste (Desktop) öffnet diese Hilfe neben der Sammlung; am Handy steht „Hilfe &amp; Doku“ in den Einstellungen.</li>
 </ul>
 <h4>Status</h4>
 <p><b>Im Besitz</b> = Vinyl steht bei dir. <b>Wunschliste</b> = möchtest du haben. Der Status lässt sich auf der Karte, in der Tabelle oder im Editor umschalten. Lagerort und Waschdatum gibt es nur für Alben im Besitz.</p>
@@ -5192,11 +5253,12 @@
 <li>Regale lassen sich ein-/ausklappen, verschieben und zoomen (+/−, am Handy auch Pinch).</li>
 <li>Im Fach öffnet der Reihenfolge-Button die <b>Sortierung</b>: Alben per Drag nach oben/unten ziehen oder mit den Pfeilen verschieben.</li>
 <li>Neben der Fachnummer startet ein kleiner Wasch-Button den Waschmodus für dieses Fach.</li>
+<li><b>Displaywand</b>: Regale im Modus „Display“ zeigen die Alben als kleine Sammlungskarten. Titel und Interpret erscheinen beim Drüberfahren, zusammen mit einem größeren <b>Anhören</b>-Button. Im Fach-Kopf gibt es dort nur das ✕ zum Entfernen; Wasch- und Sortierknopf fehlen.</li>
 </ul>
 <h4>Zufallsauswahl</h4>
 <p>Der Würfel zieht ein zufälliges Album mit Ziehanimation (abschaltbar). Der Filter-Button begrenzt nach Genre, Jahr/Jahresbereich und Format (LP, 7", Maxi, EP). „Wiederholen“ zieht neu. Auf dem Handy ist die Tracklist eingeklappt. Läuft Musik, bleibt der Mini-Player beim Schließen bestehen.</p></div></details>
     <details id="doc-wash" data-keywords="waschen reinigen wasser datum"><summary>Waschmodus</summary><div class="docs-section">
-<p>Einstellungen → <b>Waschmodus</b>. Besessene Vinyls fachweise reinigen.</p>
+<p>Am Desktop (ab ca. 1000 px) der Waschmodus-Button in der Kopfleiste neben der Lageransicht, sonst Einstellungen → <b>Waschmodus</b>. Besessene Vinyls fachweise reinigen. In fremden Sammlungen ist er nicht verfügbar.</p>
 <ul>
 <li>Auswahl: ein Fach, oder die Schaltfläche für <b>alle Fächer</b> (von alt nach neu, unabhängig vom Fach; das Fach steht trotzdem dabei).</li>
 <li>Pro Fach kommen die am längsten ungewaschenen zuerst, Alben ohne Datum noch davor.</li>
@@ -5246,16 +5308,42 @@
 <li>Cover neu suchen: Lupe auf dem Cover im Editor.</li>
 <li>Der frühere Cover-Link-Button ist entfallen; der Link lässt sich nicht mehr im Editor bearbeiten.</li>
 </ul></div></details>
-    <details id="doc-others" data-keywords="benutzer fremde import"><summary>Andere Sammlungen</summary><div class="docs-section">
+    <details id="doc-others" data-keywords="benutzer fremde nutzer karten favorit favoriten suche vergleichen vergleich import akzentfarbe"><summary>Andere Sammlungen &amp; Vergleich</summary><div class="docs-section">
+<h4>Nutzerkarten</h4>
 <ul>
-<li>Über das Benutzer-Symbol im Header wählst du eine andere Sammlung. Sie ist schreibgeschützt; die Bearbeitungsfunktionen sind ausgeblendet.</li>
+<li>Das Benutzer-Symbol im Header öffnet „Andere Nutzer“ als Raster aus Titelkarten. Jede Karte zeigt Sammlungsname, Besitzer, UID, Statistiken (Besitz, Wunschliste, Wert, Genres, Artists, Jahre, 12", 7") und die Buttons <b>Ansehen</b>, <b>+</b> (Importieren) und <b>Vergleichen</b>.</li>
+<li>Ein Klick irgendwo auf die Karte öffnet die Sammlung; die Buttons und der Stern lösen das nicht aus.</li>
+<li>Rahmen und Hintergrund der Karte nutzen die Akzentfarbe der jeweiligen Person.</li>
+<li>Das Suchfeld filtert nach Nutzername und Sammlungsname.</li>
+<li>Mit dem <b>Stern</b> machst du Nutzer zu Favoriten. Sie stehen immer oben unter „★ Favoriten“ und werden lokal und in der Cloud gespeichert.</li>
+<li>Die Statistiken werden beim Öffnen aus den Sammlungen berechnet und erscheinen nach kurzem Laden.</li>
+</ul>
+<h4>Fremde Sammlung ansehen</h4>
+<ul>
+<li>Sie ist schreibgeschützt; die Bearbeitungsfunktionen sind ausgeblendet.</li>
 <li>„Gemeinsam“ markiert Alben, die du ebenfalls besitzt.</li>
-<li><b>Anhören</b> geht direkt, <b>Zu meiner Sammlung</b> fügt das Album hinzu.</li>
+<li><b>Anhören</b> geht direkt, <b>Zu meiner Sammlung</b> fügt das Album hinzu. Die Einstellungen für „Album anhören“ (Reihenfolge, Anbieter, Tokens) sind auch hier erreichbar.</li>
 <li>Über „Eigene Sammlung“ kommst du zurück.</li>
+</ul>
+<h4>Vergleichen</h4>
+<ul>
+<li>Der Button öffnet eine Gegenüberstellung: du links, die andere Person rechts, die Kategorie in der Mitte. Es gibt keine Wertung; die Balken zeigen nur das Größenverhältnis, Farben sind die Akzentfarben beider Personen.</li>
+<li>Abschnitte: Sammlung, Formate, Vielfalt &amp; Zeit, Top 5 Genres, Top 5 Artists im Besitz, teuerste Vinyl (Besitz und Wunschliste, mit Cover; nur €-Preise) und Gemeinsamkeiten.</li>
+<li>Gemeinsame Genres und Artists haben einen Rahmen mit Farbverlauf zwischen beiden Farben; unten stehen bis zu 10 davon.</li>
 </ul></div></details>
     <p class="docs-empty" id="docsEmpty" hidden>Nichts gefunden.</p>
   </div>
 </aside>
+
+<div class="modal-overlay" id="compareOverlay" aria-modal="true" role="dialog" aria-labelledby="compareTitle">
+  <div class="modal-box compare-box">
+    <div class="compare-close-row">
+      <p class="modal-title" id="compareTitle" hidden>Sammlungen vergleichen</p>
+      <button type="button" id="closeCompareBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+    <div id="compareBody"></div>
+  </div>
+</div>
 
 <div class="modal-overlay cover-url-overlay" id="discogsUrlOverlay" aria-modal="true" role="dialog" aria-labelledby="discogsUrlTitle">
   <div class="modal-box cover-url-box">
@@ -5999,6 +6087,10 @@ async function loadCloudData(uid) {
   }
   shelfLocations = normalizeShelfLocations(data.settings?.shelves);
   restoreCollectionViewSettings(data.settings?.collectionViewSettings);
+  if (Array.isArray(data.settings?.favoriteUsers)) {
+    favoriteUserIds = new Set(data.settings.favoriteUsers.map(String));
+    localStorage.setItem('favoriteUsersV1', JSON.stringify([...favoriteUserIds]));
+  }
   const titleDisplay = document.getElementById('collectionTitleDisplay');
   if (titleDisplay) titleDisplay.textContent = collectionTitle;
   try { if (typeof updateSortButtons === 'function') updateSortButtons(); } catch (e) {}
@@ -6031,7 +6123,7 @@ async function saveCloudDataNow() {
     };
     const albumListeningOrder = [...document.querySelectorAll('#listeningProviderList [data-provider]')]
       .map(row => row.dataset.provider).join(',') || 'apple,spotify,youtube';
-    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations, storageRandomFormats, storageRandomAnimation, washDirtEffect, collectionVinylEffects, albumListeningProviders, albumListeningOrder, collectionViewSettings: getCollectionViewSettings() }, ts ? { tableSettings: ts } : {});
+    const settingsObj = Object.assign({ coverSource, discogsToken, allowWishlistPrice, refreshDiscogsPrice, defaultReleaseType, accentColor, shelves: shelfLocations, storageRandomFormats, storageRandomAnimation, washDirtEffect, collectionVinylEffects, albumListeningProviders, albumListeningOrder, collectionViewSettings: getCollectionViewSettings(), favoriteUsers: [...favoriteUserIds] }, ts ? { tableSettings: ts } : {});
 
     await db.collection('users').doc(currentUid).set({
       username: currentUsername,
@@ -6093,55 +6185,263 @@ async function loadUserList() {
   }
 }
 
-function renderUserList(users) {
+let favoriteUserIds = (() => { try { return new Set(JSON.parse(localStorage.getItem('favoriteUsersV1') || '[]').map(String)); } catch (error) { return new Set(); } })();
+let knownUsers = [];
+const userDocCache = new Map();
+const userSearchInput = document.getElementById('userSearchInput');
+
+function computeCollectionStats(items) {
+  const list = Array.isArray(items) ? items : [];
+  const owned = list.filter(item => item.owned);
+  const wishlist = list.filter(item => !item.owned);
+  const sumEuro = entries => entries.reduce((sum, item) => (item.discogsCurrency || '€') === '€' ? sum + (Number(item.discogsLowestPrice) || 0) : sum, 0);
+  const typeCount = { Album: 0, Single: 0, 'Maxi Single': 0, EP: 0 };
+  owned.forEach(item => {
+    const type = getReleaseType(item);
+    if (type in typeCount) typeCount[type]++;
+  });
+  const genres = new Map();
+  owned.forEach(item => String(item.genre || '').split(',').map(g => g.trim()).filter(Boolean).forEach(g => {
+    const key = g.toLowerCase();
+    const entry = genres.get(key) || { label: g, count: 0 };
+    entry.count++;
+    genres.set(key, entry);
+  }));
+  const artists = new Map();
+  owned.forEach(item => {
+    const name = getDisplayName(String(item.artist || '')).trim();
+    if (name) artists.set(name.toLowerCase(), name);
+  });
+  const artistCounts = new Map();
+  owned.forEach(item => {
+    const name = getDisplayName(String(item.artist || '')).trim();
+    if (!name) return;
+    const entry = artistCounts.get(name.toLowerCase()) || { label: name, count: 0 };
+    entry.count++;
+    artistCounts.set(name.toLowerCase(), entry);
+  });
+  const priciest = entries => entries
+    .filter(item => (item.discogsCurrency || '€') === '€' && Number(item.discogsLowestPrice) > 0)
+    .sort((x, y) => Number(y.discogsLowestPrice) - Number(x.discogsLowestPrice))[0] || null;
+  const years = owned.map(item => Number(String(item.year || '').slice(0, 4))).filter(Number.isFinite);
+  const yearCounts = {};
+  years.forEach(year => { yearCounts[year] = (yearCounts[year] || 0) + 1; });
+  const topYear = Object.entries(yearCounts).sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] || null;
+  return {
+    owned: owned.length,
+    wishlist: wishlist.length,
+    ownedValue: sumEuro(owned),
+    wishlistValue: sumEuro(wishlist),
+    typeCount,
+    genres,
+    artists,
+    artistCounts,
+    priciestOwned: priciest(owned),
+    priciestWishlist: priciest(wishlist),
+    minYear: years.length ? Math.min(...years) : null,
+    maxYear: years.length ? Math.max(...years) : null,
+    topYear,
+    keys: new Set(owned.map(getAlbumComparisonKey))
+  };
+}
+
+function formatEuro(value) {
+  return value > 0 ? `${value.toFixed(2).replace(/\.00$/, '')} €` : '0 €';
+}
+
+function toggleFavoriteUser(uid) {
+  if (favoriteUserIds.has(uid)) favoriteUserIds.delete(uid); else favoriteUserIds.add(uid);
+  localStorage.setItem('favoriteUsersV1', JSON.stringify([...favoriteUserIds]));
+  saveCloudDataDebounced();
+  renderUserCards();
+}
+
+function buildUserCard(user) {
+  const isOwn = user.uid === currentUid;
+  const cached = userDocCache.get(user.uid);
+  const card = document.createElement('article');
+  card.className = 'user-card' + (favoriteUserIds.has(user.uid) ? ' is-favorite' : '');
+  card.style.setProperty('--ua', cached?.accent || (isOwn ? getAccentColor() : '#d4537e'));
+  const title = cached?.title || `${user.username} - Sammlung`;
+  let statsHtml = '<div class="user-card-loading">Statistiken werden geladen…</div>';
+  if (cached) {
+    const st = cached.stats;
+    const cell = (label, value) => `<div class="user-card-stat"><span>${label}</span><strong>${escapeHtml(String(value))}</strong></div>`;
+    statsHtml = [
+      cell('Im Besitz', st.owned), cell('Wunschliste', st.wishlist),
+      cell('Wert', formatEuro(st.ownedValue)), cell('Genres', st.genres.size),
+      cell('Artists', st.artists.size), cell('Jahre', st.minYear ? `${st.minYear}–${st.maxYear}` : '–'),
+      cell('12"', st.typeCount.Album), cell('7"', st.typeCount.Single)
+    ].join('');
+  }
+  card.innerHTML = `
+    <button type="button" class="icon-btn user-card-fav${favoriteUserIds.has(user.uid) ? ' active' : ''}" title="${favoriteUserIds.has(user.uid) ? 'Favorit entfernen' : 'Als Favorit markieren'}" aria-label="Favorit umschalten" aria-pressed="${favoriteUserIds.has(user.uid)}">${favoriteUserIds.has(user.uid) ? '★' : '☆'}</button>
+    <div class="user-card-head">
+      <span class="user-card-title">${escapeHtml(getDisplayName(title))}</span>
+      <span class="user-card-owner">${escapeHtml(user.username)}${isOwn ? ' (du)' : ''}</span>
+      <span class="user-card-uid">UID: ${escapeHtml(user.uid)}</span>
+    </div>
+    <div class="user-card-stats">${statsHtml}</div>
+    <div class="user-card-actions"></div>`;
+  const actions = card.querySelector('.user-card-actions');
+  const addButton = (label, className, handler, tip) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    if (className) button.className = className;
+    if (tip) button.title = tip;
+    button.addEventListener('click', event => { event.stopPropagation(); handler(); });
+    actions.appendChild(button);
+  };
+  const open = () => isOwn ? showOwnCollection() : viewRemoteCollection(user.uid, user.username);
+  if (isOwn) {
+    addButton('Meine Sammlung', 'view-btn', open);
+  } else {
+    addButton('Ansehen', 'view-btn', open);
+    addButton('+', '', () => importUserCollection(user.uid, user.username), 'Importieren');
+    addButton('Vergleichen', '', () => openCompare(user), 'Mit deiner Sammlung vergleichen');
+  }
+  card.querySelector('.user-card-fav').addEventListener('click', event => { event.stopPropagation(); toggleFavoriteUser(user.uid); });
+  card.addEventListener('click', open);
+  return card;
+}
+
+function renderUserCards() {
   userList.innerHTML = '';
-  if (!users.length) {
+  const needle = (userSearchInput?.value || '').trim().toLocaleLowerCase('de');
+  const matches = knownUsers.filter(user => {
+    if (!needle) return true;
+    const cached = userDocCache.get(user.uid);
+    return `${user.username} ${cached?.title || ''}`.toLocaleLowerCase('de').includes(needle);
+  });
+  if (!matches.length) {
     userList.innerHTML = '<div class="hint">Keine Benutzer gefunden.</div>';
     return;
   }
-
-  users.forEach(user => {
-    const item = document.createElement('div');
-    item.className = 'user-item';
-
-    const info = document.createElement('div');
-    info.className = 'user-item-info';
-    const title = document.createElement('strong');
-    title.textContent = user.username;
-    const sub = document.createElement('span');
-    sub.className = 'sub';
-    sub.textContent = user.uid === currentUid ? 'Eigene Sammlung' : `UID: ${user.uid}`;
-    info.appendChild(title);
-    info.appendChild(sub);
-
-    const actions = document.createElement('div');
-    actions.className = 'user-item-actions';
-
-    if (user.uid === currentUid) {
-      const ownBtn = document.createElement('button');
-      ownBtn.type = 'button';
-      ownBtn.textContent = 'Meine Sammlung';
-      ownBtn.addEventListener('click', showOwnCollection);
-      actions.appendChild(ownBtn);
-    } else {
-      const viewBtn = document.createElement('button');
-      viewBtn.type = 'button';
-      viewBtn.textContent = 'Ansehen';
-      viewBtn.addEventListener('click', () => viewRemoteCollection(user.uid, user.username));
-      actions.appendChild(viewBtn);
-
-      const importBtn = document.createElement('button');
-      importBtn.type = 'button';
-      importBtn.textContent = 'Importieren';
-      importBtn.addEventListener('click', () => importUserCollection(user.uid, user.username));
-      actions.appendChild(importBtn);
+  const favorites = matches.filter(user => favoriteUserIds.has(user.uid));
+  const others = matches.filter(user => !favoriteUserIds.has(user.uid));
+  const addGroup = (label, users) => {
+    if (!users.length) return;
+    if (favorites.length) {
+      const heading = document.createElement('div');
+      heading.className = 'user-group-label';
+      heading.textContent = label;
+      userList.appendChild(heading);
     }
+    users.forEach(user => userList.appendChild(buildUserCard(user)));
+  };
+  addGroup('★ Favoriten', favorites);
+  addGroup('Alle Sammlungen', others);
+}
 
-    item.appendChild(info);
-    item.appendChild(actions);
-    userList.appendChild(item);
+let userCardsRenderFrame = 0;
+function scheduleUserCardsRender() {
+  if (userCardsRenderFrame) return;
+  userCardsRenderFrame = requestAnimationFrame(() => { userCardsRenderFrame = 0; renderUserCards(); });
+}
+
+async function fetchUserDoc(user) {
+  if (userDocCache.has(user.uid)) return userDocCache.get(user.uid);
+  const snap = await db.collection('users').doc(user.uid).get();
+  const data = snap.exists ? (snap.data() || {}) : {};
+  const items = Array.isArray(data.collection) ? data.collection : [];
+  const entry = { title: data.title || '', items, stats: computeCollectionStats(items), accent: sanitizeAccent(data.settings?.accentColor) };
+  userDocCache.set(user.uid, entry);
+  return entry;
+}
+
+function sanitizeAccent(value) {
+  return isValidAccentColor(value) ? value : '#d4537e';
+}
+
+function renderUserList(users) {
+  knownUsers = users.slice();
+  userDocCache.delete(currentUid);
+  renderUserCards();
+  knownUsers.forEach(user => {
+    if (user.uid === currentUid) {
+      const items = ownCollection;
+      userDocCache.set(user.uid, { title: ownCollectionTitle, items, stats: computeCollectionStats(items), accent: getAccentColor() });
+      scheduleUserCardsRender();
+      return;
+    }
+    userDocCache.delete(user.uid);
+    fetchUserDoc(user).then(scheduleUserCardsRender).catch(error => console.warn('Statistik laden fehlgeschlagen:', user.username, error));
   });
 }
+
+userSearchInput?.addEventListener('input', renderUserCards);
+
+function openCompare(user) {
+  const overlay = document.getElementById('compareOverlay');
+  const body = document.getElementById('compareBody');
+  const own = userDocCache.get(currentUid) || { title: ownCollectionTitle, items: ownCollection, stats: computeCollectionStats(ownCollection) };
+  const other = userDocCache.get(user.uid);
+  if (!other) return;
+  const a = own.stats, b = other.stats;
+  const box = overlay.querySelector('.compare-box');
+  box.style.setProperty('--ca', own.accent || getAccentColor());
+  box.style.setProperty('--cb', other.accent || '#d4537e');
+  const shared = [...a.keys].filter(key => b.keys.has(key)).length;
+  const sharedGenres = [...a.genres.keys()].filter(key => b.genres.has(key));
+  const sharedArtists = [...a.artists.keys()].filter(key => b.artists.has(key));
+  const row = (label, left, right, nl, nr) => {
+    const hasBar = typeof nl === 'number' && typeof nr === 'number';
+    const max = Math.max(nl || 0, nr || 0) || 1;
+    const bars = hasBar ? `<div class="compare-bars"><div class="compare-track left"><span style="width:${(nl / max) * 100}%"></span></div><div class="compare-track right"><span style="width:${(nr / max) * 100}%"></span></div></div>` : '';
+    return `<div class="compare-row"><div class="compare-val left">${left}</div><div class="compare-label">${label}</div><div class="compare-val right">${right}</div>${bars}</div>`;
+  };
+  const num = (label, x, y) => row(label, x, y, x, y);
+  const wide = (label, left, right) => `<div class="compare-row wide"><div class="compare-label">${label}</div><div class="compare-wide-cols"><div>${left}</div><div>${right}</div></div></div>`;
+  const topGenresOf = stats => [...stats.genres.values()].sort((p, q) => q.count - p.count).slice(0, 5);
+  const topArtistsOf = stats => [...stats.artistCounts.values()].sort((p, q) => q.count - p.count || p.label.localeCompare(q.label)).slice(0, 5);
+  const topList = (left, right, fmt, isShared) => {
+    const n = Math.max(left.length, right.length);
+    if (!n) return '<div class="compare-top"><div class="l">–</div><div class="rk"></div><div class="r">–</div></div>';
+    let html = '<div class="compare-top">';
+    for (let i = 0; i < n; i++) {
+      const l = left[i], r = right[i];
+      html += `<div class="l${l && isShared(l) ? ' shared' : ''}">${l ? fmt(l) : ''}</div><div class="rk">${i + 1}</div><div class="r${r && isShared(r) ? ' shared' : ''}">${r ? fmt(r) : ''}</div>`;
+    }
+    return html + '</div>';
+  };
+  const priceRow = (label, x, y) => {
+    const cell = item => item ? `<div class="compare-item">${item.coverUrl ? `<img src="${escapeHtml(item.coverUrl)}" alt="" loading="lazy">` : '<div class="noimg"></div>'}<span>${escapeHtml(getDisplayName(item.title || ''))}<br><small>${escapeHtml(getDisplayName(item.artist || ''))} · ${formatEuro(Number(item.discogsLowestPrice))}</small></span></div>` : '–';
+    return `<div class="compare-top price"><div class="l">${cell(x)}</div><div class="compare-label">${label}</div><div class="r">${cell(y)}</div></div>`;
+  };
+  const section = label => `<div class="compare-section">${label}</div>`;
+  const range = st => st.minYear ? `${st.minYear}–${st.maxYear}` : '–';
+  body.innerHTML = `<div class="compare-head"><div class="left"><strong>${escapeHtml(currentUsername || 'Du')}</strong><small>${escapeHtml(getDisplayName(own.title || ownCollectionTitle))}</small></div><div class="right"><strong>${escapeHtml(user.username)}</strong><small>${escapeHtml(getDisplayName(other.title || ''))}</small></div></div>
+    ${section('Sammlung')}
+    ${num('Im Besitz', a.owned, b.owned)}
+    ${num('Wunschliste', a.wishlist, b.wishlist)}
+    ${row('Wert Besitz', formatEuro(a.ownedValue), formatEuro(b.ownedValue), a.ownedValue, b.ownedValue)}
+    ${row('Wert Wunschliste', formatEuro(a.wishlistValue), formatEuro(b.wishlistValue), a.wishlistValue, b.wishlistValue)}
+    ${section('Formate')}
+    ${num('12" / LP', a.typeCount.Album, b.typeCount.Album)}
+    ${num('7" Single', a.typeCount.Single, b.typeCount.Single)}
+    ${num('Maxi Single', a.typeCount['Maxi Single'], b.typeCount['Maxi Single'])}
+    ${num('EP', a.typeCount.EP, b.typeCount.EP)}
+    ${section('Vielfalt & Zeit')}
+    ${num('Genres', a.genres.size, b.genres.size)}
+    ${num('Artists', a.artists.size, b.artists.size)}
+    ${row('Jahre', range(a), range(b))}
+    ${row('Häufigstes Jahr', a.topYear || '–', b.topYear || '–')}
+    ${section('Top 5 Genres')}
+    ${topList(topGenresOf(a), topGenresOf(b), g => `${escapeHtml(g.label)} <small>${g.count}</small>`, g => sharedGenres.includes(g.label.toLowerCase()))}
+    ${section('Top 5 Artists im Besitz')}
+    ${topList(topArtistsOf(a), topArtistsOf(b), g => `${escapeHtml(g.label)} <small>${g.count}</small>`, g => sharedArtists.includes(g.label.toLowerCase()))}
+    ${section('Teuerste Vinyl')}
+    ${priceRow('Im Besitz', a.priciestOwned, b.priciestOwned)}
+    ${priceRow('Auf der Wunschliste', a.priciestWishlist, b.priciestWishlist)}
+    ${section('Gemeinsamkeiten')}
+    ${row('Gemeinsame Alben', shared, shared)}
+    ${sharedGenres.length ? `<div class="compare-row wide"><div class="compare-label">Gemeinsame Genres</div><div class="compare-chips center">${sharedGenres.slice(0, 10).map(key => `<span class="compare-chip shared">${escapeHtml(a.genres.get(key).label)}</span>`).join('')}${sharedGenres.length > 10 ? `<span class="compare-chip">+${sharedGenres.length - 10}</span>` : ''}</div></div>` : ''}
+    ${sharedArtists.length ? `<div class="compare-row wide"><div class="compare-label">Gemeinsame Artists</div><div class="compare-chips center">${sharedArtists.slice(0, 10).map(key => `<span class="compare-chip shared">${escapeHtml(a.artists.get(key))}</span>`).join('')}${sharedArtists.length > 10 ? `<span class="compare-chip">+${sharedArtists.length - 10}</span>` : ''}</div></div>` : ''}`;
+  overlay.classList.add('open');
+}
+document.getElementById('closeCompareBtn').addEventListener('click', () => document.getElementById('compareOverlay').classList.remove('open'));
+document.getElementById('compareOverlay').addEventListener('click', event => { if (event.target.id === 'compareOverlay') event.currentTarget.classList.remove('open'); });
 
 function updateViewingInfo() {
   if (!viewingInfoLabel) return;
