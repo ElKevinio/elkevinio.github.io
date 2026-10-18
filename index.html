@@ -900,12 +900,14 @@
     .album-editor-form .form-top { grid-template-columns: minmax(0, 1fr); }
     .album-editor-form .form-fields { min-width: 0; }
   }
-  #toggleSearchPanelBtn { display: none; }
+  #toggleSearchPanelBtn { display: inline-flex; }
+  .collection-panel.storage-active #toggleSearchPanelBtn { display: none; }
   .desktop-form-shell {
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
+  .desktop-form-shell.search-collapsed > .panel:first-child { display: none; }
   @media (min-width: 980px) {
     .desktop-form-shell {
       display: grid;
@@ -925,11 +927,6 @@
     .desktop-form-shell.search-collapsed {
       grid-template-columns: minmax(0, 1fr);
     }
-    .desktop-form-shell.search-collapsed > .panel:first-child {
-      display: none;
-    }
-    #toggleSearchPanelBtn { display: inline-flex; }
-    .collection-panel.storage-active #toggleSearchPanelBtn { display: none; }
   }
   body.viewing-remote-collection .desktop-form-shell > .panel:first-child,
   body.user-menu-open .desktop-form-shell > .panel:first-child { display: none !important; }
@@ -939,7 +936,7 @@
   body.viewing-remote-collection #viewStorageBtn,
   body.user-menu-open #copyWishlistBtn,
   body.user-menu-open #viewStorageBtn { display: none !important; }
-  body.viewing-remote-collection #collectionSettingsContent { display: none !important; }
+  body.viewing-remote-collection #collectionSettingsContent > :not(#listeningSettingsBlock) { display: none !important; }
   .form-top { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
   .form-top img {
     width: 130px; height: 130px; object-fit: cover;
@@ -952,8 +949,11 @@
   .form-vinyl-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; margin-bottom: 2px; color: var(--text-primary); font-size: 12px; font-weight: 600; }
   .form-vinyl-heading span { min-width: 0; color: var(--text-muted); font-size: 11px; font-weight: 400; }
   .form-fields .price-design-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; min-width: 0; }
-  .form-fields .price-design-row #fManualPrice { flex: 1 1 150px; min-width: 100px; max-width: 180px; }
-  .form-fields .price-design-row #fManualPriceCurrency { flex: 0 0 76px; width: 76px; }
+  .form-fields .price-design-row #fManualPrice { flex: 0 1 90px; min-width: 60px; width: 90px; padding: 8px; }
+  .form-fields .price-design-row #fManualPriceCurrency { flex: 0 0 52px; width: 52px; padding: 8px 4px; }
+  .name-chip-field { min-height: 38px; }
+  .name-chip-field .genre-chip-text { flex: 1 1 120px; font-size: 14px; }
+  .genre-chip-label { cursor: text; }
   .vinyl-design-icon-btn { width: 38px; height: 38px; min-width: 38px; padding: 0; justify-content: center; }
   .editor-select-field { display: grid; gap: 4px; flex: 1 1 150px; min-width: 130px; }
   .editor-select-field > span { color: var(--text-secondary); font-size: 11px; line-height: 1.2; }
@@ -1149,11 +1149,6 @@
     background: var(--accent-bg);
     border-color: var(--accent-border);
     color: var(--accent);
-  }
-  @media (max-width: 1140px) and (min-width: 980px) {
-    .filter-tabs .filter-label { display: none; }
-    .filter-tabs button { padding: 8px; }
-    .filter-tabs { gap: 4px; }
   }
   @media (max-width: 640px) {
     /* Center the filter group on small screens before the narrow one-line layout. */
@@ -1985,7 +1980,7 @@
   .storage-record img { width:24px; height:24px; object-fit:cover; border-radius:3px; background:var(--surface-3); cursor:grab; touch-action:none; }
   .storage-shelf.display-mode .storage-compartment {
     position:relative;
-    width:128px;
+    width:120px;
     height:max-content;
     min-width:0;
     min-height:20px;
@@ -1993,7 +1988,7 @@
     align-self:start;
   }
   .storage-shelf.display-mode .storage-compartments {
-    grid-template-columns:repeat(var(--shelf-columns, 1), 128px);
+    grid-template-columns:repeat(var(--shelf-columns, 1), 120px);
     grid-template-rows:repeat(var(--shelf-rows, 1), max-content);
     height:max-content;
     min-height:20px;
@@ -2004,10 +1999,13 @@
     align-items:start;
   }
   .storage-shelf.display-mode .storage-compartment-header .storage-count { display:none; }
+  .storage-shelf.display-mode .storage-compartment-header .storage-compartment-name { display:none; }
+  .storage-shelf.display-mode .storage-compartment-header .wash-compartment-button,
+  .storage-shelf.display-mode .storage-compartment-header .storage-order-button { display:none !important; }
   .storage-shelf.display-mode .storage-compartment-header {
     position:absolute;
     z-index:2;
-    top:0;
+    top:8px;
     left:50%;
     width:calc(100% - 14px);
     height:20px;
@@ -2066,7 +2064,7 @@
     padding:0 !important;
     border:0;
   }
-  .storage-shelf.display-mode .storage-record img { width:min(100%, 112px); height:auto; max-height:112px; aspect-ratio:1; border-radius:6px; }
+  .storage-shelf.display-mode .storage-record img { width:min(100%, 76px); height:auto; max-height:76px; aspect-ratio:1; border-radius:6px; }
   .storage-shelf.display-mode .storage-record-copy { flex-direction:column; align-items:center; gap:1px; width:100%; overflow:visible; white-space:normal; text-align:center; }
   .storage-shelf.display-mode .storage-record-copy span::before { content:none; }
   .storage-shelf.display-mode .storage-record strong,
@@ -2317,6 +2315,16 @@
     display: flex;
     flex-direction: column;
   }
+  .storage-shelf.display-mode .storage-record strong,
+  .storage-shelf.display-mode .storage-record span { font-size:9px; }
+  .storage-display-card { min-height:0 !important; height:auto !important; padding:4px; border-radius:8px; width:100%; cursor:grab; }
+  .storage-display-card::after { border-radius:8px; border-width:1px; }
+  .collection-card.storage-display-card .media-info { opacity:0; transition:opacity .15s ease; padding:8px 5px 38px; border-bottom-left-radius:6px; border-bottom-right-radius:6px; }
+  .collection-card.storage-display-card:hover .media-info, .collection-card.storage-display-card:focus-within .media-info { opacity:1; }
+  @media (hover:none) { .collection-card.storage-display-card .media-info { opacity:1; } }
+  .collection-card.storage-display-card .title { font-size:10px; line-height:1.2; -webkit-line-clamp:1; line-clamp:1; }
+  .collection-card.storage-display-card .artist { font-size:9px; margin-top:1px; }
+  .storage-display-card .album-listen-card-btn { position:absolute !important; left:6px; bottom:6px; height:26px; min-height:26px; padding:0 8px; font-size:11px; }
   .storage-page .storage-shelf.display-mode {
     height:max-content;
     align-self:flex-start;
@@ -2336,6 +2344,7 @@
     .storage-page > .storage-board { height: calc(100dvh - 250px); min-height: 320px; padding: 8px; }
     .storage-page .desktop-form-shell > .panel:first-child .toprow textarea { min-width: 100px; }
     .storage-shelves-toolbar { flex-wrap:wrap; justify-content:flex-start; gap:5px; }
+    .storage-shelf-group-list { zoom:calc(var(--storage-shelf-zoom, 1) * .62); }
     .storage-shelf-zoom-controls { display:flex; flex:0 0 100%; align-items:center; gap:4px; }
     .storage-shelf-zoom-controls button { width:30px; min-width:30px; height:30px; min-height:30px; padding:0; justify-content:center; }
     .storage-shelf-zoom-value { min-width:40px; color:var(--text-secondary); font-size:11px; text-align:center; }
@@ -2427,7 +2436,35 @@
   }
   .table-actions .del:hover { color: var(--danger); border-color: var(--danger); }
   .table-actions .toggle-own:hover { color: var(--accent); border-color: var(--accent-border); }
-
+  .title-meta-mobile { display: none; }
+  @media (max-width: 600px) {
+    .modal-overlay .modal-box { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow: auto; padding-left: 12px; padding-right: 12px; }
+    #shelfLocationsOverlay .modal-box > div[style*="grid-template-columns"] { grid-template-columns: 1fr 1fr !important; }
+    .modal-actions { justify-content: stretch; }
+    .modal-actions button { flex: 1 1 auto; }
+  }
+  @media (max-width: 720px) {
+    .collection-table-wrap { overflow-x: hidden; }
+    .collection-table { min-width: 0; table-layout: auto; font-size: 11px; }
+    .collection-table th, .collection-table td { padding: 6px 4px; }
+    .collection-table th { font-size: 9px; letter-spacing: 0.02em; }
+    .collection-table .cover-cell img { width: 34px; height: 34px; border-radius: 5px; }
+    .collection-table .title-cell { word-break: break-word; }
+    .collection-table .title-cell strong { font-size: 12px; }
+    .collection-table .title-cell span, .collection-table .title-cell div { font-size: 11px !important; }
+    .collection-table .state-pill { padding: 2px 6px; font-size: 10px; }
+    .collection-table .col-genre, .collection-table .col-location, .collection-table .col-lastWashed,
+    .collection-table .col-price, .collection-table .col-color, .collection-table .col-status, .collection-table .col-year { display: none; }
+    .title-meta-mobile { display: block; margin-top: 3px; color: var(--text-muted); font-size: 10px; line-height: 1.3; }
+    .table-actions { gap: 3px; flex-wrap: wrap; }
+    .table-actions button { width: 26px; height: 26px; }
+    .table-actions button svg { width: 12px; height: 12px; }
+    .table-actions .add-to-own.primary { min-width: 0; padding: 0 8px; font-size: 10px; }
+  }
+  @media (max-width: 480px) {
+    .collection-table .col-type { display: none; }
+    #toggleSearchPanelBtn { width: 30px; height: 30px; padding: 0; }
+  }
   .color-preview {
     display: flex; align-items: center; gap: 10px;
     margin-top: 8px; padding: 8px 10px;
@@ -3519,7 +3556,11 @@
   .storage-result-facts .wide { grid-column:1 / -1; }
   .storage-result-facts dt { color:var(--text-muted); font-size:11px; }
   .storage-result-facts dd { margin:2px 0 0; color:var(--text-primary); font-size:13px; overflow-wrap:anywhere; }
-  .storage-result-track-heading { margin:0 0 8px; font-size:13px; }
+  .storage-result-track-heading { margin:0 0 8px; font-size:13px; font-weight:600; cursor:pointer; }
+  .storage-result-tracks > summary { list-style:none; }
+  .storage-result-tracks > summary::-webkit-details-marker { display:none; }
+  .storage-result-tracks > summary::before { content:'▸ '; color:var(--text-muted); }
+  .storage-result-tracks[open] > summary::before { content:'▾ '; }
   .storage-result-tracklist { display:grid; gap:4px; max-height:240px; overflow:auto; margin:0; padding:0 6px; list-style:none; color:var(--text-secondary); font-size:12px; }
   .storage-result-tracklist li { padding:3px 4px; }
   .storage-result-tracklist li span:last-child { float:right; margin-left:12px; color:var(--text-muted); }
@@ -3540,7 +3581,14 @@
     .storage-result-media { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; align-items:start; }
     .storage-result-media-item { min-width:0; }
     .storage-result-cover,
-    .storage-result-disc { width:min(100%,160px); }
+    .storage-result-disc { width:min(100%,120px); }
+    .storage-result-header { margin-bottom:10px; gap:8px; }
+    .storage-result-header .modal-title { font-size:14px; }
+    .storage-result-artist { font-size:12px; }
+    .storage-result-facts { gap:6px 10px; margin-bottom:10px; }
+    .storage-result-facts dd { font-size:12px; }
+    .storage-result-footer { margin-top:10px; gap:8px; }
+    .storage-result-reroll { min-width:0; }
   }
   .modal-box.album-editor-box {
     width: min(680px, calc(100vw - 16px));
@@ -3933,6 +3981,12 @@
     white-space: nowrap;
   }
   .fix-new strong { color: var(--accent); }
+  .fix-new { display:flex; flex-direction:column; gap:4px; min-width:0; white-space:normal; }
+  .fix-bubbles { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
+  .fix-bubbles strong { font-size:10px; font-weight:500; color:var(--text-muted); margin-right:2px; }
+  .fix-bubble { padding:1px 8px; border:0.5px solid var(--accent-border); border-radius:999px; background:var(--accent-bg); color:var(--text-primary); font-size:12px; }
+  .fix-note { color:var(--text-muted); font-size:11px; }
+  .fix-row { align-items:flex-start; }
 
   @media (max-width: 1140px) {
     header .header-stats .stat-priority-5 { display: none; }
@@ -4123,14 +4177,151 @@
     body.storage-page-active .header-actions > .storage-random-filter-wrap,
     body.storage-page-active .header-actions > .settings-wrap { flex:0 0 32px; }
     body.storage-page-active header .header-stats {
-      right:calc(12px + 222px + 4px);
-      max-width:calc(100% - 262px);
+      right:auto;
+      max-width:100%;
     }
     body.storage-page-active header .title-input {
       flex-basis:calc(100% - 300px);
       width:calc(100% - 300px);
       max-width:calc(100% - 300px);
     }
+  }
+
+  .sort-select option { color: var(--text-primary); background: var(--surface-2); }
+  @media (max-width: 600px) {
+    .sort-select {
+      width: 30px; max-width: 30px; min-width: 30px; height: 30px; padding: 0;
+      color: transparent;
+      -webkit-appearance: none; appearance: none;
+      background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c9c9c9' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M4 6h16M7 12h10M10 18h4'/%3E%3C/svg%3E") center / 16px no-repeat;
+    }
+  }
+
+  /* Doku-Panel */
+  .docs-panel {
+    display: none;
+    position: fixed;
+    z-index: 120;
+    top: 0; right: 0; bottom: 0;
+    width: min(460px, 100vw);
+    flex-direction: column;
+    background: var(--surface-1);
+    border-left: 0.5px solid var(--border-strong);
+    box-shadow: -8px 0 24px rgba(0,0,0,.35);
+  }
+  .docs-panel.open { display: flex; }
+  .docs-header { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:0.5px solid var(--border); }
+  .docs-header h2 { margin:0; flex:1; font-size:16px; font-weight:600; }
+  .docs-search { margin:10px 14px 0; width:auto; }
+  .docs-body { flex:1; overflow-y:auto; padding:10px 14px 28px; -webkit-overflow-scrolling:touch; font-size:13px; line-height:1.55; color:var(--text-secondary); }
+  .docs-body details { margin:8px 0; border:0.5px solid var(--border); border-radius:8px; background:rgba(255,255,255,.02); }
+  .docs-body summary { padding:9px 12px; cursor:pointer; color:var(--text-primary); font-weight:600; font-size:14px; }
+  .docs-body details[open] > summary { border-bottom:0.5px solid var(--border); }
+  .docs-section { padding:4px 12px 10px; }
+  .docs-section h4 { margin:12px 0 4px; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:.04em; }
+  .docs-section p { margin:4px 0; }
+  .docs-section ul { margin:4px 0; padding-left:18px; }
+  .docs-section li { margin:3px 0; }
+  .docs-section code { padding:1px 5px; border-radius:4px; background:var(--surface-3); color:var(--text-primary); font-size:12px; }
+  .docs-section .docs-tip { margin:8px 0; padding:7px 10px; border-left:2px solid var(--accent); background:var(--accent-bg); border-radius:4px; }
+  .docs-empty { padding:16px 4px; color:var(--text-muted); }
+  .docs-toc { display:flex; flex-wrap:wrap; gap:5px; margin:8px 0 2px; }
+  .docs-toc button { padding:3px 9px; border-radius:999px; font-size:11px; }
+  @media (min-width: 900px) {
+    body.docs-open { padding-right: 460px; }
+    body.docs-open header { padding-right: 12px; }
+    body.docs-open header .header-stats .stat-detail { display: none; }
+    body.docs-open header .header-stats .stat-compact { display: inline-flex; }
+  }
+  @media (min-width: 900px) and (max-width: 1000px) {
+    body.docs-open .toolbar-group.center { justify-content: center; width: 100%; }
+    body.docs-open .filter-tabs .filter-label { display: none; }
+    body.docs-open .filter-tabs button { padding: 8px; }
+    body.docs-open .filter-tabs { gap: 4px; }
+  }
+  @media (min-width: 900px) and (max-width: 960px) {
+    body.docs-open .filter-tabs .filter-label { display: none; }
+    body.docs-open .filter-tabs button { padding: 8px; }
+    body.docs-open .filter-tabs { gap: 4px; }
+    body.docs-open .toolbar-group.right { flex-wrap: nowrap; width: auto; }
+    body.docs-open .sort-select { min-width: 0; flex: 1 1 auto; font-size: 13px; padding-left: 8px; padding-right: 8px; }
+    body.docs-open .sort-direction-group { flex-shrink: 0; }
+  }
+  @media (min-width: 900px) and (max-width: 940px) {
+    body.docs-open .filter-tabs .filter-label { display: none !important; }
+    body.docs-open .filter-tabs button { padding: 8px !important; }
+  }
+  @media (min-width: 900px) and (max-width: 972px) {
+    body.docs-open .collection-toolbar {
+      flex-wrap: nowrap;
+      gap: 4px;
+    }
+    body.docs-open .toolbar-group {
+      flex-wrap: nowrap;
+      gap: 3px;
+    }
+    body.docs-open .toolbar-group.left, body.docs-open .toolbar-group.center, body.docs-open .toolbar-group.right {
+      width: auto;
+      flex: 0 0 auto;
+      margin-left: 0;
+    }
+    body.docs-open .toolbar-group.center {
+      justify-content: flex-start;
+    }
+    body.docs-open .filter-tabs, body.docs-open .collection-view-toggle {
+      flex-wrap: nowrap;
+      gap: 2px;
+    }
+    body.docs-open .filter-tabs button, body.docs-open .collection-view-toggle button {
+      width: 30px;
+      min-width: 30px;
+      height: 30px;
+      padding: 0 !important;
+      justify-content: center;
+      align-items: center;
+      line-height: 1;
+    }
+    body.docs-open .sort-select {
+      width: 88px;
+      max-width: 88px;
+      font-size: 11px;
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+    body.docs-open .sort-dir-btn {
+      min-width: 30px;
+      width: 30px;
+      height: 30px;
+      padding: 6px 4px;
+    }
+  }
+  @media (min-width: 900px) and (max-width: 1000px) {
+    body.docs-open .sort-select {
+      width: 30px; max-width: 30px; min-width: 30px; height: 30px; padding: 0;
+      color: transparent;
+      -webkit-appearance: none; appearance: none;
+      background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c9c9c9' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M4 6h16M7 12h10M10 18h4'/%3E%3C/svg%3E") center / 16px no-repeat;
+    }
+  }
+  @media (max-width: 670px) {
+    .filter-tabs .filter-label { display: none; }
+    .filter-tabs button { padding: 8px; }
+  }
+  @media (min-width: 900px) and (max-width: 1130px) {
+    body.docs-open .filter-tabs .filter-label { display: none; }
+    body.docs-open .filter-tabs button { padding: 8px; }
+  }
+  #washModeHeaderBtn { display: none; }
+  @media (min-width: 1000px) {
+    body:not(.viewing-remote-collection) #washModeHeaderBtn { display: inline-flex; }
+    body:not(.viewing-remote-collection) #startWashModeBtn { display: none !important; }
+  }
+  .storage-placement-mode-toggle, .storage-shelves-toggle-all { display: none !important; }
+  #openDocsHeaderBtn { font-weight: 700; font-size: 15px; }
+  @media (max-width: 600px) { #openDocsHeaderBtn { display: none; } }
+  @media (min-width: 601px) { #openDocsBtn { display: none !important; } }
+  @media (max-width: 899px) {
+    .docs-panel { width: 100vw; z-index: 200; border-left: 0; }
   }
 
   /* Login / Account */
@@ -4323,12 +4514,16 @@
       <button id="viewStorageBtn" class="icon-btn" title="Lageransicht öffnen" aria-label="Lageransicht öffnen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h18v16H3zM3 10h18M9 4v16M15 4v16" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
       </button>
+      <button id="washModeHeaderBtn" class="icon-btn" type="button" title="Waschmodus" aria-label="Waschmodus">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M12 3v3M8 4.5l1 2M16 4.5l-1 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
       <button id="toggleUserMenuBtn" class="icon-btn" title="Andere Nutzer" aria-label="Andere Nutzer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
       <button id="showOwnCollectionBtn" class="icon-btn" title="Eigene Sammlung anzeigen" aria-label="Eigene Sammlung anzeigen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
+      <button id="openDocsHeaderBtn" class="icon-btn" type="button" title="Hilfe &amp; Doku" aria-label="Hilfe und Doku">?</button>
       <div class="settings-wrap">
         <button id="settingsBtn" class="icon-btn" title="Einstellungen" aria-label="Einstellungen">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -4380,6 +4575,10 @@
             <button type="button" id="reviewLegacyVinylBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Alben ohne neues Vinyl-Design nacheinander gestalten">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
               <span>Vinyl-Farben durchgehen</span>
+            </button>
+            <button type="button" id="openDocsBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Anleitung zu allen Feldern und Funktionen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 8h6M9 12h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Hilfe &amp; Doku</span>
             </button>
             <button type="button" id="reviewOwnedAlbumsBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Alle Alben in deinem Besitz nacheinander bearbeiten">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 5h16v14H4zM8 9h8M8 13h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -4445,6 +4644,7 @@
 
           <hr class="settings-divider">
 
+          <div id="listeningSettingsBlock">
           <p class="settings-panel-title">Album anhören</p>
           <div class="listening-provider-list" id="listeningProviderList">
             <div class="listening-provider-row" data-provider="apple" draggable="true">
@@ -4492,6 +4692,7 @@
           <p class="settings-panel-title" style="margin-top:14px;">YouTube-Suche</p>
           <input type="password" id="youtubeApiKeyInput" placeholder="YouTube Data API v3-Schlüssel" autocomplete="off">
           <p class="settings-panel-hint" id="listeningCredentialsStatus" aria-live="polite"></p>
+          </div>
 
           <hr class="settings-divider">
 
@@ -4536,6 +4737,9 @@
       <p class="panel-title">Album suchen</p>
       <div class="toprow">
         <textarea id="searchInput" rows="1" placeholder="z. B. Michael Jackson Thriller"></textarea>
+        <button id="barcodeScanBtn" class="icon-btn" type="button" title="Barcode scannen" aria-label="Barcode scannen">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 8v8M11 8v8M14 8v8M17 8v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
         <button id="searchBtn" class="icon-btn" title="Suchen" aria-label="Suchen">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
@@ -4573,23 +4777,26 @@
         </div>
         <div class="form-fields">
           <div class="album-identity-fields">
-            <input type="text" id="fTitle" placeholder="Titel des Albums">
-            <input type="text" id="fArtist" placeholder="Interpret">
+            <div class="genre-chip-input name-chip-field" data-name-field="title"><div class="genre-chip-list"></div><input type="text" id="fTitle" class="genre-chip-text" placeholder="Titel des Albums" autocomplete="off"></div>
+            <div class="genre-chip-input name-chip-field" data-name-field="artist"><div class="genre-chip-list"></div><input type="text" id="fArtist" class="genre-chip-text" placeholder="Interpret" autocomplete="off"></div>
             <div class="album-genre-row">
               <div class="genre-chip-input">
                 <div id="fGenreChips" class="genre-chip-list" aria-live="polite"></div>
                 <input type="text" id="fGenre" class="genre-chip-text" list="knownGenreOptions" placeholder="Genre hinzufügen" aria-label="Genre hinzufügen" autocomplete="off">
               </div>
               <datalist id="knownGenreOptions"></datalist>
-              <button type="button" id="openCoverUrlBtn" class="icon-btn album-cover-url-btn" title="Cover-Bildlink kopieren oder ändern" aria-label="Cover-Bildlink kopieren oder ändern">
+              <button type="button" id="openDiscogsUrlBtn" class="icon-btn album-cover-url-btn" title="Discogs-Link bearbeiten" aria-label="Discogs-Link bearbeiten">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M10 13.5a4.5 4.5 0 0 0 6.36 0l3-3A4.5 4.5 0 0 0 13 4.14l-1.72 1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 10.5a4.5 4.5 0 0 0-6.36 0l-3 3A4.5 4.5 0 0 0 11 19.86l1.72-1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
           <input type="text" id="fCoverUrl" aria-label="Cover-Bildlink">
           <div class="price-design-row">
-            <input type="number" id="fManualPrice" placeholder="Preis manuell (z. B. 25.00)" step="0.01" min="0" style="max-width:180px;">
-            <select id="fManualPriceCurrency" style="max-width:90px;">
+            <button type="button" id="searchDiscogsAlternativeBtn" class="icon-btn vinyl-design-icon-btn" title="Discogs-Alternative und Preis suchen" aria-label="Discogs-Alternative und Preis suchen">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M20.5 20.5 15 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M12.4 7.6c-.6-.6-1.4-.9-2.3-.9-1.6 0-2.7 1.4-2.7 3.3s1.1 3.3 2.7 3.3c.9 0 1.7-.3 2.3-.9M6.6 9.2h3.6M6.6 10.9h3.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            </button>
+            <input type="number" id="fManualPrice" placeholder="Preis" step="0.01" min="0">
+            <select id="fManualPriceCurrency">
               <option value="€">€</option>
               <option value="$">$</option>
               <option value="£">£</option>
@@ -4598,13 +4805,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
             </button>
           </div>
-          <div class="row" style="margin-top:8px;">
-            <input type="url" id="fDiscogsUrl" placeholder="Discogs-Release- oder Master-Link" aria-label="Discogs-URL des Albums">
-            <button type="button" id="loadDiscogsUrlBtn" title="Diesen Discogs-Link nur für dieses Album laden">Laden</button>
-          </div>
-          <p id="fDiscogsUrlStatus" class="settings-panel-hint" aria-live="polite" style="margin:0;"></p>
-          <input type="url" id="fListeningUrl" placeholder="Spotify-, Apple-Music- oder YouTube-Link" aria-label="Spotify-, Apple-Music- oder YouTube-Link">
-          <button type="button" id="searchDiscogsAlternativeBtn" class="settings-fix-btn" style="margin-top:8px; width:100%;">Discogs-Alternative suchen</button>
+          <input type="url" id="fListeningUrl" hidden aria-label="Spotify-, Apple-Music- oder YouTube-Link">
           <div id="discogsAlternativeResults" class="alternative-results"></div>
         </div>
       </div>
@@ -4682,11 +4883,8 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="8" height="16" rx="1" stroke="currentColor" stroke-width="1.8"/><path d="M15 8h6M15 12h6M15 16h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
           <div class="collection-view-toggle">
-            <button id="viewGridBtn" class="toggle-active" title="Rasteransicht" aria-label="Rasteransicht">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="15" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="15" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="15" y="15" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/></svg>
-            </button>
-            <button id="viewTableBtn" title="Tabellenansicht" aria-label="Tabellenansicht">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9H21" stroke="currentColor" stroke-width="1.8"/><path d="M8 4V20" stroke="currentColor" stroke-width="1.8"/></svg>
+            <button id="viewToggleBtn" type="button" title="Tabellenansicht" aria-label="Tabellenansicht">
+              <span class="view-icon-grid" hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="15" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="15" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="15" y="15" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.8"/></svg></span><span class="view-icon-table"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9H21" stroke="currentColor" stroke-width="1.8"/><path d="M8 4V20" stroke="currentColor" stroke-width="1.8"/></svg></span>
             </button>
             <button id="selectModeBtn" title="Mehrfach-Auswahl" aria-label="Mehrfach-Auswahl" style="border-left:0.5px solid var(--border); padding:8px 10px;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="3" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="13" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.8"/></svg>
@@ -4818,7 +5016,7 @@
 <div class="modal-overlay" id="fixModalOverlay">
   <div class="modal-box fix-modal-box">
     <p class="modal-title">Interpret / Titel reparieren</p>
-    <p class="modal-message">Bei manchen Discogs-Einträgen landet "Interpret - Titel" komplett im Titelfeld. Wähle aus, welche Einträge korrigiert werden sollen.</p>
+    <p class="modal-message">Wähle die Einträge, die korrigiert werden sollen. <a href="#" data-doc-link="doc-names">Was wird geändert?</a></p>
     <div class="fix-list" id="fixList"></div>
     <div class="modal-actions">
       <button id="fixCancelBtn">Abbrechen</button>
@@ -4877,6 +5075,201 @@
     <ol id="albumQueueList" class="album-queue-list"></ol>
   </section>
 </aside>
+
+<aside class="docs-panel" id="docsPanel" aria-label="Hilfe und Dokumentation" aria-hidden="true">
+  <div class="docs-header">
+    <h2>Hilfe &amp; Doku</h2>
+    <button type="button" id="closeDocsBtn" class="icon-btn" title="Schließen" aria-label="Doku schließen">×</button>
+  </div>
+  <input type="search" id="docsSearch" class="docs-search" placeholder="In der Doku suchen…" aria-label="In der Doku suchen" autocomplete="off">
+  <div class="docs-body" id="docsBody">
+    <div class="docs-toc" id="docsToc"></div>
+    <details id="doc-start" data-keywords="sammlung album suche wunsch"><summary>Erste Schritte</summary><div class="docs-section">
+<h4>Aufbau</h4>
+<ul>
+<li><b>Album suchen</b> (links bzw. oben): Suchen, Barcode scannen, Link einfügen, manuell anlegen.</li>
+<li><b>Sammlung</b>: Raster, Tabelle oder Lageransicht. Oben Filter (Alle / Besitze ich / Wunschliste) und Sortierung.</li>
+<li><b>Einstellungen</b> (Zahnrad): Konto, Export/Import, Werkzeuge, Discogs- und Streaming-Zugänge.</li>
+</ul>
+<h4>Status</h4>
+<p><b>Im Besitz</b> = Vinyl steht bei dir. <b>Wunschliste</b> = möchtest du haben. Der Status lässt sich auf der Karte, in der Tabelle oder im Editor umschalten. Lagerort und Waschdatum gibt es nur für Alben im Besitz.</p>
+<h4>Mobil</h4>
+<p>Auf dem Handy werden Bedienelemente zu Symbolen (Sortierung, Raster/Tabelle) und manche Header-Buttons wandern in die Einstellungen unter „Weitere Schnellzugriffe“. Die Album-Suche lässt sich einklappen.</p></div></details>
+    <details id="doc-search" data-keywords="barcode discogs link mehrfach enter"><summary>Album suchen</summary><div class="docs-section">
+<h4>Textsuche</h4>
+<p>Titel und/oder Interpret eingeben, Enter (Desktop) oder Lupe. Quelle laut Einstellung „Bildquelle“: iTunes, Discogs oder beide.</p>
+<h4>Discogs-Link oder ID</h4>
+<p>Ein Discogs-Release- oder Master-Link (oder eine reine Zahl = Release-ID) lädt direkt dieses Album mit Cover, Jahr, Genre, Tracklist und Preis.</p>
+<h4>Barcode scannen</h4>
+<p>Der Barcode-Button neben der Lupe öffnet die Kamera. Erkannt werden EAN-13, EAN-8, UPC-A und UPC-E. Danach wird bei Discogs per Barcode gesucht.</p>
+<ul>
+<li>Die Kamera funktioniert nur über <b>HTTPS</b> oder <code>localhost</code>, nicht von <code>file://</code>.</li>
+<li>Android/Chrome nutzt die eingebaute Erkennung, iOS lädt eine Zusatzbibliothek (Internet nötig).</li>
+<li>Die Barcode-Suche nutzt nur Discogs.</li>
+</ul>
+<h4>Mehrere Alben auf einmal</h4>
+<p>Mehrere Zeilen in die Suche schreiben (Desktop: <code>Shift+Enter</code>, mobil: Enter) öffnet den <b>Mehrfachimport</b>. Pro Zeile ein Album oder ein Discogs-Link; Links erscheinen dort als „Discogs-Release #id“. Pro Zeile wählst du den passenden Treffer.</p>
+<h4>Mobil: Enter</h4>
+<p>Auf dem Handy erzeugt Enter eine neue Zeile. Gesucht wird mit der Lupe.</p>
+<h4>Treffer</h4>
+<p>Mit <b>+</b> auf der Karte fügst du schnell hinzu, per Klick öffnest du den Editor. „Bereits in Sammlung“ warnt vor Duplikaten. Gibt es nichts, erscheint „Manuell hinzufügen“.</p></div></details>
+    <details id="doc-editor" data-keywords="titel interpret genre preis jahr typ zustand notizen cover"><summary>Album bearbeiten (Editor)</summary><div class="docs-section">
+<h4>Cover</h4>
+<p>Die Lupe auf dem Cover sucht neue Bilder. Discogs-Bilder werden in hoher Auflösung geladen.</p>
+<h4>Titel und Interpret (Blasen)</h4>
+<p>Beide Felder arbeiten wie die Genres mit Blasen. Siehe <a href="#" data-doc-link="doc-names">Namen, Übersetzungen &amp; Features</a>.</p>
+<h4>Genre</h4>
+<p>Komma oder Enter trennt Genres. Tab ergänzt aus bekannten Genres, Backspace im leeren Feld entfernt die letzte Blase.</p>
+<h4>Discogs-Link-Button</h4>
+<p>Öffnet ein kleines Fenster mit dem Discogs-Link. „Laden“ übernimmt Titel, Interpret, Jahr, Genre, Cover, Preis und Tracklist nur für dieses Album. Erst „Speichern“ übernimmt es endgültig.</p>
+<h4>Preis</h4>
+<p>Das Lupe-€-Symbol vor dem Preisfeld sucht Discogs-Alternativen und Preise. Das Preisfeld ist ein manueller Preis mit Währung (€, $, £). Ein manueller Preis bleibt erhalten, bis du ihn leerst.</p>
+<h4>Vinyl gestalten</h4>
+<p>Der Platten-Button öffnet den Vinyl-Editor: Farben, Transparenz, Label, Effekt-Ebenen (z. B. Splatter), mehrere Platten bei Doppelalben. Die Gestaltung erscheint auf Karten, im Waschmodus und in der Zufallsauswahl.</p>
+<h4>Jahr, Typ, Zustand, Notizen</h4>
+<ul>
+<li><b>Typ</b>: Album (12"), Single (7"), Maxi Single, EP. Beeinflusst Größe in Animationen und Filter.</li>
+<li><b>Zustand</b>: Neu bis Schlecht. Schlechte Zustände zeigen Effekte auf der Platte (abschaltbar in den Einstellungen).</li>
+<li><b>Notizen</b>: frei, durchsuchbar mit <code>notes:</code>.</li>
+</ul>
+<h4>Lagerung &amp; Pflege</h4>
+<p>Regal und Fach wählen sowie „Zuletzt gewaschen“. Nur bei Alben im Besitz sichtbar.</p>
+<h4>Tracklist</h4>
+<p>Wird von Discogs/iTunes befüllt und ist durchsuchbar (<code>track:</code>).</p>
+<h4>Streaming-Link</h4>
+<p>Das Spotify-/Apple-/YouTube-Linkfeld ist im Editor ausgeblendet. Ein bereits gespeicherter Link bleibt erhalten und wird vom Anhören-Player genutzt.</p></div></details>
+    <details id="doc-names" data-keywords="gleichheitszeichen übersetzung feature komma doppelt"><summary>Namen, Übersetzungen &amp; Features</summary><div class="docs-section">
+<p>Titel und Interpret werden als normaler Text gespeichert. Das <b>Trennzeichen</b> bestimmt die Bedeutung:</p>
+<ul>
+<li><code>A = B</code> → B ist die <b>Übersetzung</b> von A (z. B. <code>Yasuha = 泰葉*</code>).</li>
+<li><code>A / B</code> → B ist ein <b>weiterer Interpret</b> / Feature.</li>
+</ul>
+<h4>Anzeige</h4>
+<p>In Karten, Tabelle, Waschmodus, Zufallsauswahl, Mini-Player und Fachlisten werden Übersetzungen (alles nach <code> = </code>) ausgeblendet. Features bleiben sichtbar. Im Editor, in der Suche und im Filter bleibt alles erhalten, du findest ein Album also auch über den japanischen Namen.</p>
+<h4>Eingabe im Editor</h4>
+<ul>
+<li><code>=</code> tippen oder Text mit <code> = </code> einfügen → neue Übersetzungs-Blase.</li>
+<li>Enter oder Feld verlassen → aktueller Text wird zur Blase.</li>
+<li>Klick auf eine Blase bearbeitet sie, × entfernt sie.</li>
+<li>Ein <code>=</code> ohne Leerzeichen (z. B. „E=MC2“) gilt nicht als Trenner.</li>
+</ul>
+<div class="docs-tip">Das Komma trennt beim Tippen <b>nicht</b>, damit Bandnamen wie „Earth, Wind &amp; Fire“ heil bleiben.</div>
+<h4>Werkzeug „Titel / Interpret“ (Einstellungen)</h4>
+<ul>
+<li>Trennt „Interpret - Titel“, wenn der Interpret im Titelfeld steht.</li>
+<li>Trennt Kommas im Interpreten in einzelne Namen (<code> / </code>), außer bei bekannten Bands (Earth, Wind &amp; Fire u. a.).</li>
+<li>Entfernt doppelte Namen: gleiche Schreibweise, Akzente, Groß-/Kleinschreibung, führendes „The“, Discogs-Zusatz „(2)“, „Foo Foo“, „Foo &amp; Foo“.</li>
+<li>Einträge mit „&amp;“ nach Komma könnten ein Bandname sein und sind <b>nicht vorausgewählt</b>.</li>
+<li>Die Vorschau zeigt Blasen, bevor etwas gespeichert wird.</li>
+</ul></div></details>
+    <details id="doc-collection" data-keywords="raster tabelle filter sortierung mehrfachauswahl suche"><summary>Sammlung, Filter &amp; Sortierung</summary><div class="docs-section">
+<h4>Ansichten</h4>
+<ul>
+<li><b>Raster/Tabelle</b>: ein Button, das Symbol zeigt die Ansicht, zu der du wechselst.</li>
+<li><b>Tabelle</b>: Spalten über den Spalten-Button ein-/ausblenden; auf dem Handy werden Spalten automatisch reduziert und Jahr/Lagerort/Waschdatum unter dem Titel gezeigt.</li>
+<li><b>Lageransicht</b>: siehe Lagerorte.</li>
+</ul>
+<h4>Filter-Tabs</h4>
+<p>Alle · Besitze ich · Wunschliste. Dazu Typ-Filter und die Suchzeile „Sammlung durchsuchen“.</p>
+<h4>Suchfilter</h4>
+<p>Freitext sucht in Titel, Interpret, Lagerort, Waschdatum u. a. Gezielt:</p>
+<ul>
+<li><code>title:</code> <code>artist:</code> <code>track:</code> <code>genre:</code> <code>year:</code> <code>location:</code> <code>washed:</code> <code>notes:</code> <code>releaseType:</code></li>
+<li>Beispiele: <code>artist:Michael Jackson</code> · <code>genre:Rock year:1990</code> · <code>title:"Thriller"</code></li>
+</ul>
+<h4>Sortierung</h4>
+<p>Neueste, Titel, Interpret, Jahr, Genre, Status, Zustand, Lagerort, Waschdatum, Preis, Farbe, LP/EP/7". Der Pfeil kehrt die Richtung um. In der Tabelle sortiert ein Klick auf die Spaltenüberschrift.</p>
+<h4>Mehrfachauswahl</h4>
+<p>Der Auswahl-Button zeigt Häkchen auf den Karten. Dann: ausgewählte anzeigen, Auswahl löschen oder <b>Bearbeiten</b> (gemeinsames Genre, Typ, Zustand, Lagerort usw. für alle).</p>
+<h4>Album-Suche einklappen</h4>
+<p>Der Button links in der Toolbar blendet das Suchpanel aus. Die Einstellung wird gespeichert.</p></div></details>
+    <details id="doc-storage" data-keywords="regal fach sortierung drag unsortiert"><summary>Lagerorte &amp; Lageransicht</summary><div class="docs-section">
+<h4>Regale verwalten</h4>
+<p>Einstellungen → <b>Lagerorte</b>: Regale mit Reihen × Spalten anlegen, Fächer umbenennen oder entfernen. Fachnamen werden überall angezeigt (auch im Waschmodus).</p>
+<h4>Lageransicht</h4>
+<ul>
+<li>Alben per Drag &amp; Drop (am Handy gedrückt halten) in Fächer ziehen. „Unsortiert“ zeigt Alben ohne Fach.</li>
+<li>Regale lassen sich ein-/ausklappen, verschieben und zoomen (+/−, am Handy auch Pinch).</li>
+<li>Im Fach öffnet der Reihenfolge-Button die <b>Sortierung</b>: Alben per Drag nach oben/unten ziehen oder mit den Pfeilen verschieben.</li>
+<li>Neben der Fachnummer startet ein kleiner Wasch-Button den Waschmodus für dieses Fach.</li>
+</ul>
+<h4>Zufallsauswahl</h4>
+<p>Der Würfel zieht ein zufälliges Album mit Ziehanimation (abschaltbar). Der Filter-Button begrenzt nach Genre, Jahr/Jahresbereich und Format (LP, 7", Maxi, EP). „Wiederholen“ zieht neu. Auf dem Handy ist die Tracklist eingeklappt. Läuft Musik, bleibt der Mini-Player beim Schließen bestehen.</p></div></details>
+    <details id="doc-wash" data-keywords="waschen reinigen wasser datum"><summary>Waschmodus</summary><div class="docs-section">
+<p>Einstellungen → <b>Waschmodus</b>. Besessene Vinyls fachweise reinigen.</p>
+<ul>
+<li>Auswahl: ein Fach, oder die Schaltfläche für <b>alle Fächer</b> (von alt nach neu, unabhängig vom Fach; das Fach steht trotzdem dabei).</li>
+<li>Pro Fach kommen die am längsten ungewaschenen zuerst, Alben ohne Datum noch davor.</li>
+<li>Eine Animation zeigt die Platte halb im schwarzen Waschbehälter, langsam und endlos rotierend (Größe je nach Single/Maxi/LP).</li>
+<li><b>Gewaschen</b> setzt das Waschdatum auf heute und geht zur nächsten Platte. Nur dann zählt sie.</li>
+<li><b>Waschen beenden</b> verwirft die gerade angezeigte Platte, sie gilt nicht als gewaschen.</li>
+<li>Nach <b>50</b> Platten pro Sitzung kommt der Hinweis „Wasser wechseln“, den du mit OK wegklickst.</li>
+<li>Ist ein Fach fertig, erscheint die Fachauswahl wieder (ohne „ganzes Fach als gewaschen“-Button).</li>
+<li><b>Anhören</b> startet den Mini-Player, der während des Waschens steuerbar bleibt.</li>
+</ul>
+<p>Das Schmutz-Effekt-Häkchen in den Einstellungen färbt Platten, die über ein Jahr nicht gewaschen wurden.</p></div></details>
+    <details id="doc-listen" data-keywords="spotify apple youtube player queue"><summary>Anhören &amp; Mini-Player</summary><div class="docs-section">
+<ul>
+<li><b>Anhören</b> auf Karten, im Waschmodus und in der Zufallsauswahl. In fremden Sammlungen kannst du Alben anhören, ohne sie hinzuzufügen.</li>
+<li>Der Mini-Player liegt fest am Rand, bleibt bei Fensterwechseln offen und lässt sich minimieren/aufklappen. Zuklappen blendet ihn nur aus, die Wiedergabe läuft weiter.</li>
+<li>Es gibt eine Warteschlange (Queue).</li>
+<li>Einstellungen → „Album anhören“: Anbieter (Apple Music, Spotify, YouTube) ein-/ausschalten und per Pfeil oder Drag sortieren.</li>
+</ul>
+<h4>Zugänge</h4>
+<ul>
+<li><b>Spotify</b>: Client ID eintragen, „Spotify verbinden“. Die Redirect-URI steht darunter und muss bei Spotify hinterlegt sein.</li>
+<li><b>YouTube</b>: API-Schlüssel (Data API v3) eintragen.</li>
+</ul>
+<div class="docs-tip">Spotify spielt mobil oft nur eine <b>30-Sekunden-Vorschau</b>, wenn du im Browser nicht bei Spotify angemeldet bist (oder kein Premium hast). Das liegt am Spotify-Embed, nicht an der App.</div></div></details>
+    <details id="doc-tools" data-keywords="reparieren urls tracklists durchgehen export import"><summary>Werkzeuge in den Einstellungen</summary><div class="docs-section">
+<ul>
+<li><b>Exportieren / Importieren</b>: Sammlung als JSON sichern und wiederherstellen.</li>
+<li><b>Akzentfarbe</b>: Farbe der Oberfläche.</li>
+<li><b>Titel / Interpret</b>: siehe <a href="#" data-doc-link="doc-names">Namen</a>.</li>
+<li><b>URLs</b>: sucht für Alben ohne Discogs-Link passende Releases und ordnet sie zu. Optional werden vorhandene Preise erneuert.</li>
+<li><b>Tracklists</b>: lädt fehlende Tracklists und Metadaten von Discogs nach.</li>
+<li><b>Lagerorte</b>: Regale/Fächer verwalten.</li>
+<li><b>Vinyl-Farben durchgehen</b>: Alben ohne neues Vinyl-Design nacheinander gestalten.</li>
+<li><b>Besessene Alben durchgehen</b>: alle Alben im Besitz nacheinander im Editor öffnen (Eintragsnummer, vor/zurück).</li>
+</ul>
+<h4>Weitere Einstellungen</h4>
+<ul>
+<li><b>Bildquelle</b>: Alle / iTunes / Discogs.</li>
+<li><b>Discogs Token</b>: persönlicher Zugriffstoken von discogs.com/settings/developers. Ohne Token bleiben viele Cover und Preise leer.</li>
+<li><b>Preise auch für Wunschliste ermitteln</b> · <b>Preise beim URL-Abgleich erneuern</b>.</li>
+<li><b>Ziehanimation</b>, <b>Schmutz-Effekt</b>, <b>Zustands-/Schmutzeffekte in der Sammlung</b>: reine Optik, abschaltbar.</li>
+<li><b>Vinyl-Format in Suche</b>: Standardtyp für neue Alben (oder automatisch schätzen).</li>
+</ul></div></details>
+    <details id="doc-covers" data-keywords="bild h:150 thumbnail"><summary>Cover &amp; Auflösung</summary><div class="docs-section">
+<ul>
+<li>Discogs liefert Cover oft als kleines Vorschaubild (<code>h:150</code>). Die App ersetzt das automatisch durch eine große Version (600 px) und zeigt Vorschläge in gleicher Größe.</li>
+<li>Cover neu suchen: Lupe auf dem Cover im Editor.</li>
+<li>Der frühere Cover-Link-Button ist entfallen; der Link lässt sich nicht mehr im Editor bearbeiten.</li>
+</ul></div></details>
+    <details id="doc-others" data-keywords="benutzer fremde import"><summary>Andere Sammlungen</summary><div class="docs-section">
+<ul>
+<li>Über das Benutzer-Symbol im Header wählst du eine andere Sammlung. Sie ist schreibgeschützt; die Bearbeitungsfunktionen sind ausgeblendet.</li>
+<li>„Gemeinsam“ markiert Alben, die du ebenfalls besitzt.</li>
+<li><b>Anhören</b> geht direkt, <b>Zu meiner Sammlung</b> fügt das Album hinzu.</li>
+<li>Über „Eigene Sammlung“ kommst du zurück.</li>
+</ul></div></details>
+    <p class="docs-empty" id="docsEmpty" hidden>Nichts gefunden.</p>
+  </div>
+</aside>
+
+<div class="modal-overlay cover-url-overlay" id="discogsUrlOverlay" aria-modal="true" role="dialog" aria-labelledby="discogsUrlTitle">
+  <div class="modal-box cover-url-box">
+    <div class="album-editor-heading">
+      <p class="modal-title" id="discogsUrlTitle">Discogs-Link</p>
+      <button type="button" id="closeDiscogsUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+    <div class="row">
+      <input type="url" id="fDiscogsUrl" placeholder="Discogs-Release- oder Master-Link" aria-label="Discogs-URL des Albums">
+      <button type="button" id="loadDiscogsUrlBtn" title="Diesen Discogs-Link nur für dieses Album laden">Laden</button>
+    </div>
+    <p id="fDiscogsUrlStatus" class="settings-panel-hint" aria-live="polite"></p>
+  </div>
+</div>
 
 <div class="modal-overlay cover-url-overlay" id="coverUrlOverlay" aria-modal="true" role="dialog" aria-labelledby="coverUrlTitle">
   <div class="modal-box cover-url-box">
@@ -5042,8 +5435,10 @@
               <div><dt>Format</dt><dd id="storageResultFormat"></dd></div>
               <div><dt>Zustand</dt><dd id="storageResultCondition"></dd></div>
             </dl>
-            <h3 class="storage-result-track-heading">Tracklist</h3>
-            <ol class="storage-result-tracklist" id="storageResultTracklist"></ol>
+            <details class="storage-result-tracks" id="storageResultTracksDetails" open>
+              <summary class="storage-result-track-heading">Tracklist</summary>
+              <ol class="storage-result-tracklist" id="storageResultTracklist"></ol>
+            </details>
           </section>
         </div>
         <aside class="storage-result-listening" aria-label="Album anhören">
@@ -6943,8 +7338,8 @@ function renderWashCurrentVinyl({ entering = false } = {}) {
   sessionMessage.textContent = item.lastWashed
     ? `Zuletzt gewaschen: ${getWashedDateLabel(item)}`
     : 'Dieses Vinyl wurde noch nicht gewaschen.';
-  document.getElementById('washCurrentTitle').textContent = item.title || 'Unbekanntes Album';
-  document.getElementById('washCurrentArtist').textContent = item.artist || 'Unbekannter Interpret';
+  document.getElementById('washCurrentTitle').textContent = getDisplayName(item.title) || 'Unbekanntes Album';
+  document.getElementById('washCurrentArtist').textContent = getDisplayName(item.artist) || 'Unbekannter Interpret';
   document.getElementById('washModeProgress').textContent =
     `Album ${washQueueIndex + 1} von ${washQueue.length} · ${washSessionCount} LPs in dieser Session gewaschen`;
   if (washAllCompartments) {
@@ -7341,7 +7736,10 @@ function endWashMode() {
   washSaveInProgress = false;
 }
 
-document.getElementById('startWashModeBtn').addEventListener('click', openWashMode);
+['startWashModeBtn', 'washModeHeaderBtn'].forEach(id => document.getElementById(id).addEventListener('click', () => {
+  settingsPanel.classList.remove('open');
+  openWashMode();
+}));
 document.getElementById('closeWashModeBtn').addEventListener('click', endWashMode);
 document.getElementById('endWashModeFromSelectionBtn').addEventListener('click', endWashMode);
 document.getElementById('endWashModeBtn').addEventListener('click', endWashMode);
@@ -7712,17 +8110,105 @@ function detectTitleArtistSplit(title) {
   return { artist: left, title: right };
 }
 
+const KNOWN_COMMA_ARTISTS = new Set([
+  'earth, wind & fire', 'earth, wind and fire', 'crosby, stills, nash & young', 'crosby, stills & nash',
+  'emerson, lake & palmer', 'peter, paul & mary', 'blood, sweat & tears', 'tyler, the creator',
+  'up, bustle & out'
+]);
+
+function getNameKey(value) {
+  return String(value || '')
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('de')
+    .replace(/\s*\(\d+\)\s*$/, '')
+    .replace(/^the\s+/, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+function collapseRepeatedName(text) {
+  const value = String(text || '').trim();
+  const words = value.split(/\s+/);
+  if (words.length % 2 === 0) {
+    const half = words.length / 2;
+    const first = words.slice(0, half).join(' ');
+    if (getNameKey(first) && getNameKey(first) === getNameKey(words.slice(half).join(' '))) return first;
+  }
+  const joined = value.split(/\s+(?:&|\+|and|und|feat\.?|ft\.?|x)\s+|\s*;\s*/i);
+  if (joined.length > 1 && joined.every(piece => getNameKey(piece) === getNameKey(joined[0]))) return joined[0].trim();
+  return value;
+}
+
+function dedupeNameParts(parts, collapse) {
+  const seen = new Set();
+  const unique = parts.map(part => ({ ...part, text: collapse ? collapseRepeatedName(part.text) : part.text })).filter(part => {
+    const key = getNameKey(part.text);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (unique.length) unique[unique.length - 1] = { ...unique[unique.length - 1], sep: '' };
+  return unique;
+}
+
+function joinNameParts(parts) {
+  return parts.map((part, index) => part.text + (index < parts.length - 1 ? part.sep : '')).join('');
+}
+
+function normalizeTitleNames(title) {
+  const parts = dedupeNameParts(parseNameParts(title, 'title'), false);
+  return { parts, text: parts.length ? joinNameParts(parts) : String(title || '').trim() };
+}
+
+function normalizeArtistNames(artist) {
+  let uncertain = false;
+  const raw = [];
+  parseNameParts(artist, 'artist').forEach(part => {
+    if (!part.text.includes(',') || KNOWN_COMMA_ARTISTS.has(getNameKey(part.text)) || KNOWN_COMMA_ARTISTS.has(part.text.toLocaleLowerCase('de'))) {
+      raw.push(part);
+      return;
+    }
+    const pieces = part.text.split(',').map(piece => piece.trim()).filter(Boolean);
+    if (pieces.some(piece => /\s(&|and|und|\+)\s/i.test(piece) || /^(&|and|und)\s/i.test(piece))) uncertain = true;
+    pieces.forEach((piece, index) => raw.push({ text: piece, sep: index === pieces.length - 1 ? part.sep : ' / ' }));
+  });
+  const parts = dedupeNameParts(raw, true);
+  return { parts, uncertain, text: parts.length ? joinNameParts(parts) : String(artist || '').trim() };
+}
+
 function findFixableEntries() {
-  return collection
-    .map(item => ({ item, split: detectTitleArtistSplit(item.title) }))
-    .filter(({ item, split }) => {
-      if (!split) return false;
-      const artist = (item.artist || '').trim();
-      return artist === '' || artist.toLowerCase() === (item.title || '').trim().toLowerCase();
+  const entries = [];
+  collection.forEach(item => {
+    const title = (item.title || '').trim();
+    const artist = (item.artist || '').trim();
+    const dashSplit = detectTitleArtistSplit(title);
+    const useDash = dashSplit && (artist === '' || artist.toLowerCase() === title.toLowerCase());
+    const baseTitle = useDash ? dashSplit.title : title;
+    const baseArtist = useDash ? dashSplit.artist : artist;
+    const normalizedTitle = normalizeTitleNames(baseTitle);
+    const normalizedArtist = normalizeArtistNames(baseArtist);
+    if (normalizedTitle.text === title && normalizedArtist.text === artist) return;
+    const notes = [];
+    if (useDash) notes.push('Interpret im Titel');
+    if (normalizedTitle.text !== baseTitle || normalizedArtist.text !== baseArtist) notes.push('Namen aufgeteilt / Doppelte entfernt');
+    if (normalizedArtist.uncertain) notes.push('Könnte ein Bandname mit Komma sein');
+    entries.push({
+      item,
+      split: { artist: normalizedArtist.text, title: normalizedTitle.text },
+      titleParts: normalizedTitle.parts,
+      artistParts: normalizedArtist.parts,
+      note: notes.join(' · '),
+      checked: !normalizedArtist.uncertain
     });
+  });
+  return entries;
 }
 
 let fixableEntries = [];
+
+function renderFixBubbles(parts, fallback) {
+  const list = parts.length ? parts.map(part => part.text) : [fallback];
+  return list.filter(Boolean).map(text => `<span class="fix-bubble">${escapeHtml(text)}</span>`).join('');
+}
 
 function openFixTool() {
   fixableEntries = findFixableEntries();
@@ -7730,12 +8216,16 @@ function openFixTool() {
   if (fixableEntries.length === 0) {
     return showAlert('Keine betroffenen Einträge gefunden.');
   }
-  list.innerHTML = fixableEntries.map(({ item, split }, idx) => `
+  list.innerHTML = fixableEntries.map((entry, idx) => `
       <label class="fix-row">
-        <input type="checkbox" class="fix-check" data-idx="${idx}" checked>
-        <span class="fix-old">${escapeHtml(item.title)}</span>
+        <input type="checkbox" class="fix-check" data-idx="${idx}" ${entry.checked ? 'checked' : ''}>
+        <span class="fix-old">${escapeHtml(entry.item.title || '')}${entry.item.artist ? ' · ' + escapeHtml(entry.item.artist) : ''}</span>
         <span class="fix-arrow">→</span>
-        <span class="fix-new"><strong>${escapeHtml(split.artist)}</strong> – ${escapeHtml(split.title)}</span>
+        <span class="fix-new">
+          <span class="fix-bubbles"><strong>Interpret</strong>${renderFixBubbles(entry.artistParts, entry.split.artist)}</span>
+          <span class="fix-bubbles"><strong>Titel</strong>${renderFixBubbles(entry.titleParts, entry.split.title)}</span>
+          ${entry.note ? `<small class="fix-note">${escapeHtml(entry.note)}</small>` : ''}
+        </span>
       </label>
     `).join('');
   document.getElementById('fixModalOverlay').classList.add('open');
@@ -9054,7 +9544,7 @@ function renderSearchResultsPage() {
       <img src="${entry.cover}" alt="">
       <span class="source-badge ${entry.source}" title="${badgeTitle}">${badgeLabel}</span>
       ${titleHtml}
-      <p class="artist">${escapeHtml(entry.artist)}</p>
+      <p class="artist">${escapeHtml(getDisplayName(entry.artist))}</p>
       ${findMatchingCollectionItems(entry).length ? '<span class="existing-match-badge">Bereits in Sammlung</span>' : ''}
     `;
     card.querySelector('.quick-add-btn').addEventListener('click', e => {
@@ -9088,9 +9578,13 @@ function renderSearchResultsPage() {
   }
 }
 
+let pendingBarcodeSearch = '';
+
 async function searchAlbums() {
-  const rawQuery = document.getElementById('searchInput').value.trim();
-  if (rawQuery.includes('\n')) {
+  const barcode = pendingBarcodeSearch;
+  pendingBarcodeSearch = '';
+  const rawQuery = barcode || document.getElementById('searchInput').value.trim();
+  if (!barcode && rawQuery.includes('\n')) {
     document.getElementById('bulkImportOverlay')?.classList.add('open');
     await startBulkImportFromText(rawQuery);
     return;
@@ -9108,12 +9602,12 @@ async function searchAlbums() {
   hint.textContent = '';
   if (manualBtn) manualBtn.style.display = 'none';
   if (!q) return;
-  hint.textContent = 'Suche läuft...';
+  hint.textContent = barcode ? 'Suche Barcode ' + barcode + '...' : 'Suche läuft...';
   if (provider !== 'itunes' && !getDiscogsToken()) {
     hint.textContent = 'Suche läuft... (Hinweis: ohne Discogs-Token bleiben Cover-Bilder leer)';
   }
 
-  const directDiscogsInput = parseDiscogsInput(q);
+  const directDiscogsInput = barcode ? null : parseDiscogsInput(q);
   if (directDiscogsInput?.type === 'release' || directDiscogsInput?.type === 'master') {
     const release = await fetchDiscogsInput(directDiscogsInput);
     if (!release) {
@@ -9137,7 +9631,7 @@ async function searchAlbums() {
     return;
   }
 
-  const sources = provider === 'itunes' ? ['itunes'] : provider === 'discogs' ? ['discogs'] : ['itunes', 'discogs'];
+  const sources = barcode ? ['discogs'] : provider === 'itunes' ? ['itunes'] : provider === 'discogs' ? ['discogs'] : ['itunes', 'discogs'];
   const cards = [];
 
   try {
@@ -9158,7 +9652,7 @@ async function searchAlbums() {
     }
 
     if (sources.includes('discogs')) {
-      const res = await fetch('https://api.discogs.com/database/search?q=' + encodeURIComponent(q) + '&type=release&per_page=12' + discogsAuthParam());
+      const res = await fetch('https://api.discogs.com/database/search?' + (barcode ? 'barcode=' : 'q=') + encodeURIComponent(q) + '&type=release&per_page=12' + discogsAuthParam());
       const data = await res.json();
       if (data.results) {
         const discogsCards = await Promise.all(data.results.map(async result => {
@@ -9219,12 +9713,14 @@ async function searchAlbums() {
     }
 
     if (cards.length === 0) {
-      hint.textContent = 'Keine Treffer. Du kannst das Album auch manuell anlegen.';
+      hint.textContent = barcode
+        ? 'Kein Treffer für Barcode ' + barcode + '. Du kannst das Album auch manuell anlegen.'
+        : 'Keine Treffer. Du kannst das Album auch manuell anlegen.';
       if (manualBtn) manualBtn.style.display = 'inline-flex';
       return;
     }
 
-    hint.textContent = 'Album auswählen:';
+    hint.textContent = barcode ? 'Treffer für Barcode ' + barcode + ':' : 'Album auswählen:';
     searchResultCards = cards;
     searchPage = 1;
     renderSearchResultsPage();
@@ -9316,6 +9812,15 @@ async function searchBulkImportCandidates(query) {
   return cards;
 }
 
+function getBulkImportLineLabel(query) {
+  const directDiscogsInput = parseDiscogsInput(query);
+  if (directDiscogsInput?.type === 'release' || directDiscogsInput?.type === 'master') {
+    const kind = directDiscogsInput.type === 'master' ? 'Master' : 'Release';
+    return `Discogs-${kind} #${directDiscogsInput.id}`;
+  }
+  return query;
+}
+
 async function addBulkImportEntry(entry) {
   if (entry.source === 'discogs' && entry.discogsResourceUrl) {
     try {
@@ -9370,10 +9875,18 @@ async function showBulkImportLine() {
     return;
   }
   const query = bulkImportLines[bulkImportIndex];
-  progress.textContent = `Zeile ${bulkImportIndex + 1} von ${bulkImportLines.length}: Suche nach „${query}“ ...`;
-  currentLine.textContent = query;
-  searchLabel.textContent = query;
-  queryInput.value = query;
+  const directDiscogsInput = parseDiscogsInput(query);
+  const isDirectDiscogsLink = directDiscogsInput?.type === 'release' || directDiscogsInput?.type === 'master';
+  const displayLabel = getBulkImportLineLabel(query);
+  progress.textContent = isDirectDiscogsLink
+    ? `Zeile ${bulkImportIndex + 1} von ${bulkImportLines.length}: Discogs-Link erkannt.`
+    : `Zeile ${bulkImportIndex + 1} von ${bulkImportLines.length}: Suche nach „${displayLabel}“ ...`;
+  currentLine.textContent = displayLabel;
+  searchLabel.textContent = displayLabel;
+  queryInput.value = isDirectDiscogsLink ? '' : query;
+  queryInput.placeholder = isDirectDiscogsLink
+    ? `${displayLabel} erkannt – alternativ Suchbegriff eingeben`
+    : 'Titel, Interpret oder Suchbegriff eingeben';
   status.textContent = 'Suche läuft...';
   results.innerHTML = '<p class="hint">Suche läuft...</p>';
   const candidates = await searchBulkImportCandidates(query);
@@ -10205,6 +10718,192 @@ document.querySelector('.genre-chip-input').addEventListener('click', event => {
   genreInput.focus();
 });
 
+const NAME_SEPARATOR_PATTERNS = { title: /(\s*=\s*)/, artist: /(\s*=\s*|\s+\/\s+)/ };
+
+// " = " trennt Übersetzungen (nur im Editor sichtbar), " / " trennt weitere Interpreten (Features).
+function getDisplayName(value) {
+  const pieces = String(value || '').split(/(\s+=\s+|\s+\/\s+)/);
+  let result = '';
+  let skipNext = false;
+  for (let i = 0; i < pieces.length; i += 2) {
+    const text = pieces[i].trim();
+    const separatorBefore = i > 0 ? pieces[i - 1] : '';
+    const isTranslation = /=/.test(separatorBefore);
+    if (!text || isTranslation) continue;
+    result += (result ? ' / ' : '') + text;
+  }
+  return result || String(value || '').trim();
+}
+
+function parseNameParts(raw, kind) {
+  const pieces = String(raw || '').split(NAME_SEPARATOR_PATTERNS[kind] || NAME_SEPARATOR_PATTERNS.title);
+  const parts = [];
+  for (let i = 0; i < pieces.length; i += 2) {
+    const text = pieces[i].trim();
+    if (!text) continue;
+    const separator = pieces[i + 1];
+    parts.push({ text, sep: separator && !separator.includes('=') ? ' / ' : ' = ' });
+  }
+  return parts;
+}
+
+function initNameChipField(input, kind) {
+  const field = input.closest('.name-chip-field');
+  const list = field.querySelector('.genre-chip-list');
+  const nativeValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  const defaultSep = kind === 'artist' ? ' / ' : ' = ';
+  const getPending = () => nativeValue.get.call(input).trim();
+  const setPending = value => nativeValue.set.call(input, value);
+  const chips = () => [...list.querySelectorAll('.genre-chip')];
+
+  function addChip(text, sep) {
+    const chip = document.createElement('span');
+    chip.className = 'genre-chip';
+    chip.dataset.sep = sep || defaultSep;
+    const label = document.createElement('span');
+    label.className = 'genre-chip-label';
+    label.textContent = text;
+    label.title = 'Zum Bearbeiten klicken';
+    label.addEventListener('click', event => {
+      event.stopPropagation();
+      commitPending();
+      setPending(label.textContent);
+      chip.remove();
+      input.focus();
+    });
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'genre-chip-remove';
+    remove.textContent = '×';
+    remove.title = `${text} entfernen`;
+    remove.setAttribute('aria-label', `${text} entfernen`);
+    remove.addEventListener('click', event => {
+      event.stopPropagation();
+      chip.remove();
+    });
+    chip.append(label, remove);
+    list.appendChild(chip);
+    return chip;
+  }
+
+  function commitPending(separatorToPrevious) {
+    const pending = getPending();
+    if (!pending) return;
+    const last = chips().pop();
+    if (last && separatorToPrevious) last.dataset.sep = separatorToPrevious;
+    addChip(pending);
+    setPending('');
+  }
+
+  function serialize() {
+    const items = chips().map(chip => ({ text: chip.firstChild.textContent, sep: chip.dataset.sep }));
+    const pending = getPending();
+    if (pending) items.push({ text: pending, sep: defaultSep });
+    return items.map((item, index) => item.text + (index < items.length - 1 ? item.sep : '')).join('');
+  }
+
+  Object.defineProperty(input, 'value', {
+    configurable: true,
+    get: serialize,
+    set(value) {
+      list.replaceChildren();
+      parseNameParts(value, kind).forEach(part => addChip(part.text, part.sep));
+      setPending('');
+    }
+  });
+
+  input.addEventListener('input', () => {
+    const raw = nativeValue.get.call(input);
+    if (!NAME_SEPARATOR_PATTERNS[kind].test(raw)) return;
+    const parts = parseNameParts(raw, kind);
+    const trailing = /(\s*=\s*|\s+\/\s+)$/.test(raw) || (kind === 'title' && /=\s*$/.test(raw));
+    const pending = trailing ? '' : (parts.pop()?.text || '');
+    const lastChip = chips().pop();
+    if (lastChip && parts.length) lastChip.dataset.sep = defaultSep;
+    parts.forEach(part => addChip(part.text, part.sep));
+    setPending(pending);
+  });
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitPending();
+    } else if (event.key === '=') {
+      event.preventDefault();
+      commitPending(' = ');
+    } else if (event.key === 'Backspace' && !nativeValue.get.call(input)) {
+      const last = chips().pop();
+      if (!last) return;
+      event.preventDefault();
+      setPending(last.firstChild.textContent);
+      last.remove();
+    }
+  });
+  input.addEventListener('blur', () => commitPending());
+  field.addEventListener('click', event => {
+    if (event.target.closest('.genre-chip')) return;
+    input.focus();
+  });
+}
+
+initNameChipField(document.getElementById('fTitle'), 'title');
+initNameChipField(document.getElementById('fArtist'), 'artist');
+
+
+const docsPanel = document.getElementById('docsPanel');
+const docsBody = document.getElementById('docsBody');
+const docsSearch = document.getElementById('docsSearch');
+document.getElementById('docsToc').innerHTML = [...docsBody.querySelectorAll('details')]
+  .map(d => `<button type="button" data-doc-target="${d.id}">${d.querySelector('summary').textContent}</button>`).join('');
+
+function openDocs(sectionId) {
+  docsPanel.classList.add('open');
+  docsPanel.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('docs-open');
+  if (sectionId) {
+    const target = document.getElementById(sectionId);
+    if (target) {
+      if (docsSearch.value) { docsSearch.value = ''; filterDocs(''); }
+      target.open = true;
+      target.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  }
+}
+
+function closeDocs() {
+  docsPanel.classList.remove('open');
+  docsPanel.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('docs-open');
+}
+
+function filterDocs(query) {
+  const needle = query.trim().toLocaleLowerCase('de');
+  let visible = 0;
+  docsBody.querySelectorAll('details').forEach(section => {
+    const match = !needle || (section.textContent + ' ' + (section.dataset.keywords || '')).toLocaleLowerCase('de').includes(needle);
+    section.hidden = !match;
+    if (match) visible++;
+    if (needle && match) section.open = true;
+  });
+  document.getElementById('docsToc').hidden = !!needle;
+  document.getElementById('docsEmpty').hidden = visible > 0;
+}
+
+['openDocsBtn', 'openDocsHeaderBtn'].forEach(id => document.getElementById(id).addEventListener('click', () => {
+  settingsPanel.classList.remove('open');
+  if (docsPanel.classList.contains('open') && id === 'openDocsHeaderBtn') closeDocs(); else openDocs();
+}));
+document.getElementById('closeDocsBtn').addEventListener('click', closeDocs);
+docsSearch.addEventListener('input', () => filterDocs(docsSearch.value));
+document.addEventListener('click', event => {
+  const jump = event.target.closest('[data-doc-target]');
+  if (jump) { openDocs(jump.dataset.docTarget); return; }
+  const link = event.target.closest('[data-doc-link]');
+  if (link) { event.preventDefault(); openDocs(link.dataset.docLink); }
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && docsPanel.classList.contains('open') && !document.querySelector('.modal-overlay.open')) closeDocs();
+});
+
 function initializeBulkGenreInput() {
   const input = document.getElementById('bulkGenre');
   if (input.dataset.initialized) return;
@@ -10614,10 +11313,10 @@ function renderListeningAlbumQueue() {
     copy.className = 'album-queue-item-copy';
     const title = document.createElement('strong');
     title.className = 'album-queue-item-title';
-    title.textContent = item.title || 'Album';
+    title.textContent = getDisplayName(item.title) || 'Album';
     const artist = document.createElement('span');
     artist.className = 'album-queue-item-artist';
-    artist.textContent = item.artist || 'Unbekannter Interpret';
+    artist.textContent = getDisplayName(item.artist) || 'Unbekannter Interpret';
     copy.append(title, artist);
     main.append(copy);
     const actions = document.createElement('div');
@@ -12045,7 +12744,17 @@ document.getElementById('fCoverUrl').addEventListener('input', e => {
 });
 
 const coverUrlOverlay = document.getElementById('coverUrlOverlay');
-document.getElementById('openCoverUrlBtn').addEventListener('click', () => {
+const discogsUrlOverlay = document.getElementById('discogsUrlOverlay');
+const closeDiscogsUrlDialog = () => discogsUrlOverlay.classList.remove('open');
+document.getElementById('openDiscogsUrlBtn').addEventListener('click', () => {
+  discogsUrlOverlay.classList.add('open');
+  document.getElementById('fDiscogsUrl').focus();
+});
+document.getElementById('closeDiscogsUrlBtn').addEventListener('click', closeDiscogsUrlDialog);
+discogsUrlOverlay.addEventListener('click', event => {
+  if (event.target === discogsUrlOverlay) closeDiscogsUrlDialog();
+});
+document.getElementById('openCoverUrlBtn')?.addEventListener('click', () => {
   document.getElementById('coverUrlModalInput').value = document.getElementById('fCoverUrl').value;
   document.getElementById('coverUrlResolutionMessage').textContent = '';
   coverUrlOverlay.classList.add('open');
@@ -12863,8 +13572,7 @@ if (toggleSearchPanelBtn && desktopFormShell) {
   });
 }
 
-document.getElementById('viewGridBtn').addEventListener('click', () => setView('grid'));
-document.getElementById('viewTableBtn').addEventListener('click', () => setView('table'));
+document.getElementById('viewToggleBtn').addEventListener('click', () => setView(activeView === 'table' ? 'grid' : 'table'));
 const viewStorageBtn = document.getElementById('viewStorageBtn');
 if (viewStorageBtn) {
   viewStorageBtn.style.display = viewingOwnCollection ? 'inline-flex' : 'none';
@@ -13095,11 +13803,15 @@ function setView(view, persist = true) {
   }
   activeView = view;
   document.body.classList.toggle('storage-page-active', view === 'storage');
-  ['viewGridBtn', 'viewTableBtn', 'viewStorageBtn'].forEach(id => {
-    document.getElementById(id).classList.remove('toggle-active');
-  });
-  const buttonId = view === 'table' ? 'viewTableBtn' : view === 'storage' ? 'viewStorageBtn' : 'viewGridBtn';
-  document.getElementById(buttonId).classList.add('toggle-active');
+  document.getElementById('viewStorageBtn').classList.toggle('toggle-active', view === 'storage');
+  const viewToggleBtn = document.getElementById('viewToggleBtn');
+  const showingTable = view === 'table';
+  viewToggleBtn.querySelector('.view-icon-grid').hidden = !showingTable;
+  viewToggleBtn.querySelector('.view-icon-table').hidden = showingTable;
+  const viewToggleLabel = showingTable ? 'Rasteransicht' : 'Tabellenansicht';
+  viewToggleBtn.title = viewToggleLabel;
+  viewToggleBtn.setAttribute('aria-label', viewToggleLabel);
+  viewToggleBtn.classList.toggle('toggle-active', view !== 'storage');
   // Show/hide the columns button only for table view
   const colBtn = document.getElementById('tableColumnsBtn');
   if (colBtn) colBtn.style.display = view === 'table' ? 'inline-flex' : 'none';
@@ -13151,14 +13863,16 @@ function createUnsortedStorageCard(item) {
   return card;
 }
 
-function createStoredVinylTile(item) {
+function createStoredVinylTile(item, displayMode = false) {
   const tile = document.createElement('article');
-  tile.className = 'storage-record';
+  tile.className = displayMode ? 'collection-card owned storage-display-card' : 'storage-record';
   tile.dataset.storageItem = item.id;
   tile.title = `${item.title || ''} · ${item.artist || ''}`;
-  tile.innerHTML = `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(item.artist || '')}</span></div><button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶</button>`;
+  tile.innerHTML = displayMode
+    ? `<div class="media"><img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"></div><div class="media-info"><p class="title">${escapeHtml(getDisplayName(item.title || ''))}</p><p class="artist">${escapeHtml(getDisplayName(item.artist || ''))}</p><button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album anhören"><span aria-hidden="true">▶</span><span>Anhören</span></button></div>`
+    : `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(item.artist || '')}</span></div><button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶</button>`;
   bindStorageItemPointerDrag(tile, item);
-  tile.querySelector('.listen').addEventListener('click', event => {
+  tile.querySelector('.listen, .album-listen-card-btn')?.addEventListener('click', event => {
     event.stopPropagation();
     openAlbumListening(item);
   });
@@ -13340,8 +14054,8 @@ function renderStorageRandomResult(item) {
   disc.style.setProperty('--vinyl-label', record.labelColor);
   disc.style.setProperty('--vinyl-art', getVinylSvgData(record));
   disc.innerHTML = getVinylLiquidMarkup(record);
-  document.getElementById('storageResultTitle').textContent = item.title || 'Unbekanntes Album';
-  document.getElementById('storageResultArtist').textContent = item.artist || 'Unbekannter Interpret';
+  document.getElementById('storageResultTitle').textContent = getDisplayName(item.title) || 'Unbekanntes Album';
+  document.getElementById('storageResultArtist').textContent = getDisplayName(item.artist) || 'Unbekannter Interpret';
   document.getElementById('storageResultCount').textContent = `${design.records.length} Vinyl${design.records.length === 1 ? '' : 's'}`;
   document.getElementById('storageResultLocation').textContent = getStorageLabel(item) || 'Kein Lagerort hinterlegt';
   document.getElementById('storageResultYear').textContent = item.year || '–';
@@ -13358,6 +14072,8 @@ function renderStorageRandomResult(item) {
     }).join('')
     : '<li>Keine Tracklist hinterlegt</li>';
   document.getElementById('storageRandomResultOverlay').classList.add('open');
+  const tracksDetails = document.getElementById('storageResultTracksDetails');
+  if (tracksDetails) tracksDetails.open = !window.matchMedia('(max-width: 900px)').matches;
   if (window.matchMedia('(min-width: 901px)').matches) {
     openAlbumListening(item, document.getElementById('storageRandomInlineListening'));
   }
@@ -13411,9 +14127,9 @@ async function playStorageCaseRoll(items, winner, locationLabel) {
       image.hidden = true;
     }
     const title = document.createElement('strong');
-    title.textContent = item.title || 'Unbekanntes Album';
+    title.textContent = getDisplayName(item.title) || 'Unbekanntes Album';
     const artist = document.createElement('span');
-    artist.textContent = item.artist || 'Unbekannter Interpret';
+    artist.textContent = getDisplayName(item.artist) || 'Unbekannter Interpret';
     card.append(image, placeholder, title, artist);
     track.appendChild(card);
   });
@@ -13925,7 +14641,7 @@ function renderStorageOrderEditor() {
   list.innerHTML = orderedItems.length
     ? orderedItems.map((item, index) => `<li class="storage-order-item" data-item-id="${escapeHtml(item.id)}">
         <button type="button" class="storage-order-drag-handle" aria-label="Album ziehen zum Umordnen" title="Ziehen zum Umordnen">⠿</button>
-        <span class="storage-order-item-copy"><span class="storage-order-item-title">${escapeHtml(item.title || 'Ohne Titel')}</span><span class="storage-order-item-meta">${escapeHtml(item.artist || 'Unbekannter Interpret')}${item.year ? ` · ${escapeHtml(item.year)}` : ''}</span></span>
+        <span class="storage-order-item-copy"><span class="storage-order-item-title">${escapeHtml(getDisplayName(item.title) || 'Ohne Titel')}</span><span class="storage-order-item-meta">${escapeHtml(getDisplayName(item.artist) || 'Unbekannter Interpret')}${item.year ? ` · ${escapeHtml(item.year)}` : ''}</span></span>
         <span class="storage-order-item-actions"><button type="button" data-order-move="-1" aria-label="Nach oben verschieben"${index === 0 ? ' disabled' : ''}>↑</button><button type="button" data-order-move="1" aria-label="Nach unten verschieben"${index === orderedItems.length - 1 ? ' disabled' : ''}>↓</button></span>
       </li>`).join('')
     : '<li class="settings-panel-hint">In diesem Fach sind keine Vinyls.</li>';
@@ -14184,7 +14900,7 @@ function renderStorageBoard(visibleItems) {
   const renderShelf = shelf => {
     const capacity = getShelfCapacity(shelf);
     const shelfWidth = shelf.mode === 'display'
-      ? shelf.columns * 128 + Math.max(0, shelf.columns - 1) * 8 + 25
+      ? shelf.columns * 120 + Math.max(0, shelf.columns - 1) * 8 + 25
       : Math.max(420, shelf.columns * 210 + 36);
     const shelfItems = collection.filter(item => item.owned && item.shelfId === shelf.id
       && isValidShelfCompartment(shelf, item.shelfCompartment));
@@ -14332,7 +15048,7 @@ function renderStorageBoard(visibleItems) {
         getStorageItemsForCompartment(shelf, number)
           .filter(item => ownedItems.includes(item))
           .forEach(item => {
-            const tile = createStoredVinylTile(item);
+            const tile = createStoredVinylTile(item, shelf.mode === 'display');
             if (item.id === randomHighlightedItemId) tile.classList.add('random-highlight');
             target.appendChild(tile);
           });
@@ -14819,10 +15535,10 @@ ${actionButtons}
           </div>
         </div>
         <div class="media-info">
-          <p class="title">${escapeHtml(item.title)}</p>
+          <p class="title">${escapeHtml(getDisplayName(item.title))}</p>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
             <div style="flex:1;">
-              <p class="artist" style="margin:4px 0 0;">${escapeHtml(item.artist)}</p>
+              <p class="artist" style="margin:4px 0 0;">${escapeHtml(getDisplayName(item.artist))}</p>
             </div>
             <div style="flex-shrink:0; display:flex; align-items:center; gap:8px;">
               <span class="release-badge ${badge.className}">${escapeHtml(badge.label)}</span>
@@ -14897,6 +15613,7 @@ ${actionButtons}
       // Always show 'common' column for remote view even if not in settings
       if (!(visible || (col.key === 'common' && !viewingOwnCollection))) return;
       const th = document.createElement('th');
+      th.classList.add('col-' + col.key);
       // Cover, actions, common, and color are not sortable in the table
       const isSortable = !(col.key === 'actions' || col.key === 'cover' || col.key === 'common' || col.key === 'color');
       th.style.cursor = isSortable ? 'pointer' : 'default';
@@ -14952,16 +15669,19 @@ ${actionButtons}
           // Respect visibility or force-show common for remote view
           if (!(ts.visible[col.key] || (col.key === 'common' && !viewingOwnCollection))) return;
           const td = document.createElement('td');
+          td.classList.add('col-' + col.key);
           if (col.key === 'cover') {
-            td.className = 'cover-cell';
+            td.classList.add('cover-cell');
             td.innerHTML = `<img src="${item.coverUrl || ''}" alt="">`;
           } else if (col.key === 'title') {
-            td.className = 'title-cell';
+            td.classList.add('title-cell');
+            const metaParts = [item.year, item.owned ? getStorageLabel(item) : '', item.owned && item.lastWashed ? 'Gewaschen: ' + getWashedDateLabel(item) : ''].filter(Boolean);
             td.innerHTML = `
-              <strong>${escapeHtml(item.title)}</strong>
+              <strong>${escapeHtml(getDisplayName(item.title))}</strong>
               <div style="margin-top:4px;">
-                <div style="color:var(--text-secondary); font-size:12px;">${escapeHtml(item.artist)}</div>
+                <div style="color:var(--text-secondary); font-size:12px;">${escapeHtml(getDisplayName(item.artist))}</div>
               </div>
+              ${metaParts.length ? `<div class="title-meta-mobile">${metaParts.map(escapeHtml).join(' · ')}</div>` : ''}
             `;
           } else if (col.key === 'common') {
             td.innerHTML = commonLabel || '';
@@ -15132,6 +15852,99 @@ function getSortIndicator(col) {
 })();
 
 document.getElementById('searchBtn').addEventListener('click', searchAlbums);
+
+let barcodeScanState = null;
+
+function loadZxingLibrary() {
+  if (window.ZXing) return Promise.resolve(window.ZXing);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';
+    s.onload = () => window.ZXing ? resolve(window.ZXing) : reject(new Error('ZXing fehlt'));
+    s.onerror = () => reject(new Error('Scanner-Bibliothek konnte nicht geladen werden'));
+    document.head.appendChild(s);
+  });
+}
+
+function stopBarcodeScan() {
+  const st = barcodeScanState;
+  barcodeScanState = null;
+  if (!st) return;
+  st.stopped = true;
+  try { st.reader?.reset(); } catch (e) {}
+  st.stream?.getTracks().forEach(t => t.stop());
+  st.overlay.remove();
+}
+
+function onBarcodeDetected(rawValue) {
+  const code = String(rawValue || '').replace(/\D/g, '');
+  if (!code) return;
+  stopBarcodeScan();
+  document.getElementById('searchInput').value = code;
+  pendingBarcodeSearch = code;
+  searchAlbums();
+}
+
+async function startBarcodeScan() {
+  if (barcodeScanState) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2147483646;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;';
+  overlay.innerHTML = '<video playsinline muted autoplay style="width:100%;max-width:520px;max-height:60vh;border-radius:12px;background:#000;object-fit:cover;"></video>' +
+    '<p class="scan-msg" style="color:#fff;font-size:14px;text-align:center;margin:0;">Barcode ins Bild halten…</p>' +
+    '<button type="button" class="scan-cancel manual-btn" style="display:inline-flex;">Abbrechen</button>';
+  document.body.appendChild(overlay);
+  const video = overlay.querySelector('video');
+  const msg = overlay.querySelector('.scan-msg');
+  const state = { overlay, stopped: false, stream: null, reader: null };
+  barcodeScanState = state;
+  overlay.querySelector('.scan-cancel').addEventListener('click', stopBarcodeScan);
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    msg.textContent = 'Kamera nicht verfügbar. Die Seite muss über HTTPS (oder localhost) geöffnet werden.';
+    return;
+  }
+  const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
+  try {
+    if ('BarcodeDetector' in window) {
+      let detector;
+      try { detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] }); } catch (e) { detector = null; }
+      if (detector) {
+        state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (state.stopped) { state.stream.getTracks().forEach(t => t.stop()); return; }
+        video.srcObject = state.stream;
+        await video.play().catch(() => {});
+        const tick = async () => {
+          if (state.stopped) return;
+          try {
+            const found = await detector.detect(video);
+            if (found.length) { onBarcodeDetected(found[0].rawValue); return; }
+          } catch (e) {}
+          setTimeout(tick, 200);
+        };
+        tick();
+        return;
+      }
+    }
+    msg.textContent = 'Scanner wird geladen…';
+    const ZX = await loadZxingLibrary();
+    if (state.stopped) return;
+    const hints = new Map();
+    hints.set(ZX.DecodeHintType.POSSIBLE_FORMATS, [ZX.BarcodeFormat.EAN_13, ZX.BarcodeFormat.EAN_8, ZX.BarcodeFormat.UPC_A, ZX.BarcodeFormat.UPC_E]);
+    hints.set(ZX.DecodeHintType.TRY_HARDER, true);
+    state.reader = new ZX.BrowserMultiFormatReader(hints);
+    msg.textContent = 'Barcode ins Bild halten…';
+    await state.reader.decodeFromConstraints(constraints, video, (result) => {
+      if (result && !state.stopped) onBarcodeDetected(result.getText());
+    });
+  } catch (e) {
+    const denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+    msg.textContent = denied
+      ? 'Kamerazugriff wurde verweigert. Bitte in den Browser-Einstellungen erlauben.'
+      : 'Scanner konnte nicht gestartet werden: ' + (e?.message || e);
+  }
+}
+
+document.getElementById('barcodeScanBtn').addEventListener('click', startBarcodeScan);
 document.getElementById('searchInput').addEventListener('keydown', e => {
   const isMobileSearch = window.matchMedia('(max-width: 760px), (hover: none) and (pointer: coarse)').matches;
   if (e.key === 'Enter' && !e.shiftKey && !isMobileSearch) {
