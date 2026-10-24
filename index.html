@@ -1884,6 +1884,7 @@
   .album-mini-seek::-moz-range-track { height:100%; background:transparent; }
   .album-mini-seek::-webkit-slider-thumb { width:0; height:0; appearance:none; -webkit-appearance:none; border:0; background:transparent; }
   .album-mini-seek::-moz-range-thumb { width:0; height:0; border:0; background:transparent; }
+  .album-mini-control.album-mini-open-spotify { width:26px; height:26px; min-width:26px; font-size:13px; text-decoration:none; }
   .album-mini-message { margin:7px 0 0; color:var(--text-muted); font-size:10px; }
   .album-mini-message[hidden] { display:none; }
   .album-mini-controller-host { position:absolute; top:0; left:0; width:152px; height:152px; overflow:hidden; opacity:.01; pointer-events:none; clip-path:inset(50%); }
@@ -3387,7 +3388,88 @@
     max-width: 1100px;
   }
   .storage-result-overlay { z-index: 115; }
+  #albumListeningOverlay { z-index: 150; }
   .wash-mode-overlay { z-index: 99; }
+  .shop-mode-overlay { z-index: 99; background:var(--surface-1); padding:0; align-items:stretch; justify-content:center; inset:var(--shop-top, 0px) 0 0 0; }
+  body.shop-active .header-stats, body.shop-active .header-info-row, body.shop-active .wrap { display:none !important; }
+  .shop-listen-choices:empty { display:none; }
+  .shop-listen-choices { margin-bottom:10px; }
+  .shop-player-slot { margin-top:auto; padding-top:10px; flex:0 0 auto; }
+  .shop-player-slot .album-listening-dock { position:static; width:100%; max-width:none; transform:none; box-shadow:none; background:var(--surface-3); }
+  .shop-player-slot .album-listening-dock.is-collapsed { width:100%; padding:10px 12px 12px; }
+  .shop-player-slot .album-listening-dock-expand-handle, .shop-player-slot .album-dock-toggle, .shop-player-slot .album-mini-topbar { display:none !important; }
+  .shop-player-slot .album-listening-dock.is-collapsed .album-mini-cover,
+  .shop-player-slot .album-listening-dock.is-collapsed .album-mini-track-title,
+  .shop-player-slot .album-listening-dock.is-collapsed .album-mini-artist,
+  .shop-player-slot .album-listening-dock.is-collapsed .album-mini-tracklist,
+  .shop-player-slot .album-listening-dock.is-collapsed .album-mini-progress,
+  .shop-player-slot .album-listening-dock.is-collapsed .album-mini-message,
+  .shop-player-slot .album-listening-dock.is-collapsed .album-mini-platform-link { display:revert; }
+  .shop-player-slot .album-listening-dock.is-collapsed .album-mini-collapsed-title { display:none; }
+  .modal-box.shop-mode-box { width:100%; max-width:1100px; height:100%; max-height:none; border:0; border-radius:0; box-shadow:none; background:transparent; overflow:auto; display:flex; flex-direction:column; gap:14px; padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+  .shop-search-row button { min-height:44px; }
+  .shop-barcode-tile { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; width:100%; max-width:360px; aspect-ratio:1; align-self:center; border:2px dashed var(--accent-border); border-radius:18px; background:var(--surface-2); color:var(--text-primary); font-size:16px; cursor:pointer; }
+  .shop-barcode-tile svg { width:30%; height:30%; }
+  .shop-barcode-tile:hover { border-color:var(--accent); }
+  .shop-barcode-tile.compact { aspect-ratio:auto; max-width:none; flex-direction:row; min-height:64px; height:64px; gap:12px; border-radius:14px; }
+  .shop-barcode-tile.compact svg { width:28px; height:28px; }
+  .shop-layout { display:flex; flex-direction:column; gap:14px; }
+  .shop-left { display:flex; flex-direction:column; gap:14px; min-width:0; }
+  .shop-right { min-width:0; }
+  .shop-placeholder { display:none; }
+  @media (min-width: 900px) {
+    .shop-layout { display:grid; grid-template-columns:minmax(320px,400px) minmax(0,1fr); gap:28px; align-items:start; }
+    .shop-left { position:sticky; top:0; }
+    .shop-results { grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); max-height:50vh; overflow:auto; }
+    .shop-barcode-tile { max-width:none; aspect-ratio:auto; min-height:180px; }
+    .shop-barcode-tile.compact { min-height:64px; }
+    .shop-right { padding:16px; border:0.5px solid var(--border); border-radius:14px; background:var(--surface-2); min-height:300px; }
+    .shop-placeholder { display:flex; align-items:center; justify-content:center; min-height:260px; color:var(--text-muted); text-align:center; }
+    .shop-placeholder[hidden] { display:none; }
+  }
+  .shop-search-row { display:flex; gap:8px; align-items:center; }
+  .shop-search-row input { flex:1; min-width:0; }
+  .shop-results { display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; }
+  .shop-results[hidden] { display:none; }
+  .shop-result { display:flex; flex-direction:column; gap:4px; padding:8px; border:0.5px solid var(--border); border-radius:10px; background:var(--surface-3); cursor:pointer; text-align:left; }
+  .shop-result:hover { border-color:var(--accent-border); }
+  .shop-result img, .shop-result .noimg { width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; background:var(--surface-1); }
+  .shop-result strong { font-size:12px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .shop-result span { font-size:11px; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .shop-detail { display:grid; grid-template-columns:minmax(0,200px) minmax(0,1fr); gap:10px 18px; align-items:start; }
+  .shop-detail[hidden] { display:none; }
+  .shop-detail-cover { width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px; background:var(--surface-3); }
+  .shop-detail-info { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .shop-detail-info h3 { margin:0; font-size:20px; }
+  .shop-detail-info p { margin:0; color:var(--text-secondary); font-size:14px; }
+  .shop-detail-meta { display:flex; flex-wrap:wrap; gap:6px; }
+  .shop-detail-meta span { padding:2px 10px; border-radius:999px; background:var(--surface-3); font-size:12px; }
+  .shop-detail-actions { display:flex; flex-wrap:nowrap; gap:8px; grid-column:1 / -1; }
+  .shop-detail-feedback { grid-column:1 / -1; margin:0; }
+  .shop-detail-feedback:empty { display:none; }
+  .shop-detail-price { color:var(--text-primary) !important; font-weight:600; }
+  .shop-detail-price[hidden] { display:none; }
+  .shop-detail-actions button { flex:1; min-height:44px; }
+  .shop-detail-actions button { white-space:nowrap; }
+  .shop-detail-actions button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .shop-detail-actions button:disabled { opacity:.5; cursor:default; }
+  .shop-detail-status { color:var(--accent); font-size:13px; }
+  @media (max-width: 600px) {
+    .shop-detail { grid-template-columns:1fr; }
+    .shop-search-row { flex-wrap:wrap; }
+    .shop-search-row input { flex:1 1 100%; min-height:48px; font-size:16px; }
+    .modal-box.shop-mode-box { gap:8px; padding-top:8px; padding-bottom:8px; }
+    .shop-mode-box .wash-mode-header { margin-bottom:0; }
+    .shop-barcode-tile { max-width:none; }
+    .shop-detail { grid-template-columns:96px minmax(0,1fr); gap:12px; align-items:center; }
+    .shop-detail-cover { max-width:96px; }
+    .shop-detail-info { gap:4px; text-align:left; align-self:center; }
+    .shop-detail-info h3 { font-size:16px; }
+    .shop-detail-info p { font-size:13px; }
+    .shop-detail-actions { width:100%; }
+    .shop-detail-actions button { width:100%; min-height:44px; font-size:14px; padding:0 6px; }
+
+  }
   .storage-order-overlay { z-index: 101; }
   .storage-order-box { width:min(560px, calc(100vw - 24px)); max-width:560px; max-height:calc(100dvh - 24px); overflow:auto; }
   .storage-order-header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -4370,10 +4452,10 @@
     body.docs-open .filter-tabs .filter-label { display: none; }
     body.docs-open .filter-tabs button { padding: 8px; }
   }
-  #washModeHeaderBtn { display: none; }
+  #washModeHeaderBtn, #shopModeHeaderBtn { display: none; }
   @media (min-width: 1000px) {
-    body:not(.viewing-remote-collection) #washModeHeaderBtn { display: inline-flex; }
-    body:not(.viewing-remote-collection) #startWashModeBtn { display: none !important; }
+    body:not(.viewing-remote-collection) #washModeHeaderBtn, body:not(.viewing-remote-collection) #shopModeHeaderBtn { display: inline-flex; }
+    body:not(.viewing-remote-collection) #startWashModeBtn, body:not(.viewing-remote-collection) #startShopModeBtn { display: none !important; }
   }
   .storage-placement-mode-toggle, .storage-shelves-toggle-all { display: none !important; }
   #openDocsHeaderBtn { font-weight: 700; font-size: 15px; }
@@ -4539,7 +4621,7 @@
           <path d="M5 15H4C3.44772 15 3 14.5523 3 14V4C3 3.44772 3.44772 3 4 3H14C14.5523 3 15 3.44772 15 4V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
       </button>
-      <button id="showAlbumMiniPlayerBtn" class="icon-btn" type="button" title="Mini-Player öffnen" aria-label="Mini-Player öffnen" style="display:none;">♫</button>
+      <button id="showAlbumMiniPlayerBtn" class="icon-btn" type="button" title="Mini-Player öffnen" aria-label="Mini-Player öffnen" style="display:none;">♫︎</button>
       <button id="storageRandomPickBtn" class="icon-btn" type="button" title="Zufälliges einsortiertes Vinyl auswählen" aria-label="Zufälliges einsortiertes Vinyl auswählen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>
       </button>
@@ -4572,6 +4654,9 @@
       </div>
       <button id="viewStorageBtn" class="icon-btn" title="Lageransicht öffnen" aria-label="Lageransicht öffnen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h18v16H3zM3 10h18M9 4v16M15 4v16" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="shopModeHeaderBtn" class="icon-btn" type="button" title="Plattenladen-Modus" aria-label="Plattenladen-Modus">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9h16M9 20v-6h6v6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>
       </button>
       <button id="washModeHeaderBtn" class="icon-btn" type="button" title="Waschmodus" aria-label="Waschmodus">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M12 3v3M8 4.5l1 2M16 4.5l-1 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -4611,6 +4696,10 @@
             <div class="settings-mobile-shortcuts-items" id="settingsMobileShortcutsItems"></div>
           </div>
           <div class="settings-panel-actions">
+            <button type="button" id="startShopModeBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Alben suchen, anhören und auf die Wunschliste setzen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9h16M9 20v-6h6v6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>
+              <span>Plattenladen</span>
+            </button>
             <button type="button" id="startWashModeBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Besessene Vinyls fachweise reinigen">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 19h14M7 4l1 2M12 3v2M17 4l-1 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
               <span>Waschmodus</span>
@@ -4714,8 +4803,8 @@
                 <span class="toggle-slider"></span>
               </label>
               <div class="listening-provider-actions">
-                <button type="button" data-provider-move="up" aria-label="Apple Music nach oben">↑</button>
-                <button type="button" data-provider-move="down" aria-label="Apple Music nach unten">↓</button>
+                <button type="button" data-provider-move="up" aria-label="Apple Music nach oben">↑︎</button>
+                <button type="button" data-provider-move="down" aria-label="Apple Music nach unten">↓︎</button>
               </div>
             </div>
             <div class="listening-provider-row" data-provider="spotify" draggable="true">
@@ -4726,8 +4815,8 @@
                 <span class="toggle-slider"></span>
               </label>
               <div class="listening-provider-actions">
-                <button type="button" data-provider-move="up" aria-label="Spotify nach oben">↑</button>
-                <button type="button" data-provider-move="down" aria-label="Spotify nach unten">↓</button>
+                <button type="button" data-provider-move="up" aria-label="Spotify nach oben">↑︎</button>
+                <button type="button" data-provider-move="down" aria-label="Spotify nach unten">↓︎</button>
               </div>
             </div>
             <div class="listening-provider-row" data-provider="youtube" draggable="true">
@@ -4738,8 +4827,8 @@
                 <span class="toggle-slider"></span>
               </label>
               <div class="listening-provider-actions">
-                <button type="button" data-provider-move="up" aria-label="YouTube nach oben">↑</button>
-                <button type="button" data-provider-move="down" aria-label="YouTube nach unten">↓</button>
+                <button type="button" data-provider-move="up" aria-label="YouTube nach oben">↑︎</button>
+                <button type="button" data-provider-move="down" aria-label="YouTube nach unten">↓︎</button>
               </div>
             </div>
           </div>
@@ -4927,7 +5016,7 @@
     <div class="user-menu-header">
       <p class="panel-title">Andere Nutzer</p>
       <button type="button" id="closeUserMenuBtn" class="icon-btn" title="Schließen" aria-label="Schließen">
-        ✕
+        ✕︎
       </button>
     </div>
     <input type="search" id="userSearchInput" class="user-search-input" placeholder="Nutzer oder Sammlung suchen…" aria-label="Nutzer suchen" autocomplete="off">
@@ -4954,8 +5043,8 @@
         <div class="toolbar-group center">
           <div class="filter-tabs">
             <button id="filterAll" class="toggle-active"><span class="filter-icon">◉</span><span class="filter-label">Alle</span></button>
-            <button id="filterOwned"><span class="filter-icon">✓</span><span class="filter-label">Besitze ich</span></button>
-            <button id="filterWishlist"><span class="filter-icon">♡</span><span class="filter-label">Wunschliste</span></button>
+            <button id="filterOwned"><span class="filter-icon">✓︎</span><span class="filter-label">Besitze ich</span></button>
+            <button id="filterWishlist"><span class="filter-icon">♡︎</span><span class="filter-label">Wunschliste</span></button>
           </div>
         </div>
         <div class="toolbar-group right">
@@ -4974,7 +5063,7 @@
             <option value="releaseType">LP/EP/7"</option>
           </select>
           <div class="sort-direction-group">
-            <button type="button" id="sortDirBtn" class="sort-dir-btn" title="Sortierrichtung umkehren" aria-label="Sortierrichtung umkehren">↓</button>
+            <button type="button" id="sortDirBtn" class="sort-dir-btn" title="Sortierrichtung umkehren" aria-label="Sortierrichtung umkehren">↓︎</button>
           </div>
         </div>
       </div>
@@ -5202,15 +5291,15 @@
     <details id="doc-names" data-keywords="gleichheitszeichen übersetzung feature komma doppelt"><summary>Namen, Übersetzungen &amp; Features</summary><div class="docs-section">
 <p>Titel und Interpret werden als normaler Text gespeichert. Das <b>Trennzeichen</b> bestimmt die Bedeutung:</p>
 <ul>
-<li><code>A = B</code> → B ist die <b>Übersetzung</b> von A (z. B. <code>Yasuha = 泰葉*</code>).</li>
-<li><code>A / B</code> → B ist ein <b>weiterer Interpret</b> / Feature.</li>
+<li><code>A = B</code> →︎ B ist die <b>Übersetzung</b> von A (z. B. <code>Yasuha = 泰葉*</code>).</li>
+<li><code>A / B</code> →︎ B ist ein <b>weiterer Interpret</b> / Feature.</li>
 </ul>
 <h4>Anzeige</h4>
 <p>In Karten, Tabelle, Waschmodus, Zufallsauswahl, Mini-Player und Fachlisten werden Übersetzungen (alles nach <code> = </code>) ausgeblendet. Features bleiben sichtbar. Im Editor, in der Suche und im Filter bleibt alles erhalten, du findest ein Album also auch über den japanischen Namen.</p>
 <h4>Eingabe im Editor</h4>
 <ul>
-<li><code>=</code> tippen oder Text mit <code> = </code> einfügen → neue Übersetzungs-Blase.</li>
-<li>Enter oder Feld verlassen → aktueller Text wird zur Blase.</li>
+<li><code>=</code> tippen oder Text mit <code> = </code> einfügen →︎ neue Übersetzungs-Blase.</li>
+<li>Enter oder Feld verlassen →︎ aktueller Text wird zur Blase.</li>
 <li>Klick auf eine Blase bearbeitet sie, × entfernt sie.</li>
 <li>Ein <code>=</code> ohne Leerzeichen (z. B. „E=MC2“) gilt nicht als Trenner.</li>
 </ul>
@@ -5246,19 +5335,19 @@
 <p>Der Button links in der Toolbar blendet das Suchpanel aus. Die Einstellung wird gespeichert.</p></div></details>
     <details id="doc-storage" data-keywords="regal fach sortierung drag unsortiert"><summary>Lagerorte &amp; Lageransicht</summary><div class="docs-section">
 <h4>Regale verwalten</h4>
-<p>Einstellungen → <b>Lagerorte</b>: Regale mit Reihen × Spalten anlegen, Fächer umbenennen oder entfernen. Fachnamen werden überall angezeigt (auch im Waschmodus).</p>
+<p>Einstellungen →︎ <b>Lagerorte</b>: Regale mit Reihen × Spalten anlegen, Fächer umbenennen oder entfernen. Fachnamen werden überall angezeigt (auch im Waschmodus).</p>
 <h4>Lageransicht</h4>
 <ul>
 <li>Alben per Drag &amp; Drop (am Handy gedrückt halten) in Fächer ziehen. „Unsortiert“ zeigt Alben ohne Fach.</li>
 <li>Regale lassen sich ein-/ausklappen, verschieben und zoomen (+/−, am Handy auch Pinch).</li>
 <li>Im Fach öffnet der Reihenfolge-Button die <b>Sortierung</b>: Alben per Drag nach oben/unten ziehen oder mit den Pfeilen verschieben.</li>
 <li>Neben der Fachnummer startet ein kleiner Wasch-Button den Waschmodus für dieses Fach.</li>
-<li><b>Displaywand</b>: Regale im Modus „Display“ zeigen die Alben als kleine Sammlungskarten. Titel und Interpret erscheinen beim Drüberfahren, zusammen mit einem größeren <b>Anhören</b>-Button. Im Fach-Kopf gibt es dort nur das ✕ zum Entfernen; Wasch- und Sortierknopf fehlen.</li>
+<li><b>Displaywand</b>: Regale im Modus „Display“ zeigen die Alben als kleine Sammlungskarten. Titel und Interpret erscheinen beim Drüberfahren, zusammen mit einem größeren <b>Anhören</b>-Button. Im Fach-Kopf gibt es dort nur das ✕︎ zum Entfernen; Wasch- und Sortierknopf fehlen.</li>
 </ul>
 <h4>Zufallsauswahl</h4>
 <p>Der Würfel zieht ein zufälliges Album mit Ziehanimation (abschaltbar). Der Filter-Button begrenzt nach Genre, Jahr/Jahresbereich und Format (LP, 7", Maxi, EP). „Wiederholen“ zieht neu. Auf dem Handy ist die Tracklist eingeklappt. Läuft Musik, bleibt der Mini-Player beim Schließen bestehen.</p></div></details>
     <details id="doc-wash" data-keywords="waschen reinigen wasser datum"><summary>Waschmodus</summary><div class="docs-section">
-<p>Am Desktop (ab ca. 1000 px) der Waschmodus-Button in der Kopfleiste neben der Lageransicht, sonst Einstellungen → <b>Waschmodus</b>. Besessene Vinyls fachweise reinigen. In fremden Sammlungen ist er nicht verfügbar.</p>
+<p>Am Desktop (ab ca. 1000 px) der Waschmodus-Button in der Kopfleiste neben der Lageransicht, sonst Einstellungen →︎ <b>Waschmodus</b>. Besessene Vinyls fachweise reinigen. In fremden Sammlungen ist er nicht verfügbar.</p>
 <ul>
 <li>Auswahl: ein Fach, oder die Schaltfläche für <b>alle Fächer</b> (von alt nach neu, unabhängig vom Fach; das Fach steht trotzdem dabei).</li>
 <li>Pro Fach kommen die am längsten ungewaschenen zuerst, Alben ohne Datum noch davor.</li>
@@ -5270,12 +5359,22 @@
 <li><b>Anhören</b> startet den Mini-Player, der während des Waschens steuerbar bleibt.</li>
 </ul>
 <p>Das Schmutz-Effekt-Häkchen in den Einstellungen färbt Platten, die über ein Jahr nicht gewaschen wurden.</p></div></details>
+    <details id="doc-shop" data-keywords="plattenladen laden barcode suche wunschliste vorschau"><summary>Plattenladen-Modus</summary><div class="docs-section">
+<p>Für den Einkauf: Button in der Kopfleiste (Desktop ab ca. 1000 px) oder Einstellungen → <b>Plattenladen</b>.</p>
+<ul>
+<li>Suche nach Titel/Interpret, Barcode oder Discogs-Link; das Kamera-Symbol scannt einen Barcode.</li>
+<li>Ein einzelner Treffer (z. B. per Barcode) wird sofort groß angezeigt, sonst wählst du aus der Trefferliste.</li>
+<li>Die Suche startet mit Enter oder beim Verlassen des Feldes. Tippst du nach einem angezeigten Album wieder ins Suchfeld, wird zurück zur Suche gewechselt.</li>
+<li>Die Detailansicht zeigt Cover, Infos und bei Discogs den niedrigsten Preis. Discogs-Styles werden zusätzlich als Genres übernommen.</li>
+<li><b>Anhören</b> startet den Player unten (ohne Spotify-Anmeldung im Browser oft nur eine 30-Sekunden-Vorschau).</li>
+<li><b>Zur Wunschliste</b> legt das Album als Wunschliste-Eintrag an. Ist es schon vorhanden, steht ein Hinweis dabei.</li>
+</ul></div></details>
     <details id="doc-listen" data-keywords="spotify apple youtube player queue"><summary>Anhören &amp; Mini-Player</summary><div class="docs-section">
 <ul>
 <li><b>Anhören</b> auf Karten, im Waschmodus und in der Zufallsauswahl. In fremden Sammlungen kannst du Alben anhören, ohne sie hinzuzufügen.</li>
 <li>Der Mini-Player liegt fest am Rand, bleibt bei Fensterwechseln offen und lässt sich minimieren/aufklappen. Zuklappen blendet ihn nur aus, die Wiedergabe läuft weiter.</li>
 <li>Es gibt eine Warteschlange (Queue).</li>
-<li>Einstellungen → „Album anhören“: Anbieter (Apple Music, Spotify, YouTube) ein-/ausschalten und per Pfeil oder Drag sortieren.</li>
+<li>Einstellungen →︎ „Album anhören“: Anbieter (Apple Music, Spotify, YouTube) ein-/ausschalten und per Pfeil oder Drag sortieren.</li>
 </ul>
 <h4>Zugänge</h4>
 <ul>
@@ -5315,7 +5414,7 @@
 <li>Ein Klick irgendwo auf die Karte öffnet die Sammlung; die Buttons und der Stern lösen das nicht aus.</li>
 <li>Rahmen und Hintergrund der Karte nutzen die Akzentfarbe der jeweiligen Person.</li>
 <li>Das Suchfeld filtert nach Nutzername und Sammlungsname.</li>
-<li>Mit dem <b>Stern</b> machst du Nutzer zu Favoriten. Sie stehen immer oben unter „★ Favoriten“ und werden lokal und in der Cloud gespeichert.</li>
+<li>Mit dem <b>Stern</b> machst du Nutzer zu Favoriten. Sie stehen immer oben unter „★︎ Favoriten“ und werden lokal und in der Cloud gespeichert.</li>
 <li>Die Statistiken werden beim Öffnen aus den Sammlungen berechnet und erscheinen nach kurzem Laden.</li>
 </ul>
 <h4>Fremde Sammlung ansehen</h4>
@@ -5371,7 +5470,7 @@
       <button type="button" id="copyCoverUrlBtn" class="icon-btn" title="Bildlink kopieren" aria-label="Bildlink kopieren">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-width="1.8"/></svg>
       </button>
-      <button type="button" id="increaseCoverResolutionBtn" title="Discogs-Bildauflösung von 150 auf 600 Pixel erhöhen">150 → 600 px</button>
+      <button type="button" id="increaseCoverResolutionBtn" title="Discogs-Bildauflösung von 150 auf 600 Pixel erhöhen">150 →︎ 600 px</button>
       <button type="button" id="applyCoverUrlBtn" class="primary">Übernehmen</button>
     </div>
   </div>
@@ -5424,6 +5523,30 @@
       <button type="button" id="saveVinylEditorBtn" class="primary">Übernehmen</button>
       <button type="button" id="vinylMigrationNextBtn" class="primary" style="display:none;">Weiter</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay shop-mode-overlay" id="shopModeOverlay" aria-modal="true" role="dialog" aria-labelledby="shopModeTitle">
+  <div class="modal-box shop-mode-box">
+    <div class="wash-mode-header">
+      <p class="modal-title" id="shopModeTitle">Plattenladen</p>
+      <button type="button" id="closeShopModeBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+    <div class="shop-layout">
+    <div class="shop-left">
+    <div class="shop-search-row">
+      <input type="search" enterkeyhint="search" id="shopSearchInput" placeholder="Titel, Interpret, Barcode oder Discogs-Link…" autocomplete="off" aria-label="Album suchen">
+    </div>
+    <button type="button" id="shopBarcodeBtn" class="shop-barcode-tile" aria-label="Barcode scannen"><svg  viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7V5h2M18 5h2v2M20 17v2h-2M6 19H4v-2M8 8v8M11 8v8M14 8v8M17 8v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Barcode scannen</span></button>
+    <p class="wash-mode-message" id="shopMessage" aria-live="polite"></p>
+    <div class="shop-results" id="shopResults"></div>
+    </div>
+    <div class="shop-right">
+      <div class="shop-placeholder" id="shopPlaceholder">Suche ein Album oder scanne einen Barcode.<br>Das Album erscheint hier.</div>
+    <section class="shop-detail" id="shopDetail" hidden></section>
+    </div>
+    </div>
+    <div class="shop-player-slot" id="shopPlayerSlot"><div class="shop-listen-choices" id="shopListenChoices"></div></div>
   </div>
 </div>
 
@@ -5535,7 +5658,7 @@
         </aside>
       </div>
       <div class="storage-result-footer">
-        <button type="button" id="storageRandomMobileListenBtn" class="storage-result-listening-mobile">▶ Anhören</button>
+        <button type="button" id="storageRandomMobileListenBtn" class="storage-result-listening-mobile">▶︎ Anhören</button>
         <button type="button" id="rerollStorageResultBtn" class="primary storage-result-reroll">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 9a7 7 0 0 1 11.9-2L20 9M4 15l2.5 2a7 7 0 0 0 11.9-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Wiederholen
@@ -5549,7 +5672,7 @@
   <div class="modal-box" style="width:min(560px, 94vw); max-height:85vh; overflow:auto;">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
       <p class="modal-title">Lagerorte verwalten</p>
-      <button type="button" id="closeShelfLocationsBtn" class="icon-btn" title="Schließen" aria-label="Schließen">✕</button>
+      <button type="button" id="closeShelfLocationsBtn" class="icon-btn" title="Schließen" aria-label="Schließen">✕︎</button>
     </div>
     <div id="shelfLocationsList" style="display:grid; gap:8px; margin:14px 0;"></div>
     <div style="display:grid; grid-template-columns:minmax(0,1fr) 88px 88px auto; align-items:end; gap:8px;">
@@ -6275,7 +6398,7 @@ function buildUserCard(user) {
     ].join('');
   }
   card.innerHTML = `
-    <button type="button" class="icon-btn user-card-fav${favoriteUserIds.has(user.uid) ? ' active' : ''}" title="${favoriteUserIds.has(user.uid) ? 'Favorit entfernen' : 'Als Favorit markieren'}" aria-label="Favorit umschalten" aria-pressed="${favoriteUserIds.has(user.uid)}">${favoriteUserIds.has(user.uid) ? '★' : '☆'}</button>
+    <button type="button" class="icon-btn user-card-fav${favoriteUserIds.has(user.uid) ? ' active' : ''}" title="${favoriteUserIds.has(user.uid) ? 'Favorit entfernen' : 'Als Favorit markieren'}" aria-label="Favorit umschalten" aria-pressed="${favoriteUserIds.has(user.uid)}">${favoriteUserIds.has(user.uid) ? '★︎' : '☆︎'}</button>
     <div class="user-card-head">
       <span class="user-card-title">${escapeHtml(getDisplayName(title))}</span>
       <span class="user-card-owner">${escapeHtml(user.username)}${isOwn ? ' (du)' : ''}</span>
@@ -6330,7 +6453,7 @@ function renderUserCards() {
     }
     users.forEach(user => userList.appendChild(buildUserCard(user)));
   };
-  addGroup('★ Favoriten', favorites);
+  addGroup('★︎ Favoriten', favorites);
   addGroup('Alle Sammlungen', others);
 }
 
@@ -8036,6 +8159,204 @@ function endWashMode() {
   washSaveInProgress = false;
 }
 
+// Plattenladen-Modus
+let shopCards = [];
+let shopSelectedEntry = null;
+
+function setShopMessage(text) {
+  document.getElementById('shopMessage').textContent = text || '';
+}
+
+const shopDesktopQuery = window.matchMedia('(min-width: 900px)');
+document.body.appendChild(document.getElementById('shopModeOverlay'));
+let shopSavedTitle = null;
+
+function updateShopTop() {
+  const header = document.querySelector('header');
+  document.getElementById('shopModeOverlay').style.setProperty('--shop-top', `${Math.ceil(header.getBoundingClientRect().bottom)}px`);
+}
+
+function openShopMode() {
+  if (!viewingOwnCollection) return;
+  const titleEl = document.getElementById('collectionTitleDisplay');
+  if (shopSavedTitle === null) shopSavedTitle = titleEl.textContent;
+  titleEl.textContent = currentUsername || '';
+  document.body.classList.add('shop-active');
+  updateShopTop();
+  resetShopMode();
+  document.getElementById('shopModeOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('shopSearchInput').focus(), 50);
+}
+
+function resetShopMode() {
+  closeAlbumListening(false);
+  document.getElementById('shopSearchInput').value = '';
+  shopLastQuery = '';
+  document.getElementById('shopDetail').hidden = true;
+  const results = document.getElementById('shopResults');
+  results.innerHTML = '';
+  results.hidden = false;
+  document.getElementById('shopBarcodeBtn').classList.remove('compact');
+  document.getElementById('shopPlaceholder').hidden = false;
+  shopCards = [];
+  shopSelectedEntry = null;
+  setShopMessage('');
+}
+
+function closeShopMode() {
+  const shopDock = document.getElementById('albumListeningDock');
+  if (shopDock.parentElement.id === 'shopPlayerSlot') document.body.appendChild(shopDock);
+  document.body.classList.remove('shop-active');
+  if (shopSavedTitle !== null) document.getElementById('collectionTitleDisplay').textContent = shopSavedTitle;
+  shopSavedTitle = null;
+  document.getElementById('shopModeOverlay').classList.remove('open');
+}
+
+async function searchShopCards(query, barcode) {
+  if (!barcode) return searchBulkImportCandidates(query);
+  const res = await fetch('https://api.discogs.com/database/search?barcode=' + encodeURIComponent(barcode) + '&type=release&per_page=12' + discogsAuthParam());
+  const data = await res.json();
+  return (data.results || []).map(result => {
+    const parsed = splitDiscogsSearchResult(result);
+    return {
+      source: 'discogs',
+      album: { title: parsed.title, artist: parsed.artist, year: result.year || '', genre: mergeDiscogsGenres(result.genre, result.style), discogsResourceUrl: result.resource_url || '' },
+      title: parsed.title,
+      artist: parsed.artist,
+      year: result.year || '',
+      cover: normalizeDiscogsImageUrl(result.cover_image || result.thumb) || '',
+      discogsResourceUrl: result.resource_url || '',
+      discogsLowestPrice: result.lowest_price != null ? Number(result.lowest_price) || null : null,
+      discogsAveragePrice: result.average_price != null ? Number(result.average_price) || null : null,
+      discogsCurrency: result.currency || result.price_currency || '€'
+    };
+  });
+}
+
+async function runShopSearch(barcode = '') {
+  const input = document.getElementById('shopSearchInput');
+  const query = barcode || input.value.trim();
+  shopLastQuery = query;
+  const results = document.getElementById('shopResults');
+  document.getElementById('shopDetail').hidden = true;
+  results.hidden = false;
+  results.innerHTML = '';
+  shopCards = [];
+  if (!query) return;
+  document.getElementById('shopBarcodeBtn').classList.add('compact');
+  if (barcode) input.value = barcode;
+  setShopMessage(barcode ? `Suche Barcode ${barcode} …` : 'Suche läuft …');
+  try {
+    shopCards = await searchShopCards(query, barcode);
+  } catch (error) {
+    setShopMessage('Suche fehlgeschlagen. Bitte versuche es erneut.');
+    return;
+  }
+  if (!shopCards.length) {
+    setShopMessage(barcode ? `Kein Treffer für Barcode ${barcode}.` : 'Keine Treffer.');
+    return;
+  }
+  if (barcode && shopCards.length === 1) {
+    setShopMessage('');
+    showShopDetail(shopCards[0]);
+    return;
+  }
+  setShopMessage(barcode ? `Treffer für Barcode ${barcode}:` : 'Album auswählen:');
+  shopCards.forEach(entry => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'shop-result';
+    card.innerHTML = `${entry.cover ? `<img src="${escapeHtml(entry.cover)}" alt="" loading="lazy">` : '<div class="noimg"></div>'}<strong>${escapeHtml(getDisplayName(entry.title || ''))}</strong><span>${escapeHtml(getDisplayName(entry.artist || ''))}</span>`;
+    card.addEventListener('click', () => showShopDetail(entry));
+    results.appendChild(card);
+  });
+}
+
+function showShopDetail(entry) {
+  shopSelectedEntry = entry;
+  setShopMessage('');
+  const detail = document.getElementById('shopDetail');
+  document.getElementById('shopResults').hidden = !shopDesktopQuery.matches;
+  document.getElementById('shopPlaceholder').hidden = true;
+  const existing = findMatchingCollectionItems(entry);
+  const year = entry.year || entry.album?.year || (entry.album?.releaseDate || '').slice(0, 4);
+  const genre = entry.album?.primaryGenreName || (Array.isArray(entry.album?.genre) ? entry.album.genre.join(', ') : '');
+  const price = Number(entry.discogsLowestPrice) > 0 ? `ab ${formatEuro(Number(entry.discogsLowestPrice))}` : '';
+  const meta = [year, genre, entry.source === 'discogs' ? 'Discogs' : 'iTunes'].filter(Boolean)
+    .map(text => `<span>${escapeHtml(String(text))}</span>`).join('');
+  const state = existing.length ? (existing.some(item => item.owned) ? 'Bereits in deiner Sammlung' : 'Bereits auf deiner Wunschliste') : '';
+  detail.innerHTML = `
+    ${entry.cover ? `<img class="shop-detail-cover" src="${escapeHtml(entry.cover)}" alt="">` : '<div class="shop-detail-cover"></div>'}
+    <div class="shop-detail-info">
+      <h3>${escapeHtml(getDisplayName(entry.title || ''))}</h3>
+      <p>${escapeHtml(getDisplayName(entry.artist || ''))}</p>
+      <div class="shop-detail-meta">${meta}</div>
+      <p class="shop-detail-price" id="shopDetailPrice"${price ? '' : ' hidden'}>${price ? `Discogs ${escapeHtml(price)}` : ''}</p>
+      ${state ? `<p class="shop-detail-status">${state}</p>` : ''}
+    </div>
+    <div class="shop-detail-actions">
+      <button type="button" data-shop="listen">▶\uFE0E Anhören</button>
+      <button type="button" data-shop="add" class="primary">＋ Zur Wunschliste</button>
+    </div>
+    <p class="shop-detail-status shop-detail-feedback" id="shopAddStatus" aria-live="polite"></p>`;
+  if (!price && entry.discogsResourceUrl) {
+    fetch(entry.discogsResourceUrl + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''))
+      .then(res => res.json())
+      .then(data => {
+        const lowest = Number(data?.lowest_price);
+        if (!(lowest > 0) || shopSelectedEntry !== entry) return;
+        entry.discogsLowestPrice = lowest;
+        const priceEl = document.getElementById('shopDetailPrice');
+        priceEl.textContent = `Discogs ab ${formatEuro(lowest)}`;
+        priceEl.hidden = false;
+      })
+      .catch(() => {});
+  }
+  detail.hidden = false;
+  detail.querySelector('[data-shop="listen"]').addEventListener('click', () => {
+    const dock = document.getElementById('albumListeningDock');
+    document.getElementById('shopPlayerSlot').appendChild(dock);
+    openAlbumListening({ title: entry.title, artist: entry.artist, coverUrl: entry.cover, year }, document.getElementById('shopListenChoices'));
+  });
+  const addButton = detail.querySelector('[data-shop="add"]');
+  addButton.addEventListener('click', async () => {
+    addButton.disabled = true;
+    const status = document.getElementById('shopAddStatus');
+    status.textContent = 'Wird hinzugefügt …';
+    try {
+      const added = await addBulkImportEntry(Object.assign({}, entry));
+      status.textContent = added ? 'Zur Wunschliste hinzugefügt.' : 'Hinzufügen nicht möglich.';
+      if (!added) addButton.disabled = false;
+    } catch (error) {
+      console.error('Plattenladen: Hinzufügen fehlgeschlagen', error);
+      status.textContent = 'Hinzufügen fehlgeschlagen.';
+      addButton.disabled = false;
+    }
+  });
+}
+
+['startShopModeBtn', 'shopModeHeaderBtn'].forEach(id => document.getElementById(id).addEventListener('click', () => {
+  settingsPanel.classList.remove('open');
+  openShopMode();
+}));
+window.addEventListener('resize', () => {
+  if (document.body.classList.contains('shop-active')) updateShopTop();
+});
+document.getElementById('closeShopModeBtn').addEventListener('click', closeShopMode);
+let shopLastQuery = '';
+document.getElementById('shopSearchInput').addEventListener('focus', () => {
+  if (document.getElementById('shopDetail').hidden) return;
+  resetShopMode();
+});
+document.getElementById('shopSearchInput').addEventListener('blur', () => {
+  const value = document.getElementById('shopSearchInput').value.trim();
+  if (value && value !== shopLastQuery) runShopSearch();
+});
+document.getElementById('shopSearchInput').addEventListener('keydown', event => {
+  if (event.key === 'Enter') { event.preventDefault(); runShopSearch(); event.target.blur(); }
+});
+document.getElementById('shopBarcodeBtn').addEventListener('click', () => startBarcodeScan(code => runShopSearch(code)));
+
 ['startWashModeBtn', 'washModeHeaderBtn'].forEach(id => document.getElementById(id).addEventListener('click', () => {
   settingsPanel.classList.remove('open');
   openWashMode();
@@ -8520,7 +8841,7 @@ function openFixTool() {
       <label class="fix-row">
         <input type="checkbox" class="fix-check" data-idx="${idx}" ${entry.checked ? 'checked' : ''}>
         <span class="fix-old">${escapeHtml(entry.item.title || '')}${entry.item.artist ? ' · ' + escapeHtml(entry.item.artist) : ''}</span>
-        <span class="fix-arrow">→</span>
+        <span class="fix-arrow">→︎</span>
         <span class="fix-new">
           <span class="fix-bubbles"><strong>Interpret</strong>${renderFixBubbles(entry.artistParts, entry.split.artist)}</span>
           <span class="fix-bubbles"><strong>Titel</strong>${renderFixBubbles(entry.titleParts, entry.split.title)}</span>
@@ -8974,8 +9295,8 @@ function renderVinylEditor() {
           <label class="vinyl-layer-captionless"><input type="color" data-layer-field="color" aria-label="Effektfarbe" title="Effektfarbe" value="${layer.color}"></label>
           ${['Liquid', 'VollFarbe', 'Farbe Innen'].includes(layer.type) ? '' : `<label class="vinyl-layer-count">Anzahl<input type="number" data-layer-field="count" aria-label="Anzahl" min="1" max="100" value="${layer.count}"></label>`}
           <div class="vinyl-layer-actions">
-            <button type="button" data-layer-action="up" aria-label="Effekt nach oben verschieben" title="Nach oben" ${index === 0 || record.layers.length === 1 ? 'disabled' : ''}>↑</button>
-            <button type="button" data-layer-action="down" aria-label="Effekt nach unten verschieben" title="Nach unten" ${index === record.layers.length - 1 || record.layers.length === 1 ? 'disabled' : ''}>↓</button>
+            <button type="button" data-layer-action="up" aria-label="Effekt nach oben verschieben" title="Nach oben" ${index === 0 || record.layers.length === 1 ? 'disabled' : ''}>↑︎</button>
+            <button type="button" data-layer-action="down" aria-label="Effekt nach unten verschieben" title="Nach unten" ${index === record.layers.length - 1 || record.layers.length === 1 ? 'disabled' : ''}>↓︎</button>
             <button type="button" data-layer-action="remove" aria-label="Effekt löschen" title="Löschen">×</button>
           </div>
         </div>
@@ -9774,7 +10095,7 @@ function quickAddFromSearch(entry) {
     title,
     artist,
     year: entry.album?.releaseDate ? entry.album.releaseDate.slice(0, 4) : (entry.album?.year ? String(entry.album.year) : ''),
-    genre: entry.album?.primaryGenreName || (Array.isArray(entry.album?.genre) ? entry.album.genre[0] : '') || '',
+    genre: entry.album?.primaryGenreName || (Array.isArray(entry.album?.genre) ? entry.album.genre.join(', ') : '') || '',
     coverUrl: entry.cover || '',
     releaseType: resolveReleaseType(entry.album, Array.isArray(entry.tracklist) ? entry.tracklist : []),
     color: '#000000',
@@ -9804,6 +10125,7 @@ function quickAddFromSearch(entry) {
   if (pagination) pagination.innerHTML = '';
   searchResultCards = [];
   searchPage = 1;
+  return newEntry;
 }
 
 function renderSearchResultsPage() {
@@ -9868,7 +10190,7 @@ function renderSearchResultsPage() {
 
     const nextBtn = document.createElement('button');
     nextBtn.type = 'button';
-    nextBtn.textContent = 'Weiter →';
+    nextBtn.textContent = 'Weiter →︎';
     nextBtn.disabled = searchPage >= totalPages;
     nextBtn.addEventListener('click', () => { searchPage++; renderSearchResultsPage(); });
 
@@ -9920,7 +10242,7 @@ async function searchAlbums() {
         title: release.title,
         artist: release.artist,
         year: release.year,
-        genre: release.genre ? [release.genre] : [],
+        genre: getGenreValues(release.genre),
         discogsResourceUrl: release.discogsResourceUrl
       },
       source: 'discogs'
@@ -9997,7 +10319,7 @@ async function searchAlbums() {
               artist: parsedResult.artist,
               cover_image: cover,
               year: result.year || '',
-              genre: result.genre || [],
+              genre: mergeDiscogsGenres(result.genre, result.style),
               discogsResourceUrl: result.resource_url || ''
             },
             title: parsedResult.title,
@@ -10049,7 +10371,7 @@ async function searchBulkImportCandidates(query) {
         title: release.title,
         artist: release.artist,
         year: release.year,
-        genre: release.genre ? [release.genre] : [],
+        genre: getGenreValues(release.genre),
         discogsResourceUrl: release.discogsResourceUrl
       },
       title: release.title,
@@ -10094,7 +10416,7 @@ async function searchBulkImportCandidates(query) {
           title: parsedResult.title,
           artist: parsedResult.artist,
           year: result.year || '',
-          genre: Array.isArray(result.genre) ? result.genre : [],
+          genre: mergeDiscogsGenres(result.genre, result.style),
           discogsResourceUrl: result.resource_url || ''
         },
         title: parsedResult.title,
@@ -10138,7 +10460,7 @@ async function addBulkImportEntry(entry) {
           entry.discogsAveragePrice = detail.discogsAveragePrice;
           entry.discogsCurrency = detail.discogsCurrency || entry.discogsCurrency;
           entry.tracklist = detail.tracklist || [];
-          entry.album = Object.assign({}, entry.album, { title: entry.title, artist: entry.artist, year: entry.year, genre: detail.genre ? [detail.genre] : [] });
+          entry.album = Object.assign({}, entry.album, { title: entry.title, artist: entry.artist, year: entry.year, genre: getGenreValues(detail.genre) });
         }
       }
     } catch (e) {}
@@ -10146,7 +10468,7 @@ async function addBulkImportEntry(entry) {
   if (!Array.isArray(entry.tracklist) || entry.tracklist.length === 0) {
     entry.tracklist = await fetchTracklistForAlbum(entry.album, entry.title, entry.artist);
   }
-  quickAddFromSearch(entry);
+  return quickAddFromSearch(entry);
 }
 
 function closeBulkImport() {
@@ -10305,7 +10627,7 @@ async function searchDiscogsReleases(query, limit = 8) {
         title: metadata?.title || parsedResult.title,
         artist: metadata?.artist || parsedResult.artist,
         year: result.year || '',
-        genre: Array.isArray(result.genre) ? result.genre[0] : '',
+        genre: mergeDiscogsGenres(result.genre, result.style).join(', '),
         cover,
         source: 'discogs',
         discogsResourceUrl: result.resource_url || '',
@@ -10465,7 +10787,7 @@ function normalizeDiscogsReleaseDetail(detail) {
     title: detail.title || '',
     artist: artist,
     year: detail.year || '',
-    genre: Array.isArray(detail.genres) ? detail.genres[0] : '',
+    genre: mergeDiscogsGenres(detail.genres, detail.styles).join(', '),
     cover,
     source: 'discogs',
     discogsResourceUrl: detail.resource_url || (detail.id ? 'https://api.discogs.com/releases/' + detail.id : ''),
@@ -10813,7 +11135,7 @@ async function selectAlbum(album, cover, source = 'itunes') {
   const title = album.collectionName || album.title || '';
   const artist = album.artistName || album.artist || '';
   const year = album.releaseDate ? album.releaseDate.slice(0, 4) : (album.year ? String(album.year) : '');
-  const genre = album.primaryGenreName || (Array.isArray(album.genre) ? album.genre[0] : '') || '';
+  const genre = album.primaryGenreName || (Array.isArray(album.genre) ? album.genre.join(', ') : '') || '';
   currentDraft = {
     id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
     title,
@@ -10884,6 +11206,10 @@ function renderTracklist() {
   box.innerHTML = currentTracks.map(t =>
     `<div class="track-row"><span>${escapeHtml(t.position || (t.number ? t.number + '.' : ''))} ${escapeHtml(t.title || '')}</span><span>${escapeHtml(t.duration || '')}</span></div>`
   ).join('');
+}
+
+function mergeDiscogsGenres(genres, styles) {
+  return getGenreValues([...(Array.isArray(genres) ? genres : []), ...(Array.isArray(styles) ? styles : [])]);
 }
 
 function getGenreValues(value) {
@@ -11290,7 +11616,7 @@ function getSpotifyEmbedUrl(rawUrl) {
   if (!safeUrl) return '';
   const url = new URL(safeUrl);
   if (!url.hostname.toLowerCase().endsWith('spotify.com') || url.hostname.toLowerCase() !== 'open.spotify.com') return '';
-  const match = url.pathname.match(/^\/(album|track)\/([A-Za-z0-9]+)\/?$/);
+  const match = url.pathname.match(/^\/(album|track|playlist)\/([A-Za-z0-9]+)\/?$/);
   return match ? `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator&theme=0&autoplay=true` : '';
 }
 
@@ -11623,14 +11949,14 @@ function renderListeningAlbumQueue() {
     actions.className = 'album-queue-item-actions';
     const moveUp = document.createElement('button');
     moveUp.type = 'button';
-    moveUp.textContent = '↑';
+    moveUp.textContent = '↑︎';
     moveUp.title = 'Album nach oben verschieben';
     moveUp.setAttribute('aria-label', moveUp.title);
     moveUp.disabled = index === 0;
     moveUp.addEventListener('click', () => moveQueuedAlbum(index, -1));
     const moveDown = document.createElement('button');
     moveDown.type = 'button';
-    moveDown.textContent = '↓';
+    moveDown.textContent = '↓︎';
     moveDown.title = 'Album nach unten verschieben';
     moveDown.setAttribute('aria-label', moveDown.title);
     moveDown.disabled = index === listeningAlbumQueue.length - 1;
@@ -11787,7 +12113,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'album-mini-control primary';
-  toggle.textContent = '▶';
+  toggle.textContent = '▶︎';
   toggle.setAttribute('aria-label', 'Wiedergabe starten');
   toggle.disabled = true;
   const expandedClose = createExpandedDockCloseButton();
@@ -11814,12 +12140,15 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   message.className = 'album-mini-message';
   message.textContent = 'YouTube wird geladen …';
   const link = document.createElement('a');
-  link.className = 'album-mini-platform-link';
+  link.className = 'album-mini-control album-mini-open-spotify';
+  link.title = 'In YouTube öffnen';
+  link.setAttribute('aria-label', 'In YouTube öffnen');
   link.href = originalUrl;
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
-  link.textContent = '▶  In YouTube öffnen  ↗';
-  player.append(topbar, main, host, message, progress, link);
+  link.textContent = '↗︎';
+  toggle.after(link);
+  player.append(topbar, main, host, message, progress);
   container.replaceChildren(player);
 
   let ready = false;
@@ -11893,7 +12222,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
             positionSeconds: Number(youtubeMiniController?.getCurrentTime()) || 0
           };
           persistListeningPlaybackProgress(event.data !== YT.PlayerState.PLAYING);
-          toggle.textContent = isPlaying ? '⏸' : '▶';
+          toggle.textContent = isPlaying ? '⏸︎' : '▶︎';
           toggle.setAttribute('aria-label', isPlaying ? 'Wiedergabe pausieren' : 'Wiedergabe starten');
           updateProgress();
           if (event.data === YT.PlayerState.ENDED && listeningAlbumQueue.length) {
@@ -11959,24 +12288,32 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const previous = document.createElement('button');
   previous.type = 'button';
   previous.className = 'album-mini-control';
-  previous.textContent = '⏮';
+  previous.textContent = '⏮︎';
   previous.setAttribute('aria-label', 'Vorheriger Titel');
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'album-mini-control primary';
-  toggle.textContent = '▶';
+  toggle.textContent = '▶︎';
   toggle.setAttribute('aria-label', 'Wiedergabe starten');
   const next = document.createElement('button');
   next.type = 'button';
   next.className = 'album-mini-control';
-  next.textContent = '⏭';
+  next.textContent = '⏭︎';
   next.setAttribute('aria-label', 'Nächster Titel');
   const favorite = document.createElement('button');
   favorite.type = 'button';
   favorite.className = 'album-mini-control';
-  favorite.textContent = '♡';
+  favorite.textContent = '♡︎';
   favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzufügen');
   favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzufügen';
+  const openInSpotify = document.createElement('a');
+  openInSpotify.className = 'album-mini-control album-mini-open-spotify';
+  openInSpotify.href = originalUrl;
+  openInSpotify.target = '_blank';
+  openInSpotify.rel = 'noopener';
+  openInSpotify.textContent = '↗︎';
+  openInSpotify.title = 'In Spotify öffnen (volle Länge, wenn die Vorschau hier nur 30 Sekunden spielt)';
+  openInSpotify.setAttribute('aria-label', 'In Spotify öffnen');
   const nextQueued = document.createElement('button');
   nextQueued.type = 'button';
   nextQueued.className = 'album-mini-control album-mini-queue-next';
@@ -12020,6 +12357,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     toggle,
     next,
     favorite,
+    openInSpotify,
     nextQueued,
     expandedClose,
     createAlbumDockToggle(),
@@ -12145,7 +12483,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       currentTrack.textContent = getListeningDisplayText(tracks[currentIndex].title, `Track ${currentIndex + 1}`);
       if (activeUri !== favoriteTrackUri) {
         favoriteTrackUri = activeUri;
-        favorite.textContent = '♡';
+        favorite.textContent = '♡︎';
         favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzufügen');
         favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzufügen';
       }
@@ -12274,7 +12612,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         }
         throw new Error(data.error?.message || `Spotify antwortete mit HTTP ${response.status}`);
       }
-      favorite.textContent = '♥';
+      favorite.textContent = '♥︎';
       favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzugefügt');
       favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzugefügt';
       message.hidden = false;
@@ -12302,7 +12640,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     }
   });
   const albumId = new URL(originalUrl).pathname.match(/^\/album\/([A-Za-z0-9]+)\/?$/)?.[1];
-  const spotifyContent = new URL(originalUrl).pathname.match(/^\/(album|track)\/([A-Za-z0-9]+)\/?$/);
+  const spotifyContent = new URL(originalUrl).pathname.match(/^\/(album|track|playlist)\/([A-Za-z0-9]+)\/?$/);
   const spotifyUri = spotifyContent ? `spotify:${spotifyContent[1]}:${spotifyContent[2]}` : '';
   if (albumId) {
     const request = new AbortController();
@@ -12381,7 +12719,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         toggle.disabled = false;
         playbackDuration = (Number(state.duration) || 0) / 1000;
         const position = (Number(state.position) || 0) / 1000;
-        toggle.textContent = state.isPaused ? '▶' : '⏸';
+        toggle.textContent = state.isPaused ? '▶︎' : '⏸︎';
         toggle.setAttribute('aria-label', state.isPaused ? 'Wiedergabe starten' : 'Wiedergabe pausieren');
         seek.max = String(playbackDuration);
         if (!seek.matches(':active')) {
@@ -12645,7 +12983,7 @@ function appendListeningProviderResults(content, provider, label, results, item)
     type.textContent = result.kind || (provider === 'youtube' ? 'Video' : 'Spotify-Treffer');
     const play = document.createElement('span');
     play.className = 'album-listen-result-play';
-    play.textContent = '▶';
+    play.textContent = '▶︎';
     button.append(title, subtitle, type, play);
     button.addEventListener('click', () => {
       if (provider === 'apple') {
@@ -12710,7 +13048,7 @@ function appendAppleMusicChoice(content, url, title) {
   label.textContent = title || 'In Apple Music öffnen';
   const action = document.createElement('span');
   action.className = 'album-listen-result-play';
-  action.textContent = '♫  ↗';
+  action.textContent = '♫︎  ↗︎';
   link.append(label, action);
   content.append(status, link);
 }
@@ -12731,20 +13069,24 @@ function calculateSearchScore(value, target) {
   return targetTokens.length ? found / targetTokens.length : 0;
 }
 
+const LISTENING_CJK_PATTERN = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Hangul}]/u;
+
+// Übersetzungen (" = ") nie mitsuchen und lateinische Schreibweise bevorzugen
+function pickListeningSearchPart(value) {
+  const raw = String(value || '').trim();
+  const sides = raw.split(/\s*[=＝]\s*/).map(side => side.trim()).filter(Boolean);
+  const latin = sides.find(side => !LISTENING_CJK_PATTERN.test(side));
+  return latin || sides[0] || raw;
+}
+
 function getListeningSearchArtist(artist) {
-  const value = String(artist || '');
-  if (!/[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u.test(value)) return value.trim();
-  return value
-    .replace(/[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/gu, ' ')
-    .replace(/[=＝|｜/／]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const first = pickListeningSearchPart(artist);
+  const parts = first.split(/\s+\/\s+/).map(part => part.trim()).filter(Boolean);
+  return (parts.find(part => !LISTENING_CJK_PATTERN.test(part)) || parts[0] || first).trim();
 }
 
 function getListeningSearchTitle(title) {
-  const value = String(title || '').trim();
-  const sides = value.split(/[=＝]/).map(side => side.trim()).filter(Boolean);
-  return sides[0] || value;
+  return pickListeningSearchPart(title);
 }
 
 async function searchSpotifyListening(item, content, controller) {
@@ -12807,6 +13149,27 @@ async function searchSpotifyListening(item, content, controller) {
   matchingResults = results.filter(result => result.url && result.score >= 0.6)
     .sort((a, b) => b.score - a.score);
   if (matchingResults.length || controller.signal.aborted) break;
+  }
+  if (!matchingResults.length && !controller.signal.aborted) {
+    // Compilations tauchen oft nur als Playlist auf
+    const playlistQueries = [`${cleanTitle} ${cleanArtist}`.trim(), cleanTitle].filter(Boolean);
+    for (const query of playlistQueries) {
+      const response = await fetch(`https://api.spotify.com/v1/search?${new URLSearchParams({ q: query, type: 'playlist', limit: '10', market: 'DE' })}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal
+      });
+      if (!response.ok) break;
+      const data = await response.json();
+      matchingResults = (data.playlists?.items || []).filter(Boolean).map(playlist => ({
+        title: playlist.name,
+        kind: 'Playlist',
+        subtitle: `${playlist.owner?.display_name || 'Spotify'}${playlist.tracks?.total ? ` · ${playlist.tracks.total} Titel` : ''}`,
+        url: playlist.external_urls?.spotify,
+        score: calculateSearchScore(playlist.name, searchTitle)
+      })).filter(result => result.url && result.score >= 0.6)
+        .sort((a, b) => b.score - a.score);
+      if (matchingResults.length || controller.signal.aborted) break;
+    }
   }
   const rankedResults = matchingResults
     .sort((a, b) => b.score - a.score).slice(0, 3);
@@ -13848,7 +14211,7 @@ function updateSortButtons() {
   const dirBtn = document.getElementById('sortDirBtn');
   if (!dirBtn) return;
   const useDirectionalSorting = ['title', 'artist', 'year', 'genre', 'releaseType', 'price', 'status', 'condition', 'color', 'location', 'lastWashed'].includes(activeSort);
-  dirBtn.textContent = activeSortDirection === 'asc' ? '↑' : '↓';
+  dirBtn.textContent = activeSortDirection === 'asc' ? '↑︎' : '↓︎';
   dirBtn.title = activeSortDirection === 'asc' ? 'Aufsteigend (klicken für absteigend)' : 'Absteigend (klicken für aufsteigend)';
   dirBtn.classList.toggle('active', useDirectionalSorting);
   dirBtn.disabled = !useDirectionalSorting;
@@ -14150,7 +14513,7 @@ function createUnsortedStorageCard(item) {
       <p class="title">${escapeHtml(item.title || '')}</p>
       <p class="artist">${escapeHtml(item.artist || '')}</p>
       <div class="storage-unsorted-actions">
-        <button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶</button>
+        <button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶︎</button>
         <button type="button" class="edit" title="Bearbeiten" aria-label="Bearbeiten">✎</button>
         <button type="button" class="del" title="Löschen" aria-label="Löschen">×</button>
       </div>
@@ -14169,8 +14532,8 @@ function createStoredVinylTile(item, displayMode = false) {
   tile.dataset.storageItem = item.id;
   tile.title = `${item.title || ''} · ${item.artist || ''}`;
   tile.innerHTML = displayMode
-    ? `<div class="media"><img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"></div><div class="media-info"><p class="title">${escapeHtml(getDisplayName(item.title || ''))}</p><p class="artist">${escapeHtml(getDisplayName(item.artist || ''))}</p><button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album anhören"><span aria-hidden="true">▶</span><span>Anhören</span></button></div>`
-    : `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(item.artist || '')}</span></div><button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶</button>`;
+    ? `<div class="media"><img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"></div><div class="media-info"><p class="title">${escapeHtml(getDisplayName(item.title || ''))}</p><p class="artist">${escapeHtml(getDisplayName(item.artist || ''))}</p><button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album anhören"><span aria-hidden="true">▶︎</span><span>Anhören</span></button></div>`
+    : `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(item.artist || '')}</span></div><button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶︎</button>`;
   bindStorageItemPointerDrag(tile, item);
   tile.querySelector('.listen, .album-listen-card-btn')?.addEventListener('click', event => {
     event.stopPropagation();
@@ -14414,7 +14777,7 @@ async function playStorageCaseRoll(items, winner, locationLabel) {
     const image = document.createElement('img');
     const placeholder = document.createElement('div');
     placeholder.className = 'storage-case-cover-placeholder';
-    placeholder.textContent = '♫';
+    placeholder.textContent = '♫︎';
     if (item.coverUrl) {
       image.src = item.coverUrl;
       image.alt = `Cover: ${item.title || 'Unbekanntes Album'}`;
@@ -14934,15 +15297,15 @@ function renderStorageOrderEditor() {
   if (!manual) activeStorageOrderEditor.order = orderedItems.map(item => String(item.id));
   const primaryDirectionButton = document.getElementById('storageOrderPrimaryDirection');
   const secondaryDirectionButton = document.getElementById('storageOrderSecondaryDirection');
-  primaryDirectionButton.textContent = settings.primaryDirection === 'asc' ? '↑' : '↓';
-  secondaryDirectionButton.textContent = settings.secondaryDirection === 'asc' ? '↑' : '↓';
+  primaryDirectionButton.textContent = settings.primaryDirection === 'asc' ? '↑︎' : '↓︎';
+  secondaryDirectionButton.textContent = settings.secondaryDirection === 'asc' ? '↑︎' : '↓︎';
   primaryDirectionButton.title = settings.primaryDirection === 'asc' ? 'Aufsteigend sortieren' : 'Absteigend sortieren';
   secondaryDirectionButton.title = settings.secondaryDirection === 'asc' ? 'Aufsteigend sortieren' : 'Absteigend sortieren';
   list.innerHTML = orderedItems.length
     ? orderedItems.map((item, index) => `<li class="storage-order-item" data-item-id="${escapeHtml(item.id)}">
         <button type="button" class="storage-order-drag-handle" aria-label="Album ziehen zum Umordnen" title="Ziehen zum Umordnen">⠿</button>
         <span class="storage-order-item-copy"><span class="storage-order-item-title">${escapeHtml(getDisplayName(item.title) || 'Ohne Titel')}</span><span class="storage-order-item-meta">${escapeHtml(getDisplayName(item.artist) || 'Unbekannter Interpret')}${item.year ? ` · ${escapeHtml(item.year)}` : ''}</span></span>
-        <span class="storage-order-item-actions"><button type="button" data-order-move="-1" aria-label="Nach oben verschieben"${index === 0 ? ' disabled' : ''}>↑</button><button type="button" data-order-move="1" aria-label="Nach unten verschieben"${index === orderedItems.length - 1 ? ' disabled' : ''}>↓</button></span>
+        <span class="storage-order-item-actions"><button type="button" data-order-move="-1" aria-label="Nach oben verschieben"${index === 0 ? ' disabled' : ''}>↑︎</button><button type="button" data-order-move="1" aria-label="Nach unten verschieben"${index === orderedItems.length - 1 ? ' disabled' : ''}>↓︎</button></span>
       </li>`).join('')
     : '<li class="settings-panel-hint">In diesem Fach sind keine Vinyls.</li>';
 }
@@ -15844,7 +16207,7 @@ ${actionButtons}
               <span class="release-badge ${badge.className}">${escapeHtml(badge.label)}</span>
             </div>
           </div>
-          <button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album ${escapeHtml(item.title)} anhören"><span aria-hidden="true">▶</span><span>Anhören</span></button>
+          <button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album ${escapeHtml(item.title)} anhören"><span aria-hidden="true">▶︎</span><span>Anhören</span></button>
           ${commonBadgeHtml}
           ${showCollectionExtra && viewingOwnCollection && item.owned && (getStorageLabel(item) || item.lastWashed) ? `<div class="collection-extra">${getStorageLabel(item) ? `<span>${escapeHtml(getStorageLabel(item))}</span>` : ''}${item.lastWashed ? `<span>Gewaschen: ${escapeHtml(getWashedDateLabel(item))}</span>` : ''}</div>` : ''}
         </div>
@@ -16111,7 +16474,7 @@ function getSortIndicator(col) {
   const ts = getTableSettings();
   const mappedCol = col === 'type' ? 'releaseType' : col === 'price' ? 'price' : col;
   if (ts.activeSortColumn !== mappedCol) return '';
-  return ts.activeSortDir === 'asc' ? '↑' : (ts.activeSortDir === 'desc' ? '↓' : '');
+  return ts.activeSortDir === 'asc' ? '↑︎' : (ts.activeSortDir === 'desc' ? '↓︎' : '');
 }
 
 // Render columns panel toggle button in toolbar
@@ -16154,6 +16517,7 @@ function getSortIndicator(col) {
 document.getElementById('searchBtn').addEventListener('click', searchAlbums);
 
 let barcodeScanState = null;
+let barcodeScanCallback = null;
 
 function loadZxingLibrary() {
   if (window.ZXing) return Promise.resolve(window.ZXing);
@@ -16174,19 +16538,27 @@ function stopBarcodeScan() {
   try { st.reader?.reset(); } catch (e) {}
   st.stream?.getTracks().forEach(t => t.stop());
   st.overlay.remove();
+  barcodeScanCallback = null;
 }
 
 function onBarcodeDetected(rawValue) {
   const code = String(rawValue || '').replace(/\D/g, '');
   if (!code) return;
   stopBarcodeScan();
+  if (barcodeScanCallback) {
+    const callback = barcodeScanCallback;
+    barcodeScanCallback = null;
+    callback(code);
+    return;
+  }
   document.getElementById('searchInput').value = code;
   pendingBarcodeSearch = code;
   searchAlbums();
 }
 
-async function startBarcodeScan() {
+async function startBarcodeScan(callback = null) {
   if (barcodeScanState) return;
+  barcodeScanCallback = typeof callback === 'function' ? callback : null;
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2147483646;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;';
   overlay.innerHTML = '<video playsinline muted autoplay style="width:100%;max-width:520px;max-height:60vh;border-radius:12px;background:#000;object-fit:cover;"></video>' +
@@ -16244,7 +16616,7 @@ async function startBarcodeScan() {
   }
 }
 
-document.getElementById('barcodeScanBtn').addEventListener('click', startBarcodeScan);
+document.getElementById('barcodeScanBtn').addEventListener('click', () => startBarcodeScan());
 document.getElementById('searchInput').addEventListener('keydown', e => {
   const isMobileSearch = window.matchMedia('(max-width: 760px), (hover: none) and (pointer: coarse)').matches;
   if (e.key === 'Enter' && !e.shiftKey && !isMobileSearch) {
