@@ -995,6 +995,7 @@
   body.viewing-remote-collection #viewStorageBtn,
   body.user-menu-open #copyWishlistBtn,
   body.user-menu-open #viewStorageBtn { display: none !important; }
+  #viewStorageBtn svg[hidden] { display:none; }
   body.viewing-remote-collection #collectionSettingsContent > :not(#listeningSettingsBlock) { display: none !important; }
   .form-top { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
   .form-top img {
@@ -2200,6 +2201,15 @@
   .storage-shelf-group-count { color:var(--text-muted); font-weight:400; }
   .storage-shelf-group-list { display:flex; align-items:flex-start; gap:10px; width:max-content; min-width:100%; }
   .storage-shelf-group-list { zoom:var(--storage-shelf-zoom, 1); }
+  .storage-shelves-body { display:flex; align-items:stretch; gap:8px; width:max-content; min-width:100%; height:calc(100% - 40px); min-height:calc(100% - 40px); }
+  .storage-shelves-body .storage-shelf-groups { height:auto; min-height:0; flex:1; min-width:0; }
+  .storage-collapsed-rail { position:sticky; left:0; z-index:3; display:flex; flex-direction:column; align-items:flex-start; gap:8px; flex:0 0 auto; background:var(--surface-1); }
+  .storage-collapsed-rail-toggle { width:30px; min-width:30px; height:30px; padding:0; justify-content:center; }
+  .storage-collapsed-rail-toggle svg { transition:transform .15s ease; }
+  .storage-shelves-body.rail-open .storage-collapsed-rail-toggle svg { transform:rotate(180deg); }
+  .storage-shelves-body:not(.rail-open) .storage-shelf-group-collapsed { display:none; }
+  .storage-collapsed-rail .storage-shelf-group-list { flex-direction:column; min-width:0; }
+  .storage-collapsed-rail .storage-shelf-group-collapsed { max-height:calc(100% - 38px); overflow:auto; }
   .storage-shelf-group-collapsed { padding:10px; border:0.5px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.025); }
   .storage-shelf-group-expanded { flex:1; min-height:0; }
   .storage-shelf-group-expanded .storage-shelf-group-list { align-items:stretch; height:100%; min-height:0; }
@@ -2652,6 +2662,8 @@
     background-size: var(--bar-bg-size, cover);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
+  .table-vinyl-disc { width: 34px; max-width: 34px; margin: 0 auto; }
+  .album-color-bar.inline.color-dot { width: 20px; height: 20px; border-radius: 50%; margin-right: 0; }
   .album-color-bar.animated {
     animation: liquidWave 6s ease infinite;
   }
@@ -3506,19 +3518,21 @@
     gap:10px;
   }
   .wash-mode-header { margin-bottom:14px; }
+  .wash-header-location { flex:1; min-width:0; margin:0; }
+  .wash-mode-box:has(#washModeSession[hidden]) .wash-header-location { display:none; }
   .wash-mode-header .modal-title { margin:0; }
   .wash-mode-selectors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
   .wash-mode-selectors label { display:grid; gap:5px; color:var(--text-secondary); font-size:12px; }
-  .wash-shelf-overview { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr)); align-items:start; gap:8px; max-height:min(58vh,560px); overflow:auto; padding:2px; }
-  .wash-shelf-card { min-width:0; max-width:250px; padding:7px; border:1px solid var(--border); border-radius:9px; background:var(--surface-1); }
-  .wash-shelf-name { margin:0 0 6px; overflow:hidden; color:var(--text-primary); font-size:12px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+  .wash-shelf-overview { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:8px; max-height:min(58vh,560px); overflow:auto; padding:2px; }
+  .wash-shelf-card { min-width:0; max-width:100%; width:max-content; padding:8px; border:1px solid var(--border); border-radius:9px; background:var(--surface-1); }
+  .wash-shelf-name { text-align:center; margin:0 0 6px; overflow:hidden; color:var(--text-primary); font-size:12px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
   .wash-compartment-scroll { overflow-x:auto; }
+  .wash-compartment-grid { margin:0 auto; }
+  #washModeSelection .wash-selection-actions { justify-content:center; }
   .wash-compartment-grid { display:grid; grid-template-columns:repeat(var(--wash-columns, 1), 64px); gap:6px; width:max-content; }
   .wash-compartment-choice { display:flex; width:64px; min-width:64px; height:64px; min-height:64px; align-items:center; justify-content:center; padding:6px; overflow:hidden; border-radius:8px; aspect-ratio:1; font-size:14px; line-height:1.2; text-align:center; white-space:normal; overflow-wrap:anywhere; }
   .wash-compartment-choice:disabled { opacity:.38; cursor:not-allowed; }
   @media (max-width:640px) {
-    .wash-shelf-overview { grid-template-columns:minmax(0,1fr); }
-    .wash-shelf-card { max-width:none; }
   }
   .wash-mode-message { color:var(--text-secondary); font-size:13px; }
   .wash-current-vinyl { display:grid; justify-items:center; text-align:center; gap:8px; padding:18px 12px; }
@@ -4453,9 +4467,11 @@
     body.docs-open .filter-tabs button { padding: 8px; }
   }
   #washModeHeaderBtn, #shopModeHeaderBtn { display: none; }
+  body:not(.viewing-remote-collection) #shopModeHeaderBtn { display: inline-flex; }
+  body:not(.viewing-remote-collection) #startShopModeBtn { display: none !important; }
   @media (min-width: 1000px) {
-    body:not(.viewing-remote-collection) #washModeHeaderBtn, body:not(.viewing-remote-collection) #shopModeHeaderBtn { display: inline-flex; }
-    body:not(.viewing-remote-collection) #startWashModeBtn, body:not(.viewing-remote-collection) #startShopModeBtn { display: none !important; }
+    body:not(.viewing-remote-collection) #washModeHeaderBtn { display: inline-flex; }
+    body:not(.viewing-remote-collection) #startWashModeBtn { display: none !important; }
   }
   .storage-placement-mode-toggle, .storage-shelves-toggle-all { display: none !important; }
   #openDocsHeaderBtn { font-weight: 700; font-size: 15px; }
@@ -4544,6 +4560,14 @@
   }
   .auth-loading.show { display: block; }
   #appRoot.hidden { display: none; }
+  .app-loading { position:fixed; inset:0; z-index:2147483645; background:var(--surface-1, #17171b); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:var(--text-secondary, #aaa); font-size:14px; opacity:1; transition:opacity .2s ease; }
+  .app-loading-title { position:absolute; top:0; left:0; right:0; padding:22px 16px; text-align:center; font-size:20px; font-weight:600; color:var(--text, #eee); }
+  .app-loading.done { opacity:0; pointer-events:none; }
+  .app-loading[hidden] { display:none; }
+  .app-loading-block { position:relative; width:72px; height:72px; border-radius:18px; overflow:hidden; background:linear-gradient(135deg, var(--la, var(--accent, #d4537e)), var(--lb, var(--accent, #d4537e))); box-shadow:0 0 36px color-mix(in srgb, var(--lb, var(--accent, #d4537e)) 45%, transparent); animation:appLoadingPulse 1.6s ease-in-out infinite; }
+  .app-loading-block span { position:absolute; inset:0; background:var(--lb, var(--accent, #d4537e)); opacity:0; animation:appLoadingFade 1.4s ease-in-out .1s forwards; }
+  @keyframes appLoadingFade { from { opacity:0; } to { opacity:1; } }
+  @keyframes appLoadingPulse { 0%, 100% { transform:scale(1) rotate(0deg); } 50% { transform:scale(1.08) rotate(6deg); } }
   .user-pill {
     display: flex;
     align-items: center;
@@ -4565,12 +4589,226 @@
     color: var(--text-muted);
   }
   .user-pill button:hover { color: var(--danger); background: transparent; }
+/* Handy im Querformat */
+@media (orientation: landscape) and (max-height: 520px) {
+  header { padding: 6px 16px; row-gap: 4px; gap: 8px; }
+  header .logo { width: 28px; height: 28px; }
+  header .logo svg { width: 16px; height: 16px; }
+  header .header-top-row { flex-wrap: nowrap; gap: 8px; }
+  header .collection-title { font-size: 15px; }
+  .icon-btn, .settings-wrap .icon-btn { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
+  header .header-actions { gap: 6px; }
+  header .header-stats { height: 26px; gap: 6px; }
+  header .header-stats .stat-pill { padding: 3px 9px; font-size: 11px; }
+  .wrap { padding-top: .5rem; }
+  .desktop-form-shell { display: grid; grid-template-columns: minmax(250px, 330px) minmax(0, 1fr); align-items: start; gap: .75rem; }
+  .desktop-form-shell .panel { margin-bottom: 0; }
+  .desktop-form-shell > .panel:first-child { position: sticky; top: 76px; max-height: calc(100dvh - 90px); overflow: auto; }
+  .desktop-form-shell.search-collapsed, body.viewing-remote-collection .desktop-form-shell, body.user-menu-open .desktop-form-shell { grid-template-columns: minmax(0, 1fr); }
+  .storage-page .desktop-form-shell { display: block; }
+  .storage-page .desktop-form-shell > .panel:first-child { position: static; max-height: none; overflow: visible; }
+  .wrap.storage-page { padding: 0 8px 6px; }
+  .storage-page > .storage-board { height: calc(100dvh - 128px); min-height: 0; padding: 6px; }
+  .storage-shelf-group-list { zoom: calc(var(--storage-shelf-zoom, 1) * .62); }
+  .modal-box { max-height: calc(100dvh - 16px); overflow: auto; }
+  .modal-overlay { padding: 8px; }
+  .collection-toolbar { flex-wrap: nowrap; gap: 6px; }
+  .toolbar-group.center { width: auto; }
+  .filter-tabs { flex-wrap: nowrap; gap: 4px; }
+  .filter-tabs button { padding: 6px 9px; }
+  .desktop-form-shell:not(.search-collapsed) .filter-tabs .filter-label { display: none; }
+  .desktop-form-shell > .panel:first-child .toprow { flex-wrap: nowrap; }
+  .desktop-form-shell > .panel:first-child .toprow textarea { min-width: 0; }
+  .modal-box.wash-mode-box { width: min(820px, calc(100vw - 16px)); max-width: 820px; padding: 10px 16px; }
+  .wash-mode-header { margin-bottom: 4px; }
+  .wash-mode-overlay #washModeSession:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) 190px; column-gap: 14px; align-items: center; }
+  #washModeSession > .wash-mode-message { grid-column: 1 / -1; margin: 0; }
+  #washModeSession .wash-current-vinyl { grid-column: 1; display: grid; grid-template-columns: 215px minmax(0, 1fr); align-items: center; justify-items: start; text-align: left; gap: 2px 12px; padding: 0; }
+  #washModeSession .wash-cleaner-stage { grid-row: 1 / span 5; zoom: .62; margin: 0; }
+  #washModeSession .wash-condition-control { justify-items: start; width: 100%; }
+  #washModeSession .wash-mode-actions { grid-column: 2; grid-row: 1; flex-direction: column; align-items: stretch; margin: 0; gap: 6px; }
+  #washModeSession .wash-mode-actions button { width: 100%; min-height: 34px; padding: 4px 8px; font-size: 13px; }
+  #washModeSession #washModeSessionMessage { grid-column: 2; grid-row: auto; margin: 2px 0 0; font-size: 12px; }
+  .wash-header-location { font-size: 14px; align-self: center; }
+  .wash-shelf-overview { max-height: calc(100dvh - 150px); padding: 0; }
+  .wash-compartment-grid { grid-template-columns: repeat(var(--wash-columns, 1), 96px); gap: 5px; }
+  .wash-compartment-choice { width: 96px; min-width: 96px; height: 48px; min-height: 48px; padding: 2px 4px; font-size: 12px; line-height: 1.15; overflow-wrap: normal; word-break: normal; hyphens: manual; aspect-ratio: auto; }
+  .shop-layout { display: grid; grid-template-columns: minmax(230px, 320px) minmax(0, 1fr); gap: 14px; align-items: start; }
+  .shop-left { position: sticky; top: 0; gap: 8px; }
+  .shop-right { padding: 10px; border: 0.5px solid var(--border); border-radius: 14px; background: var(--surface-2); min-height: 120px; }
+  .shop-placeholder { display: flex; align-items: center; justify-content: center; min-height: 100px; color: var(--text-muted); text-align: center; }
+  .shop-placeholder[hidden] { display: none; }
+  .shop-barcode-tile { max-width: none; aspect-ratio: auto; min-height: 110px; }
+  .shop-barcode-tile.compact { min-height: 52px; height: 52px; }
+  .shop-results { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); max-height: calc(100dvh - 260px); overflow: auto; }
+  .modal-box.shop-mode-box { gap: 8px; padding-top: 6px; padding-bottom: 6px; }
+  .shop-detail { grid-template-columns: minmax(0, 190px) minmax(0, 1fr); gap: 8px 14px; align-items: start; }
+  .shop-detail-cover { max-width: 190px; }
+  .shop-left .shop-player-slot { margin-top: 0; padding-top: 0; }
+  .shop-left { max-height: calc(100dvh - 112px); overflow-y: auto; }
+  .shop-mode-box .wash-mode-header { margin: 0; }
+  .shop-mode-box .wash-mode-header .icon-btn { width: 34px; min-width: 34px; height: 34px; min-height: 34px; }
+  .shop-left .shop-barcode-tile { min-height: 44px; padding: 4px 8px; }
+  .shop-left .shop-barcode-tile svg { width: 20px; height: 20px; }
+  .shop-listen-choices .wash-mode-message, .shop-listen-choices p { font-size: 11px; margin: 0; }
+  .shop-right { align-self: start; max-height: calc(100dvh - 112px); overflow-y: auto; }
+  .shop-right:has(#shopResults:not(:empty):not([hidden])) .shop-placeholder { display: none; }
+  .shop-right .shop-results { max-height: none; overflow: visible; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .shop-left .shop-listen-choices { margin-bottom: 0; }
+  .shop-left .shop-barcode-tile { min-height: 64px; flex-direction: row; padding: 8px; }
+  .shop-detail-info { gap: 3px; align-self: center; }
+  .shop-detail-info h3 { font-size: 16px; }
+  .shop-detail-info p { font-size: 13px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .collection-grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 8px; max-width: none; }
+  .desktop-form-shell:not(.search-collapsed) .collection-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .collection-grid .media-info { padding: 6px 8px 8px; }
+  .collection-grid .media-info .title { font-size: 11px; }
+  .collection-grid .media-info .artist { font-size: 10px; }
+  .collection-grid .release-badge { font-size: 9px; padding: 1px 5px; }
+  .collection-grid .price-bubble { font-size: 10px; padding: 2px 6px; }
+  .collection-grid .year-badge { font-size: 9px; padding: 1px 5px; }
+  .modal-box.album-editor-box, .album-editor-box { width: min(860px, calc(100vw - 16px)); max-width: 860px; padding: 8px 12px; }
+  .album-editor-heading { margin-bottom: 6px; }
+  .album-editor-form .form-top { grid-template-columns: minmax(190px, 250px) minmax(0, 1fr); align-items: start; gap: 12px; margin-bottom: 6px; }
+  .album-editor-form .form-cover-wrap { width: 76px; height: 76px; }
+  .album-editor-form .album-cover-meta { gap: 4px 8px; }
+  .album-editor-form .form-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; min-width: 0; }
+  .album-editor-form .album-identity-fields { display: contents; }
+  .album-editor-form .form-fields > #discogsAlternativeResults,
+  .album-editor-form .form-fields > .alternative-results { grid-column: 1 / -1; }
+  .album-editor-form .form-fields .price-design-row { margin-top: 0; }
+  .album-editor-form .select-row { flex-wrap: nowrap; margin-bottom: 6px; gap: 8px; }
+  .album-editor-form .select-row select { min-width: 0; }
+  .album-editor-form .editor-select-field { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .album-editor-form .editor-select-field > span { flex: 0 0 auto; }
+  .album-editor-form #fNotes { min-height: 36px; height: 36px; margin: 0 0 6px; }
+  .album-editor-form .genre-chip-input, .album-editor-form .name-chip-field { min-height: 34px; height: 34px; padding: 2px 8px; flex-wrap: nowrap; overflow: hidden; }
+  .album-editor-form .genre-chip { flex: 0 0 auto; padding: 1px 6px; font-size: 11px; line-height: 1.4; white-space: nowrap; }
+  .album-editor-form .genre-chip-text, .album-editor-form .name-chip-field .genre-chip-text { flex: 1 1 40px; width: 40px; min-width: 40px; font-size: 13px; }
+  .album-editor-form .form-fields .price-design-row .icon-btn, .album-editor-form .album-genre-row .icon-btn { width: 34px; height: 34px; min-width: 34px; min-height: 34px; }
+  .album-editor-form .form-fields .price-design-row #fManualPrice, .album-editor-form .form-fields .price-design-row #fManualPriceCurrency { height: 34px; padding-top: 2px; padding-bottom: 2px; }
+  .album-editor-form .form-cover-wrap { width: 104px; height: 104px; }
+  .album-editor-form .form-top { grid-template-columns: minmax(250px, 290px) minmax(0, 1fr); }
+  .album-editor-form input, .album-editor-form select { padding-top: 6px; padding-bottom: 6px; }
+  .album-editor-form .editor-collapsible { margin-top: 6px !important; }
+  .album-editor-form .editor-collapsible summary { padding: 6px 10px; font-size: 12px; }
+  .album-editor-form .select-row select { padding: 4px 8px; min-height: 0; }
+  .album-editor-form .form-actions { margin-top: 6px; }
+  .album-editor-form .form-actions button { min-height: 32px; padding: 4px 12px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  /* Nutzerkarten */
+  .user-card-grid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  .user-card { min-height: 0; gap: 6px; padding: 10px 12px; border-radius: 12px; }
+  .user-card-head { gap: 0; padding-right: 30px; }
+  .user-card-title { font-size: 14px; }
+  .user-card-owner, .user-card-uid { font-size: 11px; }
+  .user-card-fav { width: 26px; min-width: 26px; height: 26px; min-height: 26px; top: 8px; right: 8px; }
+  .user-card-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .user-card-stat { padding: 4px 6px; border-radius: 8px; gap: 0; }
+  .user-card-stat span { font-size: 9px; }
+  .user-card-stat strong { font-size: 12px; white-space: nowrap; line-height: 1.2; }
+  .user-card-stat span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+  .user-card-uid { display: none; }
+  .user-card-stats { flex: 0 0 auto; }
+  .user-card-actions button { min-height: 28px; padding: 3px 8px; font-size: 12px; }
+  /* Waschansicht */
+  .modal-box.wash-mode-box { padding: 12px 16px 14px; }
+  #washModeSession .wash-cleaner-stage { zoom: .66; margin-bottom: 14px; }
+  #washModeSession .wash-current-vinyl { row-gap: 2px; padding-bottom: 6px; }
+  #washModeSession .wash-mode-title, #washModeSession .wash-mode-artist { font-size: 15px; line-height: 1.25; }
+  /* Discogs-Auswahl, Sammelimport, Cover-Suche */
+  .modal-box.discogs-match-box { width: min(900px, calc(100vw - 16px)); max-width: 900px; max-height: calc(100dvh - 16px) !important; padding: 10px 14px; overflow: hidden !important; }
+  .discogs-match-box .discogs-match-content { grid-template-columns: minmax(190px, 250px) minmax(0, 1fr); gap: 14px; overflow: hidden; padding-right: 0; }
+  .discogs-match-left, .discogs-match-right { min-height: 0; overflow-y: auto; gap: 6px; }
+  .discogs-match-right { display: flex; }
+  .match-current { grid-template-columns: 72px minmax(0, 1fr); gap: 8px; }
+  .match-current img { width: 72px; border-radius: 8px; }
+  .match-current-info strong { font-size: 13px; margin-bottom: 2px; }
+  .match-current-info span { font-size: 11px; line-height: 1.35; }
+  .match-search-header { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px; padding-bottom: 6px; }
+  .match-search-form { margin-top: 4px; }
+  .match-search-form input, .match-search-form button { padding: 6px 10px; }
+  .match-status { margin: 2px 0 0; }
+  .match-results { max-height: none; gap: 6px; flex: 1; min-height: 0; overflow-y: auto; }
+  .match-item { grid-template-columns: 52px minmax(0, 1fr) auto; padding: 6px 8px; gap: 8px; }
+  .match-item img { width: 52px; }
+  .discogs-match-box .modal-actions { padding-top: 8px; margin-top: 6px; flex-wrap: nowrap; }
+  .cover-search-box { max-height: calc(100dvh - 16px); padding: 10px 14px; }
+  .cover-search-grid { max-height: calc(100dvh - 90px); grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  /* Tracklist */
+  .album-editor-form .tracklist-box { max-height: 120px; column-count: 2; column-gap: 20px; margin-bottom: 6px; padding: 6px 10px; }
+  .album-editor-form .track-row { break-inside: avoid; font-size: 12px; padding: 2px 0; }
+  .match-tracklist-preview { column-count: 2; column-gap: 16px; }
+  /* Vinyl gestalten */
+  .modal-box.vinyl-editor-box { width: min(960px, calc(100vw - 16px)); max-width: 960px; height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); padding: 8px 14px; }
+  .vinyl-editor-box > .vinyl-editor-toolbar { align-items: center; margin-bottom: 4px; }
+  .vinyl-editor-box > .vinyl-editor-toolbar .modal-title { margin: 0; }
+  .vinyl-editor-layout { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 12px; }
+  .vinyl-editor-preview { position: static; grid-template-columns: 150px minmax(0, 1fr); grid-template-rows: auto; align-content: center; gap: 12px; padding: 10px; overflow: auto; }
+  .vinyl-editor-preview .vinyl-editor-disc { width: 150px; max-width: 150px; }
+  .vinyl-editor-preview .vinyl-editor-meta { grid-template-columns: 1fr 1fr; gap: 6px 8px; align-self: center; }
+  .vinyl-editor-preview .vinyl-transparency-label { grid-column: 1 / -1; }
+  .vinyl-editor-meta input[type="color"] { height: 30px; }
+  .vinyl-editor-controls { min-height: 0; overflow-y: auto; }
+  /* Sammlungstabelle */
+  .collection-table-wrap { overflow-x: hidden; max-width: 100%; }
+  .collection-table { min-width: 0; width: 100%; table-layout: auto; font-size: 12px; }
+  .collection-table th, .collection-table td { padding: 5px 6px; }
+  .collection-table th { font-size: 10px; letter-spacing: .02em; }
+  .collection-table .cover-cell img { width: 38px; height: 38px; border-radius: 6px; }
+  .collection-table .title-cell { word-break: break-word; }
+  .collection-table .title-cell strong { font-size: 13px; }
+  .collection-table .title-cell span, .collection-table .title-cell div { font-size: 11px !important; }
+  .collection-table .col-genre, .collection-table .col-location { max-width: 110px; word-break: break-word; }
+  .collection-table .col-color { width: 40px; text-align: center; }
+  .table-actions { gap: 4px; flex-wrap: nowrap; }
+  .table-actions button { width: 28px; height: 28px; min-width: 28px; }
+  .table-actions button svg { width: 13px; height: 13px; }
+  /* Zufallsergebnis */
+  .modal-box.storage-result-box { width: min(900px, calc(100vw - 16px)); max-width: 900px; padding: 10px 14px; }
+  .storage-result-details:not([hidden]) { display: grid; grid-template-columns: 130px minmax(0, 1fr) 170px; column-gap: 16px; align-items: start; }
+  .storage-result-header { grid-column: 1 / -1; margin-bottom: 8px; align-items: center; }
+  .storage-result-header > div { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  .storage-result-details .modal-title { margin: 0; font-size: 17px; }
+  .storage-result-content-layout, .storage-result-layout { display: contents; }
+  .storage-result-media { grid-column: 1; grid-template-columns: 1fr; gap: 6px; }
+  .storage-result-media-label { display: none; }
+  .storage-result-cover, .storage-result-disc { width: 120px; max-width: 120px; }
+  .storage-result-count { font-size: 11px; }
+  .storage-result-layout > section:not(.storage-result-media) { grid-column: 2; min-width: 0; }
+  .storage-result-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 10px; margin-bottom: 8px; }
+  .storage-result-tracklist { max-height: calc(100dvh - 190px); column-count: 2; column-gap: 16px; display: block; }
+  .storage-result-tracklist li { break-inside: avoid; }
+  .storage-result-footer { grid-column: 3; grid-row: 2; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 6px; margin: 0; }
+  .storage-result-footer button { width: 100%; justify-content: center; min-height: 34px; }
+  .vinyl-editor-layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
+  .vinyl-editor-preview { grid-template-columns: 120px minmax(0, 1fr); gap: 8px; }
+  .vinyl-editor-preview .vinyl-editor-disc { width: 120px; max-width: 120px; }
+  .vinyl-layer-row { padding: 6px 8px; }
+  .vinyl-layer-fields { gap: 4px; margin-top: 4px; }
+  .vinyl-layer-fields select, .vinyl-layer-fields input[type="number"], .vinyl-layer-fields input[type="color"] { height: 26px; min-height: 0; padding: 2px 4px; font-size: 11px; border-radius: 8px; }
+  .vinyl-layer-fields select { min-width: 0; width: 100%; }
+  .vinyl-layer-main-row, .vinyl-layer-liquid-main { grid-template-columns: minmax(0, 1fr) 34px auto auto; gap: 4px; }
+  .vinyl-layer-liquid-main { grid-template-columns: minmax(0, 1fr) 34px auto; }
+  .vinyl-layer-fields input[type="color"] { width: 34px; }
+  .vinyl-layer-count { grid-template-columns: auto 40px; }
+  .vinyl-layer-count input[type="number"] { width: 40px; }
+  .vinyl-layer-actions button { width: 24px; min-width: 24px; height: 26px; }
+  .vinyl-layer-detail-row { grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); gap: 4px; }
+  .vinyl-layer-fields .angle-fields { grid-column: auto; }
+  .vinyl-layer-fields label { font-size: 10px; }
+  .vinyl-editor-footer { margin-top: 6px; }
+}
 @media (hover:none) and (pointer:coarse) {
   input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]), select, textarea { font-size:16px !important; }
 }
 </style>
 </head>
 <body>
+<div id="appLoading" class="app-loading" role="status" aria-live="polite"><div class="app-loading-title" id="appLoadingTitle"></div><div class="app-loading-block"><span></span></div><p id="appLoadingText">Wird geladen …</p></div>
 
 <!-- Login / Registrierung -->
 <div id="authOverlay">
@@ -4656,7 +4894,8 @@
         </div>
       </div>
       <button id="viewStorageBtn" class="icon-btn" title="Lageransicht öffnen" aria-label="Lageransicht öffnen" style="display:none;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h18v16H3zM3 10h18M9 4v16M15 4v16" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <svg class="storage-icon-storage" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h18v16H3zM3 10h18M9 4v16M15 4v16" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <svg class="storage-icon-grid" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" hidden><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
       </button>
       <button id="shopModeHeaderBtn" class="icon-btn" type="button" title="Plattenladen-Modus" aria-label="Plattenladen-Modus">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9h16M9 20v-6h6v6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>
@@ -5363,7 +5602,7 @@
 </ul>
 <p>Das Schmutz-Effekt-Häkchen in den Einstellungen färbt Platten, die über ein Jahr nicht gewaschen wurden.</p></div></details>
     <details id="doc-shop" data-keywords="plattenladen laden barcode suche wunschliste vorschau"><summary>Plattenladen-Modus</summary><div class="docs-section">
-<p>Für den Einkauf: Button in der Kopfleiste (Desktop ab ca. 1000 px) oder Einstellungen → <b>Plattenladen</b>.</p>
+<p>Für den Einkauf: Button (Laden-Symbol) immer in der Kopfleiste. Wechselst du oben in die Lageransicht, den Waschmodus oder zu anderen Nutzern, wird der Plattenladen automatisch beendet.</p>
 <ul>
 <li>Suche nach Titel/Interpret, Barcode oder Discogs-Link; das Kamera-Symbol scannt einen Barcode.</li>
 <li>Ein einzelner Treffer (z. B. per Barcode) wird sofort groß angezeigt, sonst wählst du aus der Trefferliste.</li>
@@ -5541,6 +5780,7 @@
       <input type="search" enterkeyhint="search" id="shopSearchInput" placeholder="Titel, Interpret, Barcode oder Discogs-Link…" autocomplete="off" aria-label="Album suchen">
     </div>
     <button type="button" id="shopBarcodeBtn" class="shop-barcode-tile" aria-label="Barcode scannen"><svg  viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7V5h2M18 5h2v2M20 17v2h-2M6 19H4v-2M8 8v8M11 8v8M14 8v8M17 8v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Barcode scannen</span></button>
+    <div class="shop-player-slot" id="shopPlayerSlot"><div class="shop-listen-choices" id="shopListenChoices"></div></div>
     <p class="wash-mode-message" id="shopMessage" aria-live="polite"></p>
     <div class="shop-results" id="shopResults"></div>
     </div>
@@ -5549,7 +5789,6 @@
     <section class="shop-detail" id="shopDetail" hidden></section>
     </div>
     </div>
-    <div class="shop-player-slot" id="shopPlayerSlot"><div class="shop-listen-choices" id="shopListenChoices"></div></div>
   </div>
 </div>
 
@@ -5557,21 +5796,18 @@
   <div class="modal-box wash-mode-box">
     <div class="wash-mode-header">
       <p class="modal-title" id="washModeTitle">Waschmodus</p>
+      <p class="wash-mode-message wash-header-location" id="washModeLocation"></p>
       <button type="button" id="closeWashModeBtn" class="icon-btn" title="Waschen beenden" aria-label="Waschen beenden">×</button>
     </div>
     <section id="washModeSelection">
-      <p class="wash-mode-message">Wähle ein Fach im Regal, das du jetzt wäschst.</p>
-      <div class="wash-mode-actions">
-        <button type="button" id="washAllCompartmentsBtn" class="primary">Alle Fächer waschen · älteste zuerst</button>
-      </div>
       <div class="wash-shelf-overview" id="washShelfOverview"></div>
-      <p class="wash-mode-message" id="washModeSelectionMessage" aria-live="polite"></p>
-      <div class="wash-mode-actions">
+      <p class="wash-mode-message" id="washModeSelectionMessage" aria-live="polite" hidden></p>
+      <div class="wash-mode-actions wash-selection-actions">
+        <button type="button" id="washAllCompartmentsBtn" class="primary">Alle Fächer waschen · älteste zuerst</button>
         <button type="button" id="endWashModeFromSelectionBtn">Waschen beenden</button>
       </div>
     </section>
     <section id="washModeSession" hidden aria-live="polite">
-      <p class="wash-mode-message" id="washModeLocation"></p>
       <div class="wash-current-vinyl" id="washCurrentVinyl">
         <div class="wash-cleaner-stage" id="washCleanerStage">
           <div id="washCurrentDisc" class="vinyl-editor-disc wash-current-disc"></div>
@@ -5596,8 +5832,8 @@
             <option value="Schlecht">Schlecht</option>
           </select>
         </label>
+        <p class="wash-mode-message" id="washModeSessionMessage" aria-live="polite"></p>
       </div>
-      <p class="wash-mode-message" id="washModeSessionMessage" aria-live="polite"></p>
       <div class="wash-mode-actions">
         <button type="button" id="listenToWashAlbumBtn">Anhören</button>
         <button type="button" id="markWashCompartmentBtn">Ganzes Fach als gewaschen markieren</button>
@@ -5970,6 +6206,54 @@ function getCollectionViewSettings() {
 
 const authOverlay = document.getElementById('authOverlay');
 const appRoot = document.getElementById('appRoot');
+const appLoadingEl = document.getElementById('appLoading');
+let appLoadingCount = 1;
+let appLoadingFallback = setTimeout(() => { appLoadingCount = 0; hideAppLoading(true); }, 20000);
+const APP_LOADING_JOKES = [
+  'Platten werden abgestaubt …',
+  'Nadel wird aufgesetzt …',
+  'Die Rillen werden gezählt …',
+  'Cover werden geradegerückt …',
+  'Plattenspieler wärmt sich auf …',
+  'A-Seite oder B-Seite? Moment …',
+  'Fächer werden alphabetisch beleidigt …',
+  'Staub wird weggepustet …',
+  'Der Plattenladen-Typ sucht noch den Schlüssel …',
+  'Sammlung wird sortiert, bitte nicht stören …'
+];
+function showAppLoading(text, fromColor, toColor, title) {
+  document.getElementById('appLoadingTitle').textContent = title || '';
+  const from = fromColor || getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  appLoadingEl.style.setProperty('--la', from);
+  appLoadingEl.style.setProperty('--lb', toColor || from);
+  const fadeEl = appLoadingEl.querySelector('.app-loading-block span');
+  fadeEl.style.animation = 'none';
+  void fadeEl.offsetWidth;
+  fadeEl.style.animation = '';
+  document.getElementById('appLoadingText').textContent = text || APP_LOADING_JOKES[Math.floor(Math.random() * APP_LOADING_JOKES.length)];
+  appLoadingCount++;
+  appLoadingEl.hidden = false;
+  appLoadingEl.classList.remove('done');
+}
+function hideAppLoading(force) {
+  if (!force) appLoadingCount = Math.max(0, appLoadingCount - 1);
+  if (appLoadingCount > 0) return;
+  clearTimeout(appLoadingFallback);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (appLoadingCount > 0) return;
+    appLoadingEl.classList.add('done');
+    setTimeout(() => { if (appLoadingCount === 0) appLoadingEl.hidden = true; }, 250);
+  }));
+}
+async function withAppLoading(task, text, fromColor, toColor, title) {
+  showAppLoading(text, fromColor, toColor, title);
+  const minimumShown = new Promise(resolve => setTimeout(resolve, 1700));
+  try {
+    const result = await task();
+    await minimumShown;
+    return result;
+  } finally { hideAppLoading(); }
+}
 const authTitle = document.getElementById('authTitle');
 const authSub = document.getElementById('authSub');
 const authUsernameInput = document.getElementById('authUsername');
@@ -6103,9 +6387,9 @@ logoutBtn.addEventListener('click', async () => {
   await auth.signOut();
 });
 
-async function loadCloudData(uid) {
+async function loadCloudData(uid, prefetchedSnap) {
   const docRef = db.collection('users').doc(uid);
-  const docSnap = await docRef.get();
+  const docSnap = prefetchedSnap || await docRef.get();
   const data = docSnap.exists ? docSnap.data() : { collection: [], title: 'Vinyl-Sammlung', settings: {} };
   suppressNextCloudSave = true;
   ownCollection = Array.isArray(data.collection)
@@ -6466,8 +6750,8 @@ function scheduleUserCardsRender() {
   userCardsRenderFrame = requestAnimationFrame(() => { userCardsRenderFrame = 0; renderUserCards(); });
 }
 
-async function fetchUserDoc(user) {
-  if (userDocCache.has(user.uid)) return userDocCache.get(user.uid);
+async function fetchUserDoc(user, force) {
+  if (!force && userDocCache.has(user.uid)) return userDocCache.get(user.uid);
   const snap = await db.collection('users').doc(user.uid).get();
   const data = snap.exists ? (snap.data() || {}) : {};
   const items = Array.isArray(data.collection) ? data.collection : [];
@@ -6480,21 +6764,23 @@ function sanitizeAccent(value) {
   return isValidAccentColor(value) ? value : '#d4537e';
 }
 
-function renderUserList(users) {
+async function renderUserList(users) {
   knownUsers = users.slice();
-  userDocCache.delete(currentUid);
-  renderUserCards();
-  knownUsers.forEach(user => {
-    if (user.uid === currentUid) {
-      const items = ownCollection;
-      userDocCache.set(user.uid, { title: ownCollectionTitle, items, stats: computeCollectionStats(items), accent: getAccentColor() });
-      scheduleUserCardsRender();
-      return;
-    }
-    userDocCache.delete(user.uid);
-    fetchUserDoc(user).then(scheduleUserCardsRender).catch(error => console.warn('Statistik laden fehlgeschlagen:', user.username, error));
-  });
+  const token = ++userListRenderToken;
+  const own = knownUsers.find(user => user.uid === currentUid);
+  if (own) userDocCache.set(own.uid, { title: ownCollectionTitle, items: ownCollection, stats: computeCollectionStats(ownCollection), accent: getAccentColor() });
+  const others = knownUsers.filter(user => user.uid !== currentUid);
+  const refresh = others.map(user => fetchUserDoc(user, true).catch(error => { console.warn('Statistik laden fehlgeschlagen:', user.username, error); }));
+  if (others.every(user => userDocCache.has(user.uid))) {
+    renderUserCards();
+    Promise.all(refresh).then(() => { if (token === userListRenderToken) scheduleUserCardsRender(); });
+    return;
+  }
+  userList.innerHTML = '<div class="hint">Lade Sammlungen …</div>';
+  await Promise.all(refresh);
+  if (token === userListRenderToken) renderUserCards();
 }
+let userListRenderToken = 0;
 
 userSearchInput?.addEventListener('input', renderUserCards);
 
@@ -6583,6 +6869,7 @@ function updateViewingInfo() {
     : `Besitzt ${viewedUsername || 'Nutzer'}`;
   // Hide the small viewing info label; user details belong into the user menu only
   viewingInfoLabel.style.display = 'none';
+  previewAccentColor(viewingOwnCollection ? getAccentColor() : remoteAccentColor);
   if (viewingOwnCollection) {
     showOwnCollectionBtn.style.display = 'none';
     if (viewStorageBtn) viewStorageBtn.style.display = 'inline-flex';
@@ -6599,22 +6886,39 @@ function updateViewingInfo() {
   }
 }
 
-async function viewRemoteCollection(uid, username) {
+let remoteAccentColor = null;
+
+function viewRemoteCollection(uid, username) {
+  return withAppLoading(() => viewRemoteCollectionInner(uid, username), `Besuche ${username} …`, null, sanitizeAccent(userDocCache.get(uid)?.accent), getDisplayName(userDocCache.get(uid)?.title || `${username} - Sammlung`));
+}
+
+async function viewRemoteCollectionInner(uid, username) {
   if (!uid) return;
-  if (viewingOwnCollection && currentUid) {
+  if (viewingOwnCollection && currentUid && saveDebounceTimer) {
     await saveCloudDataNow();
   }
   try {
-    const docSnap = await db.collection('users').doc(uid).get();
-    if (!docSnap.exists) {
-      await showAlert('Die Sammlung dieses Benutzers konnte nicht gefunden werden.');
-      return;
+    let items, title, accent;
+    const cached = userDocCache.get(uid);
+    if (cached) {
+      items = cached.items;
+      title = cached.title;
+      accent = cached.accent;
+    } else {
+      const docSnap = await db.collection('users').doc(uid).get();
+      if (!docSnap.exists) {
+        await showAlert('Die Sammlung dieses Benutzers konnte nicht gefunden werden.');
+        loadUserList();
+        return;
+      }
+      const data = docSnap.data() || {};
+      items = Array.isArray(data.collection) ? data.collection : [];
+      title = data.title;
+      accent = data.settings?.accentColor;
     }
-    const data = docSnap.data() || {};
-    collection = Array.isArray(data.collection)
-      ? data.collection.map(item => { item.color = normalizeColor(item.color); return item; })
-      : [];
-    collectionTitle = data.title || `${username} - Sammlung`;
+    collection = items.map(item => { item.color = normalizeColor(item.color); return item; });
+    collectionTitle = title || `${username} - Sammlung`;
+    remoteAccentColor = accent;
     viewingOwnCollection = false;
     viewedUid = uid;
     viewedUsername = username;
@@ -6625,6 +6929,7 @@ async function viewRemoteCollection(uid, username) {
   } catch (err) {
     console.error('Remote-Sammlung laden fehlgeschlagen:', err);
     await showAlert('Fehler beim Laden der Sammlung. Bitte versuche es erneut.');
+    loadUserList();
   }
 }
 
@@ -6671,6 +6976,8 @@ async function importUserCollection(uid, username) {
 
 auth.onAuthStateChanged(async user => {
   if (user) {
+    showAppLoading();
+    try {
     currentUid = user.uid;
     spotifyClientId = '';
     youtubeApiKey = '';
@@ -6680,8 +6987,10 @@ auth.onAuthStateChanged(async user => {
     if (youtubeInput) youtubeInput.value = '';
     updateListeningCredentialsStatus('Private Wiedergabe-Einstellungen werden geladen …');
     // Benutzername aus Firestore holen (zuverlässiger als aus der Pseudo-E-Mail zu raten)
+    let userDocSnap = null;
     try {
       const docSnap = await db.collection('users').doc(user.uid).get();
+      userDocSnap = docSnap;
       currentUsername = (docSnap.exists && docSnap.data().username) || (user.email || '').split('@')[0];
     } catch (e) {
       currentUsername = (user.email || '').split('@')[0];
@@ -6690,7 +6999,11 @@ auth.onAuthStateChanged(async user => {
     authOverlay.classList.add('hidden');
     appRoot.classList.remove('hidden');
     setAuthLoading(false);
-    await loadCloudData(user.uid);
+    await loadCloudData(user.uid, userDocSnap);
+    } finally {
+      appLoadingCount = 0;
+      hideAppLoading(true);
+    }
     await loadListeningCredentials(user.uid);
     await restoreListeningSession();
     await completeSpotifyAuthCallback().catch(error => {
@@ -6713,6 +7026,8 @@ auth.onAuthStateChanged(async user => {
     appRoot.classList.add('hidden');
     authPasswordInput.value = '';
     setAuthLoading(false);
+    appLoadingCount = 0;
+    hideAppLoading(true);
   }
 });
 
@@ -6729,8 +7044,10 @@ function saveOwnCollectionData() {
 
 async function showOwnCollection() {
   if (!currentUid) return;
-  await saveCloudDataNow();
-  await loadCloudData(currentUid);
+  await withAppLoading(async () => {
+    if (saveDebounceTimer) await saveCloudDataNow();
+    await loadCloudData(currentUid);
+  }, 'Kehre zurück nach Hause …', null, getAccentColor(), getDisplayName(ownCollectionTitle));
   if (userMenuPanel) userMenuPanel.classList.remove('open');
   document.body.classList.remove('user-menu-open');
 }
@@ -6746,9 +7063,9 @@ if (toggleUserMenuBtn && userMenuPanel) {
       document.body.classList.remove('user-menu-open');
       return;
     }
-    await loadUserList();
     userMenuPanel.classList.add('open');
     document.body.classList.add('user-menu-open');
+    await loadUserList();
   });
 }
 if (closeUserMenuBtn && userMenuPanel) {
@@ -6988,6 +7305,15 @@ function setAccentColor(color) {
   updateFavicon(value);
   const input = document.getElementById('accentColorInput');
   if (input) input.value = value;
+}
+
+function previewAccentColor(color) {
+  const value = isValidAccentColor(color) ? color : '#d4537e';
+  const root = document.documentElement;
+  root.style.setProperty('--accent', value);
+  root.style.setProperty('--accent-bg', hexToRgba(value, 0.12));
+  root.style.setProperty('--accent-border', hexToRgba(value, 0.4));
+  updateFavicon(value);
 }
 
 setAccentColor(getAccentColor());
@@ -8171,7 +8497,18 @@ function setShopMessage(text) {
 }
 
 const shopDesktopQuery = window.matchMedia('(min-width: 900px)');
+const shopCompactLandscapeQuery = window.matchMedia('(orientation: landscape) and (max-height: 520px)');
+function placeShopResults() {
+  const results = document.getElementById('shopResults');
+  const target = shopCompactLandscapeQuery.matches
+    ? document.querySelector('.shop-right')
+    : document.querySelector('.shop-left');
+  if (results.parentElement !== target) target.appendChild(results);
+}
+shopCompactLandscapeQuery.addEventListener('change', placeShopResults);
+placeShopResults();
 document.body.appendChild(document.getElementById('shopModeOverlay'));
+document.body.appendChild(document.getElementById('albumListeningOverlay'));
 let shopSavedTitle = null;
 
 function updateShopTop() {
@@ -8185,6 +8522,7 @@ function openShopMode() {
   if (shopSavedTitle === null) shopSavedTitle = titleEl.textContent;
   titleEl.textContent = currentUsername || '';
   document.body.classList.add('shop-active');
+  document.getElementById('shopModeHeaderBtn').classList.add('toggle-active');
   updateShopTop();
   resetShopMode();
   document.getElementById('shopModeOverlay').classList.add('open');
@@ -8210,6 +8548,7 @@ function closeShopMode() {
   const shopDock = document.getElementById('albumListeningDock');
   if (shopDock.parentElement.id === 'shopPlayerSlot') document.body.appendChild(shopDock);
   document.body.classList.remove('shop-active');
+  document.getElementById('shopModeHeaderBtn').classList.remove('toggle-active');
   if (shopSavedTitle !== null) document.getElementById('collectionTitleDisplay').textContent = shopSavedTitle;
   shopSavedTitle = null;
   document.getElementById('shopModeOverlay').classList.remove('open');
@@ -8279,7 +8618,7 @@ function showShopDetail(entry) {
   shopSelectedEntry = entry;
   setShopMessage('');
   const detail = document.getElementById('shopDetail');
-  document.getElementById('shopResults').hidden = !shopDesktopQuery.matches;
+  document.getElementById('shopResults').hidden = !shopDesktopQuery.matches || shopCompactLandscapeQuery.matches;
   document.getElementById('shopPlaceholder').hidden = true;
   const existing = findMatchingCollectionItems(entry);
   const year = entry.year || entry.album?.year || (entry.album?.releaseDate || '').slice(0, 4);
@@ -8317,9 +8656,14 @@ function showShopDetail(entry) {
   }
   detail.hidden = false;
   detail.querySelector('[data-shop="listen"]').addEventListener('click', () => {
+    const listenItem = { title: entry.title, artist: entry.artist, coverUrl: entry.cover, year };
+    if (shopCompactLandscapeQuery.matches) {
+      openAlbumListening(listenItem);
+      return;
+    }
     const dock = document.getElementById('albumListeningDock');
     document.getElementById('shopPlayerSlot').appendChild(dock);
-    openAlbumListening({ title: entry.title, artist: entry.artist, coverUrl: entry.cover, year }, document.getElementById('shopListenChoices'));
+    openAlbumListening(listenItem, document.getElementById('shopListenChoices'));
   });
   const addButton = detail.querySelector('[data-shop="add"]');
   addButton.addEventListener('click', async () => {
@@ -8340,12 +8684,20 @@ function showShopDetail(entry) {
 
 ['startShopModeBtn', 'shopModeHeaderBtn'].forEach(id => document.getElementById(id).addEventListener('click', () => {
   settingsPanel.classList.remove('open');
-  openShopMode();
+  if (document.body.classList.contains('shop-active')) closeShopMode();
+  else openShopMode();
 }));
 window.addEventListener('resize', () => {
   if (document.body.classList.contains('shop-active')) updateShopTop();
 });
 document.getElementById('closeShopModeBtn').addEventListener('click', closeShopMode);
+document.addEventListener('click', event => {
+  if (!document.body.classList.contains('shop-active')) return;
+  const button = event.target.closest('#viewStorageBtn, #toggleUserMenuBtn, #showOwnCollectionBtn, #washModeHeaderBtn, #startWashModeBtn, #storageRandomPickBtn');
+  if (!button) return;
+  closeShopMode();
+  if (button.id === 'viewStorageBtn' && activeView === 'storage') event.stopPropagation();
+}, true);
 let shopLastQuery = '';
 document.getElementById('shopSearchInput').addEventListener('focus', () => {
   if (document.getElementById('shopDetail').hidden) return;
@@ -14500,6 +14852,8 @@ function setView(view, persist = true) {
     viewStorageBtn.style.display = viewingOwnCollection ? 'inline-flex' : 'none';
     viewStorageBtn.classList.toggle('toggle-active', view === 'storage');
     viewStorageBtn.title = view === 'storage' ? 'Zur Sammlung wechseln' : 'Lageransicht öffnen';
+    viewStorageBtn.querySelector('.storage-icon-storage').hidden = view === 'storage';
+    viewStorageBtn.querySelector('.storage-icon-grid').hidden = view !== 'storage';
     viewStorageBtn.setAttribute('aria-label', viewStorageBtn.title);
   }
   if (persist) saveCloudDataDebounced();
@@ -14739,7 +15093,7 @@ function renderStorageRandomResult(item) {
     : '<li>Keine Tracklist hinterlegt</li>';
   document.getElementById('storageRandomResultOverlay').classList.add('open');
   const tracksDetails = document.getElementById('storageResultTracksDetails');
-  if (tracksDetails) tracksDetails.open = !window.matchMedia('(max-width: 900px)').matches;
+  if (tracksDetails) tracksDetails.open = !window.matchMedia('(max-width: 900px)').matches || window.matchMedia('(orientation: landscape) and (max-height: 520px)').matches;
   if (window.matchMedia('(min-width: 901px)').matches) {
     openAlbumListening(item, document.getElementById('storageRandomInlineListening'));
   }
@@ -14989,6 +15343,7 @@ let activeStorageDropTarget = null;
 let suppressStorageClickUntil = 0;
 let draggedStorageShelfId = null;
 let storagePlacementMode = false;
+let storageCollapsedRailOpen = false;
 
 function applyStoragePaneLayout(layout) {
   if (!layout) return;
@@ -15003,7 +15358,9 @@ function applyStoragePaneLayout(layout) {
     layout.style.gridTemplateColumns = 'minmax(0, 1fr)';
     layout.style.gridTemplateRows = `minmax(0, ${storagePaneSplit}fr) 8px minmax(0, ${1 - storagePaneSplit}fr)`;
   } else {
-    layout.style.gridTemplateColumns = `minmax(0, ${storagePaneSplit}fr) 8px minmax(220px, ${1 - storagePaneSplit}fr)`;
+    const usable = Math.max(1, layout.clientWidth - 8);
+    const split = Math.min(storagePaneSplit, Math.max(0.28, 1 - 220 / usable));
+    layout.style.gridTemplateColumns = `minmax(0, ${split}fr) 8px minmax(0, ${1 - split}fr)`;
     layout.style.gridTemplateRows = 'minmax(0, 1fr)';
   }
 }
@@ -15085,10 +15442,10 @@ document.addEventListener('pointermove', event => {
   if (!storagePaneResize || storagePaneResize.pointerId !== event.pointerId) return;
   event.preventDefault();
   const rect = storagePaneResize.layout.getBoundingClientRect();
-  const position = storagePaneResize.orientation === 'vertical'
+  const position = (storagePaneResize.orientation === 'vertical'
     ? event.clientY - rect.top
-    : event.clientX - rect.left;
-  const size = storagePaneResize.orientation === 'vertical' ? rect.height : rect.width;
+    : event.clientX - rect.left) - 4;
+  const size = (storagePaneResize.orientation === 'vertical' ? rect.height : rect.width) - 8;
   storagePaneSplit = Math.max(0.28, Math.min(0.78, position / size));
   applyStoragePaneLayout(storagePaneResize.layout);
 }, { capture:true, passive:false });
@@ -15631,15 +15988,22 @@ function renderStorageBoard(visibleItems) {
           <button type="button" class="storage-placement-mode-toggle" aria-pressed="${storagePlacementMode}" title="Fächer beim Ziehen als Ablageziele anzeigen">Fächer-Modus: ${storagePlacementMode ? 'An' : 'Aus'}</button>
           <button type="button" class="storage-shelves-toggle-all" aria-expanded="false" title="Alle Regale ausklappen"><span>Alle Regale ausklappen</span></button>
         </div>
-        <div class="storage-shelf-groups">
+        <div class="storage-shelves-body${storageCollapsedRailOpen ? ' rail-open' : ''}">
+        <aside class="storage-collapsed-rail">
+          <button type="button" class="storage-collapsed-rail-toggle" aria-expanded="${storageCollapsedRailOpen}" title="Eingeklappte Regale ${storageCollapsedRailOpen ? 'ausblenden' : 'anzeigen'}" aria-label="Eingeklappte Regale ${storageCollapsedRailOpen ? 'ausblenden' : 'anzeigen'}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <section class="storage-shelf-group storage-shelf-group-collapsed">
             <div class="storage-shelf-group-heading"><span>Eingeklappt</span><span class="storage-shelf-group-count">${collapsedShelves.length}</span></div>
             <div class="storage-shelf-group-list">${collapsedSections}<button type="button" class="storage-add-shelf" title="Regal hinzufügen" aria-label="Regal hinzufügen">+</button></div>
           </section>
+        </aside>
+        <div class="storage-shelf-groups">
           <section class="storage-shelf-group storage-shelf-group-expanded">
             <div class="storage-shelf-group-heading"><span>Ausgeklappt</span><span class="storage-shelf-group-count">${expandedShelves.length}</span></div>
             <div class="storage-shelf-group-list">${expandedSections}</div>
           </section>
+        </div>
         </div>
       </section>
       <div class="storage-pane-resizer" role="separator" tabindex="0" aria-label="Bereichsbreite anpassen" aria-orientation="vertical"></div>
@@ -15688,6 +16052,14 @@ function renderStorageBoard(visibleItems) {
     });
     updateStorageShelfCollapseControls(board);
     saveCloudDataDebounced();
+  });
+  layout.querySelector('.storage-collapsed-rail-toggle').addEventListener('click', event => {
+    storageCollapsedRailOpen = !storageCollapsedRailOpen;
+    layout.querySelector('.storage-shelves-body').classList.toggle('rail-open', storageCollapsedRailOpen);
+    const label = `Eingeklappte Regale ${storageCollapsedRailOpen ? 'ausblenden' : 'anzeigen'}`;
+    event.currentTarget.setAttribute('aria-expanded', String(storageCollapsedRailOpen));
+    event.currentTarget.title = label;
+    event.currentTarget.setAttribute('aria-label', label);
   });
   bindStorageShelfPinchZoom(layout.querySelector('.storage-shelves-pane'), board);
   const resizer = layout.querySelector('.storage-pane-resizer');
@@ -16365,7 +16737,8 @@ ${actionButtons}
             const pVal = Number(item.discogsLowestPrice != null ? item.discogsLowestPrice : (item.discogsAveragePrice != null ? item.discogsAveragePrice : 0)) || 0;
             td.textContent = pVal > 0 ? (pVal.toFixed(2).replace(/\.00$/, '') + ' ' + escapeHtml(item.discogsCurrency || '€')) : '';
           } else if (col.key === 'color') {
-            td.innerHTML = `<span class="album-color-bar inline ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};"></span>${escapeHtml(getVisibleLabel(item))}`;
+            const discRecord = getVinylRecordForItem(item);
+            td.innerHTML = `<div class="vinyl-editor-disc table-vinyl-disc" title="${escapeHtml(getVisibleLabel(item))}" style="--vinyl-base: ${hexToRgba(discRecord.baseColor, 1 - discRecord.transparency / 100)}; --vinyl-label: ${discRecord.labelColor}; --vinyl-art: ${getVinylSvgData(discRecord)};">${getVinylLiquidMarkup(discRecord)}</div>`;
           } else if (col.key === 'status') {
             td.innerHTML = `<span class="state-pill">${item.owned ? 'Besitze ich' : 'Wunschliste'}</span>`;
           } else if (col.key === 'actions') {
