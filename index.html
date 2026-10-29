@@ -3294,6 +3294,9 @@
   }
   .settings-panel-actions button svg { flex: 0 0 16px; width: 16px; height: 16px; margin-right: 0 !important; }
   .settings-panel-actions button span { font-size: 10px; line-height: 1.2; white-space: normal; }
+  .settings-price-refresh-status { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; color:var(--text-secondary); font-size:12px; line-height:1.4; }
+  .settings-price-refresh-status[hidden] { display:none; }
+  .settings-price-refresh-status button { flex:0 0 auto; min-height:28px; padding:4px 8px; font-size:11px; }
   .tooltip-btn {
     position: relative;
   }
@@ -4566,6 +4569,7 @@
   .app-loading[hidden] { display:none; }
   .app-loading-block { position:relative; width:72px; height:72px; border-radius:18px; overflow:hidden; background:linear-gradient(135deg, var(--la, var(--accent, #d4537e)), var(--lb, var(--accent, #d4537e))); box-shadow:0 0 36px color-mix(in srgb, var(--lb, var(--accent, #d4537e)) 45%, transparent); animation:appLoadingPulse 1.6s ease-in-out infinite; }
   .app-loading-block span { position:absolute; inset:0; background:var(--lb, var(--accent, #d4537e)); opacity:0; animation:appLoadingFade 1.4s ease-in-out .1s forwards; }
+  .app-loading-block > svg { position:absolute; inset:0; width:42px; height:42px; margin:auto; color:var(--loading-logo-color, #fff); transition:color 1.4s ease-in-out .1s; filter:drop-shadow(0 1px 2px rgba(0,0,0,.55)); z-index:1; }
   @keyframes appLoadingFade { from { opacity:0; } to { opacity:1; } }
   @keyframes appLoadingPulse { 0%, 100% { transform:scale(1) rotate(0deg); } 50% { transform:scale(1.08) rotate(6deg); } }
   .user-pill {
@@ -4808,7 +4812,7 @@
 </style>
 </head>
 <body>
-<div id="appLoading" class="app-loading" role="status" aria-live="polite"><div class="app-loading-title" id="appLoadingTitle"></div><div class="app-loading-block"><span></span></div><p id="appLoadingText">Wird geladen …</p></div>
+<div id="appLoading" class="app-loading" role="status" aria-live="polite"><div class="app-loading-title" id="appLoadingTitle"></div><div class="app-loading-block"><span></span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1" opacity=".75"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></svg></div><p id="appLoadingText">Wird geladen …</p></div>
 
 <!-- Login / Registrierung -->
 <div id="authOverlay">
@@ -4958,6 +4962,10 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right:6px;"><path d="M4 5h16v14H4z" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 13h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <span>Tracklists</span>
             </button>
+            <button type="button" id="refreshDiscogsPricesBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Discogs-Preise bei allen verknüpften Alben aktualisieren">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 9a7 7 0 0 1 11.6-2L20 12M4 12l2.8 5a7 7 0 0 0 11.6-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Preise aktualisieren</span>
+            </button>
             <button type="button" id="manageShelvesBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Regale und Fächer verwalten">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h16v16H4zM4 10h16M4 16h16M10 4v16M16 4v16" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
               <span>Lagerorte</span>
@@ -4974,6 +4982,10 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 5h16v14H4zM8 9h8M8 13h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <span>Besessene Alben durchgehen</span>
             </button>
+          </div>
+          <div class="settings-price-refresh-status" id="discogsPriceRefreshStatus" role="status" aria-live="polite" hidden>
+            <span id="discogsPriceRefreshMessage"></span>
+            <button type="button" id="cancelDiscogsPriceRefreshBtn" hidden>Abbrechen</button>
           </div>
           <hr class="settings-divider">
 
@@ -5630,6 +5642,7 @@
 <li><b>Akzentfarbe</b>: Farbe der Oberfläche.</li>
 <li><b>Titel / Interpret</b>: siehe <a href="#" data-doc-link="doc-names">Namen</a>.</li>
 <li><b>URLs</b>: sucht für Alben ohne Discogs-Link passende Releases und ordnet sie zu. Optional werden vorhandene Preise erneuert.</li>
+<li><b>Preise aktualisieren</b>: fragt alle Discogs-verknüpften Alben in Besitz und Wunschliste nacheinander neu ab. Manuelle Preise bleiben unverändert; die Anfragen werden zum Schutz des Discogs-Limits gedrosselt.</li>
 <li><b>Tracklists</b>: lädt fehlende Tracklists und Metadaten von Discogs nach.</li>
 <li><b>Lagerorte</b>: Regale/Fächer verwalten.</li>
 <li><b>Vinyl-Farben durchgehen</b>: Alben ohne neues Vinyl-Design nacheinander gestalten.</li>
@@ -6221,11 +6234,26 @@ const APP_LOADING_JOKES = [
   'Der Plattenladen-Typ sucht noch den Schlüssel …',
   'Sammlung wird sortiert, bitte nicht stören …'
 ];
+function getLoadingLogoColor(backgroundColor) {
+  const channels = [1, 3, 5].map(index => parseInt(backgroundColor.slice(index, index + 2), 16) / 255);
+  const luminance = channels.map(channel => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+  return luminance > 0.48 ? '#17171b' : '#fff';
+}
+let loadingLogoTransitionFrame = 0;
 function showAppLoading(text, fromColor, toColor, title) {
   document.getElementById('appLoadingTitle').textContent = title || '';
   const from = fromColor || getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  const to = toColor || from;
   appLoadingEl.style.setProperty('--la', from);
-  appLoadingEl.style.setProperty('--lb', toColor || from);
+  appLoadingEl.style.setProperty('--lb', to);
+  appLoadingEl.style.setProperty('--loading-logo-color', getLoadingLogoColor(from));
+  const logo = appLoadingEl.querySelector('.app-loading-block > svg');
+  void logo.offsetWidth;
+  cancelAnimationFrame(loadingLogoTransitionFrame);
+  loadingLogoTransitionFrame = requestAnimationFrame(() => {
+    appLoadingEl.style.setProperty('--loading-logo-color', getLoadingLogoColor(to));
+  });
   const fadeEl = appLoadingEl.querySelector('.app-loading-block span');
   fadeEl.style.animation = 'none';
   void fadeEl.offsetWidth;
@@ -6510,7 +6538,7 @@ async function loadCloudData(uid, prefetchedSnap) {
 }
 
 async function saveCloudDataNow() {
-  if (!currentUid) return;
+  if (!currentUid) return false;
   clearTimeout(saveDebounceTimer);
   saveDebounceTimer = null;
   try {
@@ -6542,8 +6570,10 @@ async function saveCloudDataNow() {
       settings: settingsObj,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
+    return true;
   } catch (err) {
     console.error('Cloud-Speichern fehlgeschlagen:', err);
+    return false;
   }
 }
 
@@ -6867,6 +6897,8 @@ function updateViewingInfo() {
   if (ownedFilterLabel) ownedFilterLabel.textContent = viewingOwnCollection
     ? 'Besitze ich'
     : `Besitzt ${viewedUsername || 'Nutzer'}`;
+  const refreshDiscogsPricesBtn = document.getElementById('refreshDiscogsPricesBtn');
+  if (refreshDiscogsPricesBtn) refreshDiscogsPricesBtn.hidden = !viewingOwnCollection;
   // Hide the small viewing info label; user details belong into the user menu only
   viewingInfoLabel.style.display = 'none';
   previewAccentColor(viewingOwnCollection ? getAccentColor() : remoteAccentColor);
@@ -7176,6 +7208,167 @@ async function enrichDiscogsPriceForItem(item) {
   } catch (e) {
     return false;
   }
+}
+
+let discogsPriceRefreshRunning = false;
+let cancelDiscogsPriceRefresh = false;
+
+function getDiscogsRefreshResourceUrl(item) {
+  try {
+    const url = new URL(item.discogsResourceUrl);
+    if (url.hostname !== 'api.discogs.com' || !/^\/(releases|masters)\/\d+\/?$/.test(url.pathname)) return '';
+    url.searchParams.delete('token');
+    return url.href;
+  } catch (error) {
+    return '';
+  }
+}
+
+function waitForDiscogsRefresh(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function refreshDiscogsPrices() {
+  if (discogsPriceRefreshRunning) return;
+  if (!viewingOwnCollection || !currentUid) {
+    await showAlert('Bitte öffne deine eigene Sammlung, um Discogs-Preise zu aktualisieren.');
+    return;
+  }
+
+  const groupedItems = new Map();
+  let skipped = 0;
+  for (const item of ownCollection) {
+    if (!item.discogsResourceUrl || item.priceManual === true) continue;
+    const url = getDiscogsRefreshResourceUrl(item);
+    if (!url) {
+      skipped++;
+      continue;
+    }
+    if (!groupedItems.has(url)) groupedItems.set(url, []);
+    groupedItems.get(url).push(item);
+  }
+
+  const requests = [...groupedItems.entries()];
+  if (!requests.length) {
+    await showAlert('Keine automatisch gepflegten Preise mit gültiger Discogs-API-URL gefunden.');
+    return;
+  }
+
+  const delay = getDiscogsToken() ? 1100 : 2500;
+  const estimatedMinutes = Math.ceil(Math.max(0, requests.length - 1) * delay / 60000);
+  const confirmed = await showConfirm(
+    `${requests.length} verschiedene Discogs-URLs für ${[...groupedItems.values()].reduce((sum, items) => sum + items.length, 0)} Alben werden nacheinander abgefragt. Manuell gesetzte Preise bleiben unverändert.${skipped ? ` ${skipped} ungültige oder nicht unterstützte URLs werden übersprungen.` : ''} Geschätzte Mindestdauer: etwa ${estimatedMinutes} Min.${getDiscogsToken() ? ' Mit Token maximal ungefähr 55 Anfragen pro Minute.' : ' Ohne Token maximal ungefähr 24 Anfragen pro Minute.'}`,
+    { confirmLabel: 'Aktualisieren', cancelLabel: 'Abbrechen' }
+  );
+  if (!confirmed) return;
+
+  const status = document.getElementById('discogsPriceRefreshStatus');
+  const message = document.getElementById('discogsPriceRefreshMessage');
+  const cancelButton = document.getElementById('cancelDiscogsPriceRefreshBtn');
+  const refreshButton = document.getElementById('refreshDiscogsPricesBtn');
+  let successfulRequests = 0;
+  let updatedAlbums = 0;
+  let failedRequests = 0;
+  let stoppedForAuthError = false;
+  const failureExamples = [];
+
+  discogsPriceRefreshRunning = true;
+  cancelDiscogsPriceRefresh = false;
+  refreshButton.disabled = true;
+  cancelButton.disabled = false;
+  cancelButton.hidden = false;
+  status.hidden = false;
+
+  try {
+    for (let index = 0; index < requests.length; index++) {
+      if (cancelDiscogsPriceRefresh) break;
+      const [resourceUrl, items] = requests[index];
+      message.textContent = `Discogs-Preise: Anfrage ${index + 1} von ${requests.length} …`;
+      const url = new URL(resourceUrl);
+      const token = getDiscogsToken();
+      if (token) url.searchParams.set('token', token);
+
+      try {
+        let response = await fetch(url.href);
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('Retry-After');
+          const retryDelay = retryAfter && Number.isFinite(Number(retryAfter))
+            ? Number(retryAfter) * 1000
+            : retryAfter
+              ? Math.max(0, Date.parse(retryAfter) - Date.now())
+              : 60000;
+          message.textContent = `Discogs-Limit erreicht. Warte ${Math.ceil(retryDelay / 1000)} Sekunden und versuche es erneut …`;
+          await waitForDiscogsRefresh(Math.min(Math.max(retryDelay, 1000), 120000));
+          if (cancelDiscogsPriceRefresh) break;
+          response = await fetch(url.href);
+        }
+        if (!response.ok) {
+          failedRequests++;
+          failureExamples.push(`${response.status} bei ${resourceUrl}`);
+          if (response.status === 401 || response.status === 403) {
+            stoppedForAuthError = true;
+            break;
+          }
+        } else {
+          const data = await response.json();
+          const hasLowestPrice = Object.prototype.hasOwnProperty.call(data, 'lowest_price');
+          const hasAveragePrice = Object.prototype.hasOwnProperty.call(data, 'average_price');
+          const hasCurrency = !!(data.currency || data.community?.currency);
+          if (hasLowestPrice) {
+            const value = Number(data.lowest_price);
+            for (const item of items) item.discogsLowestPrice = Number.isFinite(value) && value > 0 ? value : null;
+          }
+          if (hasAveragePrice) {
+            const value = Number(data.average_price);
+            for (const item of items) item.discogsAveragePrice = Number.isFinite(value) && value > 0 ? value : null;
+          }
+          if (hasCurrency) {
+            const currency = data.currency || data.community.currency;
+            for (const item of items) item.discogsCurrency = currency;
+          }
+          for (const item of items) item.discogsPriceCheckedAt = new Date().toISOString();
+          updatedAlbums += items.length;
+          successfulRequests++;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(ownCollection));
+          if (successfulRequests % 5 === 0) saveCloudDataDebounced();
+        }
+      } catch (error) {
+        failedRequests++;
+        failureExamples.push(error instanceof Error ? error.message : String(error));
+        console.error('Discogs-Preisaktualisierung: Anfrage fehlgeschlagen.', error);
+      }
+
+      if (index < requests.length - 1 && !cancelDiscogsPriceRefresh && !stoppedForAuthError) {
+        await waitForDiscogsRefresh(delay);
+      }
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(ownCollection));
+    if (successfulRequests) renderCollection();
+    const cloudSaved = successfulRequests ? await saveCloudDataNow() : true;
+    const cancelled = cancelDiscogsPriceRefresh;
+    const summary = `${cancelled ? 'Aktualisierung abgebrochen.' : stoppedForAuthError ? 'Wegen eines Discogs-Authentifizierungsfehlers angehalten.' : 'Aktualisierung abgeschlossen.'} ${successfulRequests} von ${requests.length} Anfragen erfolgreich; Preise bei ${updatedAlbums} Alben geprüft.${failedRequests ? ` ${failedRequests} Anfragen fehlgeschlagen.` : ''}${skipped ? ` ${skipped} ungültige oder nicht unterstützte URLs übersprungen.` : ''}${cloudSaved ? '' : ' Lokal gespeichert, aber die Cloud-Synchronisierung ist fehlgeschlagen.'}${failureExamples.length ? ` Beispiel: ${failureExamples[0]}` : ''}`;
+    message.textContent = summary;
+    if (!cloudSaved) console.error('Discogs-Preise wurden lokal gespeichert, aber nicht in die Cloud synchronisiert.');
+  } catch (error) {
+    console.error('Discogs-Preisaktualisierung wurde unerwartet unterbrochen.', error);
+    message.textContent = `Aktualisierung unterbrochen: ${error instanceof Error ? error.message : String(error)}. Bisherige Änderungen sind lokal gespeichert.`;
+  } finally {
+    discogsPriceRefreshRunning = false;
+    refreshButton.disabled = false;
+    cancelButton.hidden = true;
+  }
+}
+
+const refreshDiscogsPricesBtn = document.getElementById('refreshDiscogsPricesBtn');
+if (refreshDiscogsPricesBtn) refreshDiscogsPricesBtn.addEventListener('click', refreshDiscogsPrices);
+const cancelDiscogsPriceRefreshBtn = document.getElementById('cancelDiscogsPriceRefreshBtn');
+if (cancelDiscogsPriceRefreshBtn) {
+  cancelDiscogsPriceRefreshBtn.addEventListener('click', () => {
+    cancelDiscogsPriceRefresh = true;
+    cancelDiscogsPriceRefreshBtn.disabled = true;
+    document.getElementById('discogsPriceRefreshMessage').textContent = 'Wird nach der laufenden Anfrage abgebrochen …';
+  });
 }
 
 async function hydrateDiscogsPricesForLoadedEntries() {
@@ -14565,9 +14758,11 @@ function setSortDirection(direction) {
 function updateSortButtons() {
   const dirBtn = document.getElementById('sortDirBtn');
   if (!dirBtn) return;
-  const useDirectionalSorting = ['title', 'artist', 'year', 'genre', 'releaseType', 'price', 'status', 'condition', 'color', 'location', 'lastWashed'].includes(activeSort);
+  const useDirectionalSorting = ['newest', 'title', 'artist', 'year', 'genre', 'releaseType', 'price', 'status', 'condition', 'color', 'location', 'lastWashed'].includes(activeSort);
   dirBtn.textContent = activeSortDirection === 'asc' ? '↑︎' : '↓︎';
-  dirBtn.title = activeSortDirection === 'asc' ? 'Aufsteigend (klicken für absteigend)' : 'Absteigend (klicken für aufsteigend)';
+  dirBtn.title = activeSort === 'newest'
+    ? (activeSortDirection === 'asc' ? 'Älteste zuerst (klicken für neueste zuerst)' : 'Neueste zuerst (klicken für älteste zuerst)')
+    : activeSortDirection === 'asc' ? 'Aufsteigend (klicken für absteigend)' : 'Absteigend (klicken für aufsteigend)';
   dirBtn.classList.toggle('active', useDirectionalSorting);
   dirBtn.disabled = !useDirectionalSorting;
 }
@@ -16386,9 +16581,14 @@ function renderCollection() {
   const colorSortInfoByItem = sortColumn === 'color'
     ? new Map(list.map(item => [item, getColorSortInfo(item)]))
     : null;
+  const originalOrderByItem = sortColumn === 'newest'
+    ? new Map(collection.map((item, index) => [item, index]))
+    : null;
   list = list.sort((a, b) => {
     const directionMultiplier = sortDir === 'asc' ? 1 : -1;
     switch (sortColumn) {
+      case 'newest':
+        return directionMultiplier * (originalOrderByItem.get(b) - originalOrderByItem.get(a));
       case 'title':
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       case 'artist':
