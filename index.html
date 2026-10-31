@@ -16588,7 +16588,7 @@ function renderCollection() {
     const directionMultiplier = sortDir === 'asc' ? 1 : -1;
     switch (sortColumn) {
       case 'newest':
-        return directionMultiplier * (originalOrderByItem.get(b) - originalOrderByItem.get(a));
+        return directionMultiplier * (originalOrderByItem.get(a) - originalOrderByItem.get(b));
       case 'title':
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       case 'artist':
