@@ -93,6 +93,21 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  header .collection-title-edit {
+    display:flex;
+    align-items:center;
+    gap:6px;
+    min-width:0;
+  }
+  header .collection-title-edit button {
+    width:26px;
+    min-width:26px;
+    height:26px;
+    min-height:26px;
+    padding:0;
+    justify-content:center;
+    font-size:13px;
+  }
   header .sub { font-size: 12px; color: var(--text-muted); margin: 0; }
   header .header-top-row {
     display: flex;
@@ -4857,7 +4872,11 @@
       </svg>
     </div>
     <div class="title-input">
-      <div class="collection-title" id="collectionTitleDisplay" aria-label="Sammlungsname">Vinyl-Sammlung</div>
+      <div class="collection-title-edit">
+        <div class="collection-title" id="collectionTitleDisplay" aria-label="Sammlungsname">Vinyl-Sammlung</div>
+        <button type="button" id="editCollectionTitleBtn" class="icon-btn" title="Eigene Sammlung umbenennen" aria-label="Eigene Sammlung umbenennen" hidden>✎</button>
+      </div>
+      <input type="text" id="collectionTitleEditInput" aria-label="Neuer Sammlungsname" maxlength="80" hidden>
     </div>
     <div class="header-actions">
       <button id="copyWishlistBtn" class="icon-btn" title="Wunschliste in Zwischenablage kopieren" aria-label="Wunschliste kopieren">
@@ -6897,6 +6916,8 @@ function updateViewingInfo() {
   if (ownedFilterLabel) ownedFilterLabel.textContent = viewingOwnCollection
     ? 'Besitze ich'
     : `Besitzt ${viewedUsername || 'Nutzer'}`;
+  const editCollectionTitleBtn = document.getElementById('editCollectionTitleBtn');
+  if (editCollectionTitleBtn) editCollectionTitleBtn.hidden = !viewingOwnCollection;
   const refreshDiscogsPricesBtn = document.getElementById('refreshDiscogsPricesBtn');
   if (refreshDiscogsPricesBtn) refreshDiscogsPricesBtn.hidden = !viewingOwnCollection;
   // Hide the small viewing info label; user details belong into the user menu only
@@ -14986,7 +15007,53 @@ const selectAllCheckbox = document.getElementById('selectAllCheckbox');
 if (selectAllCheckbox) {
   selectAllCheckbox.addEventListener('change', toggleSelectAll);
 }
-// Title editing removed from header; collection title is displayed but not editable here.
+const editCollectionTitleBtn = document.getElementById('editCollectionTitleBtn');
+const collectionTitleEditInput = document.getElementById('collectionTitleEditInput');
+const collectionTitleDisplay = document.getElementById('collectionTitleDisplay');
+
+function finishCollectionTitleEdit(save) {
+  if (!collectionTitleEditInput || collectionTitleEditInput.hidden) return;
+  const nextTitle = collectionTitleEditInput.value.trim();
+  collectionTitleEditInput.hidden = true;
+  collectionTitleDisplay.hidden = false;
+  editCollectionTitleBtn.hidden = !viewingOwnCollection;
+  if (!save || !viewingOwnCollection) {
+    collectionTitleEditInput.value = ownCollectionTitle;
+    return;
+  }
+  if (!nextTitle) {
+    collectionTitleEditInput.value = ownCollectionTitle;
+    showAlert('Der Sammlungsname darf nicht leer sein.');
+    return;
+  }
+  if (nextTitle === ownCollectionTitle) return;
+  ownCollectionTitle = nextTitle;
+  collectionTitle = nextTitle;
+  collectionTitleDisplay.textContent = nextTitle;
+  localStorage.setItem(TITLE_STORAGE_KEY, nextTitle);
+  saveCloudDataDebounced();
+}
+
+if (editCollectionTitleBtn && collectionTitleEditInput && collectionTitleDisplay) {
+  editCollectionTitleBtn.addEventListener('click', () => {
+    if (!viewingOwnCollection) return;
+    collectionTitleDisplay.hidden = true;
+    editCollectionTitleBtn.hidden = true;
+    collectionTitleEditInput.value = ownCollectionTitle;
+    collectionTitleEditInput.hidden = false;
+    collectionTitleEditInput.focus();
+    collectionTitleEditInput.select();
+  });
+  collectionTitleEditInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      finishCollectionTitleEdit(true);
+    } else if (event.key === 'Escape') {
+      finishCollectionTitleEdit(false);
+    }
+  });
+  collectionTitleEditInput.addEventListener('blur', () => finishCollectionTitleEdit(true));
+}
 
 function setView(view, persist = true) {
   if (view === 'storage' && !viewingOwnCollection) return;
