@@ -4754,7 +4754,7 @@
     color:var(--danger) !important;
   }
   .cloud-sync-indicator[data-state="synced"] { color:#35b66a !important; }
-  .cloud-sync-indicator[data-state="pending"],
+  .cloud-sync-indicator[data-state="pending"] { color:#3b8eea !important; }
   .cloud-sync-indicator[data-state="error"] { color:var(--danger) !important; }
   .cloud-sync-indicator:hover { background:var(--surface-3) !important; }
   .cloud-sync-indicator[hidden] { display:none; }
@@ -6340,7 +6340,10 @@ let cloudSyncUnavailableReason = null;
 let cloudWriteWindowStartedAt = 0;
 let cloudWritesInWindow = 0;
 let cloudCollectionSnapshotUid = null;
-let cloudCollectionSnapshot = new Map();
+let cloudChunkSnapshot = new Map();     // Block-ID -> JSON, wie zuletzt in der Cloud
+let cloudImageSnapshot = new Map();     // Bild-Dokument-ID -> Data-URL, wie zuletzt in der Cloud
+let cloudPendingImageIds = new Set();   // Bilder, die in der Cloud liegen, aber noch nicht heruntergeladen sind
+let cloudRootCache = null;              // { uid, data } letzter bekannter Stand des Root-Dokuments
 let suppressNextCloudSave = false; // verhindert Schreib-Loop beim initialen Laden
 let viewingOwnCollection = true;
 let viewedUid = null;
@@ -6703,10 +6706,62 @@ function getCloudCollectionItemsRef(uid) {
   return db.collection('users').doc(uid).collection('collectionItems');
 }
 
-async function loadCloudCollection(uid, userData) {
-  if (userData.collectionStorageVersion !== 1) {
-    return Array.isArray(userData.collection) ? userData.collection : [];
+// ---------------------------------------------------------------------------
+// Cloud-Speicherformat v2
+//  - users/{uid}                       Root: Titel, Einstellungen, collectionChunkIds, collectionImageIds, ...
+//  - users/{uid}/collectionChunks/{c}  { json: "[...Alben ohne Bild...]" }  (~700 KB pro Block)
+//  - users/{uid}/collectionImages/{id} { dataUrl: "data:image/..." }        (Picture-Disc-Bild, 1 Dokument pro Album)
+// Firestore berechnet pro DOKUMENT. Viele Alben pro Dokument = wenige Lese-/Schreibzugriffe.
+// Das alte Format (v1: ein Dokument pro Album in collectionItems) wird nur noch zum Migrieren gelesen
+// und nie automatisch gelöscht.
+// ---------------------------------------------------------------------------
+const CLOUD_CHUNK_MAX_BYTES = 700 * 1024;      // Dokumentlimit von Firestore ist 1 MiB
+const CLOUD_BATCH_MAX_BYTES = 8 * 1024 * 1024; // Anfragelimit von Firestore ist 10 MiB
+const cloudTextEncoder = new TextEncoder();
+
+function getCloudChunksRef(uid) {
+  return db.collection('users').doc(uid).collection('collectionChunks');
+}
+
+function getCloudImagesRef(uid) {
+  return db.collection('users').doc(uid).collection('collectionImages');
+}
+
+function getCloudItemDocId(item) {
+  return encodeURIComponent(String(item.id));
+}
+
+function cloudChunkId(index) {
+  return 'c' + String(index).padStart(5, '0');
+}
+
+async function loadCloudCollectionDetailed(uid, userData) {
+  if (userData.collectionStorageVersion === 2) {
+    const chunkIds = Array.isArray(userData.collectionChunkIds) ? userData.collectionChunkIds : [];
+    const chunksRef = getCloudChunksRef(uid);
+    const snapshots = await Promise.all(chunkIds.map(id => chunksRef.doc(id).get()));
+    const items = [];
+    const chunkSnapshot = new Map();
+    snapshots.forEach((snapshot, index) => {
+      const id = chunkIds[index];
+      // Lieber abbrechen als eine unvollständige Sammlung laden und später darüber speichern.
+      if (!snapshot.exists) throw new Error(`Sammlungsblock ${id} fehlt in der Cloud.`);
+      const json = snapshot.data().json;
+      let parsed;
+      try { parsed = JSON.parse(json); } catch (error) { throw new Error(`Sammlungsblock ${id} ist beschädigt.`); }
+      if (!Array.isArray(parsed)) throw new Error(`Sammlungsblock ${id} hat ein ungültiges Format.`);
+      chunkSnapshot.set(id, json);
+      parsed.forEach(item => { item.color = normalizeColor(item.color); items.push(item); });
+    });
+    if (typeof userData.collectionItemCount === 'number' && userData.collectionItemCount !== items.length) {
+      throw new Error(`Sammlung unvollständig geladen (${items.length} von ${userData.collectionItemCount} Alben).`);
+    }
+    return { items, chunkSnapshot, version: 2 };
   }
+  if (userData.collectionStorageVersion !== 1) {
+    return { items: Array.isArray(userData.collection) ? userData.collection : [], chunkSnapshot: new Map(), version: 0 };
+  }
+  // Altes Format v1: ein Dokument pro Album
   const collectionItemsRef = getCloudCollectionItemsRef(uid);
   const itemIds = Array.isArray(userData.collectionItemIds) ? userData.collectionItemIds : [];
   const items = [];
@@ -6720,50 +6775,250 @@ async function loadCloudCollection(uid, userData) {
       items.push(item);
     });
   }
-  return items;
+  return { items, chunkSnapshot: new Map(), version: 1 };
 }
 
-async function saveCloudCollectionItems(uid, items, previousItemIds, savedItems, availableWrites) {
-  const collectionItemsRef = getCloudCollectionItemsRef(uid);
-  const itemRefs = new Map();
-  const nextSnapshot = new Map(savedItems);
-  items.forEach((item, index) => {
+async function loadCloudCollection(uid, userData) {
+  return (await loadCloudCollectionDetailed(uid, userData)).items;
+}
+
+// Trennt das Picture-Disc-Bild vom Album (Bild kommt in ein eigenes Dokument).
+function splitCloudItem(item) {
+  const { _collectionOrder, ...rest } = item;
+  const design = rest.vinylDesign;
+  const image = design && typeof design === 'object' && typeof design.cdImageDataUrl === 'string' ? design.cdImageDataUrl : '';
+  if (image) rest.vinylDesign = { ...design, cdImageDataUrl: '' };
+  return { base: rest, image };
+}
+
+function buildCloudCollectionPlan(items) {
+  const docIds = new Set();
+  const images = new Map();
+  const entries = [];
+  items.forEach(item => {
     if (item.id == null || String(item.id) === '') throw new Error('Ein Album ohne ID kann nicht in der Cloud gespeichert werden.');
-    const docId = encodeURIComponent(String(item.id));
-    if (itemRefs.has(docId)) throw new Error(`Doppelte Album-ID kann nicht in der Cloud gespeichert werden: ${item.id}`);
-    const serializedItem = JSON.stringify({ ...item, _collectionOrder: index });
-    const byteLength = new Blob([serializedItem]).size;
-    if (byteLength > 900 * 1024) {
-      throw new Error(`Album „${item.title || item.id}“ ist mit ${Math.ceil(byteLength / 1024)} KiB zu groß für ein Firestore-Dokument.`);
+    const docId = getCloudItemDocId(item);
+    if (docIds.has(docId)) throw new Error(`Doppelte Album-ID kann nicht in der Cloud gespeichert werden: ${item.id}`);
+    docIds.add(docId);
+    const { base, image } = splitCloudItem(item);
+    if (image) images.set(docId, image);
+    // JSON-Rundlauf entfernt undefined; sortierte Schlüssel machen den Vergleich unabhängig von der Feldreihenfolge.
+    const str = stableCloudJson(JSON.parse(JSON.stringify(base)));
+    const bytes = cloudTextEncoder.encode(str).length;
+    if (bytes > CLOUD_CHUNK_MAX_BYTES) {
+      throw new Error(`Album „${item.title || item.id}“ ist mit ${Math.ceil(bytes / 1024)} KiB (ohne Picture-Disc-Bild) zu groß für die Cloud.`);
     }
-    itemRefs.set(docId, { serializedItem, byteLength });
+    entries.push({ str, bytes });
   });
-  const entries = [...itemRefs.entries()]
-    .filter(([docId, entry]) => savedItems.get(docId) !== entry.serializedItem);
-  const selectedEntries = [];
-  let batchBytes = 0;
-  for (const entry of entries) {
-    if (selectedEntries.length >= availableWrites || selectedEntries.length >= 60
-        || batchBytes + entry[1].byteLength > 5 * 1024 * 1024) break;
-    selectedEntries.push(entry);
-    batchBytes += entry[1].byteLength;
-  }
-  if (selectedEntries.length) {
+  const chunks = [];
+  let parts = [];
+  let bytes = 2;
+  const flush = () => {
+    if (!parts.length) return;
+    chunks.push({ id: cloudChunkId(chunks.length), json: '[' + parts.join(',') + ']', bytes });
+    parts = [];
+    bytes = 2;
+  };
+  entries.forEach(entry => {
+    if (parts.length && bytes + entry.bytes + 1 > CLOUD_CHUNK_MAX_BYTES) flush();
+    parts.push(entry.str);
+    bytes += entry.bytes + 1;
+  });
+  flush();
+  return { chunks, images, docIds, itemCount: items.length };
+}
+
+// Schreibt geänderte Bilder, dann (atomar in EINEM Batch) geänderte Blöcke + Root-Dokument,
+// danach räumt es nicht mehr benötigte Dokumente auf.
+async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budget) {
+  const plan = buildCloudCollectionPlan(items);
+  const sameUid = cloudCollectionSnapshotUid === uid;
+  const chunkSnap = sameUid ? cloudChunkSnapshot : new Map();
+  const imageSnap = sameUid ? cloudImageSnapshot : new Map();
+  const pendingImages = sameUid ? cloudPendingImageIds : new Set();
+  const wasV2 = previousRoot.collectionStorageVersion === 2;
+  const prevChunkIds = wasV2 && Array.isArray(previousRoot.collectionChunkIds) ? previousRoot.collectionChunkIds : [];
+  const prevImageIds = wasV2 && Array.isArray(previousRoot.collectionImageIds) ? [...previousRoot.collectionImageIds].sort() : [];
+  const chunkIds = plan.chunks.map(chunk => chunk.id);
+  // Bilder, die noch nicht heruntergeladen wurden, existieren in der Cloud weiter und dürfen nicht gelöscht werden.
+  const imageIds = [...new Set([...plan.images.keys(), ...[...pendingImages].filter(id => plan.docIds.has(id))])].sort();
+  const sameList = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
+  const changedImages = [...plan.images].filter(([id, url]) => imageSnap.get(id) !== url);
+  const changedChunks = plan.chunks.filter(chunk => chunkSnap.get(chunk.id) !== chunk.json);
+  const structureChanged = !wasV2
+    || !sameList(prevChunkIds, chunkIds)
+    || !sameList(prevImageIds, imageIds)
+    || previousRoot.collectionItemCount !== plan.itemCount
+    || Object.prototype.hasOwnProperty.call(previousRoot, 'collection');
+
+  const userDocRef = db.collection('users').doc(uid);
+  const nextChunkSnapshot = new Map(chunkSnap);
+  const nextImageSnapshot = new Map(imageSnap);
+  const nextRoot = { ...previousRoot };
+  const result = { nextChunkSnapshot, nextImageSnapshot, nextRoot, rootWritten: false, complete: false, written: 0 };
+  let remaining = budget;
+
+  // 1. Bilder (je ein Dokument)
+  const queue = [...changedImages];
+  while (queue.length && remaining > 0) {
     const batch = db.batch();
-    selectedEntries.forEach(([docId, entry]) => {
-      batch.set(collectionItemsRef.doc(docId), JSON.parse(entry.serializedItem));
-    });
+    const taken = [];
+    let bytes = 0;
+    while (queue.length && taken.length < Math.min(remaining, 400)) {
+      const [id, url] = queue[0];
+      if (taken.length && bytes + url.length > CLOUD_BATCH_MAX_BYTES) break;
+      queue.shift();
+      batch.set(getCloudImagesRef(uid).doc(id), { dataUrl: url });
+      bytes += url.length;
+      taken.push([id, url]);
+    }
     await batch.commit();
-    selectedEntries.forEach(([docId, entry]) => nextSnapshot.set(docId, entry.serializedItem));
+    taken.forEach(([id, url]) => nextImageSnapshot.set(id, url));
+    remaining -= taken.length;
+    result.written += taken.length;
   }
-  const complete = selectedEntries.length === entries.length;
-  const staleRefs = complete ? (previousItemIds || [])
-    .filter(docId => !itemRefs.has(docId))
-    .map(docId => collectionItemsRef.doc(docId)) : [];
-  if (complete) {
-    (previousItemIds || []).filter(docId => !itemRefs.has(docId)).forEach(docId => nextSnapshot.delete(docId));
+  const imagesComplete = queue.length === 0;
+
+  // 2. Blöcke + Root atomar
+  let collectionComplete = false;
+  if (imagesComplete) {
+    const needsRoot = structureChanged || rootFields.needsWrite;
+    const needed = changedChunks.length + (needsRoot ? 1 : 0);
+    const totalBytes = changedChunks.reduce((sum, chunk) => sum + chunk.bytes, 0);
+    if (totalBytes > CLOUD_BATCH_MAX_BYTES) throw new Error('Die Sammlung ist zu groß für einen gemeinsamen Schreibvorgang.');
+    if (needed === 0) {
+      collectionComplete = true;
+    } else if (needed <= remaining) {
+      const batch = db.batch();
+      changedChunks.forEach(chunk => batch.set(getCloudChunksRef(uid).doc(chunk.id), { json: chunk.json }));
+      if (needsRoot) {
+        batch.set(userDocRef, {
+          ...rootFields.data,
+          collection: firebase.firestore.FieldValue.delete(),
+          collectionStorageVersion: 2,
+          collectionChunkIds: chunkIds,
+          collectionImageIds: imageIds,
+          collectionItemCount: plan.itemCount
+        }, { merge: true });
+      }
+      await batch.commit();
+      changedChunks.forEach(chunk => nextChunkSnapshot.set(chunk.id, chunk.json));
+      remaining -= needed;
+      result.written += needed;
+      collectionComplete = true;
+      if (needsRoot) {
+        result.rootWritten = true;
+        const { updatedAt, ...plainRoot } = rootFields.data;
+        Object.assign(nextRoot, plainRoot, {
+          collectionStorageVersion: 2,
+          collectionChunkIds: chunkIds,
+          collectionImageIds: imageIds,
+          collectionItemCount: plan.itemCount
+        });
+        delete nextRoot.collection;
+      }
+    }
   }
-  return { staleRefs, nextSnapshot, complete, changedWrites: selectedEntries.length };
+  if (!collectionComplete && rootFields.needsWrite && remaining > 0) {
+    // Einstellungen/Titel trotzdem sichern, auch wenn die Sammlung noch nicht komplett übertragen ist.
+    await userDocRef.set(rootFields.data, { merge: true });
+    remaining -= 1;
+    result.written += 1;
+    result.rootWritten = true;
+    const { updatedAt, ...plainRoot } = rootFields.data;
+    Object.assign(nextRoot, plainRoot);
+  }
+
+  // 3. Aufräumen (nur nach erfolgreichem Root-Update; Fehler hier sind nicht kritisch)
+  if (collectionComplete) {
+    const staleRefs = [
+      ...prevChunkIds.filter(id => !chunkIds.includes(id)).map(id => getCloudChunksRef(uid).doc(id)),
+      ...prevImageIds.filter(id => !imageIds.includes(id)).map(id => getCloudImagesRef(uid).doc(id))
+    ];
+    prevChunkIds.filter(id => !chunkIds.includes(id)).forEach(id => nextChunkSnapshot.delete(id));
+    [...nextImageSnapshot.keys()].filter(id => !plan.images.has(id) && !pendingImages.has(id)).forEach(id => nextImageSnapshot.delete(id));
+    if (staleRefs.length && remaining > 0) {
+      try {
+        const { deleted } = await deleteCloudCollectionItems(staleRefs, remaining);
+        result.written += deleted;
+      } catch (error) {
+        console.warn('Alte Cloud-Dokumente konnten nicht entfernt werden (nicht kritisch):', error);
+      }
+    }
+  }
+  result.complete = collectionComplete;
+  return result;
+}
+
+// Lädt Picture-Disc-Bilder der EIGENEN Sammlung im Hintergrund nach.
+let cloudHydrationToken = 0;
+async function hydrateOwnCloudImages(uid) {
+  const token = ++cloudHydrationToken;
+  const byId = new Map(ownCollection.map(item => [getCloudItemDocId(item), item]));
+  const hasImage = item => !!(item.vinylDesign && item.vinylDesign.cdImageDataUrl);
+  const todo = [];
+  let changed = false;
+  [...cloudPendingImageIds].forEach(id => {
+    const item = byId.get(id);
+    if (!item) { cloudPendingImageIds.delete(id); return; }
+    if (hasImage(item)) { cloudPendingImageIds.delete(id); return; }
+    if (cloudImageSnapshot.has(id) && item.vinylDesign && typeof item.vinylDesign === 'object') {
+      item.vinylDesign.cdImageDataUrl = cloudImageSnapshot.get(id);
+      cloudPendingImageIds.delete(id);
+      changed = true;
+      return;
+    }
+    todo.push(id);
+  });
+  const rerender = () => {
+    if (!changed || !viewingOwnCollection || viewedUid !== uid) return;
+    changed = false;
+    try { renderCollection(); } catch (error) { console.warn('Neuzeichnen nach Bild-Nachladen fehlgeschlagen:', error); }
+  };
+  rerender();
+  for (let offset = 0; offset < todo.length; offset += 10) {
+    if (token !== cloudHydrationToken || cloudCollectionSnapshotUid !== uid) return;
+    await Promise.all(todo.slice(offset, offset + 10).map(async id => {
+      try {
+        const snapshot = await getCloudImagesRef(uid).doc(id).get();
+        if (token !== cloudHydrationToken) return;
+        const item = byId.get(id);
+        const url = snapshot.exists && typeof snapshot.data().dataUrl === 'string' ? snapshot.data().dataUrl : '';
+        if (url && item && item.vinylDesign && typeof item.vinylDesign === 'object') {
+          if (!hasImage(item)) item.vinylDesign.cdImageDataUrl = url;
+          cloudImageSnapshot.set(id, url);
+          cloudPendingImageIds.delete(id);
+          changed = true;
+        } else if (!url && snapshot.exists === false) {
+          cloudPendingImageIds.delete(id); // Bild-Dokument existiert nicht mehr
+        }
+      } catch (error) {
+        console.warn('Picture-Disc-Bild konnte nicht geladen werden:', id, error); // bleibt "pending" und wird nicht gelöscht
+      }
+    }));
+    rerender();
+  }
+}
+
+// Lädt Picture-Disc-Bilder einer FREMDEN Sammlung (nur auf Klick).
+async function hydrateRemoteCloudImages(uid, entry, onProgress) {
+  if (!entry || entry.imagesLoaded || !Array.isArray(entry.imageIds) || !entry.imageIds.length) return;
+  entry.imagesLoaded = true;
+  const byId = new Map(entry.items.map(item => [getCloudItemDocId(item), item]));
+  const ids = entry.imageIds.filter(id => byId.has(id));
+  for (let offset = 0; offset < ids.length; offset += 10) {
+    await Promise.all(ids.slice(offset, offset + 10).map(async id => {
+      try {
+        const snapshot = await getCloudImagesRef(uid).doc(id).get();
+        const url = snapshot.exists && typeof snapshot.data().dataUrl === 'string' ? snapshot.data().dataUrl : '';
+        const item = byId.get(id);
+        if (url && item && item.vinylDesign && typeof item.vinylDesign === 'object') item.vinylDesign.cdImageDataUrl = url;
+      } catch (error) {
+        console.warn('Picture-Disc-Bild konnte nicht geladen werden:', id, error);
+      }
+    }));
+    if (onProgress) onProgress();
+  }
 }
 
 async function deleteCloudCollectionItems(refs, maxWrites = refs.length) {
@@ -6903,8 +7158,11 @@ async function loadCloudData(uid, prefetchedSnap) {
   }
   cloudSyncUnavailableReason = localPending?.lastError || null;
   suppressNextCloudSave = true;
-  const cloudItems = (await loadCloudCollection(uid, data))
+  const rawRootData = docSnap.exists ? data : null;
+  const loaded = await loadCloudCollectionDetailed(uid, data);
+  const cloudItems = loaded.items
     .map(item => { item.color = normalizeColor(item.color); return item; });
+  const cloudImageIds = loaded.version === 2 && Array.isArray(data.collectionImageIds) ? data.collectionImageIds : [];
   let pendingLocalItems = null;
   if (localPending) {
     try {
@@ -6920,13 +7178,14 @@ async function loadCloudData(uid, prefetchedSnap) {
     };
   }
   ownCollection = pendingLocalItems || cloudItems;
+  const keptImages = cloudCollectionSnapshotUid === uid
+    ? cloudImageIds.filter(id => cloudImageSnapshot.has(id)).map(id => [id, cloudImageSnapshot.get(id)])
+    : [];
   cloudCollectionSnapshotUid = uid;
-  cloudCollectionSnapshot = data.collectionStorageVersion === 1
-    ? new Map(cloudItems.map((item, index) => {
-      const docId = encodeURIComponent(String(item.id));
-      return [docId, JSON.stringify({ ...item, _collectionOrder: index })];
-    }))
-    : new Map();
+  cloudChunkSnapshot = loaded.chunkSnapshot;
+  cloudImageSnapshot = new Map(keptImages);
+  cloudPendingImageIds = new Set(cloudImageIds);
+  cloudRootCache = rawRootData ? { uid, data: rawRootData } : null;
   collection = ownCollection;
   viewingOwnCollection = true;
   viewedUid = uid;
@@ -6938,7 +7197,10 @@ async function loadCloudData(uid, prefetchedSnap) {
       username: currentUsername,
       title: collectionTitle,
       collection: [],
-      collectionStorageVersion: 1,
+      collectionStorageVersion: 2,
+      collectionChunkIds: [],
+      collectionImageIds: [],
+      collectionItemCount: 0,
       settings: {},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true }).catch(err => console.error('Neues Benutzer-Dokument konnte nicht erstellt werden:', err));
@@ -7030,6 +7292,7 @@ async function loadCloudData(uid, prefetchedSnap) {
   try { if (typeof updateSortButtons === 'function') updateSortButtons(); } catch (e) {}
   try { if (typeof renderCollection === 'function') renderCollection(); } catch (e) {}
   try { if (typeof updateViewingInfo === 'function') updateViewingInfo(); } catch (e) {}
+  hydrateOwnCloudImages(uid); // Picture-Disc-Bilder im Hintergrund nachladen
   suppressNextCloudSave = false;
   pendingCloudSave = false;
   cloudChangeRevision = 0;
@@ -7048,6 +7311,12 @@ async function loadCloudData(uid, prefetchedSnap) {
     updateCloudSyncIndicator();
     updateCloudSyncBanner(getPendingCloudStatusMessage());
     scheduleCloudSave(0);
+  } else if (loaded.version !== 2 && docSnap.exists) {
+    // Einmalige Migration ins neue Speicherformat
+    pendingCloudSave = true;
+    cloudChangeRevision += 1;
+    updateCloudSyncIndicator();
+    scheduleCloudSave(2000);
   }
 }
 
@@ -7055,24 +7324,23 @@ async function performCloudDataSaveNow() {
   if (!currentUid || !viewingOwnCollection) return false;
   const revisionAtStart = cloudChangeRevision;
   try {
+    const uid = currentUid;
     const settingsObj = getCloudSettingsSnapshot();
     persistPendingCloudSnapshot(settingsObj);
 
-    const userDocRef = db.collection('users').doc(currentUid);
-    const previousUserSnapshot = await userDocRef.get();
-    const previousUserData = previousUserSnapshot.exists ? previousUserSnapshot.data() : {};
-    const cloudItemIds = ownCollection.map(item => encodeURIComponent(String(item.id)));
-    const savedItems = cloudCollectionSnapshotUid === currentUid ? cloudCollectionSnapshot : new Map();
+    const userDocRef = db.collection('users').doc(uid);
+    let previousUserData;
+    let rootExists = true;
+    if (cloudRootCache && cloudRootCache.uid === uid) {
+      previousUserData = cloudRootCache.data; // spart 1 Lesezugriff pro Speichervorgang
+    } else {
+      const previousUserSnapshot = await userDocRef.get();
+      rootExists = previousUserSnapshot.exists;
+      previousUserData = previousUserSnapshot.exists ? previousUserSnapshot.data() : {};
+    }
     resetCloudWriteWindow();
     const availableWrites = Math.max(0, 60 - cloudWritesInWindow);
-    const rootMayNeedWrite = !previousUserSnapshot.exists
-      || previousUserData.username !== currentUsername
-      || previousUserData.title !== ownCollectionTitle
-      || previousUserData.collectionStorageVersion !== 1
-      || JSON.stringify(previousUserData.collectionItemIds || []) !== JSON.stringify(cloudItemIds)
-      || Object.prototype.hasOwnProperty.call(previousUserData, 'collection')
-      || stableCloudJson(previousUserData.settings || {}) !== stableCloudJson(settingsObj);
-    if (availableWrites === 0 && rootMayNeedWrite) {
+    if (availableWrites === 0) {
       persistPendingCloudSnapshot(settingsObj);
       pendingCloudSave = true;
       updateCloudSyncIndicator();
@@ -7080,73 +7348,35 @@ async function performCloudDataSaveNow() {
       scheduleCloudSave(Math.max(1000, 60000 - (Date.now() - cloudWriteWindowStartedAt)));
       return true;
     }
-    const collectionWriteBudget = Math.max(0, availableWrites - (rootMayNeedWrite ? 1 : 0));
-    const { staleRefs: staleCollectionRefs, nextSnapshot, complete, changedWrites } = await saveCloudCollectionItems(
-      currentUid,
-      ownCollection,
-      previousUserData.collectionItemIds,
-      savedItems,
-      collectionWriteBudget
-    );
-    cloudCollectionSnapshotUid = currentUid;
-    cloudCollectionSnapshot = nextSnapshot;
-    const rootNeedsWrite = !previousUserSnapshot.exists
+    const rootNeedsWrite = !rootExists
       || previousUserData.username !== currentUsername
       || previousUserData.title !== ownCollectionTitle
-      || (complete && previousUserData.collectionStorageVersion !== 1)
-      || (complete && JSON.stringify(previousUserData.collectionItemIds || []) !== JSON.stringify(cloudItemIds))
-      || stableCloudJson(previousUserData.settings || {}) !== stableCloudJson(settingsObj)
-      || (complete && Object.prototype.hasOwnProperty.call(previousUserData, 'collection'));
-    if (rootNeedsWrite) {
-      const rootData = {
+      || stableCloudJson(previousUserData.settings || {}) !== stableCloudJson(settingsObj);
+    const result = await saveCloudCollectionV2(uid, ownCollection, previousUserData, {
+      needsWrite: rootNeedsWrite,
+      data: {
         username: currentUsername,
         title: ownCollectionTitle,
         settings: settingsObj,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      if (complete) Object.assign(rootData, {
-        collection: firebase.firestore.FieldValue.delete(),
-        collectionStorageVersion: 1,
-        collectionItemIds: cloudItemIds
-      });
-      await userDocRef.set(rootData, { merge: true });
-    }
-    const rootWriteCount = rootNeedsWrite ? 1 : 0;
-    cloudWritesInWindow += changedWrites + rootWriteCount;
-    let pendingRecord = null;
-    try {
-      pendingRecord = JSON.parse(localStorage.getItem(getPendingCloudStorageKey()) || 'null');
-    } catch (error) {
-      console.warn('Lokale Cleanup-Warteschlange konnte nicht gelesen werden:', error);
-    }
-    const activeItemIds = new Set(ownCollection.map(item => encodeURIComponent(String(item.id))));
-    const cleanupIds = [...new Set([
-      ...(Array.isArray(pendingRecord?.cleanupIds) ? pendingRecord.cleanupIds : []),
-      ...staleCollectionRefs.map(ref => ref.id)
-    ])].filter(id => !activeItemIds.has(id));
-    if (cleanupIds.length) persistPendingCloudSnapshot(settingsObj, cleanupIds);
-    const deleteBudget = Math.max(0, availableWrites - changedWrites - rootWriteCount);
-    const cleanupRefs = cleanupIds.map(id => getCloudCollectionItemsRef(currentUid).doc(id));
-    const { deleted: deletedCount, remaining: remainingCleanupRefs } = await deleteCloudCollectionItems(cleanupRefs, deleteBudget);
-    cloudWritesInWindow += deletedCount;
-    const remainingCleanupIds = remainingCleanupRefs.map(ref => ref.id);
-    if (remainingCleanupIds.length) persistPendingCloudSnapshot(settingsObj, remainingCleanupIds);
-    if (complete) {
-      cloudCollectionSnapshotUid = currentUid;
-      cloudCollectionSnapshot = nextSnapshot;
-    } else {
-      cloudCollectionSnapshotUid = currentUid;
-      cloudCollectionSnapshot = nextSnapshot;
-    }
-    pendingCloudSave = !complete || remainingCleanupIds.length > 0 || cloudChangeRevision !== revisionAtStart;
+      }
+    }, availableWrites);
+    cloudCollectionSnapshotUid = uid;
+    cloudChunkSnapshot = result.nextChunkSnapshot;
+    cloudImageSnapshot = result.nextImageSnapshot;
+    if (rootExists || result.rootWritten) cloudRootCache = { uid, data: result.nextRoot };
+    cloudWritesInWindow += result.written;
+    pendingCloudSave = !result.complete || cloudChangeRevision !== revisionAtStart;
     cloudSyncUnavailableReason = null;
-    if (!pendingCloudSave) localStorage.removeItem(getPendingCloudStorageKey(currentUid));
-    else persistPendingCloudSnapshot(settingsObj, remainingCleanupIds, null);
+    if (!pendingCloudSave) localStorage.removeItem(getPendingCloudStorageKey(uid));
+    else persistPendingCloudSnapshot(settingsObj, [], null);
     updateCloudSyncIndicator();
     cloudRetryAttempt = 0;
     if (pendingCloudSave) {
       resetCloudWriteWindow();
-      const waitMs = availableWrites === 0 ? Math.max(1000, 60000 - (Date.now() - cloudWriteWindowStartedAt)) : 60000;
+      const waitMs = result.complete
+        ? 1500 // nur während des Speicherns weiter geändert
+        : (availableWrites === 0 ? Math.max(1000, 60000 - (Date.now() - cloudWriteWindowStartedAt)) : 60000);
       updateCloudSyncBanner('Änderungen werden in Firebase in kleinen, gedrosselten Paketen synchronisiert …');
       scheduleCloudSave(waitMs);
     } else {
@@ -7254,8 +7484,10 @@ document.getElementById('cloudSyncIndicator').addEventListener('click', async ()
   await saveCloudDataNow();
 });
 
-async function loadUserList() {
+let userListLoadedAt = 0;
+async function loadUserList(force = false) {
   if (!currentUid) return;
+  if (!force && knownUsers.length && Date.now() - userListLoadedAt < USER_DOC_CACHE_TTL_MS) { renderUserList(knownUsers); return; }
   userList.innerHTML = '<div class="hint">Lade Benutzerliste…</div>';
   try {
     const snapshot = await db.collection('usernames').limit(200).get();
@@ -7271,6 +7503,7 @@ async function loadUserList() {
     if (!users.length) {
       throw new Error('Keine Benutzer gefunden.');
     }
+    userListLoadedAt = Date.now();
     renderUserList(users);
   } catch (err) {
     console.warn('Benutzerliste (usernames) laden fehlgeschlagen, versuche Fallback users:', err);
@@ -7371,7 +7604,7 @@ function buildUserCard(user) {
   card.className = 'user-card' + (favoriteUserIds.has(user.uid) ? ' is-favorite' : '');
   card.style.setProperty('--ua', cached?.accent || (isOwn ? getAccentColor() : '#d4537e'));
   const title = cached?.title || `${user.username} - Sammlung`;
-  let statsHtml = '<div class="user-card-loading">Statistiken werden geladen…</div>';
+  let statsHtml = '<div class="user-card-loading">Wird beim Öffnen geladen</div>';
   if (cached) {
     const st = cached.stats;
     const cell = (label, value) => `<div class="user-card-stat"><span>${label}</span><strong>${escapeHtml(String(value))}</strong></div>`;
@@ -7449,12 +7682,14 @@ function scheduleUserCardsRender() {
   userCardsRenderFrame = requestAnimationFrame(() => { userCardsRenderFrame = 0; renderUserCards(); });
 }
 
+const USER_DOC_CACHE_TTL_MS = 5 * 60 * 1000;
 async function fetchUserDoc(user, force) {
-  if (!force && userDocCache.has(user.uid)) return userDocCache.get(user.uid);
+  const hit = userDocCache.get(user.uid);
+  if (!force && hit && (user.uid === currentUid || Date.now() - (hit.fetchedAt || 0) < USER_DOC_CACHE_TTL_MS)) return hit;
   const snap = await db.collection('users').doc(user.uid).get();
   const data = snap.exists ? (snap.data() || {}) : {};
   const items = await loadCloudCollection(user.uid, data);
-  const entry = { title: data.title || '', items, stats: computeCollectionStats(items), accent: sanitizeAccent(data.settings?.accentColor) };
+  const entry = { title: data.title || '', items, stats: computeCollectionStats(items), accent: sanitizeAccent(data.settings?.accentColor), fetchedAt: Date.now(), imageIds: data.collectionStorageVersion === 2 && Array.isArray(data.collectionImageIds) ? data.collectionImageIds : [] };
   userDocCache.set(user.uid, entry);
   return entry;
 }
@@ -7468,22 +7703,19 @@ async function renderUserList(users) {
   const token = ++userListRenderToken;
   const own = knownUsers.find(user => user.uid === currentUid);
   if (own) userDocCache.set(own.uid, { title: ownCollectionTitle, items: ownCollection, stats: computeCollectionStats(ownCollection), accent: getAccentColor() });
-  const others = knownUsers.filter(user => user.uid !== currentUid);
-  const refresh = others.map(user => fetchUserDoc(user, true).catch(error => { console.warn('Statistik laden fehlgeschlagen:', user.username, error); }));
-  if (others.every(user => userDocCache.has(user.uid))) {
-    renderUserCards();
-    Promise.all(refresh).then(() => { if (token === userListRenderToken) scheduleUserCardsRender(); });
-    return;
-  }
-  userList.innerHTML = '<div class="hint">Lade Sammlungen …</div>';
-  await Promise.all(refresh);
+  // Fremde Sammlungen werden NICHT mehr automatisch geladen (1 Lesezugriff pro Album!).
+  // Sie werden erst beim Anklicken (Ansehen / Vergleichen / Importieren) geholt und gecacht.
   if (token === userListRenderToken) renderUserCards();
 }
 let userListRenderToken = 0;
 
 userSearchInput?.addEventListener('input', renderUserCards);
 
-function openCompare(user) {
+async function openCompare(user) {
+  if (!userDocCache.has(user.uid)) {
+    try { await withAppLoading(() => fetchUserDoc(user), `Lade ${user.username} …`); }
+    catch (error) { console.error('Vergleich laden fehlgeschlagen:', error); await showAlert('Die Sammlung konnte nicht geladen werden.'); return; }
+  }
   const overlay = document.getElementById('compareOverlay');
   const body = document.getElementById('compareBody');
   const own = userDocCache.get(currentUid) || { title: ownCollectionTitle, items: ownCollection, stats: computeCollectionStats(ownCollection) };
@@ -7606,23 +7838,10 @@ async function viewRemoteCollectionInner(uid, username) {
   if (!uid) return;
   try {
     let items, title, accent;
-    const cached = userDocCache.get(uid);
-    if (cached) {
-      items = cached.items;
-      title = cached.title;
-      accent = cached.accent;
-    } else {
-      const docSnap = await db.collection('users').doc(uid).get();
-      if (!docSnap.exists) {
-        await showAlert('Die Sammlung dieses Benutzers konnte nicht gefunden werden.');
-        loadUserList();
-        return;
-      }
-      const data = docSnap.data() || {};
-      items = await loadCloudCollection(uid, data);
-      title = data.title;
-      accent = data.settings?.accentColor;
-    }
+    const cached = await fetchUserDoc({ uid, username });
+    items = cached.items;
+    title = cached.title;
+    accent = cached.accent;
     collection = items.map(item => { item.color = normalizeColor(item.color); return item; });
     collectionTitle = title || `${username} - Sammlung`;
     remoteAccentColor = accent;
@@ -7633,6 +7852,7 @@ async function viewRemoteCollectionInner(uid, username) {
     document.body.classList.remove('user-menu-open');
     updateViewingInfo();
     renderCollection();
+    hydrateRemoteCloudImages(uid, cached, () => { if (!viewingOwnCollection && viewedUid === uid) renderCollection(); });
   } catch (err) {
     console.error('Remote-Sammlung laden fehlgeschlagen:', err);
     await showAlert('Fehler beim Laden der Sammlung. Bitte versuche es erneut.');
@@ -7654,6 +7874,10 @@ async function importUserCollection(uid, username) {
     const data = docSnap.data() || {};
     const remoteCollection = (await loadCloudCollection(uid, data))
       .map(item => { item.color = normalizeColor(item.color); return item; });
+    await hydrateRemoteCloudImages(uid, {
+      items: remoteCollection,
+      imageIds: data.collectionStorageVersion === 2 && Array.isArray(data.collectionImageIds) ? data.collectionImageIds : []
+    });
 
     const seen = new Set(ownCollection.map(item => `${(item.title||'').trim().toLowerCase()}___${(item.artist||'').trim().toLowerCase()}`));
     let importedCount = 0;
