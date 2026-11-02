@@ -7348,16 +7348,19 @@ async function performCloudDataSaveNow() {
       scheduleCloudSave(Math.max(1000, 60000 - (Date.now() - cloudWriteWindowStartedAt)));
       return true;
     }
+    const cardStats = computeCardStatsSummary(ownCollection);
     const rootNeedsWrite = !rootExists
       || previousUserData.username !== currentUsername
       || previousUserData.title !== ownCollectionTitle
-      || stableCloudJson(previousUserData.settings || {}) !== stableCloudJson(settingsObj);
+      || stableCloudJson(previousUserData.settings || {}) !== stableCloudJson(settingsObj)
+      || stableCloudJson(previousUserData.cardStats || {}) !== stableCloudJson(cardStats);
     const result = await saveCloudCollectionV2(uid, ownCollection, previousUserData, {
       needsWrite: rootNeedsWrite,
       data: {
         username: currentUsername,
         title: ownCollectionTitle,
         settings: settingsObj,
+        cardStats,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }
     }, availableWrites);
@@ -7586,6 +7589,57 @@ function computeCollectionStats(items) {
   };
 }
 
+// Kompakte Kartenstatistik (nur Zahlen), wird beim Speichern ins Root-Dokument geschrieben,
+// damit die Benutzerliste keine fremden Alben laden muss.
+function computeCardStatsSummary(items) {
+  const st = computeCollectionStats(items);
+  return {
+    owned: st.owned,
+    wishlist: st.wishlist,
+    ownedValue: Math.round(st.ownedValue * 100) / 100,
+    genreCount: st.genres.size,
+    artistCount: st.artists.size,
+    minYear: st.minYear,
+    maxYear: st.maxYear,
+    typeCount: { Album: st.typeCount.Album, '10 Inch': st.typeCount['10 Inch'], Single: st.typeCount.Single, CD: st.typeCount.CD }
+  };
+}
+
+const userSummaryCache = new Map(); // uid -> { title, accent, cardStats, fetchedAt } (1 Lesezugriff pro Nutzer)
+
+function getUserCardInfo(uid) {
+  const full = userDocCache.get(uid);
+  if (full) return full;
+  const summary = userSummaryCache.get(uid);
+  if (!summary) return undefined;
+  const cs = summary.cardStats;
+  return {
+    title: summary.title,
+    accent: summary.accent,
+    stats: cs ? {
+      owned: cs.owned || 0, wishlist: cs.wishlist || 0, ownedValue: cs.ownedValue || 0,
+      genres: { size: cs.genreCount || 0 }, artists: { size: cs.artistCount || 0 },
+      minYear: cs.minYear || null, maxYear: cs.maxYear || null,
+      typeCount: { Album: 0, '10 Inch': 0, Single: 0, CD: 0, ...(cs.typeCount || {}) }
+    } : null
+  };
+}
+
+async function fetchUserSummary(user) {
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    const data = snap.exists ? (snap.data() || {}) : {};
+    userSummaryCache.set(user.uid, {
+      title: data.title || '',
+      accent: sanitizeAccent(data.settings?.accentColor),
+      cardStats: data.cardStats && typeof data.cardStats === 'object' ? data.cardStats : null,
+      fetchedAt: Date.now()
+    });
+  } catch (error) {
+    console.warn('Benutzerkarte laden fehlgeschlagen:', user.username, error);
+  }
+}
+
 function formatEuro(value) {
   return value > 0 ? `${value.toFixed(2).replace(/\.00$/, '')} €` : '0 €';
 }
@@ -7599,13 +7653,13 @@ function toggleFavoriteUser(uid) {
 
 function buildUserCard(user) {
   const isOwn = user.uid === currentUid;
-  const cached = userDocCache.get(user.uid);
+  const cached = getUserCardInfo(user.uid);
   const card = document.createElement('article');
   card.className = 'user-card' + (favoriteUserIds.has(user.uid) ? ' is-favorite' : '');
   card.style.setProperty('--ua', cached?.accent || (isOwn ? getAccentColor() : '#d4537e'));
   const title = cached?.title || `${user.username} - Sammlung`;
-  let statsHtml = '<div class="user-card-loading">Wird beim Öffnen geladen</div>';
-  if (cached) {
+  let statsHtml = '<div class="user-card-loading">Statistik folgt, sobald diese Person die neue Version nutzt</div>';
+  if (cached && cached.stats) {
     const st = cached.stats;
     const cell = (label, value) => `<div class="user-card-stat"><span>${label}</span><strong>${escapeHtml(String(value))}</strong></div>`;
     statsHtml = [
@@ -7653,7 +7707,7 @@ function renderUserCards() {
   const needle = (userSearchInput?.value || '').trim().toLocaleLowerCase('de');
   const matches = knownUsers.filter(user => {
     if (!needle) return true;
-    const cached = userDocCache.get(user.uid);
+    const cached = getUserCardInfo(user.uid);
     return `${user.username} ${cached?.title || ''}`.toLocaleLowerCase('de').includes(needle);
   });
   if (!matches.length) {
@@ -7703,8 +7757,16 @@ async function renderUserList(users) {
   const token = ++userListRenderToken;
   const own = knownUsers.find(user => user.uid === currentUid);
   if (own) userDocCache.set(own.uid, { title: ownCollectionTitle, items: ownCollection, stats: computeCollectionStats(ownCollection), accent: getAccentColor() });
-  // Fremde Sammlungen werden NICHT mehr automatisch geladen (1 Lesezugriff pro Album!).
-  // Sie werden erst beim Anklicken (Ansehen / Vergleichen / Importieren) geholt und gecacht.
+  // Fremde Sammlungen werden NICHT automatisch geladen (1 Lesezugriff pro Album!).
+  // Für die Karten genügt das Root-Dokument (Titel, Akzentfarbe, cardStats) = 1 Lesezugriff pro Nutzer.
+  const others = knownUsers.filter(user => user.uid !== currentUid);
+  const stale = others.filter(user => {
+    const summary = userSummaryCache.get(user.uid);
+    return !summary || Date.now() - summary.fetchedAt >= USER_DOC_CACHE_TTL_MS;
+  });
+  renderUserCards();
+  if (!stale.length) return;
+  await Promise.all(stale.map(fetchUserSummary));
   if (token === userListRenderToken) renderUserCards();
 }
 let userListRenderToken = 0;
