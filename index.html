@@ -15135,6 +15135,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   let controllerReady = false;
   let playbackIsPaused = true;
   let lastTrackEndTriggered = false;
+  let pendingAutoAdvancedTrackUri = '';
   let pendingRestoredTrackUri = '';
   let restoringPausedTrack = false;
   if (restorePlayback && /^spotify:track:[A-Za-z0-9]+$/.test(listeningPlaybackState.trackUri)) {
@@ -15162,7 +15163,17 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       && Number.isInteger(Number(state.playbackContextPosition));
     const reportedIndex = hasReportedIndex ? Number(state.playbackContextPosition) : -1;
     const matchingIndex = reportedUri ? tracks.findIndex(track => track.uri === reportedUri) : -1;
-    if (reportedIndex >= 0 && reportedIndex < tracks.length) {
+    const pendingIndex = pendingAutoAdvancedTrackUri
+      ? tracks.findIndex(track => track.uri === pendingAutoAdvancedTrackUri)
+      : -1;
+    if (pendingIndex >= 0 && reportedUri !== pendingAutoAdvancedTrackUri && reportedIndex !== pendingIndex) {
+      currentIndex = pendingIndex;
+      playingUri = pendingAutoAdvancedTrackUri;
+    } else if (pendingIndex >= 0) {
+      pendingAutoAdvancedTrackUri = '';
+      currentIndex = pendingIndex;
+      playingUri = tracks[currentIndex].uri;
+    } else if (reportedIndex >= 0 && reportedIndex < tracks.length) {
       currentIndex = reportedIndex;
       playingUri = tracks[currentIndex].uri || reportedUri || playingUri;
     } else if (matchingIndex >= 0) {
@@ -15218,6 +15229,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         try {
           currentIndex = index;
           playingUri = track.uri;
+          pendingAutoAdvancedTrackUri = '';
           pendingRestoredTrackUri = '';
           restoringPausedTrack = false;
           listeningPlaybackState = { trackUri: track.uri, positionSeconds: 0 };
@@ -15275,6 +15287,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     try {
       currentIndex = nextIndex;
       playingUri = track.uri;
+      pendingAutoAdvancedTrackUri = '';
       pendingRestoredTrackUri = '';
       restoringPausedTrack = false;
       listeningPlaybackState = { trackUri: track.uri, positionSeconds: 0 };
@@ -15423,10 +15436,30 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           seek.value = String(Math.min(position, playbackDuration));
           progress.style.setProperty('--progress', `${playbackDuration > 0 ? Math.min(position / playbackDuration * 100, 100) : 0}%`);
         }
-        if (albumId && listeningAlbumQueue.length && currentIndex === tracks.length - 1
-          && !playbackIsPaused && playbackDuration > 0 && position >= playbackDuration - 0.5 && !lastTrackEndTriggered) {
+        if (albumId && !playbackIsPaused && playbackDuration > 0
+          && position >= playbackDuration - 0.5 && !lastTrackEndTriggered) {
           lastTrackEndTriggered = true;
-          playNextQueuedAlbum();
+          if (currentIndex >= 0 && currentIndex < tracks.length - 1) {
+            const nextTrack = tracks[currentIndex + 1];
+            currentIndex += 1;
+            playingUri = nextTrack.uri || playingUri;
+            pendingAutoAdvancedTrackUri = nextTrack.uri || '';
+            listeningPlaybackState = { trackUri: playingUri, positionSeconds: 0 };
+            updateCurrentTrack();
+            persistListeningSession();
+            if (nextTrack.uri) {
+              try {
+                controller.loadUri(nextTrack.uri);
+                controller.play();
+              } catch (error) {
+                console.error('Nächster Spotify-Titel konnte nicht automatisch gestartet werden:', error);
+                message.hidden = false;
+                message.textContent = 'Der nächste Spotify-Titel konnte nicht automatisch gestartet werden. Bitte nutze „Nächster Titel“.';
+              }
+            }
+          } else if (listeningAlbumQueue.length) {
+            playNextQueuedAlbum();
+          }
         }
       });
     });
