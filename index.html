@@ -15156,13 +15156,20 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       || state.track_window?.current_track?.uri
       || state.currentTrack?.uri
       || '';
-    if (reportedUri) playingUri = reportedUri;
-    const matchingIndex = tracks.findIndex(track => track.uri === playingUri);
-    const reportedIndex = Number(state.playbackContextPosition);
-    if (matchingIndex >= 0) currentIndex = matchingIndex;
-    else if (Number.isInteger(reportedIndex) && reportedIndex >= 0 && reportedIndex < tracks.length) {
+    const matchingIndex = reportedUri ? tracks.findIndex(track => track.uri === reportedUri) : -1;
+    const hasReportedIndex = state.playbackContextPosition !== null
+      && state.playbackContextPosition !== undefined
+      && state.playbackContextPosition !== ''
+      && Number.isInteger(Number(state.playbackContextPosition));
+    const reportedIndex = hasReportedIndex ? Number(state.playbackContextPosition) : -1;
+    if (matchingIndex >= 0) {
+      playingUri = reportedUri;
+      currentIndex = matchingIndex;
+    } else if (reportedIndex >= 0 && reportedIndex < tracks.length) {
       currentIndex = reportedIndex;
-      playingUri = tracks[currentIndex].uri || playingUri;
+      playingUri = tracks[currentIndex].uri || reportedUri || playingUri;
+    } else if (reportedUri) {
+      playingUri = reportedUri;
     }
     if (currentIndex >= 0 && tracks[currentIndex]) {
       const activeUri = tracks[currentIndex].uri;
