@@ -8172,6 +8172,7 @@ auth.onAuthStateChanged(async user => {
       console.error('Spotify-Rückmeldung konnte nicht verarbeitet werden:', error);
       updateSpotifyConnectionStatus(`Spotify-Rückmeldung konnte nicht verarbeitet werden: ${error.message}`);
     });
+    await restoreSpotifyConnection();
     if (userMenuPanel) userMenuPanel.classList.remove('open');
     document.body.classList.remove('user-menu-open');
   } else {
@@ -8892,6 +8893,9 @@ localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, 'auto');
 const SPOTIFY_CLIENT_ID_KEY = 'albumListeningSpotifyClientIdV1';
 const YOUTUBE_API_KEY_KEY = 'albumListeningYouTubeApiKeyV1';
 const SPOTIFY_TOKEN_KEY = 'albumListeningSpotifyTokenV1';
+const SPOTIFY_REFRESH_TOKEN_KEY = 'albumListeningSpotifyRefreshTokenV1';
+const SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY = 'albumListeningSpotifyAutoConnectAttemptV1';
+const SPOTIFY_AUTO_CONNECT_DISABLED_KEY = 'albumListeningSpotifyAutoConnectDisabledV1';
 const SPOTIFY_VERIFIER_KEY = 'albumListeningSpotifyVerifierV1';
 const SPOTIFY_STATE_KEY = 'albumListeningSpotifyStateV1';
 let spotifyClientId = '';
@@ -8902,6 +8906,31 @@ let listeningCredentialsSaveRequest = Promise.resolve();
 function updateListeningCredentialsStatus(message) {
   const status = document.getElementById('listeningCredentialsStatus');
   if (status) status.textContent = message;
+}
+
+function getStoredSpotifyRefreshCredential(clientId = spotifyClientId) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(SPOTIFY_REFRESH_TOKEN_KEY) || 'null');
+    return stored?.clientId === clientId && typeof stored.refreshToken === 'string'
+      ? stored.refreshToken
+      : '';
+  } catch (error) {
+    console.warn('Gespeicherte Spotify-Verbindung konnte nicht gelesen werden:', error);
+    return '';
+  }
+}
+
+function storeSpotifyRefreshCredential(refreshToken) {
+  if (!refreshToken || !spotifyClientId) return;
+  try {
+    localStorage.setItem(SPOTIFY_REFRESH_TOKEN_KEY, JSON.stringify({
+      clientId: spotifyClientId,
+      refreshToken
+    }));
+  } catch (error) {
+    console.error('Spotify-Verbindung konnte nicht dauerhaft gespeichert werden:', error);
+    updateSpotifyConnectionStatus('Spotify ist verbunden, aber die automatische Wiederverbindung konnte nicht gespeichert werden.');
+  }
 }
 
 async function loadListeningCredentials(uid) {
@@ -9035,6 +9064,9 @@ if (spotifyClientIdInput) {
     spotifyClientId = spotifyClientIdInput.value.trim();
     if (previousClientId !== spotifyClientId) {
       sessionStorage.removeItem(SPOTIFY_TOKEN_KEY);
+      localStorage.removeItem(SPOTIFY_REFRESH_TOKEN_KEY);
+      localStorage.removeItem(SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY);
+      localStorage.removeItem(SPOTIFY_AUTO_CONNECT_DISABLED_KEY);
       updateSpotifyConnectionStatus('Spotify Client ID geändert. Bitte erneut verbinden.');
     }
     updateListeningCredentialsStatus('Nicht gespeicherte Änderungen. Drücke „Wiedergabe-Einstellungen speichern“, um sie privat in Firebase zu sichern.');
@@ -9052,11 +9084,17 @@ const spotifyRedirectUriElement = document.getElementById('spotifyRedirectUri');
 if (spotifyRedirectUriElement) spotifyRedirectUriElement.textContent = getSpotifyRedirectUri() || 'Nicht verfügbar bei file://';
 document.getElementById('spotifyConnectBtn')?.addEventListener('click', () => {
   const token = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
-  if (token?.accessToken && (Number(token.expiresAt) > Date.now() || token.refreshToken)) {
+  if ((token?.accessToken && (Number(token.expiresAt) > Date.now() || token.refreshToken))
+      || getStoredSpotifyRefreshCredential()) {
     sessionStorage.removeItem(SPOTIFY_TOKEN_KEY);
+    localStorage.removeItem(SPOTIFY_REFRESH_TOKEN_KEY);
+    localStorage.setItem(SPOTIFY_AUTO_CONNECT_DISABLED_KEY, 'true');
+    localStorage.removeItem(SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY);
     updateSpotifyConnectionStatus('Spotify wurde getrennt.');
     return;
   }
+  localStorage.removeItem(SPOTIFY_AUTO_CONNECT_DISABLED_KEY);
+  localStorage.removeItem(SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY);
   connectSpotify().catch(error => {
     console.error('Spotify-Verbindung konnte nicht gestartet werden:', error);
     updateSpotifyConnectionStatus(`Spotify-Verbindung konnte nicht gestartet werden: ${error.message}`);
@@ -15444,7 +15482,7 @@ function updateSpotifyConnectionStatus(message = '') {
   if (!status) return;
   const token = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
   const connected = token?.accessToken
-    && (Number(token.expiresAt) > Date.now() || token.refreshToken);
+    && (Number(token.expiresAt) > Date.now() || token.refreshToken || getStoredSpotifyRefreshCredential());
   status.textContent = message || (connected
     ? 'Spotify ist für diese Sitzung verbunden.'
     : 'Spotify ist nicht verbunden.');
@@ -15474,6 +15512,9 @@ function saveListeningCredentials() {
       localStorage.removeItem(SPOTIFY_CLIENT_ID_KEY);
       localStorage.removeItem(YOUTUBE_API_KEY_KEY);
       updateListeningCredentialsStatus('Wiedergabe-Einstellungen privat in deinem Konto gespeichert.');
+      if (spotifyClientId && !getStoredSpotifyRefreshCredential()) {
+        await restoreSpotifyConnection();
+      }
       return true;
     })
     .catch(error => {
@@ -15570,6 +15611,9 @@ async function completeSpotifyAuthCallback() {
       refreshToken: data.refresh_token || '',
       expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000
     }));
+    storeSpotifyRefreshCredential(data.refresh_token);
+    localStorage.removeItem(SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY);
+    if (!data.refresh_token) localStorage.setItem(SPOTIFY_AUTO_CONNECT_DISABLED_KEY, 'true');
     updateSpotifyConnectionStatus();
   } catch (error) {
     console.error('Spotify-Anmeldung fehlgeschlagen:', error);
@@ -15579,27 +15623,55 @@ async function completeSpotifyAuthCallback() {
 
 async function getSpotifyAccessToken() {
   const stored = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
-  if (!stored) return '';
-  if (Number(stored.expiresAt) > Date.now() + 60000) return stored.accessToken;
-  if (!stored.refreshToken) {
+  const refreshToken = stored?.refreshToken || getStoredSpotifyRefreshCredential();
+  if (!stored?.accessToken && !refreshToken) return '';
+  if (stored?.refreshToken) storeSpotifyRefreshCredential(stored.refreshToken);
+  if (Number(stored?.expiresAt) > Date.now() + 60000) return stored.accessToken;
+  if (!refreshToken) {
     sessionStorage.removeItem(SPOTIFY_TOKEN_KEY);
     updateSpotifyConnectionStatus('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.');
     return '';
   }
   try {
-    const data = await exchangeSpotifyToken({ grant_type: 'refresh_token', refresh_token: stored.refreshToken });
+    const data = await exchangeSpotifyToken({ grant_type: 'refresh_token', refresh_token: refreshToken });
     const refreshed = {
       accessToken: data.access_token,
-      refreshToken: data.refresh_token || stored.refreshToken,
+      refreshToken: data.refresh_token || refreshToken,
       expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000
     };
     sessionStorage.setItem(SPOTIFY_TOKEN_KEY, JSON.stringify(refreshed));
+    storeSpotifyRefreshCredential(refreshed.refreshToken);
     updateSpotifyConnectionStatus();
     return refreshed.accessToken;
   } catch (error) {
     sessionStorage.removeItem(SPOTIFY_TOKEN_KEY);
     updateSpotifyConnectionStatus(`Spotify-Sitzung konnte nicht erneuert werden: ${error.message}`);
     return '';
+  }
+}
+
+async function restoreSpotifyConnection() {
+  const refreshToken = getStoredSpotifyRefreshCredential();
+  const sessionToken = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
+  if (!spotifyClientId) {
+    updateSpotifyConnectionStatus();
+    return;
+  }
+  if (refreshToken || sessionToken?.accessToken) {
+    await getSpotifyAccessToken();
+    return;
+  }
+  if (!getSpotifyRedirectUri() || localStorage.getItem(SPOTIFY_AUTO_CONNECT_DISABLED_KEY) === 'true'
+      || localStorage.getItem(SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY) === 'true') {
+    updateSpotifyConnectionStatus();
+    return;
+  }
+  localStorage.setItem(SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY, 'true');
+  try {
+    await connectSpotify();
+  } catch (error) {
+    console.error('Automatische Spotify-Anmeldung konnte nicht gestartet werden:', error);
+    updateSpotifyConnectionStatus(`Spotify-Verbindung konnte nicht automatisch gestartet werden: ${error.message}`);
   }
 }
 
