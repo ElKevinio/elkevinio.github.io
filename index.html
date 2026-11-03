@@ -211,6 +211,34 @@
   }
 
   .settings-wrap { position: relative; }
+  #cloudSyncStrip {
+    position:absolute;
+    top:0;
+    right:0;
+    z-index:2147483649;
+    width:4px;
+    height:100%;
+    min-width:4px;
+    min-height:0;
+    padding:0;
+    border:0;
+    border-radius:0 6px 6px 0;
+    background:var(--danger);
+    cursor:pointer;
+    transition:none !important;
+  }
+  #cloudSyncStrip[data-state="synced"] {
+    background:#35b66a;
+    box-shadow:0 0 7px rgba(53,182,106,.55);
+  }
+  #cloudSyncStrip[data-state="pending"],
+  #cloudSyncStrip[data-state="error"] {
+    background:var(--danger);
+    box-shadow:0 0 7px rgba(224,100,95,.45);
+  }
+  #cloudSyncStrip[data-state="pending"] { animation:cloudSyncPulse 1.4s ease-in-out infinite; }
+  #cloudSyncStrip[hidden] { display:none; }
+  @keyframes cloudSyncPulse { 50% { opacity:.45; } }
   .settings-wrap .icon-btn {
     color: var(--text-secondary);
     background: rgba(255,255,255,0.04);
@@ -5181,6 +5209,7 @@
         <button id="settingsBtn" class="icon-btn" title="Einstellungen" aria-label="Einstellungen">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
+        <button id="cloudSyncStrip" type="button" data-state="synced" title="Mit Firebase synchronisiert. Klicken, um den Status zu prüfen." aria-label="Mit Firebase synchronisiert. Klicken, um den Status zu prüfen." hidden></button>
         <div class="settings-panel" id="settingsPanel">
           <p class="settings-panel-title">Konto</p>
           <div class="user-pill settings-user-pill">
@@ -7119,19 +7148,77 @@ function updateCloudSyncBanner(message, state = 'pending', retry = false) {
 
 function updateCloudSyncIndicator() {
   const indicator = document.getElementById('cloudSyncIndicator');
-  if (!indicator) return;
-  indicator.hidden = !currentUid || !viewingOwnCollection;
+  const strip = document.getElementById('cloudSyncStrip');
+  if (!indicator && !strip) return;
   const state = pendingCloudSave ? (cloudSyncUnavailableReason ? 'error' : 'pending') : 'synced';
+  const pendingCount = pendingCloudSave ? getCloudPendingChangeCount() : { albums: 0, settings: false };
+  const pendingDetails = [
+    pendingCount.albums ? `${pendingCount.albums} ${pendingCount.albums === 1 ? 'Album' : 'Alben'}` : '',
+    pendingCount.settings ? 'Einstellungen' : ''
+  ].filter(Boolean).join(' und ');
   const status = state === 'synced'
     ? 'Mit Firebase synchronisiert.'
     : cloudSyncUnavailableReason === 'quota'
-      ? 'Lokal gespeichert. Firebase hat sein Schreibkontingent erreicht.'
+      ? `Lokal gespeichert. Firebase hat sein Schreibkontingent erreicht.${pendingDetails ? ` Ausstehend: ${pendingDetails}.` : ''}`
       : cloudSyncUnavailableReason === 'offline'
-        ? 'Lokal gespeichert. Firebase ist nicht erreichbar.'
-        : 'Änderungen sind lokal vorgemerkt und werden mit Firebase synchronisiert.';
-  indicator.dataset.state = state;
-  indicator.title = `${status} Klicken, um den Status zu prüfen.`;
-  indicator.setAttribute('aria-label', `${status} Klicken, um den Status zu prüfen.`);
+        ? `Lokal gespeichert. Firebase ist nicht erreichbar.${pendingDetails ? ` Ausstehend: ${pendingDetails}.` : ''}`
+        : `Änderungen sind lokal vorgemerkt und werden mit Firebase synchronisiert.${pendingDetails ? ` Ausstehend: ${pendingDetails}.` : ''}`;
+  [indicator, strip].forEach(element => {
+    if (!element) return;
+    element.hidden = !currentUid || !viewingOwnCollection;
+    element.dataset.state = state;
+    element.title = `${status} Klicken, um den Status zu prüfen.`;
+    element.setAttribute('aria-label', `${status} Klicken, um den Status zu prüfen.`);
+  });
+  const settingsButton = document.getElementById('settingsBtn');
+  if (settingsButton) {
+    settingsButton.title = pendingCloudSave
+      ? `Einstellungen · Cloud ausstehend${pendingDetails ? `: ${pendingDetails} nicht synchron` : ' · Änderungen nicht synchron'}.`
+      : 'Einstellungen';
+    settingsButton.setAttribute('aria-label', settingsButton.title);
+  }
+}
+
+function getCloudPendingChangeCount() {
+  const changedAlbumIds = new Set();
+  let settingsChanged = false;
+  try {
+    const cloudItems = new Map();
+    cloudChunkSnapshot.forEach(json => {
+      JSON.parse(json).forEach(item => {
+        cloudItems.set(getCloudItemDocId(item), stableCloudJson(item));
+      });
+    });
+    const currentPlan = buildCloudCollectionPlan(ownCollection);
+    currentPlan.chunks.forEach(chunk => {
+      JSON.parse(chunk.json).forEach(item => {
+        const id = getCloudItemDocId(item);
+        if (cloudItems.get(id) !== stableCloudJson(item)) changedAlbumIds.add(id);
+        cloudItems.delete(id);
+      });
+    });
+    cloudItems.forEach((value, id) => changedAlbumIds.add(id));
+    currentPlan.images.forEach((image, id) => {
+      if (cloudImageSnapshot.has(id) && cloudImageSnapshot.get(id) !== image) changedAlbumIds.add(id);
+      else if (!cloudImageSnapshot.has(id) && !cloudPendingImageIds.has(id)) changedAlbumIds.add(id);
+    });
+  } catch (error) {
+    console.warn('Ausstehende Cloud-Änderungen konnten nicht vollständig gezählt werden:', error);
+    return { albums: ownCollection.length, settings: true };
+  }
+
+  if (cloudRootCache?.uid === currentUid) {
+    const root = cloudRootCache.data || {};
+    const cardStats = computeCardStatsSummary(ownCollection);
+    settingsChanged = root.title !== ownCollectionTitle
+      || stableCloudJson(root.settings || {}) !== stableCloudJson(getCloudSettingsSnapshot())
+      || stableCloudJson(root.cardStats || {}) !== stableCloudJson(cardStats)
+      || root.collectionStorageVersion !== 2;
+  } else {
+    settingsChanged = true;
+  }
+  if (pendingCloudSave && changedAlbumIds.size === 0 && !settingsChanged) settingsChanged = true;
+  return { albums: changedAlbumIds.size, settings: settingsChanged };
 }
 
 function showCloudSyncStatus(message = getPendingCloudStatusMessage()) {
@@ -7473,6 +7560,21 @@ window.addEventListener('online', () => {
 });
 
 document.getElementById('cloudSyncIndicator').addEventListener('click', async () => {
+  if (!currentUid || !viewingOwnCollection) {
+    showCloudSyncStatus('Wechsle zu deiner eigenen Sammlung, um den Firebase-Status zu prüfen.');
+    return;
+  }
+  if (!pendingCloudSave) {
+    showCloudSyncStatus('Deine Sammlung ist mit Firebase synchronisiert.');
+    return;
+  }
+  clearTimeout(cloudRetryTimer);
+  cloudRetryTimer = null;
+  updateCloudSyncBanner('Synchronisierung mit Firebase wird versucht …', 'pending');
+  await saveCloudDataNow();
+});
+
+document.getElementById('cloudSyncStrip').addEventListener('click', async () => {
   if (!currentUid || !viewingOwnCollection) {
     showCloudSyncStatus('Wechsle zu deiner eigenen Sammlung, um den Firebase-Status zu prüfen.');
     return;
@@ -9432,7 +9534,7 @@ function renderWashCurrentVinyl({ entering = false } = {}) {
     'is-dirty',
     document.getElementById('vinylEffectsCheckbox').checked && wasVinylLastWashedOverYearAgo(item)
   );
-  disc.innerHTML = `${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : `${getVinylLiquidMarkup(record)}${getWashScratchOverlayMarkup(conditionSelect.value)}<div class="wash-record-dirt"></div>`}`;
+  disc.innerHTML = `${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : `${getVinylLiquidMarkup(record, design.discStyle)}${getWashScratchOverlayMarkup(conditionSelect.value)}<div class="wash-record-dirt"></div>`}`;
   if (entering) {
     disc.style.transform = 'translateY(-110%)';
     disc.style.opacity = '1';
@@ -11011,7 +11113,8 @@ function getVinylSvgData(record) {
   return image;
 }
 
-function getVinylLiquidMarkup(record) {
+function getVinylLiquidMarkup(record, discStyle = 'vinyl') {
+  if (discStyle === 'picture-disc') return '';
   return (record?.layers || []).filter(layer => layer.type === 'Liquid').map(layer => {
     const amount = Math.max(0, Math.min(100, Number(layer.amount ?? 50) || 0));
     if (amount === 0) return '';
@@ -11190,7 +11293,7 @@ function renderVinylEditor() {
   const previewDesign = vinylEditorOriginalPictureDataUrl
     ? { ...vinylEditorDesign, cdImagePreviewDataUrl: vinylEditorOriginalPictureDataUrl }
     : vinylEditorDesign;
-  preview.innerHTML = `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record)}`;
+  preview.innerHTML = `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
   renderPictureColorMarker();
   const pictureImage = preview.querySelector('.cd-picture-art');
   if (pictureImage) pictureImage.addEventListener('error', () => {
@@ -11263,7 +11366,7 @@ function updateVinylEditorPreview() {
   const previewDesign = vinylEditorOriginalPictureDataUrl
     ? { ...vinylEditorDesign, cdImagePreviewDataUrl: vinylEditorOriginalPictureDataUrl }
     : vinylEditorDesign;
-  preview.innerHTML = `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record)}`;
+  preview.innerHTML = `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
   renderPictureColorMarker();
   updatePictureTransformControls();
   const pictureImage = preview.querySelector('.cd-picture-art');
@@ -11875,7 +11978,17 @@ function getClearVinylBarColor(color) {
 
 function getBarPatternStyle(item) {
   if (item?.vinylDesign?.records?.length) {
+    const design = normalizeVinylDesign(item);
     const record = getVinylRecordForItem(item);
+    if (design.discStyle === 'picture-disc') {
+      return {
+        barColor: design.pictureBackgroundColor,
+        barColorSolid: design.pictureBackgroundColor,
+        barPattern: 'none',
+        barBgSize: 'cover',
+        isAnimated: false
+      };
+    }
     return {
       barColor: record.transparency > 0 ? getClearVinylBarColor(record.baseColor) : record.baseColor,
       barColorSolid: record.baseColor,
@@ -17189,7 +17302,7 @@ function renderStorageRandomResult(item) {
   disc.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
   disc.style.setProperty('--vinyl-label', record.labelColor);
   disc.style.setProperty('--vinyl-art', getVinylSvgData(record));
-  disc.innerHTML = `${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(record)}`;
+  disc.innerHTML = `${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(record, design.discStyle)}`;
   document.getElementById('storageResultTitle').textContent = getDisplayName(item.title) || 'Unbekanntes Album';
   document.getElementById('storageResultArtist').textContent = getArtistDisplayName(item);
   document.getElementById('storageResultCount').textContent = `${design.records.length} Vinyl${design.records.length === 1 ? '' : 's'}`;
@@ -18653,6 +18766,7 @@ function renderCollection() {
       const showCollectionExtra = ['location', 'lastWashed', 'genre', 'condition', 'releaseType'].includes(activeSort);
       const genreLabel = item.genre ? escapeHtml(item.genre) : '';
       const barStyle = getBarPatternStyle(item);
+      const vinylDesignPreview = normalizeVinylDesign(item);
       const vinylRecordPreview = getVinylRecordForItem(item);
       const showCollectionVinylEffects = viewingOwnCollection && item.owned
         && document.getElementById('vinylEffectsCheckbox')?.checked !== false;
@@ -18684,7 +18798,7 @@ function renderCollection() {
           ` : '';
 
       card.innerHTML = `
-        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${isCollectionVinylDirty && !isCdItem(item) ? 'is-dirty' : ''} ${getDiscMediaClasses(item)}" style="--picture-background:${normalizeVinylDesign(item).pictureBackgroundColor};--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${vinylRecordPreview.labelColor};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="${isCdItem(item) ? 'CD-Design' : 'Vinyl-Design'}">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : `${getVinylLiquidMarkup(vinylRecordPreview)}${collectionVinylEffectsMarkup}`}</div></div>
+        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${isCollectionVinylDirty && !isCdItem(item) ? 'is-dirty' : ''} ${getDiscMediaClasses(item)}" style="--picture-background:${vinylDesignPreview.pictureBackgroundColor};--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${vinylRecordPreview.labelColor};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="${isCdItem(item) ? 'CD-Design' : 'Vinyl-Design'}">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : `${getVinylLiquidMarkup(vinylRecordPreview, vinylDesignPreview.discStyle)}${collectionVinylEffectsMarkup}`}</div></div>
         ${selectModeActive ? `<div class="collection-card-checkbox" style="position:absolute;top:10px;left:10px;z-index:4;"><input type="checkbox" data-item-id="${item.id}" style="cursor:pointer; width:18px; height:18px;" ${selectedItemIds.has(item.id) ? 'checked' : ''}></div>` : ''}
         <div class="media">
           <img src="${item.coverUrl || ''}" alt="" loading="lazy" decoding="async">
@@ -18860,7 +18974,7 @@ ${actionButtons}
             td.textContent = pVal > 0 ? (pVal.toFixed(2).replace(/\.00$/, '') + ' ' + escapeHtml(item.discogsCurrency || '€')) : '';
           } else if (col.key === 'color') {
             const discRecord = getVinylRecordForItem(item);
-            td.innerHTML = `<div class="vinyl-editor-disc table-vinyl-disc ${getDiscMediaClasses(item)}" title="${escapeHtml(getVisibleLabel(item))}" style="${getDiscArtworkBackgroundStyle(item)} --vinyl-base: ${hexToRgba(discRecord.baseColor, 1 - discRecord.transparency / 100)}; --vinyl-label: ${discRecord.labelColor}; --vinyl-art: ${getVinylSvgData(discRecord)};">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(discRecord)}</div>`;
+            td.innerHTML = `<div class="vinyl-editor-disc table-vinyl-disc ${getDiscMediaClasses(item)}" title="${escapeHtml(getVisibleLabel(item))}" style="${getDiscArtworkBackgroundStyle(item)} --vinyl-base: ${hexToRgba(discRecord.baseColor, 1 - discRecord.transparency / 100)}; --vinyl-label: ${discRecord.labelColor}; --vinyl-art: ${getVinylSvgData(discRecord)};">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(discRecord, normalizeVinylDesign(item).discStyle)}</div>`;
           } else if (col.key === 'status') {
             td.innerHTML = `<span class="state-pill">${item.owned ? 'Besitze ich' : 'Wunschliste'}</span>`;
           } else if (col.key === 'actions') {
