@@ -231,20 +231,41 @@
     background:#35b66a;
     box-shadow:0 0 7px rgba(53,182,106,.55);
   }
-  #cloudSyncStrip[data-state="pending"],
+  #cloudSyncStrip[data-state="pending"] {
+    background:#3b8eea;
+    box-shadow:0 0 7px rgba(59,142,234,.55);
+  }
   #cloudSyncStrip[data-state="error"] {
     background:var(--danger);
     box-shadow:0 0 7px rgba(224,100,95,.45);
   }
-  #cloudSyncStrip[data-state="pending"] { animation:cloudSyncPulse 1.4s ease-in-out infinite; }
+  #cloudSyncStrip[data-state="syncing"] {
+    background:#3b8eea;
+    box-shadow:0 0 8px rgba(59,142,234,.7);
+  }
+  #cloudSyncStrip[data-state="pending"] { animation:cloudActivityPulse .8s ease-in-out infinite alternate; }
   #cloudSyncStrip[hidden] { display:none; }
-  @keyframes cloudSyncPulse { 50% { opacity:.45; } }
   .settings-wrap .icon-btn {
     color: var(--text-secondary);
     background: rgba(255,255,255,0.04);
     position: relative;
     z-index: 2147483648; /* keep the button above the panel so it remains clickable */
   }
+  #settingsBtn::after {
+    position:absolute;
+    inset:2px;
+    z-index:0;
+    border-radius:50%;
+    background:conic-gradient(#3b8eea var(--settings-progress,0%), rgba(59,142,234,.18) 0);
+    opacity:0;
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+    mask:radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+    pointer-events:none;
+    content:'';
+    transition:opacity .15s ease;
+  }
+  #settingsBtn[data-refreshing="true"]::after { opacity:1; }
+  #settingsBtn > svg { position:relative; z-index:1; }
   .settings-wrap .icon-btn:hover { color: var(--text-primary); }
   .settings-panel {
     display: none;
@@ -3458,9 +3479,13 @@
   }
   .settings-panel-actions button svg { flex: 0 0 16px; width: 16px; height: 16px; margin-right: 0 !important; }
   .settings-panel-actions button span { font-size: 10px; line-height: 1.2; white-space: normal; }
-  .settings-price-refresh-status { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px; color:var(--text-secondary); font-size:12px; line-height:1.4; }
+  .settings-price-refresh-status { position:relative; isolation:isolate; display:flex; align-items:center; justify-content:space-between; gap:8px; overflow:hidden; margin-top:8px; padding:6px 8px; border:1px solid var(--border); border-radius:7px; background:var(--surface-1); color:var(--text-secondary); font-size:12px; line-height:1.4; }
+  .settings-price-refresh-status::before { position:absolute; z-index:-1; inset:0; background:linear-gradient(90deg, rgba(59,142,234,.2) 0%, rgba(59,142,234,.2) var(--refresh-progress,0%), transparent var(--refresh-progress,0%)); content:''; transition:background-size .2s ease; }
+  .settings-price-refresh-status[data-active="false"]::before { background:linear-gradient(90deg, rgba(53,182,106,.16) 0%, rgba(53,182,106,.16) var(--refresh-progress,0%), transparent var(--refresh-progress,0%)); }
+  .settings-price-refresh-status > span { position:relative; z-index:0; }
   .settings-price-refresh-status[hidden] { display:none; }
   .settings-price-refresh-status button { flex:0 0 auto; min-height:28px; padding:4px 8px; font-size:11px; }
+  #cancelDiscogsPriceRefreshBtn[hidden] { display:none; }
   .settings-price-refresh-action { display:flex; align-items:stretch; }
   .fix-entry-action, .settings-price-refresh-action { display:flex; align-items:stretch; min-width:0; }
   .fix-entry-action > button, .settings-price-refresh-action > button { width:100%; min-width:0; }
@@ -4783,7 +4808,9 @@
   }
   .cloud-sync-indicator[data-state="synced"] { color:#35b66a !important; }
   .cloud-sync-indicator[data-state="pending"] { color:#3b8eea !important; }
+  .cloud-sync-indicator[data-state="syncing"] { color:#3b8eea !important; animation:cloudActivityPulse .8s ease-in-out infinite alternate; }
   .cloud-sync-indicator[data-state="error"] { color:var(--danger) !important; }
+  @keyframes cloudActivityPulse { to { filter:brightness(1.45); } }
   .cloud-sync-indicator:hover { background:var(--surface-3) !important; }
   .cloud-sync-indicator[hidden] { display:none; }
   .account-action-icon {
@@ -5211,7 +5238,6 @@
         </button>
         <button id="cloudSyncStrip" type="button" data-state="synced" title="Mit Firebase synchronisiert. Klicken, um den Status zu prüfen." aria-label="Mit Firebase synchronisiert. Klicken, um den Status zu prüfen." hidden></button>
         <div class="settings-panel" id="settingsPanel">
-          <p class="settings-panel-title">Konto</p>
           <div class="user-pill settings-user-pill">
             <span><strong id="currentUsernameLabel">–</strong></span>
             <button type="button" id="logoutBtn" class="account-action-icon" title="Abmelden" aria-label="Abmelden">
@@ -6366,6 +6392,12 @@ let cloudSaveInFlightPromise = null;
 let cloudChangeRevision = 0;
 let cloudRetryAttempt = 0;
 let cloudSyncUnavailableReason = null;
+let firebaseActivityCount = 0;
+let firebaseActivityStartedAt = 0;
+let firebaseActivityHoldUntil = 0;
+let firebaseActivityTimer = null;
+let discogsRefreshProgressPercent = null;
+let discogsRefreshIsActive = false;
 let cloudWriteWindowStartedAt = 0;
 let cloudWritesInWindow = 0;
 let cloudCollectionSnapshotUid = null;
@@ -6680,31 +6712,31 @@ async function handleAuthSubmit() {
   const email = usernameToEmail(username);
   try {
     if (authMode === 'register') {
-      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      const cred = await trackFirebaseRequest(auth.createUserWithEmailAndPassword(email, password));
       const uid = cred.user.uid;
       const usernameKey = username.toLowerCase();
       try {
-        const takenDoc = await db.collection('usernames').doc(usernameKey).get();
+        const takenDoc = await trackFirebaseRequest(db.collection('usernames').doc(usernameKey).get());
         if (takenDoc.exists) {
-          await cred.user.delete();
+          await trackFirebaseRequest(cred.user.delete());
           showAuthError('Dieser Benutzername ist bereits vergeben.');
           setAuthLoading(false);
           return;
         }
-        await db.collection('usernames').doc(usernameKey).set({ uid: uid, username: username });
-        await db.collection('users').doc(uid).set({
+        await trackFirebaseRequest(db.collection('usernames').doc(usernameKey).set({ uid: uid, username: username }));
+        await trackFirebaseRequest(db.collection('users').doc(uid).set({
           username: username,
           title: 'Vinyl-Sammlung',
           collection: [],
           settings: {},
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }));
       } catch (innerErr) {
-        await cred.user.delete().catch(() => {});
+        await trackFirebaseRequest(cred.user.delete()).catch(() => {});
         throw innerErr;
       }
     } else {
-      await auth.signInWithEmailAndPassword(email, password);
+      await trackFirebaseRequest(auth.signInWithEmailAndPassword(email, password));
     }
     // onAuthStateChanged übernimmt den Rest (Daten laden, UI umschalten)
   } catch (err) {
@@ -6724,7 +6756,7 @@ logoutBtn.addEventListener('click', async () => {
   });
   if (!confirmed) return;
   try {
-    await auth.signOut();
+    await trackFirebaseRequest(auth.signOut());
   } catch (error) {
     console.error('Abmelden fehlgeschlagen:', error);
     await showAlert('Du konntest nicht abgemeldet werden. Bitte versuche es erneut.');
@@ -6768,7 +6800,7 @@ async function loadCloudCollectionDetailed(uid, userData) {
   if (userData.collectionStorageVersion === 2) {
     const chunkIds = Array.isArray(userData.collectionChunkIds) ? userData.collectionChunkIds : [];
     const chunksRef = getCloudChunksRef(uid);
-    const snapshots = await Promise.all(chunkIds.map(id => chunksRef.doc(id).get()));
+    const snapshots = await trackFirebaseRequest(Promise.all(chunkIds.map(id => chunksRef.doc(id).get())));
     const items = [];
     const chunkSnapshot = new Map();
     snapshots.forEach((snapshot, index) => {
@@ -6795,8 +6827,8 @@ async function loadCloudCollectionDetailed(uid, userData) {
   const itemIds = Array.isArray(userData.collectionItemIds) ? userData.collectionItemIds : [];
   const items = [];
   for (let offset = 0; offset < itemIds.length; offset += 20) {
-    const snapshots = await Promise.all(itemIds.slice(offset, offset + 20)
-      .map(docId => collectionItemsRef.doc(docId).get()));
+    const snapshots = await trackFirebaseRequest(Promise.all(itemIds.slice(offset, offset + 20)
+      .map(docId => collectionItemsRef.doc(docId).get())));
     snapshots.forEach(snapshot => {
       if (!snapshot.exists) return;
       const item = snapshot.data();
@@ -6901,7 +6933,7 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
       bytes += url.length;
       taken.push([id, url]);
     }
-    await batch.commit();
+    await trackFirebaseRequest(batch.commit());
     taken.forEach(([id, url]) => nextImageSnapshot.set(id, url));
     remaining -= taken.length;
     result.written += taken.length;
@@ -6930,7 +6962,7 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
           collectionItemCount: plan.itemCount
         }, { merge: true });
       }
-      await batch.commit();
+      await trackFirebaseRequest(batch.commit());
       changedChunks.forEach(chunk => nextChunkSnapshot.set(chunk.id, chunk.json));
       remaining -= needed;
       result.written += needed;
@@ -6950,7 +6982,7 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
   }
   if (!collectionComplete && rootFields.needsWrite && remaining > 0) {
     // Einstellungen/Titel trotzdem sichern, auch wenn die Sammlung noch nicht komplett übertragen ist.
-    await userDocRef.set(rootFields.data, { merge: true });
+    await trackFirebaseRequest(userDocRef.set(rootFields.data, { merge: true }));
     remaining -= 1;
     result.written += 1;
     result.rootWritten = true;
@@ -7009,7 +7041,7 @@ async function hydrateOwnCloudImages(uid) {
     if (token !== cloudHydrationToken || cloudCollectionSnapshotUid !== uid) return;
     await Promise.all(todo.slice(offset, offset + 10).map(async id => {
       try {
-        const snapshot = await getCloudImagesRef(uid).doc(id).get();
+        const snapshot = await trackFirebaseRequest(getCloudImagesRef(uid).doc(id).get());
         if (token !== cloudHydrationToken) return;
         const item = byId.get(id);
         const url = snapshot.exists && typeof snapshot.data().dataUrl === 'string' ? snapshot.data().dataUrl : '';
@@ -7038,7 +7070,7 @@ async function hydrateRemoteCloudImages(uid, entry, onProgress) {
   for (let offset = 0; offset < ids.length; offset += 10) {
     await Promise.all(ids.slice(offset, offset + 10).map(async id => {
       try {
-        const snapshot = await getCloudImagesRef(uid).doc(id).get();
+        const snapshot = await trackFirebaseRequest(getCloudImagesRef(uid).doc(id).get());
         const url = snapshot.exists && typeof snapshot.data().dataUrl === 'string' ? snapshot.data().dataUrl : '';
         const item = byId.get(id);
         if (url && item && item.vinylDesign && typeof item.vinylDesign === 'object') item.vinylDesign.cdImageDataUrl = url;
@@ -7055,7 +7087,7 @@ async function deleteCloudCollectionItems(refs, maxWrites = refs.length) {
   for (let offset = 0; offset < refsToDelete.length; offset += 400) {
     const batch = db.batch();
     refsToDelete.slice(offset, offset + 400).forEach(ref => batch.delete(ref));
-    await batch.commit();
+    await trackFirebaseRequest(batch.commit());
   }
   return { deleted: refsToDelete.length, remaining: refs.slice(refsToDelete.length) };
 }
@@ -7146,17 +7178,48 @@ function updateCloudSyncBanner(message, state = 'pending', retry = false) {
   }, 10000);
 }
 
+function beginFirebaseActivity() {
+  clearTimeout(firebaseActivityTimer);
+  firebaseActivityTimer = null;
+  if (firebaseActivityCount === 0) firebaseActivityStartedAt = Date.now();
+  firebaseActivityCount += 1;
+  firebaseActivityHoldUntil = 0;
+  updateCloudSyncIndicator();
+  let finished = false;
+  return () => {
+    if (finished) return;
+    finished = true;
+    firebaseActivityCount = Math.max(0, firebaseActivityCount - 1);
+    if (firebaseActivityCount > 0) return;
+    firebaseActivityHoldUntil = Math.max(firebaseActivityStartedAt + 1800, Date.now());
+    firebaseActivityTimer = setTimeout(() => {
+      firebaseActivityTimer = null;
+      firebaseActivityHoldUntil = 0;
+      updateCloudSyncIndicator();
+    }, Math.max(0, firebaseActivityHoldUntil - Date.now()));
+    updateCloudSyncIndicator();
+  };
+}
+
+function trackFirebaseRequest(request) {
+  const finishActivity = beginFirebaseActivity();
+  return Promise.resolve(request).finally(finishActivity);
+}
+
 function updateCloudSyncIndicator() {
   const indicator = document.getElementById('cloudSyncIndicator');
   const strip = document.getElementById('cloudSyncStrip');
   if (!indicator && !strip) return;
-  const state = pendingCloudSave ? (cloudSyncUnavailableReason ? 'error' : 'pending') : 'synced';
+  const isSyncing = firebaseActivityCount > 0 || Date.now() < firebaseActivityHoldUntil;
+  const state = isSyncing ? 'syncing' : pendingCloudSave ? (cloudSyncUnavailableReason ? 'error' : 'pending') : 'synced';
   const pendingCount = pendingCloudSave ? getCloudPendingChangeCount() : { albums: 0, settings: false };
   const pendingDetails = [
     pendingCount.albums ? `${pendingCount.albums} ${pendingCount.albums === 1 ? 'Album' : 'Alben'}` : '',
     pendingCount.settings ? 'Einstellungen' : ''
   ].filter(Boolean).join(' und ');
-  const status = state === 'synced'
+  const status = state === 'syncing'
+    ? 'Firebase wird gerade angefragt oder aktualisiert.'
+    : state === 'synced'
     ? 'Mit Firebase synchronisiert.'
     : cloudSyncUnavailableReason === 'quota'
       ? `Lokal gespeichert. Firebase hat sein Schreibkontingent erreicht.${pendingDetails ? ` Ausstehend: ${pendingDetails}.` : ''}`
@@ -7172,9 +7235,14 @@ function updateCloudSyncIndicator() {
   });
   const settingsButton = document.getElementById('settingsBtn');
   if (settingsButton) {
-    settingsButton.title = pendingCloudSave
+    const progressTitle = discogsRefreshProgressPercent === null
+      ? ''
+      : ` Discogs-Aktualisierung${discogsRefreshIsActive ? ' läuft' : ' abgeschlossen'}: ${Math.round(discogsRefreshProgressPercent)}%.`;
+    settingsButton.dataset.refreshing = String(discogsRefreshIsActive);
+    settingsButton.style.setProperty('--settings-progress', `${discogsRefreshProgressPercent ?? 0}%`);
+    settingsButton.title = (pendingCloudSave
       ? `Einstellungen · Cloud ausstehend${pendingDetails ? `: ${pendingDetails} nicht synchron` : ' · Änderungen nicht synchron'}.`
-      : 'Einstellungen';
+      : 'Einstellungen') + progressTitle;
     settingsButton.setAttribute('aria-label', settingsButton.title);
   }
 }
@@ -7235,7 +7303,7 @@ function resetCloudWriteWindow() {
 
 async function loadCloudData(uid, prefetchedSnap) {
   const docRef = db.collection('users').doc(uid);
-  const docSnap = prefetchedSnap || await docRef.get();
+  const docSnap = prefetchedSnap || await trackFirebaseRequest(docRef.get());
   let data = docSnap.exists ? docSnap.data() : { collection: [], title: 'Vinyl-Sammlung', settings: {} };
   let localPending = null;
   try {
@@ -7280,7 +7348,7 @@ async function loadCloudData(uid, prefetchedSnap) {
   collectionTitle = typeof data.title === 'string' && data.title ? data.title : 'Vinyl-Sammlung';
   ownCollectionTitle = collectionTitle;
   if (!docSnap.exists) {
-    await docRef.set({
+    await trackFirebaseRequest(docRef.set({
       username: currentUsername,
       title: collectionTitle,
       collection: [],
@@ -7290,7 +7358,7 @@ async function loadCloudData(uid, prefetchedSnap) {
       collectionItemCount: 0,
       settings: {},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true }).catch(err => console.error('Neues Benutzer-Dokument konnte nicht erstellt werden:', err));
+    }, { merge: true })).catch(err => console.error('Neues Benutzer-Dokument konnte nicht erstellt werden:', err));
   }
     if (data.settings) {
     localStorage.setItem(COVER_SOURCE_KEY, 'all');
@@ -7421,7 +7489,7 @@ async function performCloudDataSaveNow() {
     if (cloudRootCache && cloudRootCache.uid === uid) {
       previousUserData = cloudRootCache.data; // spart 1 Lesezugriff pro Speichervorgang
     } else {
-      const previousUserSnapshot = await userDocRef.get();
+      const previousUserSnapshot = await trackFirebaseRequest(userDocRef.get());
       rootExists = previousUserSnapshot.exists;
       previousUserData = previousUserSnapshot.exists ? previousUserSnapshot.data() : {};
     }
@@ -7595,7 +7663,7 @@ async function loadUserList(force = false) {
   if (!force && knownUsers.length && Date.now() - userListLoadedAt < USER_DOC_CACHE_TTL_MS) { renderUserList(knownUsers); return; }
   userList.innerHTML = '<div class="hint">Lade Benutzerliste…</div>';
   try {
-    const snapshot = await db.collection('usernames').limit(200).get();
+    const snapshot = await trackFirebaseRequest(db.collection('usernames').limit(200).get());
     const users = [];
     snapshot.forEach(doc => {
       const data = doc.data() || {};
@@ -7613,7 +7681,7 @@ async function loadUserList(force = false) {
   } catch (err) {
     console.warn('Benutzerliste (usernames) laden fehlgeschlagen, versuche Fallback users:', err);
     try {
-      const snapshot = await db.collection('users').orderBy('username').limit(200).get();
+      const snapshot = await trackFirebaseRequest(db.collection('users').orderBy('username').limit(200).get());
       const users = [];
       snapshot.forEach(doc => {
         const data = doc.data() || {};
@@ -7729,7 +7797,7 @@ function getUserCardInfo(uid) {
 
 async function fetchUserSummary(user) {
   try {
-    const snap = await db.collection('users').doc(user.uid).get();
+    const snap = await trackFirebaseRequest(db.collection('users').doc(user.uid).get());
     const data = snap.exists ? (snap.data() || {}) : {};
     userSummaryCache.set(user.uid, {
       title: data.title || '',
@@ -7842,7 +7910,7 @@ const USER_DOC_CACHE_TTL_MS = 5 * 60 * 1000;
 async function fetchUserDoc(user, force) {
   const hit = userDocCache.get(user.uid);
   if (!force && hit && (user.uid === currentUid || Date.now() - (hit.fetchedAt || 0) < USER_DOC_CACHE_TTL_MS)) return hit;
-  const snap = await db.collection('users').doc(user.uid).get();
+  const snap = await trackFirebaseRequest(db.collection('users').doc(user.uid).get());
   const data = snap.exists ? (snap.data() || {}) : {};
   const items = await loadCloudCollection(user.uid, data);
   const entry = { title: data.title || '', items, stats: computeCollectionStats(items), accent: sanitizeAccent(data.settings?.accentColor), fetchedAt: Date.now(), imageIds: data.collectionStorageVersion === 2 && Array.isArray(data.collectionImageIds) ? data.collectionImageIds : [] };
@@ -8030,7 +8098,7 @@ async function importUserCollection(uid, username) {
   if (!ok) return;
 
   try {
-    const docSnap = await db.collection('users').doc(uid).get();
+    const docSnap = await trackFirebaseRequest(db.collection('users').doc(uid).get());
     if (!docSnap.exists) {
       await showAlert('Die Sammlung dieses Benutzers konnte nicht gefunden werden.');
       return;
@@ -8083,7 +8151,7 @@ auth.onAuthStateChanged(async user => {
     // Benutzername aus Firestore holen (zuverlässiger als aus der Pseudo-E-Mail zu raten)
     let userDocSnap = null;
     try {
-      const docSnap = await db.collection('users').doc(user.uid).get();
+      const docSnap = await trackFirebaseRequest(db.collection('users').doc(user.uid).get());
       userDocSnap = docSnap;
       currentUsername = (docSnap.exists && docSnap.data().username) || (user.email || '').split('@')[0];
     } catch (e) {
@@ -8285,6 +8353,43 @@ let discogsPriceRefreshRunning = false;
 let cancelDiscogsPriceRefresh = false;
 let discogsGenreRefreshRunning = false;
 let cancelDiscogsGenreRefresh = false;
+let discogsRefreshStatusTimer = null;
+let discogsRefreshStatusDismissed = false;
+
+function updateDiscogsRefreshProgress(status, completed, total, active) {
+  const percentage = total ? Math.max(0, Math.min(100, completed / total * 100)) : 0;
+  discogsRefreshProgressPercent = percentage;
+  discogsRefreshIsActive = active;
+  updateCloudSyncIndicator();
+  status.style.setProperty('--refresh-progress', `${percentage}%`);
+  status.dataset.active = String(active);
+}
+
+function dismissDiscogsRefreshStatus() {
+  clearTimeout(discogsRefreshStatusTimer);
+  discogsRefreshStatusTimer = null;
+  discogsRefreshStatusDismissed = true;
+  const status = document.getElementById('discogsPriceRefreshStatus');
+  if (status) status.hidden = true;
+  if (!discogsPriceRefreshRunning && !discogsGenreRefreshRunning) {
+    discogsRefreshProgressPercent = null;
+    discogsRefreshIsActive = false;
+    updateCloudSyncIndicator();
+  }
+}
+
+function scheduleDiscogsRefreshStatusDismissal() {
+  clearTimeout(discogsRefreshStatusTimer);
+  discogsRefreshStatusTimer = null;
+  if (discogsRefreshStatusDismissed || !settingsPanel?.classList.contains('open')) {
+    dismissDiscogsRefreshStatus();
+    return;
+  }
+  discogsRefreshStatusTimer = setTimeout(() => {
+    discogsRefreshStatusTimer = null;
+    dismissDiscogsRefreshStatus();
+  }, 10000);
+}
 
 function getDiscogsRefreshResourceUrl(item) {
   try {
@@ -8348,6 +8453,9 @@ async function refreshDiscogsPrices() {
 
   discogsPriceRefreshRunning = true;
   cancelDiscogsPriceRefresh = false;
+  discogsRefreshStatusDismissed = false;
+  clearTimeout(discogsRefreshStatusTimer);
+  updateDiscogsRefreshProgress(status, 0, requests.length, true);
   refreshButton.disabled = true;
   genreRefreshButton.disabled = true;
   cancelButton.disabled = false;
@@ -8358,6 +8466,7 @@ async function refreshDiscogsPrices() {
     for (let index = 0; index < requests.length; index++) {
       if (cancelDiscogsPriceRefresh) break;
       const [resourceUrl, items] = requests[index];
+      updateDiscogsRefreshProgress(status, index, requests.length, true);
       message.textContent = `Discogs-Preise: Anfrage ${index + 1} von ${requests.length} …`;
       const url = new URL(resourceUrl);
       const token = getDiscogsToken();
@@ -8415,6 +8524,7 @@ async function refreshDiscogsPrices() {
         console.error('Discogs-Preisaktualisierung: Anfrage fehlgeschlagen.', error);
       }
 
+      updateDiscogsRefreshProgress(status, index + 1, requests.length, true);
       if (index < requests.length - 1 && !cancelDiscogsPriceRefresh && !stoppedForAuthError) {
         await waitForDiscogsRefresh(delay);
       }
@@ -8426,15 +8536,20 @@ async function refreshDiscogsPrices() {
     const cancelled = cancelDiscogsPriceRefresh;
     const summary = `${cancelled ? 'Aktualisierung abgebrochen.' : stoppedForAuthError ? 'Wegen eines Discogs-Authentifizierungsfehlers angehalten.' : 'Aktualisierung abgeschlossen.'} ${successfulRequests} von ${requests.length} Anfragen erfolgreich; Preise bei ${updatedAlbums} Alben geprüft.${failedRequests ? ` ${failedRequests} Anfragen fehlgeschlagen.` : ''}${skipped ? ` ${skipped} ungültige oder nicht unterstützte URLs übersprungen.` : ''}${successfulRequests ? ' Änderungen werden automatisch mit Firebase synchronisiert.' : ''}${failureExamples.length ? ` Beispiel: ${failureExamples[0]}` : ''}`;
     message.textContent = summary;
+    updateDiscogsRefreshProgress(status, successfulRequests + failedRequests, requests.length, false);
+    scheduleDiscogsRefreshStatusDismissal();
   } catch (error) {
     console.error('Discogs-Preisaktualisierung wurde unerwartet unterbrochen.', error);
     if (successfulRequests) saveCloudDataDebounced();
     message.textContent = `Aktualisierung unterbrochen: ${error instanceof Error ? error.message : String(error)}. Bisherige Änderungen sind lokal gespeichert.${successfulRequests ? ' Die Synchronisierung mit Firebase läuft automatisch weiter.' : ''}`;
+    updateDiscogsRefreshProgress(status, successfulRequests + failedRequests, requests.length, false);
+    scheduleDiscogsRefreshStatusDismissal();
   } finally {
     discogsPriceRefreshRunning = false;
     refreshButton.disabled = false;
     genreRefreshButton.disabled = false;
     cancelButton.hidden = true;
+    if (status.hidden) clearTimeout(discogsRefreshStatusTimer);
   }
 }
 
@@ -8502,6 +8617,9 @@ async function refreshDiscogsGenresAndStyles() {
 
   discogsGenreRefreshRunning = true;
   cancelDiscogsGenreRefresh = false;
+  discogsRefreshStatusDismissed = false;
+  clearTimeout(discogsRefreshStatusTimer);
+  updateDiscogsRefreshProgress(status, 0, requests.length, true);
   refreshButton.disabled = true;
   priceButton.disabled = true;
   cancelButton.disabled = false;
@@ -8512,6 +8630,7 @@ async function refreshDiscogsGenresAndStyles() {
     for (let index = 0; index < requests.length; index++) {
       if (cancelDiscogsGenreRefresh) break;
       const [resourceUrl, items] = requests[index];
+      updateDiscogsRefreshProgress(status, index, requests.length, true);
       message.textContent = `Discogs-Genres & Stile: Anfrage ${index + 1} von ${requests.length} …`;
       const url = new URL(resourceUrl);
       const token = getDiscogsToken();
@@ -8557,6 +8676,7 @@ async function refreshDiscogsGenresAndStyles() {
         console.error('Discogs-Genre-/Stilaktualisierung: Anfrage fehlgeschlagen.', error);
       }
 
+      updateDiscogsRefreshProgress(status, index + 1, requests.length, true);
       if (index < requests.length - 1 && !cancelDiscogsGenreRefresh && !stoppedForAuthError) {
         await waitForDiscogsRefresh(delay);
       }
@@ -8567,15 +8687,20 @@ async function refreshDiscogsGenresAndStyles() {
     if (successfulRequests) saveCloudDataDebounced();
     const cancelled = cancelDiscogsGenreRefresh;
     message.textContent = `${cancelled ? 'Aktualisierung abgebrochen.' : stoppedForAuthError ? 'Wegen eines Discogs-Authentifizierungsfehlers angehalten.' : 'Aktualisierung abgeschlossen.'} ${successfulRequests} von ${requests.length} Anfragen erfolgreich; Genres/Stile bei ${updatedEntries} Einträgen aktualisiert.${failedRequests ? ` ${failedRequests} Anfragen fehlgeschlagen.` : ''}${withoutUrl ? ` ${withoutUrl} Einträge ohne Discogs-Link übersprungen.` : ''}${invalidUrl ? ` ${invalidUrl} ungültige Links übersprungen.` : ''}${successfulRequests ? ' Änderungen werden automatisch mit Firebase synchronisiert.' : ''}${failureExamples.length ? ` Beispiel: ${failureExamples[0]}` : ''}`;
+    updateDiscogsRefreshProgress(status, successfulRequests + failedRequests, requests.length, false);
+    scheduleDiscogsRefreshStatusDismissal();
   } catch (error) {
     console.error('Discogs-Genre-/Stilaktualisierung wurde unerwartet unterbrochen.', error);
     if (successfulRequests) saveCloudDataDebounced();
     message.textContent = `Aktualisierung unterbrochen: ${error instanceof Error ? error.message : String(error)}. Bisherige Änderungen sind lokal gespeichert.${successfulRequests ? ' Die Synchronisierung mit Firebase läuft automatisch weiter.' : ''}`;
+    updateDiscogsRefreshProgress(status, successfulRequests + failedRequests, requests.length, false);
+    scheduleDiscogsRefreshStatusDismissal();
   } finally {
     discogsGenreRefreshRunning = false;
     refreshButton.disabled = false;
     priceButton.disabled = false;
     cancelButton.hidden = true;
+    if (status.hidden) clearTimeout(discogsRefreshStatusTimer);
   }
 }
 
@@ -8787,7 +8912,7 @@ async function loadListeningCredentials(uid) {
   const legacyYoutubeApiKey = localStorage.getItem(YOUTUBE_API_KEY_KEY) || '';
   try {
     const credentialsRef = db.collection('users').doc(uid).collection('privateSettings').doc('integrations');
-    const snapshot = await credentialsRef.get();
+    const snapshot = await trackFirebaseRequest(credentialsRef.get());
     if (snapshot.exists) {
       const credentials = snapshot.data() || {};
       spotifyClientId = typeof credentials.spotifyClientId === 'string' ? credentials.spotifyClientId : '';
@@ -8942,10 +9067,18 @@ updateSpotifyConnectionStatus();
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 if (settingsBtn && settingsPanel) {
+  const closeSettingsPanel = () => {
+    settingsPanel.classList.remove('open');
+    dismissDiscogsRefreshStatus();
+  };
   settingsBtn.addEventListener('click', e => {
     e.stopPropagation();
     const shouldOpen = !settingsPanel.classList.contains('open');
     if (shouldOpen) {
+      if (discogsPriceRefreshRunning || discogsGenreRefreshRunning) {
+        discogsRefreshStatusDismissed = false;
+        document.getElementById('discogsPriceRefreshStatus').hidden = false;
+      }
       document.body.appendChild(settingsPanel);
       const buttonRect = settingsBtn.getBoundingClientRect();
       const top = Math.max(8, buttonRect.bottom + 8);
@@ -8954,13 +9087,18 @@ if (settingsBtn && settingsPanel) {
       settingsPanel.style.left = 'auto';
       settingsPanel.style.maxHeight = `calc(100vh - ${top + 8}px)`;
       settingsPanel.style.overflowY = 'auto';
+    } else {
+      dismissDiscogsRefreshStatus();
     }
     settingsPanel.classList.toggle('open', shouldOpen);
   });
   settingsPanel.addEventListener('click', e => e.stopPropagation());
-  document.addEventListener('click', () => settingsPanel.classList.remove('open'));
+  document.addEventListener('click', event => {
+    if (event.target instanceof Element && event.target.closest('.modal-overlay')) return;
+    closeSettingsPanel();
+  });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') settingsPanel.classList.remove('open');
+    if (e.key === 'Escape') closeSettingsPanel();
   });
 }
 
@@ -15331,7 +15469,7 @@ function saveListeningCredentials() {
   listeningCredentialsSaveRequest = listeningCredentialsSaveRequest
     .catch(() => {})
     .then(async () => {
-      await db.collection('users').doc(uid).collection('privateSettings').doc('integrations').set(credentials);
+      await trackFirebaseRequest(db.collection('users').doc(uid).collection('privateSettings').doc('integrations').set(credentials));
       savedListeningCredentials = credentials;
       localStorage.removeItem(SPOTIFY_CLIENT_ID_KEY);
       localStorage.removeItem(YOUTUBE_API_KEY_KEY);
@@ -18486,6 +18624,66 @@ function restoreStorageBoardState(board, state) {
   }
 }
 
+const MAIN_GENRE_GROUPS = [
+  'Hip Hop',
+  'Soul, Funk & Jazz',
+  'Rock & Indie',
+  'Electronic & Dance',
+  'Reggae & Dancehall',
+  'Pop',
+  'Klassik',
+  'Soundtracks',
+  'Weitere Genres',
+  'Ohne Genre'
+];
+
+function getMainGenreGroup(genre) {
+  const value = String(genre || '').toLocaleLowerCase('de').replace(/[‐‑‒–—]/g, '-');
+  if (!value) return '';
+  if (/\b(soundtrack|soundtracks|film score|original score|motion picture)\b/.test(value)) return 'Soundtracks';
+  if (/\b(classical|klassik|classique|baroque|opera|operatic|symphon|chamber music|orchestral)\b/.test(value)) return 'Klassik';
+  if (/\b(hip[\s-]?hop|rap|trap|gangsta|grime)\b/.test(value)) return 'Hip Hop';
+  if (/\b(reggae|dancehall|ska|rocksteady|ragga)\b/.test(value)) return 'Reggae & Dancehall';
+  if (/\b(jazz|soul|funk|blues|r&b|rnb|rhythm and blues|neo soul)\b/.test(value)) return 'Soul, Funk & Jazz';
+  if (/\b(rock|indie|alternative|punk|metal|grunge|shoegaze|post-rock|hardcore|emo)\b/.test(value)) return 'Rock & Indie';
+  if (/\b(pop|city pop|j-pop|k-pop|jpop|kpop|dance-pop|synth-pop)\b/.test(value)) return 'Pop';
+  if (/\b(electronic|dance|house|techno|trance|disco|ambient|idm|electro|industrial|breakbeat|drum and bass|drum & bass|dnb|downtempo|synthwave|new age)\b/.test(value)) return 'Electronic & Dance';
+  return 'Weitere Genres';
+}
+
+function getAlbumMainGenreGroup(item) {
+  const groups = new Set(getGenreValues(item?.genre).map(getMainGenreGroup).filter(Boolean));
+  if (!groups.size) return 'Ohne Genre';
+  // Discogs often adds broad "Electronic" alongside a more descriptive genre or style.
+  const specificGroups = [...groups].filter(group => group !== 'Electronic & Dance' && group !== 'Weitere Genres');
+  if (specificGroups.length) return MAIN_GENRE_GROUPS.find(group => specificGroups.includes(group)) || 'Weitere Genres';
+  return groups.has('Electronic & Dance') ? 'Electronic & Dance' : 'Weitere Genres';
+}
+
+function getArtistDominantGenres(items) {
+  const genreCountsByArtist = new Map();
+  const totalGenreCounts = new Map();
+  items.forEach(item => {
+    const artistKey = getArtistSortName(item) || `album:${item.id}`;
+    const group = getAlbumMainGenreGroup(item);
+    if (!genreCountsByArtist.has(artistKey)) genreCountsByArtist.set(artistKey, new Map());
+    const artistCounts = genreCountsByArtist.get(artistKey);
+    artistCounts.set(group, (artistCounts.get(group) || 0) + 1);
+    totalGenreCounts.set(group, (totalGenreCounts.get(group) || 0) + 1);
+  });
+
+  const dominantGenreByArtist = new Map();
+  genreCountsByArtist.forEach((genreCounts, artistKey) => {
+    const dominantGenre = [...genreCounts.entries()].sort((first, second) =>
+      second[1] - first[1]
+      || (totalGenreCounts.get(second[0]) || 0) - (totalGenreCounts.get(first[0]) || 0)
+      || MAIN_GENRE_GROUPS.indexOf(first[0]) - MAIN_GENRE_GROUPS.indexOf(second[0])
+    )[0]?.[0];
+    if (dominantGenre) dominantGenreByArtist.set(artistKey, dominantGenre);
+  });
+  return dominantGenreByArtist;
+}
+
 function renderCollection() {
   const grid = document.getElementById('collectionGrid');
   const tableWrap = document.getElementById('collectionTableWrap');
@@ -18616,6 +18814,9 @@ function renderCollection() {
   const colorSortInfoByItem = sortColumn === 'color'
     ? new Map(list.map(item => [item, getColorSortInfo(item)]))
     : null;
+  const artistGenreByKey = sortColumn === 'genre'
+    ? getArtistDominantGenres(collection)
+    : null;
   const originalOrderByItem = sortColumn === 'newest'
     ? new Map(collection.map((item, index) => [item, index]))
     : null;
@@ -18637,9 +18838,9 @@ function renderCollection() {
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       }
       case 'genre': {
-        const gA = getGenreValues(a.genre).sort((x, y) => x.localeCompare(y, 'de')).join(', ') || 'Ohne Genre';
-        const gB = getGenreValues(b.genre).sort((x, y) => x.localeCompare(y, 'de')).join(', ') || 'Ohne Genre';
-        const diff = gA.localeCompare(gB, 'de');
+        const gA = artistGenreByKey.get(getArtistSortName(a)) || 'Ohne Genre';
+        const gB = artistGenreByKey.get(getArtistSortName(b)) || 'Ohne Genre';
+        const diff = MAIN_GENRE_GROUPS.indexOf(gA) - MAIN_GENRE_GROUPS.indexOf(gB);
         if (diff !== 0) return directionMultiplier * diff;
         const artistDiff = getArtistSortName(a).localeCompare(getArtistSortName(b), 'de');
         if (artistDiff !== 0) return directionMultiplier * artistDiff;
@@ -18731,11 +18932,11 @@ function renderCollection() {
     if (activeSort === 'genre') {
       const groups = {};
       list.forEach(it => {
-        const g = getGenreValues(it.genre).sort((a, b) => a.localeCompare(b, 'de'))[0] || 'Ohne Genre';
+        const g = artistGenreByKey.get(getArtistSortName(it)) || 'Ohne Genre';
         if (!groups[g]) groups[g] = [];
         groups[g].push(it);
       });
-      const sortedGenres = Object.keys(groups).sort((a,b) => a.localeCompare(b, 'de'));
+      const sortedGenres = MAIN_GENRE_GROUPS.filter(genre => groups[genre]);
       renderItems = [];
       sortedGenres.forEach(g => {
         renderItems.push({ __genreHeader: g });
