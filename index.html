@@ -15156,24 +15156,30 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       || state.track_window?.current_track?.uri
       || state.currentTrack?.uri
       || '';
-    const matchingIndex = reportedUri ? tracks.findIndex(track => track.uri === reportedUri) : -1;
     const hasReportedIndex = state.playbackContextPosition !== null
       && state.playbackContextPosition !== undefined
       && state.playbackContextPosition !== ''
       && Number.isInteger(Number(state.playbackContextPosition));
     const reportedIndex = hasReportedIndex ? Number(state.playbackContextPosition) : -1;
-    if (matchingIndex >= 0) {
-      playingUri = reportedUri;
-      currentIndex = matchingIndex;
-    } else if (reportedIndex >= 0 && reportedIndex < tracks.length) {
+    const matchingIndex = reportedUri ? tracks.findIndex(track => track.uri === reportedUri) : -1;
+    if (reportedIndex >= 0 && reportedIndex < tracks.length) {
       currentIndex = reportedIndex;
       playingUri = tracks[currentIndex].uri || reportedUri || playingUri;
+    } else if (matchingIndex >= 0) {
+      playingUri = reportedUri;
+      currentIndex = matchingIndex;
     } else if (reportedUri) {
       playingUri = reportedUri;
     }
     if (currentIndex >= 0 && tracks[currentIndex]) {
       const activeUri = tracks[currentIndex].uri;
-      currentTrack.textContent = getListeningDisplayText(tracks[currentIndex].title, `Track ${currentIndex + 1}`);
+      const reportedTitle = state.track_window?.current_track?.name
+        || state.currentTrack?.name
+        || state.name;
+      currentTrack.textContent = getListeningDisplayText(
+        reportedTitle || tracks[currentIndex].title,
+        `Track ${currentIndex + 1}`
+      );
       if (activeUri !== favoriteTrackUri) {
         favoriteTrackUri = activeUri;
         favorite.innerHTML = LISTENING_ICON_SVG.favorite;
