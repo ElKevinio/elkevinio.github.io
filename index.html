@@ -1053,6 +1053,14 @@
     .desktop-form-shell.search-collapsed {
       grid-template-columns: minmax(0, 1fr);
     }
+    .desktop-form-shell:not(.search-collapsed) .filter-tabs .filter-label { display: none; }
+    .desktop-form-shell:not(.search-collapsed) .filter-tabs { gap: 4px; }
+    .desktop-form-shell:not(.search-collapsed) .filter-tabs button { padding: 8px; }
+  }
+  @media (min-width: 1200px) {
+    .desktop-form-shell:not(.search-collapsed) .filter-tabs .filter-label { display: inline; }
+    .desktop-form-shell:not(.search-collapsed) .filter-tabs { gap: 6px; }
+    .desktop-form-shell:not(.search-collapsed) .filter-tabs button { padding: 7px 10px; }
   }
   body.viewing-remote-collection .desktop-form-shell > .panel:first-child,
   body.user-menu-open .desktop-form-shell > .panel:first-child { display: none !important; }
@@ -1446,6 +1454,7 @@
   .storage-compartment-header button { width: 20px; min-width: 20px; height: 20px; min-height:20px; padding:0; }
   .storage-compartment-header .storage-order-button { width:20px; min-width:20px; color:var(--text-secondary); }
   .storage-compartment-header .wash-compartment-button { width:18px; min-width:18px; height:18px; min-height:18px; color:var(--accent); }
+  .storage-compartment-header .spotify-compartment-playlist-button { width:18px; min-width:18px; height:18px; min-height:18px; color:#1ed760; }
   .storage-compartment-header .wash-compartment-button:disabled { opacity:.35; cursor:not-allowed; }
   .storage-records { display:flex; flex:1; flex-direction:column; gap:0; min-height:28px; overflow:auto; }
   .storage-record {
@@ -2175,6 +2184,7 @@
   .storage-shelf.display-mode .storage-compartment-header .remove-compartment { position:absolute; right:0; width:18px; min-width:18px; height:18px; min-height:18px; }
   .storage-shelf.display-mode .storage-compartment-header .wash-compartment-button { position:absolute; right:20px; width:18px; min-width:18px; height:18px; min-height:18px; }
   .storage-shelf.display-mode .storage-compartment-header .storage-order-button { position:absolute; right:40px; }
+  .storage-shelf.display-mode .storage-compartment-header .spotify-compartment-playlist-button { position:absolute; right:60px; width:18px; min-width:18px; height:18px; min-height:18px; }
   .storage-shelf.display-mode .storage-shelf-topline { gap:3px; }
   .storage-shelf.display-mode .storage-shelf-name { min-width:24px; }
   .storage-shelf.display-mode .storage-shelf-topline button { width:22px; min-width:22px; height:22px; padding:0; }
@@ -3597,6 +3607,41 @@
   .modal-box.vinyl-editor-box {
     width: min(1100px, 96vw);
     max-width: 1100px;
+  }
+  .spotify-playlist-box {
+    width: min(760px, 96vw);
+    max-width: 760px;
+    max-height: min(86vh, 900px);
+    overflow: auto;
+  }
+  .spotify-playlist-list,
+  .spotify-album-list { display:grid; gap:8px; margin-top:10px; }
+  .spotify-playlist-option,
+  .spotify-album-option {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:var(--surface-1);
+  }
+  .spotify-playlist-option { width:100%; text-align:left; color:var(--text-primary); cursor:pointer; }
+  .spotify-playlist-option:hover { border-color:var(--accent-border); }
+  .spotify-playlist-option img,
+  .spotify-album-option img { width:46px; height:46px; flex:0 0 46px; object-fit:cover; border-radius:6px; background:var(--surface-3); }
+  .spotify-playlist-option span,
+  .spotify-album-option span { min-width:0; }
+  .spotify-playlist-option strong,
+  .spotify-album-option strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .spotify-playlist-option small,
+  .spotify-album-option small { display:block; margin-top:3px; color:var(--text-secondary); }
+  .spotify-album-option input { flex:0 0 auto; }
+  .spotify-playlist-import-status { min-height:20px; color:var(--text-secondary); }
+  .spotify-playlist-toolbar { display:flex; gap:8px; margin-top:12px; }
+  .spotify-playlist-toolbar input { flex:1; min-width:0; }
+  @media (max-width:600px) {
+    .spotify-playlist-toolbar { flex-direction:column; }
   }
   .storage-result-overlay { z-index: 115; }
   #albumListeningOverlay { z-index: 150; }
@@ -5374,6 +5419,8 @@
           <button type="button" id="spotifyConnectBtn" class="settings-fix-btn" style="width:100%; margin-top:8px;">Spotify verbinden</button>
           <p class="settings-panel-hint" id="spotifyConnectionStatus" aria-live="polite"></p>
           <p class="settings-panel-hint">Redirect-URI: <code id="spotifyRedirectUri"></code></p>
+          <button type="button" id="spotifyPlaylistImportBtn" class="settings-fix-btn" style="width:100%; margin-top:8px;">Alben aus Spotify-Playlisten hinzufügen</button>
+          <p class="settings-panel-hint">Deine eigenen Playlisten stehen zuerst. Du kannst zusätzlich einen öffentlichen Playlist-Link laden.</p>
           <p class="settings-panel-title" style="margin-top:14px;">YouTube-Suche</p>
           <input type="password" id="youtubeApiKeyInput" placeholder="YouTube Data API v3-Schlüssel" autocomplete="off">
           <button type="button" id="saveListeningCredentialsBtn" class="settings-fix-btn" style="width:100%; margin-top:8px;">Wiedergabe-Einstellungen speichern</button>
@@ -5473,6 +5520,9 @@
               <datalist id="knownGenreOptions"></datalist>
               <button type="button" id="openDiscogsUrlBtn" class="icon-btn album-cover-url-btn" title="Discogs-Link bearbeiten" aria-label="Discogs-Link bearbeiten">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M10 13.5a4.5 4.5 0 0 0 6.36 0l3-3A4.5 4.5 0 0 0 13 4.14l-1.72 1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 10.5a4.5 4.5 0 0 0-6.36 0l-3 3A4.5 4.5 0 0 0 11 19.86l1.72-1.72" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </button>
+              <button type="button" id="openSpotifyAlbumUrlBtn" class="icon-btn album-cover-url-btn" title="Spotify-Albumlink bearbeiten" aria-label="Spotify-Albumlink bearbeiten">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 9.5c4.8-1.4 10.9-.9 15.1 1.8M5.5 13c4-1.1 8.8-.6 12.1 1.3M6.5 16.3c3.1-.8 6.6-.4 9.2 1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -5641,6 +5691,9 @@
           <button id="bulkEditBtn" class="settings-fix-btn bulk-action-btn tooltip-btn" title="Auswahl bearbeiten" aria-label="Auswahl bearbeiten" data-tooltip="Bearbeiten" disabled>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4.5L20 8.5a2 2 0 0 0-4-4L4 16.5V20Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13 6 5 5" stroke="currentColor" stroke-width="1.8"/></svg>
           </button>
+          <button type="button" id="createSpotifyPlaylistFromSelectionBtn" class="settings-fix-btn bulk-action-btn tooltip-btn" title="Spotify-Playlist aus Auswahl erstellen" aria-label="Spotify-Playlist aus Auswahl erstellen" data-tooltip="Spotify-Playlist" disabled>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h12M4 10h12M4 14h8M17 14v7m-3.5-3.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <button id="bulkCancelBtn" class="settings-fix-btn bulk-action-btn tooltip-btn" title="Massenbearbeitung abbrechen" aria-label="Massenbearbeitung abbrechen" data-tooltip="Abbrechen" style="color:var(--text-secondary);">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
@@ -5687,7 +5740,36 @@
     </div>
   </div>
 </div>
-
+<div class="modal-overlay" id="spotifyPlaylistImportOverlay" aria-modal="true" role="dialog" aria-labelledby="spotifyPlaylistImportTitle">
+  <section class="modal-box spotify-playlist-box">
+    <h2 id="spotifyPlaylistImportTitle" style="margin:0 0 8px;">Alben aus Spotify-Playlisten</h2>
+    <p class="spotify-playlist-import-status" id="spotifyPlaylistImportStatus" aria-live="polite">Lade deine Playlisten …</p>
+    <div id="spotifyPlaylistList" class="spotify-playlist-list"></div>
+    <div class="spotify-playlist-toolbar">
+      <input id="spotifyPublicPlaylistUrl" type="url" placeholder="Öffentlicher Spotify-Playlist-Link">
+      <button type="button" class="btn" id="loadSpotifyPublicPlaylistBtn">Playlist laden</button>
+    </div>
+    <div id="spotifyPlaylistAlbums" class="spotify-album-list"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button type="button" class="btn" id="reauthorizeSpotifyPlaylistBtn" hidden>Spotify-Berechtigungen erneuern</button>
+      <button type="button" class="btn" id="closeSpotifyPlaylistImportBtn">Schließen</button>
+      <button type="button" class="btn btn-primary" id="addSpotifyPlaylistAlbumsBtn" disabled>Ausgewählte Alben hinzufügen</button>
+    </div>
+  </section>
+</div>
+<div class="modal-overlay" id="spotifyCreatePlaylistOverlay" aria-modal="true" role="dialog" aria-labelledby="spotifyCreatePlaylistTitle">
+  <section class="modal-box">
+    <h2 id="spotifyCreatePlaylistTitle" style="margin:0 0 12px;">Spotify-Playlist erstellen</h2>
+    <label for="spotifyCreatePlaylistName">Playlist-Name</label>
+    <input id="spotifyCreatePlaylistName" type="text" maxlength="100" style="width:100%; margin-top:6px;">
+    <p id="spotifyCreatePlaylistStatus" class="spotify-playlist-import-status" aria-live="polite"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="reauthorizeSpotifyCreatePlaylistBtn" hidden>Spotify-Berechtigungen erneuern</button>
+      <button type="button" id="cancelSpotifyPlaylistCreateBtn">Abbrechen</button>
+      <button type="button" class="btn btn-primary" id="confirmSpotifyPlaylistCreateBtn">Erstellen</button>
+    </div>
+  </section>
+</div>
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal-box">
     <p class="modal-message" id="modalMessage"></p>
@@ -5984,6 +6066,20 @@
       <button type="button" id="loadDiscogsUrlBtn" title="Diesen Discogs-Link nur für dieses Album laden">Laden</button>
     </div>
     <p id="fDiscogsUrlStatus" class="settings-panel-hint" aria-live="polite"></p>
+  </div>
+</div>
+<div class="modal-overlay cover-url-overlay" id="spotifyAlbumUrlOverlay" aria-modal="true" role="dialog" aria-labelledby="spotifyAlbumUrlTitle">
+  <div class="modal-box cover-url-box">
+    <div class="album-editor-heading">
+      <p class="modal-title" id="spotifyAlbumUrlTitle">Spotify-Albumlink</p>
+      <button type="button" id="closeSpotifyAlbumUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+    </div>
+    <input type="text" id="spotifyAlbumUrlInput" placeholder="https://open.spotify.com/intl-de/album/…" aria-label="Spotify-Albumlink oder Spotify-URI" autocomplete="off" spellcheck="false">
+    <p class="settings-panel-hint" id="spotifyAlbumUrlStatus" aria-live="polite">Der gespeicherte Albumlink wird beim Anhören und für Playlisten bevorzugt.</p>
+    <div class="cover-url-actions">
+      <button type="button" id="clearSpotifyAlbumUrlBtn">Link entfernen</button>
+      <button type="button" class="btn btn-primary" id="saveSpotifyAlbumUrlBtn">Übernehmen</button>
+    </div>
   </div>
 </div>
 
@@ -7475,8 +7571,8 @@ async function loadCloudData(uid, prefetchedSnap) {
   }
 }
 
-async function performCloudDataSaveNow() {
-  if (!currentUid || !viewingOwnCollection) return false;
+async function performCloudDataSaveNow(allowRemoteView = false) {
+  if (!currentUid || (!viewingOwnCollection && !allowRemoteView)) return false;
   const revisionAtStart = cloudChangeRevision;
   try {
     const uid = currentUid;
@@ -7536,7 +7632,7 @@ async function performCloudDataSaveNow() {
         ? 1500 // nur während des Speicherns weiter geändert
         : (availableWrites === 0 ? Math.max(1000, 60000 - (Date.now() - cloudWriteWindowStartedAt)) : 60000);
       updateCloudSyncBanner('Änderungen werden in Firebase in kleinen, gedrosselten Paketen synchronisiert …');
-      scheduleCloudSave(waitMs);
+      scheduleCloudSave(waitMs, allowRemoteView);
     } else {
       updateCloudSyncBanner('Änderungen wurden mit Firebase synchronisiert.', 'synced');
     }
@@ -7560,7 +7656,7 @@ async function performCloudDataSaveNow() {
       'error',
       true
     );
-    scheduleCloudRetry(retryDelay);
+    scheduleCloudRetry(retryDelay, allowRemoteView);
     return false;
   }
 }
@@ -7575,19 +7671,23 @@ function getPendingCloudStatusMessage() {
   return 'Lokal gespeichert. Firebase wird im Hintergrund synchronisiert; bei einem Kontingent- oder Verbindungsfehler erfolgt automatisch ein neuer Versuch.';
 }
 
-function saveCloudDataNow() {
-  if (!currentUid || !viewingOwnCollection) return Promise.resolve(false);
+function saveCloudDataNow(allowRemoteView = false) {
+  if (!currentUid || (!viewingOwnCollection && !allowRemoteView)) return Promise.resolve(false);
   clearTimeout(cloudSaveDebounceTimer);
   cloudSaveDebounceTimer = null;
-  if (cloudSaveInFlightPromise) return cloudSaveInFlightPromise;
-  cloudSaveInFlightPromise = performCloudDataSaveNow().finally(() => {
+  if (cloudSaveInFlightPromise) {
+    return allowRemoteView
+      ? cloudSaveInFlightPromise.then(() => saveCloudDataNow(true))
+      : cloudSaveInFlightPromise;
+  }
+  cloudSaveInFlightPromise = performCloudDataSaveNow(allowRemoteView).finally(() => {
     cloudSaveInFlightPromise = null;
   });
   return cloudSaveInFlightPromise;
 }
 
-function scheduleCloudSave(delay = 1200) {
-  if (!currentUid || !viewingOwnCollection) return;
+function scheduleCloudSave(delay = 1200, allowRemoteView = false) {
+  if (!currentUid || (!viewingOwnCollection && !allowRemoteView)) return;
   if (cloudRetryTimer) {
     clearTimeout(cloudRetryTimer);
     cloudRetryTimer = null;
@@ -7595,28 +7695,28 @@ function scheduleCloudSave(delay = 1200) {
   clearTimeout(cloudSaveDebounceTimer);
   cloudSaveDebounceTimer = setTimeout(() => {
     cloudSaveDebounceTimer = null;
-    saveCloudDataNow();
+    saveCloudDataNow(allowRemoteView);
   }, delay);
 }
 
-function scheduleCloudRetry(delay) {
+function scheduleCloudRetry(delay, allowRemoteView = false) {
   clearTimeout(cloudSaveDebounceTimer);
   cloudSaveDebounceTimer = null;
   clearTimeout(cloudRetryTimer);
   cloudRetryTimer = setTimeout(() => {
     cloudRetryTimer = null;
-    scheduleCloudSave(0);
+    scheduleCloudSave(0, allowRemoteView);
   }, delay);
 }
 
-function saveCloudDataDebounced() {
-  if (!currentUid || !viewingOwnCollection) return;
+function saveCloudDataDebounced(allowRemoteView = false) {
+  if (!currentUid || (!viewingOwnCollection && !allowRemoteView)) return;
   if (suppressNextCloudSave) { suppressNextCloudSave = false; return; }
   pendingCloudSave = true;
   cloudChangeRevision += 1;
   persistPendingCloudSnapshot();
   updateCloudSyncIndicator();
-  scheduleCloudSave();
+  scheduleCloudSave(1200, allowRemoteView);
   updateCloudSyncBanner(getPendingCloudStatusMessage());
 }
 
@@ -8194,7 +8294,7 @@ auth.onAuthStateChanged(async user => {
   }
 });
 
-function saveOwnCollectionData() {
+function saveOwnCollectionData(syncWhileViewingRemote = false) {
   ownCollectionTitle = ownCollectionTitle || 'Vinyl-Sammlung';
   localStorage.setItem(TITLE_STORAGE_KEY, ownCollectionTitle);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(ownCollection));
@@ -8202,7 +8302,7 @@ function saveOwnCollectionData() {
     const titleDisplay = document.getElementById('collectionTitleDisplay');
     if (titleDisplay) titleDisplay.textContent = ownCollectionTitle;
   }
-  saveCloudDataDebounced();
+  saveCloudDataDebounced(syncWhileViewingRemote);
 }
 
 async function showOwnCollection() {
@@ -9080,6 +9180,64 @@ if (youtubeApiKeyInput) {
   });
 }
 document.getElementById('saveListeningCredentialsBtn')?.addEventListener('click', saveListeningCredentials);
+document.getElementById('spotifyPlaylistImportBtn')?.addEventListener('click', openSpotifyPlaylistImport);
+document.getElementById('closeSpotifyPlaylistImportBtn')?.addEventListener('click', closeSpotifyPlaylistImport);
+document.getElementById('spotifyPlaylistImportOverlay')?.addEventListener('click', event => {
+  if (event.target.id === 'spotifyPlaylistImportOverlay') closeSpotifyPlaylistImport();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('spotifyPlaylistImportOverlay')?.classList.contains('open')) {
+    closeSpotifyPlaylistImport();
+  }
+});
+document.getElementById('loadSpotifyPublicPlaylistBtn')?.addEventListener('click', () => {
+  const input = document.getElementById('spotifyPublicPlaylistUrl');
+  loadSpotifyPlaylist(input?.value.trim() || '', true);
+});
+document.getElementById('spotifyPlaylistAlbums')?.addEventListener('change', event => {
+  if (event.target.matches('input[type="checkbox"]')) {
+    document.getElementById('addSpotifyPlaylistAlbumsBtn').disabled =
+      !document.querySelector('#spotifyPlaylistAlbums input[type="checkbox"]:checked:not(:disabled)');
+  }
+});
+document.getElementById('addSpotifyPlaylistAlbumsBtn')?.addEventListener('click', addSelectedSpotifyPlaylistAlbums);
+document.getElementById('createSpotifyPlaylistFromSelectionBtn')?.addEventListener('click', () => {
+  const selectedItems = collection.filter(item => selectedItemIds.has(item.id));
+  openSpotifyPlaylistCreator(selectedItems, 'Ausgewählte Alben');
+});
+document.getElementById('cancelSpotifyPlaylistCreateBtn')?.addEventListener('click', () => closeSpotifyPlaylistCreator());
+document.getElementById('spotifyCreatePlaylistOverlay')?.addEventListener('click', event => {
+  if (event.target.id === 'spotifyCreatePlaylistOverlay') closeSpotifyPlaylistCreator();
+});
+document.getElementById('confirmSpotifyPlaylistCreateBtn')?.addEventListener('click', createSpotifyPlaylistFromDialog);
+document.getElementById('reauthorizeSpotifyCreatePlaylistBtn')?.addEventListener('click', () => {
+  localStorage.removeItem(SPOTIFY_AUTO_CONNECT_DISABLED_KEY);
+  localStorage.removeItem(SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY);
+  connectSpotify().catch(error => {
+    console.error('Spotify-Berechtigungen konnten nicht erneuert werden:', error);
+    document.getElementById('spotifyCreatePlaylistStatus').textContent =
+      `Spotify-Verbindung konnte nicht gestartet werden: ${error.message}`;
+  });
+});
+document.getElementById('spotifyCreatePlaylistName')?.addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    createSpotifyPlaylistFromDialog();
+  }
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && document.getElementById('spotifyCreatePlaylistOverlay')?.classList.contains('open')) {
+    closeSpotifyPlaylistCreator();
+  }
+});
+document.getElementById('reauthorizeSpotifyPlaylistBtn')?.addEventListener('click', () => {
+  localStorage.removeItem(SPOTIFY_AUTO_CONNECT_DISABLED_KEY);
+  localStorage.removeItem(SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY);
+  connectSpotify().catch(error => {
+    console.error('Spotify-Berechtigungen konnten nicht erneuert werden:', error);
+    updateSpotifyConnectionStatus(`Spotify-Verbindung konnte nicht gestartet werden: ${error.message}`);
+  });
+});
 const spotifyRedirectUriElement = document.getElementById('spotifyRedirectUri');
 if (spotifyRedirectUriElement) spotifyRedirectUriElement.textContent = getSpotifyRedirectUri() || 'Nicht verfügbar bei file://';
 document.getElementById('spotifyConnectBtn')?.addEventListener('click', () => {
@@ -12457,15 +12615,15 @@ function saveCollection() {
 function addRemoteEntryToOwn(itemId) {
   const item = collection.find(c => c.id === itemId);
   if (!item) return;
-  const key = `${(item.title || '').trim().toLowerCase()}___${(item.artist || '').trim().toLowerCase()}`;
-  if (ownCollection.some(c => `${(c.title || '').trim().toLowerCase()}___${(c.artist || '').trim().toLowerCase()}` === key)) {
+  const key = getAlbumComparisonKey(item);
+  if (ownCollection.some(c => getAlbumComparisonKey(c) === key)) {
     showAlert('Dieses Album ist bereits in deiner Sammlung.');
     return;
   }
   const newItem = JSON.parse(JSON.stringify(item));
   newItem.id = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
   ownCollection.push(newItem);
-  saveOwnCollectionData();
+  saveOwnCollectionData(true);
   renderCollection();
   showAlert(`'${item.title}' wurde zu deiner Sammlung hinzugefügt.`);
 }
@@ -14262,8 +14420,38 @@ function getSpotifyEmbedUrl(rawUrl) {
   if (!safeUrl) return '';
   const url = new URL(safeUrl);
   if (!url.hostname.toLowerCase().endsWith('spotify.com') || url.hostname.toLowerCase() !== 'open.spotify.com') return '';
-  const match = url.pathname.match(/^\/(album|track|playlist)\/([A-Za-z0-9]+)\/?$/);
+  const match = url.pathname.match(/^\/(?:intl-[a-z]{2}\/)?(album|track|playlist)\/([A-Za-z0-9]+)\/?$/i);
   return match ? `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator&theme=0&autoplay=true` : '';
+}
+
+function getSpotifyAlbumId(rawUrl) {
+  const value = String(rawUrl || '').trim();
+  const uriMatch = value.match(/^spotify:album:([A-Za-z0-9]+)$/);
+  if (uriMatch) return uriMatch[1];
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== 'open.spotify.com') return '';
+    return url.pathname.match(/^\/(?:intl-[a-z]{2}\/)?album\/([A-Za-z0-9]+)\/?$/i)?.[1] || '';
+  } catch {
+    return '';
+  }
+}
+
+function normalizeSpotifyAlbumLink(rawUrl) {
+  const albumId = getSpotifyAlbumId(rawUrl);
+  return albumId ? `https://open.spotify.com/album/${albumId}` : '';
+}
+
+function saveSpotifyAlbumLink(item, rawUrl) {
+  const normalizedUrl = normalizeSpotifyAlbumLink(rawUrl);
+  if (!normalizedUrl) return false;
+  const storedItem = ownCollection.find(entry => entry.id === item?.id);
+  if (!viewingOwnCollection || !storedItem || storedItem.spotifyAlbumUrl === normalizedUrl) return false;
+  storedItem.spotifyAlbumUrl = normalizedUrl;
+  if (item !== storedItem) item.spotifyAlbumUrl = normalizedUrl;
+  saveCollection();
+  void saveCloudDataNow();
+  return true;
 }
 
 function getAppleMusicEmbedUrl(rawUrl) {
@@ -14408,8 +14596,8 @@ async function restoreListeningSession() {
   if (!saved || typeof saved !== 'object') return;
   const savedQueue = Array.isArray(saved.queue) ? saved.queue : [];
   savedQueue.forEach(item => {
-    const url = getSupportedListeningUrl(item?.listeningUrl);
-    const albumPath = url && new URL(url).pathname.match(/^\/album\/[A-Za-z0-9]+\/?$/);
+    const url = getSupportedListeningUrl(item?.spotifyAlbumUrl || item?.listeningUrl);
+    const albumPath = getSpotifyAlbumId(url);
     if (albumPath && getSpotifyEmbedUrl(url)) listeningAlbumQueue.push({ ...item, listeningUrl: url });
   });
   const savedCurrentUrl = getSupportedListeningUrl(saved.currentAlbum?.listeningUrl);
@@ -14675,7 +14863,7 @@ function updateAlbumQueueControls() {
 function queueAlbumForListening(item, listeningUrl) {
   const safeUrl = getSupportedListeningUrl(listeningUrl);
   if (!safeUrl || !getSpotifyEmbedUrl(safeUrl)
-    || !new URL(safeUrl).pathname.match(/^\/album\/[A-Za-z0-9]+\/?$/)) {
+    || !getSpotifyAlbumId(safeUrl)) {
     console.error('Album konnte nicht eingereiht werden: Kein gültiger Spotify-Albumlink vorhanden.');
     return false;
   }
@@ -15351,8 +15539,9 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       message.textContent = 'Die Wiedergabeposition konnte nicht geändert werden. Bitte versuche es erneut.';
     }
   });
-  const albumId = new URL(originalUrl).pathname.match(/^\/album\/([A-Za-z0-9]+)\/?$/)?.[1];
-  const spotifyContent = new URL(originalUrl).pathname.match(/^\/(album|track|playlist)\/([A-Za-z0-9]+)\/?$/);
+  const spotifyPath = new URL(originalUrl).pathname.replace(/^\/intl-[a-z]{2}(?=\/)/i, '');
+  const albumId = getSpotifyAlbumId(originalUrl);
+  const spotifyContent = spotifyPath.match(/^\/(album|track|playlist)\/([A-Za-z0-9]+)\/?$/);
   const spotifyUri = spotifyContent ? `spotify:${spotifyContent[1]}:${spotifyContent[2]}` : '';
   if (albumId) {
     const request = new AbortController();
@@ -15523,6 +15712,452 @@ function getSpotifyRedirectUri() {
   return `${window.location.origin}${window.location.pathname}`;
 }
 
+let spotifyPlaylistImportAlbums = [];
+let spotifyPlaylistImportRequest = 0;
+
+function closeSpotifyPlaylistImport() {
+  spotifyPlaylistImportRequest += 1;
+  document.getElementById('spotifyPlaylistImportOverlay')?.classList.remove('open');
+}
+
+function spotifyPlaylistAlbumKey(title, artist) {
+  const normalize = value => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('de')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+  return `${normalize(title)}___${normalize(artist)}`;
+}
+
+async function requestSpotifyPlaylistApi(url, options = {}) {
+  const token = await getSpotifyAccessToken();
+  if (!token) throw new Error('Spotify ist nicht verbunden. Verbinde Spotify in den Einstellungen und versuche es erneut.');
+  const requestUrl = new URL(url);
+  if (requestUrl.protocol !== 'https:' || requestUrl.hostname !== 'api.spotify.com' || !requestUrl.pathname.startsWith('/v1/')) {
+    throw new Error('Spotify hat eine ungültige Playlist-Adresse zurückgegeben.');
+  }
+  const response = await fetch(requestUrl.href, {
+    ...options,
+    headers: { ...options.headers, Authorization: `Bearer ${token}` }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 403) {
+    const error = new Error('Spotify benötigt zusätzliche Playlist-Berechtigungen. Bitte erneuere die Spotify-Berechtigungen.');
+    error.requiresSpotifyPlaylistScope = true;
+    throw error;
+  }
+  if (!response.ok) throw new Error(data.error?.message || `Spotify antwortete mit HTTP ${response.status}`);
+  return data;
+}
+
+async function loadSpotifyAccountPlaylists(requestId) {
+  const list = document.getElementById('spotifyPlaylistList');
+  const status = document.getElementById('spotifyPlaylistImportStatus');
+  const reauthorize = document.getElementById('reauthorizeSpotifyPlaylistBtn');
+  list.replaceChildren();
+  status.textContent = 'Lade deine Playlisten …';
+  reauthorize.hidden = true;
+  try {
+    let url = 'https://api.spotify.com/v1/me/playlists?limit=50&offset=0';
+    const playlists = [];
+    while (url) {
+      const page = await requestSpotifyPlaylistApi(url);
+      if (requestId !== spotifyPlaylistImportRequest) return;
+      playlists.push(...(page.items || []));
+      url = page.next || '';
+    }
+    if (!playlists.length) {
+      status.textContent = 'In deinem Spotify-Konto wurden keine Playlisten gefunden.';
+      return;
+    }
+    status.textContent = 'Deine Playlisten – wähle eine zum Durchsuchen aus:';
+    playlists.forEach(playlist => {
+      if (!playlist?.id) return;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'spotify-playlist-option';
+      const image = document.createElement('img');
+      image.alt = '';
+      image.src = playlist.images?.[0]?.url || '';
+      const text = document.createElement('span');
+      const title = document.createElement('strong');
+      title.textContent = playlist.name || 'Unbenannte Playlist';
+      const detail = document.createElement('small');
+      detail.textContent = `${playlist.owner?.display_name || 'Spotify'} · ${Number(playlist.tracks?.total ?? playlist.items?.total) || 0} Songs`;
+      text.append(title, detail);
+      button.append(image, text);
+      button.addEventListener('click', () => loadSpotifyPlaylist(playlist.id, false));
+      list.append(button);
+    });
+  } catch (error) {
+    if (requestId !== spotifyPlaylistImportRequest) return;
+    console.error('Spotify-Playlisten konnten nicht geladen werden:', error);
+    status.textContent = error.message || 'Deine Spotify-Playlisten konnten nicht geladen werden.';
+    reauthorize.hidden = !error.requiresSpotifyPlaylistScope;
+  }
+}
+
+function renderSpotifyPlaylistAlbums() {
+  const container = document.getElementById('spotifyPlaylistAlbums');
+  const addButton = document.getElementById('addSpotifyPlaylistAlbumsBtn');
+  container.replaceChildren();
+  const existingKeys = new Set(collection.map(entry => spotifyPlaylistAlbumKey(entry.title, entry.artist)));
+  spotifyPlaylistImportAlbums.forEach(album => {
+    const alreadyAdded = existingKeys.has(spotifyPlaylistAlbumKey(album.title, album.artist));
+    const label = document.createElement('label');
+    label.className = 'spotify-album-option';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = !alreadyAdded;
+    checkbox.disabled = alreadyAdded;
+    checkbox.dataset.albumId = album.id;
+    const image = document.createElement('img');
+    image.alt = '';
+    image.src = album.coverUrl || '';
+    const text = document.createElement('span');
+    const title = document.createElement('strong');
+    title.textContent = album.title;
+    const detail = document.createElement('small');
+    detail.textContent = `${album.artist}${album.year ? ` · ${album.year}` : ''} · ${album.tracklist.length} Playlist-Song${album.tracklist.length === 1 ? '' : 's'}${alreadyAdded ? ' · Bereits in deiner Sammlung' : ''}`;
+    text.append(title, detail);
+    label.append(checkbox, image, text);
+    container.append(label);
+  });
+  addButton.disabled = !container.querySelector('input[type="checkbox"]:checked:not(:disabled)');
+}
+
+async function loadSpotifyPlaylist(playlistIdOrUrl, isExternalLink) {
+  const status = document.getElementById('spotifyPlaylistImportStatus');
+  const list = document.getElementById('spotifyPlaylistList');
+  const albumsContainer = document.getElementById('spotifyPlaylistAlbums');
+  const addButton = document.getElementById('addSpotifyPlaylistAlbumsBtn');
+  const reauthorize = document.getElementById('reauthorizeSpotifyPlaylistBtn');
+  const requestId = ++spotifyPlaylistImportRequest;
+  albumsContainer.replaceChildren();
+  addButton.disabled = true;
+  reauthorize.hidden = true;
+  let playlistId = playlistIdOrUrl;
+  if (isExternalLink) {
+    try {
+      const uriMatch = playlistIdOrUrl.match(/^spotify:playlist:([A-Za-z0-9]+)$/);
+      if (uriMatch) {
+        playlistId = uriMatch[1];
+      } else {
+        const url = new URL(playlistIdOrUrl);
+        const urlMatch = url.protocol === 'https:' && url.hostname === 'open.spotify.com'
+          ? url.pathname.match(/^\/playlist\/([A-Za-z0-9]+)\/?$/)
+          : null;
+        if (!urlMatch) throw new Error('Bitte einen gültigen Spotify-Playlist-Link einfügen.');
+        playlistId = urlMatch[1];
+      }
+    } catch (error) {
+      status.textContent = error instanceof TypeError
+        ? 'Bitte einen gültigen Spotify-Playlist-Link einfügen.'
+        : error.message;
+      return;
+    }
+  }
+  status.textContent = 'Lade Playlist-Songs und gruppiere sie nach Album …';
+  try {
+    const playlist = await requestSpotifyPlaylistApi(`https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}`);
+    const albumMap = new Map();
+    let nextUrl = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks?limit=100&offset=0&market=DE`;
+    while (nextUrl) {
+      const page = await requestSpotifyPlaylistApi(nextUrl);
+      if (requestId !== spotifyPlaylistImportRequest) return;
+      for (const entry of page.items || []) {
+        const track = entry?.track;
+        const album = track?.album;
+        if (!album?.id || !track?.name) continue;
+        let groupedAlbum = albumMap.get(album.id);
+        if (!groupedAlbum) {
+          groupedAlbum = {
+            id: album.id,
+            title: album.name || 'Unbenanntes Album',
+            artist: (album.artists || []).map(value => value.name).filter(Boolean).join(', ') || 'Unbekannter Interpret',
+            year: album.release_date ? album.release_date.slice(0, 4) : '',
+            coverUrl: album.images?.[0]?.url || '',
+            listeningUrl: album.external_urls?.spotify || `https://open.spotify.com/album/${album.id}`,
+            spotifyAlbumUrl: `https://open.spotify.com/album/${album.id}`,
+            releaseType: album.album_type === 'single' ? 'Single' : 'Album',
+            tracklist: []
+          };
+          albumMap.set(album.id, groupedAlbum);
+        }
+        groupedAlbum.tracklist.push({
+          title: track.name,
+          duration: Number(track.duration_ms) ? formatListeningTime(Number(track.duration_ms) / 1000) : '',
+          uri: track.uri || ''
+        });
+      }
+      nextUrl = page.next || '';
+    }
+    if (requestId !== spotifyPlaylistImportRequest) return;
+    spotifyPlaylistImportAlbums = [...albumMap.values()];
+    if (!spotifyPlaylistImportAlbums.length) {
+      status.textContent = `„${playlist.name || 'Playlist'}“ enthält keine verfügbaren Album-Tracks.`;
+      return;
+    }
+    const alreadyPresent = spotifyPlaylistImportAlbums.filter(album =>
+      collection.some(entry => spotifyPlaylistAlbumKey(entry.title, entry.artist) === spotifyPlaylistAlbumKey(album.title, album.artist))
+    ).length;
+    status.textContent = `„${playlist.name || 'Playlist'}“ · ${spotifyPlaylistImportAlbums.length} einmalige Alben gefunden; ${alreadyPresent} bereits vorhanden.`;
+    renderSpotifyPlaylistAlbums();
+  } catch (error) {
+    if (requestId !== spotifyPlaylistImportRequest) return;
+    console.error('Spotify-Playlist konnte nicht geladen werden:', error);
+    status.textContent = error.message || 'Die Spotify-Playlist konnte nicht geladen werden.';
+    reauthorize.hidden = !error.requiresSpotifyPlaylistScope;
+  }
+}
+
+async function openSpotifyPlaylistImport() {
+  if (!viewingOwnCollection) {
+    await showAlert('Playlist-Alben können nur in deine eigene Sammlung importiert werden.');
+    return;
+  }
+  const overlay = document.getElementById('spotifyPlaylistImportOverlay');
+  document.getElementById('spotifyPublicPlaylistUrl').value = '';
+  document.getElementById('spotifyPlaylistAlbums').replaceChildren();
+  document.getElementById('addSpotifyPlaylistAlbumsBtn').disabled = true;
+  overlay.classList.add('open');
+  await loadSpotifyAccountPlaylists(++spotifyPlaylistImportRequest);
+}
+
+async function addSelectedSpotifyPlaylistAlbums() {
+  if (!viewingOwnCollection) {
+    await showAlert('Playlist-Alben können nur in deine eigene Sammlung importiert werden.');
+    closeSpotifyPlaylistImport();
+    return;
+  }
+  const selectedIds = new Set([...document.querySelectorAll('#spotifyPlaylistAlbums input[type="checkbox"]:checked')]
+    .map(input => input.dataset.albumId));
+  const selectedAlbums = spotifyPlaylistImportAlbums.filter(album => selectedIds.has(album.id));
+  const existingKeys = new Set(collection.map(entry => spotifyPlaylistAlbumKey(entry.title, entry.artist)));
+  const newAlbums = selectedAlbums.filter(album => {
+    const key = spotifyPlaylistAlbumKey(album.title, album.artist);
+    if (existingKeys.has(key)) return false;
+    existingKeys.add(key);
+    return true;
+  });
+  if (!newAlbums.length) {
+    await showAlert('Bitte wähle mindestens ein noch nicht vorhandenes Album aus.');
+    return;
+  }
+  const now = Date.now();
+  newAlbums.forEach((album, index) => {
+    collection.push({
+      id: `${now}_${index}_${Math.random().toString(36).slice(2, 7)}`,
+      title: album.title,
+      artist: album.artist,
+      year: album.year,
+      genre: '',
+      coverUrl: album.coverUrl,
+      listeningUrl: album.listeningUrl,
+      spotifyAlbumUrl: album.spotifyAlbumUrl || album.listeningUrl,
+      releaseType: album.releaseType,
+      color: '#000000',
+      colorSecondary: '#ffffff',
+      colorTertiary: '#61b8ff',
+      colors: ['#000000', '#ffffff', '#61b8ff'],
+      pattern: 'Keine',
+      transparent: false,
+      condition: 'Sehr gut',
+      notes: '',
+      owned: false,
+      source: 'spotify',
+      tracklist: album.tracklist
+    });
+  });
+  saveCollection();
+  closeSpotifyPlaylistImport();
+  void saveCloudDataNow();
+  await showAlert(`${newAlbums.length} Album${newAlbums.length === 1 ? '' : 'e'} zur Wunschliste hinzugefügt. Die Playlist-Songs wurden je Album gruppiert.`);
+}
+
+let spotifyPlaylistCreatorItems = [];
+
+function closeSpotifyPlaylistCreator() {
+  document.getElementById('spotifyCreatePlaylistOverlay')?.classList.remove('open');
+  spotifyPlaylistCreatorItems = [];
+}
+
+function openSpotifyPlaylistCreator(items, suggestedName) {
+  const uniqueItems = [...new Map(items.filter(item => item?.id).map(item => [item.id, item])).values()];
+  if (!uniqueItems.length) {
+    void showAlert('In dieser Auswahl wurden keine Alben gefunden.');
+    return;
+  }
+  if (!viewingOwnCollection) {
+    void showAlert('Spotify-Playlists können nur aus deiner eigenen Sammlung erstellt werden.');
+    return;
+  }
+  spotifyPlaylistCreatorItems = uniqueItems;
+  const overlay = document.getElementById('spotifyCreatePlaylistOverlay');
+  const input = document.getElementById('spotifyCreatePlaylistName');
+  const status = document.getElementById('spotifyCreatePlaylistStatus');
+  const confirmButton = document.getElementById('confirmSpotifyPlaylistCreateBtn');
+  const reauthorize = document.getElementById('reauthorizeSpotifyCreatePlaylistBtn');
+  const suffix = new Date().toLocaleDateString('de-DE');
+  input.value = `${suggestedName} · ${suffix}`.slice(0, 100);
+  status.textContent = `${uniqueItems.length} Album${uniqueItems.length === 1 ? '' : 'e'} · Spotify-Titel werden beim Erstellen ermittelt. Die Playlist wird privat angelegt.`;
+  confirmButton.disabled = false;
+  reauthorize.hidden = true;
+  overlay.classList.add('open');
+  input.focus();
+  input.select();
+}
+
+function findSpotifyAlbumId(item) {
+  return getSpotifyAlbumId(item.spotifyAlbumUrl || item.listeningUrl);
+}
+
+function normalizeSpotifyMatchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('de')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+async function findMatchingSpotifyAlbum(item) {
+  const params = new URLSearchParams({
+    q: `album:${item.title} artist:${item.artist}`,
+    type: 'album',
+    limit: '10',
+    market: 'DE'
+  });
+  const results = await requestSpotifyPlaylistApi(`https://api.spotify.com/v1/search?${params}`);
+  const targetTitle = normalizeSpotifyMatchText(item.title);
+  const targetArtists = normalizeSpotifyMatchText(item.artist).split(/\s+/).filter(Boolean);
+  const albums = results.albums?.items || [];
+  const candidates = albums.map(album => {
+    const title = normalizeSpotifyMatchText(album.name);
+    const artists = normalizeSpotifyMatchText((album.artists || []).map(artist => artist.name).join(' '));
+    const titleMatches = title === targetTitle || (title && targetTitle && (title.includes(targetTitle) || targetTitle.includes(title)));
+    const artistMatches = !targetArtists.length || targetArtists.some(token => artists.split(/\s+/).includes(token));
+    return { album, score: (title === targetTitle ? 2 : titleMatches ? 1 : 0) + (artistMatches ? 1 : 0) };
+  }).filter(candidate => candidate.score >= 2)
+    .sort((a, b) => b.score - a.score);
+  return candidates[0]?.album?.id || '';
+}
+
+async function getSpotifyAlbumTrackUris(item) {
+  const albumId = findSpotifyAlbumId(item) || await findMatchingSpotifyAlbum(item);
+  if (!albumId) {
+    const knownUris = (Array.isArray(item.tracklist) ? item.tracklist : [])
+      .map(track => typeof track === 'string' ? '' : track.uri || track.spotifyUri || '')
+      .filter(uri => /^spotify:track:[A-Za-z0-9]+$/.test(uri));
+    if (knownUris.length) return { albumId: '', trackUris: knownUris };
+    throw new Error('Kein passendes Spotify-Album gefunden.');
+  }
+  let url = `https://api.spotify.com/v1/albums/${encodeURIComponent(albumId)}/tracks?limit=50&market=DE`;
+  const trackUris = [];
+  while (url) {
+    const page = await requestSpotifyPlaylistApi(url);
+    for (const track of page.items || []) {
+      if (/^spotify:track:[A-Za-z0-9]+$/.test(track?.uri || '')) trackUris.push(track.uri);
+    }
+    url = page.next || '';
+  }
+  return { albumId, trackUris };
+}
+
+async function createSpotifyPlaylistFromDialog() {
+  const items = spotifyPlaylistCreatorItems;
+  const nameInput = document.getElementById('spotifyCreatePlaylistName');
+  const status = document.getElementById('spotifyCreatePlaylistStatus');
+  const confirmButton = document.getElementById('confirmSpotifyPlaylistCreateBtn');
+  const reauthorize = document.getElementById('reauthorizeSpotifyCreatePlaylistBtn');
+  const name = nameInput.value.trim();
+  if (!name) {
+    status.textContent = 'Bitte einen Playlist-Namen eingeben.';
+    nameInput.focus();
+    return;
+  }
+  if (!items.length || confirmButton.disabled) return;
+  confirmButton.disabled = true;
+  reauthorize.hidden = true;
+  const trackUris = [];
+  const seenUris = new Set();
+  const skippedAlbums = [];
+  let savedSpotifyAlbumLinks = 0;
+  let createdPlaylist = null;
+  try {
+    for (let index = 0; index < items.length; index += 1) {
+      status.textContent = `Spotify-Alben werden durchsucht (${index + 1} von ${items.length}) …`;
+      try {
+        const { albumId, trackUris: albumTrackUris } = await getSpotifyAlbumTrackUris(items[index]);
+        albumTrackUris.forEach(uri => {
+          if (!seenUris.has(uri)) {
+            seenUris.add(uri);
+            trackUris.push(uri);
+          }
+        });
+        if (!albumTrackUris.length) {
+          skippedAlbums.push(`${items[index].artist} – ${items[index].title}`);
+        } else if (albumId && !findSpotifyAlbumId(items[index])) {
+          const currentUrl = getSupportedListeningUrl(items[index].listeningUrl);
+          if (!currentUrl || getSpotifyEmbedUrl(currentUrl)) {
+            items[index].spotifyAlbumUrl = `https://open.spotify.com/album/${albumId}`;
+            savedSpotifyAlbumLinks += 1;
+          }
+        }
+      } catch (error) {
+        if (error.requiresSpotifyPlaylistScope) throw error;
+        console.error(`Spotify-Titel für „${items[index].title}“ konnten nicht gefunden werden:`, error);
+        skippedAlbums.push(`${items[index].artist} – ${items[index].title}`);
+      }
+    }
+    if (savedSpotifyAlbumLinks) {
+      saveCollection();
+      void saveCloudDataNow();
+    }
+    if (!trackUris.length) {
+      status.textContent = 'Für die ausgewählten Alben wurden keine Spotify-Titel gefunden. Prüfe die Spotify-Links oder verbinde dein Konto erneut.';
+      confirmButton.disabled = false;
+      return;
+    }
+    status.textContent = `${trackUris.length} Titel gefunden. Private Spotify-Playlist wird erstellt …`;
+    createdPlaylist = await requestSpotifyPlaylistApi('https://api.spotify.com/v1/me/playlists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name.slice(0, 100),
+        description: `Erstellt aus ${items.length} Alben deiner Vinyl-Sammlung.`,
+        public: false
+      })
+    });
+    if (!createdPlaylist?.id) throw new Error('Spotify hat keine Playlist-ID zurückgegeben.');
+    for (let index = 0; index < trackUris.length; index += 100) {
+      status.textContent = `Füge Titel hinzu (${Math.min(index + 100, trackUris.length)} von ${trackUris.length}) …`;
+      await requestSpotifyPlaylistApi(`https://api.spotify.com/v1/playlists/${encodeURIComponent(createdPlaylist.id)}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uris: trackUris.slice(index, index + 100) })
+      });
+    }
+    closeSpotifyPlaylistCreator();
+    const details = skippedAlbums.length
+      ? ` Nicht gefunden und übersprungen: ${skippedAlbums.join('; ')}.`
+      : '';
+    const savedLinksMessage = savedSpotifyAlbumLinks
+      ? ` Spotify-Albumlinks wurden für ${savedSpotifyAlbumLinks} ${savedSpotifyAlbumLinks === 1 ? 'Eintrag' : 'Einträge'} gespeichert.`
+      : '';
+    const playlistUrl = createdPlaylist.external_urls?.spotify || '';
+    await showAlert(`Die private Spotify-Playlist „${name}“ wurde mit ${trackUris.length} Titeln erstellt.${savedLinksMessage}${details}${playlistUrl ? `\n${playlistUrl}` : ''}`);
+  } catch (error) {
+    console.error('Spotify-Playlist konnte nicht erstellt werden:', error);
+    status.textContent = createdPlaylist
+      ? `Die Playlist wurde angelegt, aber die Titel konnten nicht vollständig hinzugefügt werden: ${error.message || 'Unbekannter Fehler'}${createdPlaylist.external_urls?.spotify ? ` ${createdPlaylist.external_urls.spotify}` : ''}`
+      : error.message || 'Die Spotify-Playlist konnte nicht erstellt werden.';
+    reauthorize.hidden = !error.requiresSpotifyPlaylistScope;
+    confirmButton.disabled = false;
+  }
+}
+
 function updateSpotifyConnectionStatus(message = '') {
   const status = document.getElementById('spotifyConnectionStatus');
   if (!status) return;
@@ -15607,7 +16242,7 @@ async function connectSpotify() {
     client_id: clientId,
     response_type: 'code',
     redirect_uri: redirectUri,
-    scope: 'user-library-modify',
+    scope: 'user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-private',
     code_challenge_method: 'S256',
     code_challenge: challenge,
     state
@@ -15738,7 +16373,7 @@ function appendListeningProviderResults(content, provider, label, results, item)
   results.forEach(result => {
     const choice = document.createElement('div');
     const canQueueAlbum = provider === 'spotify' && !!getSpotifyEmbedUrl(result.url)
-      && /^\/album\/[A-Za-z0-9]+\/?$/.test(new URL(result.url).pathname);
+      && !!getSpotifyAlbumId(result.url);
     choice.className = canQueueAlbum ? 'album-listen-choice' : '';
     const button = document.createElement('button');
     button.type = 'button';
@@ -15761,6 +16396,7 @@ function appendListeningProviderResults(content, provider, label, results, item)
         window.open(result.url, '_blank', 'noopener,noreferrer');
         return;
       }
+      if (provider === 'spotify') saveSpotifyAlbumLink(item, result.url);
       content.querySelectorAll('.album-listen-provider-results, .album-listen-track-list, .album-listen-embed, .album-listen-open-platform')
         .forEach(element => element.remove());
       if (mountListeningEmbed(content, result.url, result.title || item.title || provider, item)) {
@@ -15777,6 +16413,7 @@ function appendListeningProviderResults(content, provider, label, results, item)
       queueButton.title = 'Album in die Warteschlange';
       queueButton.setAttribute('aria-label', `${result.title || item.title} in die Warteschlange`);
       queueButton.addEventListener('click', () => {
+        saveSpotifyAlbumLink(item, result.url);
         const queued = queueAlbumForListening({
           ...item,
           title: result.title || item.title,
@@ -16070,9 +16707,9 @@ async function searchAppleListening(item, content, controller, status) {
 
 async function openAlbumListening(item, inlineTarget = null, options = {}) {
   const overlay = document.getElementById('albumListeningOverlay');
-  const storedUrl = getSupportedListeningUrl(item.listeningUrl);
+  const storedUrl = getSupportedListeningUrl(item.spotifyAlbumUrl || item.listeningUrl);
   const restorePlayback = options.restorePlayback === true;
-  if (item.listeningUrl && !storedUrl) {
+  if ((item.spotifyAlbumUrl || item.listeningUrl) && !storedUrl) {
     await showAlert('Der gespeicherte Hörlink ist ungültig. Bitte verwende einen HTTPS-Link von Spotify, Apple Music oder YouTube.');
     return;
   }
@@ -16203,6 +16840,45 @@ document.getElementById('openDiscogsUrlBtn').addEventListener('click', () => {
 document.getElementById('closeDiscogsUrlBtn').addEventListener('click', closeDiscogsUrlDialog);
 discogsUrlOverlay.addEventListener('click', event => {
   if (event.target === discogsUrlOverlay) closeDiscogsUrlDialog();
+});
+const spotifyAlbumUrlOverlay = document.getElementById('spotifyAlbumUrlOverlay');
+const closeSpotifyAlbumUrlDialog = () => spotifyAlbumUrlOverlay.classList.remove('open');
+document.getElementById('openSpotifyAlbumUrlBtn').addEventListener('click', () => {
+  const savedLink = currentDraft?.spotifyAlbumUrl || normalizeSpotifyAlbumLink(currentDraft?.listeningUrl);
+  document.getElementById('spotifyAlbumUrlInput').value = savedLink || '';
+  document.getElementById('spotifyAlbumUrlStatus').textContent =
+    'Der gespeicherte Albumlink wird beim Anhören und für Playlisten bevorzugt.';
+  spotifyAlbumUrlOverlay.classList.add('open');
+  document.getElementById('spotifyAlbumUrlInput').focus();
+});
+document.getElementById('closeSpotifyAlbumUrlBtn').addEventListener('click', closeSpotifyAlbumUrlDialog);
+spotifyAlbumUrlOverlay.addEventListener('click', event => {
+  if (event.target === spotifyAlbumUrlOverlay) closeSpotifyAlbumUrlDialog();
+});
+document.getElementById('saveSpotifyAlbumUrlBtn').addEventListener('click', () => {
+  if (!currentDraft) return;
+  const input = document.getElementById('spotifyAlbumUrlInput');
+  const value = input.value.trim();
+  const normalizedUrl = value ? normalizeSpotifyAlbumLink(value) : '';
+  const status = document.getElementById('spotifyAlbumUrlStatus');
+  if (value && !normalizedUrl) {
+    status.textContent = 'Bitte einen gültigen Spotify-Albumlink oder eine spotify:album:…-URI eintragen.';
+    input.focus();
+    return;
+  }
+  currentDraft.spotifyAlbumUrl = normalizedUrl;
+  if (!normalizedUrl && getSpotifyAlbumId(currentDraft.listeningUrl)) {
+    currentDraft.listeningUrl = '';
+    document.getElementById('fListeningUrl').value = '';
+  }
+  status.textContent = normalizedUrl
+    ? 'Spotify-Albumlink übernommen. Speichere den Albumeintrag, um die Änderung zu sichern.'
+    : 'Spotify-Albumlink entfernt. Speichere den Albumeintrag, um die Änderung zu sichern.';
+  closeSpotifyAlbumUrlDialog();
+});
+document.getElementById('clearSpotifyAlbumUrlBtn').addEventListener('click', () => {
+  document.getElementById('spotifyAlbumUrlInput').value = '';
+  document.getElementById('saveSpotifyAlbumUrlBtn').click();
 });
 document.getElementById('openCoverUrlBtn')?.addEventListener('click', () => {
   document.getElementById('coverUrlModalInput').value = document.getElementById('fCoverUrl').value;
@@ -16832,6 +17508,7 @@ function updateBulkUI() {
   const count = selectedItemIds.size;
   document.getElementById('bulkSelectedCount').textContent = `${count} ausgewählt`;
   document.getElementById('bulkEditBtn').disabled = count === 0;
+  document.getElementById('createSpotifyPlaylistFromSelectionBtn').disabled = count === 0;
   document.getElementById('selectAllCheckbox').checked = false;
   document.getElementById('selectAllCheckbox').indeterminate = count > 0 && count < collection.length;
 }
@@ -18427,7 +19104,7 @@ function renderStorageBoard(visibleItems) {
         : `<input type="text" class="storage-compartment-name" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" value="${escapeHtml(compartmentName)}" placeholder="Name" aria-label="Name für Fach ${number}">`;
       const compartmentLabel = getShelfCompartmentLabel(shelf, number);
       return `<section class="storage-compartment${hasSearchMatch ? ' search-match' : ''}" style="grid-row:${rowNumber};grid-column:${columnNumber};" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}">
-        <header class="storage-compartment-header">${singleCompartment ? '' : `<span class="storage-compartment-index" aria-hidden="true">${number}</span>`}${compartmentNameMarkup}<span class="storage-count" title="${compartmentCount} Album${compartmentCount === 1 ? '' : 'e'}">${compartmentCount}</span><button type="button" class="storage-order-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fachsortierung bearbeiten" aria-label="Sortierung von ${escapeHtml(compartmentLabel)} bearbeiten"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h10M4 12h7M4 18h4M17 4v16m0 0-3-3m3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" class="wash-compartment-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `${escapeHtml(compartmentLabel)} waschen` : `Keine Vinyls in ${escapeHtml(compartmentLabel)}`}" aria-label="${escapeHtml(compartmentLabel)} waschen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 4l1 2M12 3v2M18 4l-1 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
+        <header class="storage-compartment-header">${singleCompartment ? '' : `<span class="storage-compartment-index" aria-hidden="true">${number}</span>`}${compartmentNameMarkup}<span class="storage-count" title="${compartmentCount} Album${compartmentCount === 1 ? '' : 'e'}">${compartmentCount}</span><button type="button" class="storage-order-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fachsortierung bearbeiten" aria-label="Sortierung von ${escapeHtml(compartmentLabel)} bearbeiten"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h10M4 12h7M4 18h4M17 4v16m0 0-3-3m3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" class="wash-compartment-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `${escapeHtml(compartmentLabel)} waschen` : `Keine Vinyls in ${escapeHtml(compartmentLabel)}`}" aria-label="${escapeHtml(compartmentLabel)} waschen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 4l1 2M12 3v2M18 4l-1 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="spotify-compartment-playlist-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `Spotify-Playlist aus ${escapeHtml(compartmentLabel)} erstellen` : `Keine Alben in ${escapeHtml(compartmentLabel)}`}" aria-label="Spotify-Playlist aus ${escapeHtml(compartmentLabel)} erstellen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7c5-1.5 11-.8 16 2M5 12c4-1.2 9-.7 13 1.2M6 17c3-.8 6-.4 9 .8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
         <div class="storage-records" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}"></div>
       </section>`;
     }).join('');
@@ -18676,6 +19353,14 @@ function renderStorageBoard(visibleItems) {
     shelfElement.querySelectorAll('.wash-compartment-button').forEach(button => {
       button.addEventListener('click', () => {
         openWashModeForCompartment(shelf.id, Number(button.dataset.compartment));
+      });
+    });
+    shelfElement.querySelectorAll('.spotify-compartment-playlist-button').forEach(button => {
+      button.addEventListener('click', () => {
+        const items = collection.filter(item => item.owned && item.shelfId === shelf.id
+          && Number(item.shelfCompartment) === Number(button.dataset.compartment));
+        const label = getShelfCompartmentLabel(shelf, Number(button.dataset.compartment));
+        openSpotifyPlaylistCreator(items, label);
       });
     });
     shelfElement.querySelectorAll('.storage-order-button').forEach(button => {
