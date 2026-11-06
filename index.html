@@ -3638,6 +3638,11 @@
   .spotify-album-option small { display:block; margin-top:3px; color:var(--text-secondary); }
   .spotify-album-option input { flex:0 0 auto; }
   .spotify-playlist-import-status { min-height:20px; color:var(--text-secondary); }
+  .spotify-resolve-panel { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+  .spotify-resolve-title { margin:0; font-weight:600; }
+  .spotify-resolve-actions { display:flex; justify-content:flex-end; margin-top:10px; }
+  .spotify-album-option.is-clickable { width:100%; text-align:left; color:var(--text-primary); cursor:pointer; }
+  .spotify-album-option.is-clickable:hover { border-color:var(--accent-border); }
   .spotify-playlist-toolbar { display:flex; gap:8px; margin-top:12px; }
   .spotify-playlist-toolbar input { flex:1; min-width:0; }
   @media (max-width:600px) {
@@ -5763,6 +5768,17 @@
     <label for="spotifyCreatePlaylistName">Playlist-Name</label>
     <input id="spotifyCreatePlaylistName" type="text" maxlength="100" style="width:100%; margin-top:6px;">
     <p id="spotifyCreatePlaylistStatus" class="spotify-playlist-import-status" aria-live="polite"></p>
+    <div id="spotifyResolvePanel" class="spotify-resolve-panel" hidden>
+      <p class="spotify-resolve-title" id="spotifyResolveTitle"></p>
+      <div class="spotify-playlist-toolbar">
+        <input id="spotifyResolveInput" type="text" placeholder="Albumname suchen oder Spotify-Link einfügen" autocomplete="off" spellcheck="false">
+        <button type="button" class="btn" id="spotifyResolveSearchBtn">Suchen</button>
+      </div>
+      <div id="spotifyResolveResults" class="spotify-album-list"></div>
+      <div class="spotify-resolve-actions">
+        <button type="button" id="spotifyResolveSkipBtn">Überspringen</button>
+      </div>
+    </div>
     <div class="modal-actions">
       <button type="button" class="btn" id="reauthorizeSpotifyCreatePlaylistBtn" hidden>Spotify-Berechtigungen erneuern</button>
       <button type="button" id="cancelSpotifyPlaylistCreateBtn">Abbrechen</button>
@@ -15978,7 +15994,10 @@ async function addSelectedSpotifyPlaylistAlbums() {
 
 let spotifyPlaylistCreatorItems = [];
 
+let spotifyResolveCancel = null;
+
 function closeSpotifyPlaylistCreator() {
+  if (spotifyResolveCancel) spotifyResolveCancel();
   document.getElementById('spotifyCreatePlaylistOverlay')?.classList.remove('open');
   spotifyPlaylistCreatorItems = [];
 }
@@ -16065,6 +16084,105 @@ async function getSpotifyAlbumTrackUris(item) {
   return { albumId, trackUris };
 }
 
+async function fetchSpotifyAlbumTrackUris(albumId) {
+  let url = `https://api.spotify.com/v1/albums/${encodeURIComponent(albumId)}/tracks?limit=50&market=DE`;
+  const trackUris = [];
+  while (url) {
+    const page = await requestSpotifyPlaylistApi(url);
+    for (const track of page.items || []) {
+      if (/^spotify:track:[A-Za-z0-9]+$/.test(track?.uri || '')) trackUris.push(track.uri);
+    }
+    url = page.next || '';
+  }
+  return trackUris;
+}
+
+async function searchSpotifyAlbumsByText(query) {
+  const params = new URLSearchParams({ q: query, type: 'album', limit: '8', market: 'DE' });
+  const results = await requestSpotifyPlaylistApi(`https://api.spotify.com/v1/search?${params}`);
+  return results.albums?.items || [];
+}
+
+// Fragt für ein nicht gefundenes Album: Suche / Link / Überspringen.
+// Gibt die Spotify-Album-ID zurück oder '' beim Überspringen.
+function resolveSpotifyAlbumManually(item, position, total) {
+  return new Promise((resolve, reject) => {
+    const panel = document.getElementById('spotifyResolvePanel');
+    const title = document.getElementById('spotifyResolveTitle');
+    const input = document.getElementById('spotifyResolveInput');
+    const searchBtn = document.getElementById('spotifyResolveSearchBtn');
+    const skipBtn = document.getElementById('spotifyResolveSkipBtn');
+    const resultsBox = document.getElementById('spotifyResolveResults');
+    title.textContent = `Nicht gefunden (${position} von ${total}): ${item.artist} – ${item.title}`;
+    input.value = `${item.artist} ${item.title}`.trim();
+    resultsBox.replaceChildren();
+    panel.hidden = false;
+    input.focus();
+    input.select();
+
+    const cleanup = () => {
+      spotifyResolveCancel = null;
+      searchBtn.removeEventListener('click', onSearch);
+      skipBtn.removeEventListener('click', onSkip);
+      input.removeEventListener('keydown', onKey);
+      panel.hidden = true;
+      resultsBox.replaceChildren();
+    };
+    const finish = albumId => { cleanup(); resolve(albumId); };
+    const onSkip = () => finish('');
+    const onKey = event => {
+      if (event.key === 'Enter') { event.preventDefault(); onSearch(); }
+    };
+    const onSearch = async () => {
+      const value = input.value.trim();
+      if (!value) return;
+      const linkedId = getSpotifyAlbumId(value);
+      if (linkedId) { finish(linkedId); return; }
+      searchBtn.disabled = true;
+      resultsBox.replaceChildren();
+      try {
+        const albums = await searchSpotifyAlbumsByText(value);
+        if (!albums.length) {
+          const empty = document.createElement('p');
+          empty.className = 'spotify-playlist-import-status';
+          empty.textContent = 'Keine Treffer. Anderen Namen versuchen, einen Link einfügen oder überspringen.';
+          resultsBox.appendChild(empty);
+        }
+        albums.forEach(album => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'spotify-album-option is-clickable';
+          const cover = document.createElement('img');
+          cover.alt = '';
+          const coverUrl = album.images?.[album.images.length - 1]?.url || '';
+          if (/^https:\/\//.test(coverUrl)) cover.src = coverUrl;
+          const text = document.createElement('span');
+          const name = document.createElement('strong');
+          name.textContent = album.name || '';
+          const meta = document.createElement('small');
+          meta.textContent = `${(album.artists || []).map(a => a.name).join(', ')} · ${(album.release_date || '').slice(0, 4)}`;
+          text.append(name, meta);
+          button.append(cover, text);
+          button.addEventListener('click', () => finish(album.id));
+          resultsBox.appendChild(button);
+        });
+      } catch (error) {
+        cleanup();
+        reject(error);
+        return;
+      }
+      searchBtn.disabled = false;
+    };
+    spotifyResolveCancel = () => {
+      cleanup();
+      reject(Object.assign(new Error('Abgebrochen'), { cancelled: true }));
+    };
+    searchBtn.addEventListener('click', onSearch);
+    skipBtn.addEventListener('click', onSkip);
+    input.addEventListener('keydown', onKey);
+  });
+}
+
 async function createSpotifyPlaylistFromDialog() {
   const items = spotifyPlaylistCreatorItems;
   const nameInput = document.getElementById('spotifyCreatePlaylistName');
@@ -16083,6 +16201,7 @@ async function createSpotifyPlaylistFromDialog() {
   const trackUris = [];
   const seenUris = new Set();
   const skippedAlbums = [];
+  const unresolvedItems = [];
   let savedSpotifyAlbumLinks = 0;
   let createdPlaylist = null;
   try {
@@ -16097,7 +16216,7 @@ async function createSpotifyPlaylistFromDialog() {
           }
         });
         if (!albumTrackUris.length) {
-          skippedAlbums.push(`${items[index].artist} – ${items[index].title}`);
+          unresolvedItems.push(items[index]);
         } else if (albumId && !findSpotifyAlbumId(items[index])) {
           const currentUrl = getSupportedListeningUrl(items[index].listeningUrl);
           if (!currentUrl || getSpotifyEmbedUrl(currentUrl)) {
@@ -16108,7 +16227,39 @@ async function createSpotifyPlaylistFromDialog() {
       } catch (error) {
         if (error.requiresSpotifyPlaylistScope) throw error;
         console.error(`Spotify-Titel für „${items[index].title}“ konnten nicht gefunden werden:`, error);
-        skippedAlbums.push(`${items[index].artist} – ${items[index].title}`);
+        unresolvedItems.push(items[index]);
+      }
+    }
+    for (let index = 0; index < unresolvedItems.length; index += 1) {
+      const item = unresolvedItems[index];
+      status.textContent = `${unresolvedItems.length} Album${unresolvedItems.length === 1 ? '' : 'en'} nicht automatisch gefunden. Bitte manuell zuordnen oder überspringen.`;
+      const manualAlbumId = await resolveSpotifyAlbumManually(item, index + 1, unresolvedItems.length);
+      if (!manualAlbumId) {
+        skippedAlbums.push(`${item.artist} – ${item.title}`);
+        continue;
+      }
+      status.textContent = `Lade Titel für ${item.artist} – ${item.title} …`;
+      try {
+        const manualUris = await fetchSpotifyAlbumTrackUris(manualAlbumId);
+        if (!manualUris.length) {
+          skippedAlbums.push(`${item.artist} – ${item.title}`);
+          continue;
+        }
+        manualUris.forEach(uri => {
+          if (!seenUris.has(uri)) {
+            seenUris.add(uri);
+            trackUris.push(uri);
+          }
+        });
+        const currentUrl = getSupportedListeningUrl(item.listeningUrl);
+        if (!findSpotifyAlbumId(item) && (!currentUrl || getSpotifyEmbedUrl(currentUrl))) {
+          item.spotifyAlbumUrl = `https://open.spotify.com/album/${manualAlbumId}`;
+          savedSpotifyAlbumLinks += 1;
+        }
+      } catch (error) {
+        if (error.requiresSpotifyPlaylistScope) throw error;
+        console.error(`Manuell gewähltes Album für „${item.title}“ konnte nicht geladen werden:`, error);
+        skippedAlbums.push(`${item.artist} – ${item.title}`);
       }
     }
     if (savedSpotifyAlbumLinks) {
@@ -16149,12 +16300,15 @@ async function createSpotifyPlaylistFromDialog() {
     const playlistUrl = createdPlaylist.external_urls?.spotify || '';
     await showAlert(`Die private Spotify-Playlist „${name}“ wurde mit ${trackUris.length} Titeln erstellt.${savedLinksMessage}${details}${playlistUrl ? `\n${playlistUrl}` : ''}`);
   } catch (error) {
+    if (error.cancelled) return;
     console.error('Spotify-Playlist konnte nicht erstellt werden:', error);
     status.textContent = createdPlaylist
       ? `Die Playlist wurde angelegt, aber die Titel konnten nicht vollständig hinzugefügt werden: ${error.message || 'Unbekannter Fehler'}${createdPlaylist.external_urls?.spotify ? ` ${createdPlaylist.external_urls.spotify}` : ''}`
       : error.message || 'Die Spotify-Playlist konnte nicht erstellt werden.';
     reauthorize.hidden = !error.requiresSpotifyPlaylistScope;
     confirmButton.disabled = false;
+    const resolvePanel = document.getElementById('spotifyResolvePanel');
+    if (resolvePanel) resolvePanel.hidden = true;
   }
 }
 
