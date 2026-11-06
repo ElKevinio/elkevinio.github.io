@@ -15945,12 +15945,12 @@ async function loadSpotifyPlaylist(playlistIdOrUrl, isExternalLink) {
   try {
     const playlist = await requestSpotifyPlaylistApi(`https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}`);
     const albumMap = new Map();
-    let nextUrl = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/tracks?limit=100&offset=0&market=DE`;
+    let nextUrl = `https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}/items?limit=100&offset=0&market=DE`;
     while (nextUrl) {
       const page = await requestSpotifyPlaylistApi(nextUrl);
       if (requestId !== spotifyPlaylistImportRequest) return;
       for (const entry of page.items || []) {
-        const track = entry?.track;
+        const track = entry?.item || entry?.track;
         const album = track?.album;
         if (!album?.id || !track?.name) continue;
         let groupedAlbum = albumMap.get(album.id);
@@ -15990,7 +15990,9 @@ async function loadSpotifyPlaylist(playlistIdOrUrl, isExternalLink) {
   } catch (error) {
     if (requestId !== spotifyPlaylistImportRequest) return;
     console.error('Spotify-Playlist konnte nicht geladen werden:', error);
-    status.textContent = error.message || 'Die Spotify-Playlist konnte nicht geladen werden.';
+    status.textContent = error.requiresSpotifyPlaylistScope
+      ? 'Spotify verweigert den Zugriff auf die Songs dieser Playlist. Spotify erlaubt in Entwickler-Apps oft nur eigene oder gemeinsam bearbeitete Playlists. Falls es eine eigene ist, hilft evtl. das Erneuern der Berechtigungen.'
+      : (error.message || 'Die Spotify-Playlist konnte nicht geladen werden.');
     reauthorize.hidden = !error.requiresSpotifyPlaylistScope;
   }
 }
