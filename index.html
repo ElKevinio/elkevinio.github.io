@@ -3648,6 +3648,17 @@
   @media (max-width:600px) {
     .spotify-playlist-toolbar { flex-direction:column; }
   }
+  .spotify-import-box { display:flex; flex-direction:column; height:min(88vh, 900px); height:min(88dvh, 900px); max-height:none; overflow:hidden; }
+  .spotify-import-box [hidden] { display:none !important; }
+  .spotify-import-box > * { flex:0 0 auto; }
+  .spotify-import-searchrow { display:flex; align-items:center; gap:8px; margin-top:4px; }
+  .spotify-import-searchrow input { flex:1; min-width:0; }
+  .spotify-import-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; margin-top:8px; }
+  .spotify-import-scroll .spotify-playlist-list,
+  .spotify-import-scroll .spotify-album-list { margin-top:0; }
+  .spotify-import-box .spotify-playlist-toolbar { flex-direction:row; margin-top:8px; }
+  .spotify-import-box .modal-actions { margin-top:8px; }
+  .spotify-import-box .spotify-playlist-import-status { margin:0 0 4px; }
   .storage-result-overlay { z-index: 115; }
   #albumListeningOverlay { z-index: 150; }
   .wash-mode-overlay { z-index: 99; }
@@ -5747,19 +5758,26 @@
   </div>
 </div>
 <div class="modal-overlay" id="spotifyPlaylistImportOverlay" aria-modal="true" role="dialog" aria-labelledby="spotifyPlaylistImportTitle">
-  <section class="modal-box spotify-playlist-box">
+  <section class="modal-box spotify-playlist-box spotify-import-box">
     <h2 id="spotifyPlaylistImportTitle" style="margin:0 0 8px;">Alben aus Spotify-Playlisten</h2>
     <p class="spotify-playlist-import-status" id="spotifyPlaylistImportStatus" aria-live="polite">Lade deine Playlisten …</p>
-    <div id="spotifyPlaylistList" class="spotify-playlist-list"></div>
-    <div class="spotify-playlist-toolbar">
-      <input id="spotifyPublicPlaylistUrl" type="url" placeholder="Öffentlicher Spotify-Playlist-Link">
-      <button type="button" class="btn" id="loadSpotifyPublicPlaylistBtn">Playlist laden</button>
+    <div class="spotify-import-searchrow">
+      <button type="button" class="icon-btn" id="spotifyImportBackBtn" title="Zurück zu den Playlisten" aria-label="Zurück zu den Playlisten" hidden>‹</button>
+      <input id="spotifyImportSearch" type="search" placeholder="Playlisten durchsuchen …" autocomplete="off" spellcheck="false" aria-label="Playlisten oder Alben durchsuchen">
     </div>
-    <div id="spotifyPlaylistAlbums" class="spotify-album-list"></div>
-    <div class="modal-actions" style="margin-top:16px;">
-      <button type="button" class="btn" id="reauthorizeSpotifyPlaylistBtn" hidden>Spotify-Berechtigungen erneuern</button>
+    <div class="spotify-import-scroll" id="spotifyImportScroll">
+      <div id="spotifyPlaylistList" class="spotify-playlist-list"></div>
+      <div id="spotifyPlaylistAlbums" class="spotify-album-list" hidden></div>
+      <p class="spotify-playlist-import-status" id="spotifyImportNoMatch" hidden>Keine Treffer.</p>
+    </div>
+    <div class="spotify-playlist-toolbar">
+      <input id="spotifyPublicPlaylistUrl" type="url" placeholder="Öffentlicher Playlist-Link">
+      <button type="button" class="btn" id="loadSpotifyPublicPlaylistBtn">Laden</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="reauthorizeSpotifyPlaylistBtn" hidden>Berechtigungen erneuern</button>
       <button type="button" class="btn" id="closeSpotifyPlaylistImportBtn">Schließen</button>
-      <button type="button" class="btn btn-primary" id="addSpotifyPlaylistAlbumsBtn" disabled>Ausgewählte Alben hinzufügen</button>
+      <button type="button" class="btn btn-primary" id="addSpotifyPlaylistAlbumsBtn" title="Ausgewählte Alben hinzufügen" disabled>Hinzufügen</button>
     </div>
   </section>
 </div>
@@ -9218,6 +9236,8 @@ document.getElementById('spotifyPlaylistAlbums')?.addEventListener('change', eve
   }
 });
 document.getElementById('addSpotifyPlaylistAlbumsBtn')?.addEventListener('click', addSelectedSpotifyPlaylistAlbums);
+document.getElementById('spotifyImportSearch')?.addEventListener('input', applySpotifyImportFilter);
+document.getElementById('spotifyImportBackBtn')?.addEventListener('click', backToSpotifyPlaylists);
 document.getElementById('createSpotifyPlaylistFromSelectionBtn')?.addEventListener('click', () => {
   const selectedItems = collection.filter(item => selectedItemIds.has(item.id));
   openSpotifyPlaylistCreator(selectedItems, 'Ausgewählte Alben');
@@ -15768,6 +15788,46 @@ async function requestSpotifyPlaylistApi(url, options = {}) {
   return data;
 }
 
+let spotifyImportView = 'playlists';
+let spotifyImportPlaylistsStatus = '';
+
+function applySpotifyImportFilter() {
+  const query = normalizeSpotifyMatchText(document.getElementById('spotifyImportSearch')?.value || '');
+  const selector = spotifyImportView === 'albums' ? '#spotifyPlaylistAlbums .spotify-album-option' : '#spotifyPlaylistList .spotify-playlist-option';
+  const options = [...document.querySelectorAll(selector)];
+  let visible = 0;
+  options.forEach(option => {
+    const match = !query || (option.dataset.search || '').includes(query);
+    option.style.display = match ? '' : 'none';
+    if (match) visible += 1;
+  });
+  const noMatch = document.getElementById('spotifyImportNoMatch');
+  if (noMatch) noMatch.hidden = !(query && options.length && !visible);
+}
+
+function setSpotifyImportView(view) {
+  spotifyImportView = view === 'albums' ? 'albums' : 'playlists';
+  const isAlbums = spotifyImportView === 'albums';
+  document.getElementById('spotifyPlaylistList').hidden = isAlbums;
+  document.getElementById('spotifyPlaylistAlbums').hidden = !isAlbums;
+  document.getElementById('spotifyImportBackBtn').hidden = !isAlbums;
+  const search = document.getElementById('spotifyImportSearch');
+  search.placeholder = isAlbums ? 'Alben durchsuchen …' : 'Playlisten durchsuchen …';
+  search.value = '';
+  document.getElementById('spotifyImportScroll').scrollTop = 0;
+  applySpotifyImportFilter();
+}
+
+function backToSpotifyPlaylists() {
+  spotifyPlaylistImportRequest += 1;
+  spotifyPlaylistImportAlbums = [];
+  document.getElementById('spotifyPlaylistAlbums').replaceChildren();
+  document.getElementById('addSpotifyPlaylistAlbumsBtn').disabled = true;
+  document.getElementById('reauthorizeSpotifyPlaylistBtn').hidden = true;
+  if (spotifyImportPlaylistsStatus) document.getElementById('spotifyPlaylistImportStatus').textContent = spotifyImportPlaylistsStatus;
+  setSpotifyImportView('playlists');
+}
+
 async function loadSpotifyAccountPlaylists(requestId) {
   const list = document.getElementById('spotifyPlaylistList');
   const status = document.getElementById('spotifyPlaylistImportStatus');
@@ -15788,7 +15848,8 @@ async function loadSpotifyAccountPlaylists(requestId) {
       status.textContent = 'In deinem Spotify-Konto wurden keine Playlisten gefunden.';
       return;
     }
-    status.textContent = 'Deine Playlisten – wähle eine zum Durchsuchen aus:';
+    spotifyImportPlaylistsStatus = `Deine Playlisten (${playlists.length}) – wähle eine aus:`;
+    status.textContent = spotifyImportPlaylistsStatus;
     playlists.forEach(playlist => {
       if (!playlist?.id) return;
       const button = document.createElement('button');
@@ -15796,7 +15857,9 @@ async function loadSpotifyAccountPlaylists(requestId) {
       button.className = 'spotify-playlist-option';
       const image = document.createElement('img');
       image.alt = '';
+      image.loading = 'lazy';
       image.src = playlist.images?.[0]?.url || '';
+      button.dataset.search = normalizeSpotifyMatchText(`${playlist.name || ''} ${playlist.owner?.display_name || ''}`);
       const text = document.createElement('span');
       const title = document.createElement('strong');
       title.textContent = playlist.name || 'Unbenannte Playlist';
@@ -15831,7 +15894,9 @@ function renderSpotifyPlaylistAlbums() {
     checkbox.dataset.albumId = album.id;
     const image = document.createElement('img');
     image.alt = '';
+    image.loading = 'lazy';
     image.src = album.coverUrl || '';
+    label.dataset.search = normalizeSpotifyMatchText(`${album.title} ${album.artist}`);
     const text = document.createElement('span');
     const title = document.createElement('strong');
     title.textContent = album.title;
@@ -15875,6 +15940,7 @@ async function loadSpotifyPlaylist(playlistIdOrUrl, isExternalLink) {
       return;
     }
   }
+  setSpotifyImportView('albums');
   status.textContent = 'Lade Playlist-Songs und gruppiere sie nach Album …';
   try {
     const playlist = await requestSpotifyPlaylistApi(`https://api.spotify.com/v1/playlists/${encodeURIComponent(playlistId)}`);
@@ -15939,6 +16005,7 @@ async function openSpotifyPlaylistImport() {
   document.getElementById('spotifyPublicPlaylistUrl').value = '';
   document.getElementById('spotifyPlaylistAlbums').replaceChildren();
   document.getElementById('addSpotifyPlaylistAlbumsBtn').disabled = true;
+  setSpotifyImportView('playlists');
   overlay.classList.add('open');
   await loadSpotifyAccountPlaylists(++spotifyPlaylistImportRequest);
 }
