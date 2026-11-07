@@ -2864,6 +2864,9 @@
   .fullscreen-player-tracks-list .album-mini-track { min-height:42px; text-align:left; }
   .fullscreen-player-tracks-list .album-mini-track:disabled { opacity:.5; cursor:default; }
   .fullscreen-track-readonly { padding:9px 7px; font-size:13px; border-bottom:1px solid var(--border); }
+  .fullscreen-player-overlay:not(.is-changing-album) .fullscreen-player-tonearm-rod { transform:rotate(calc(16deg + var(--album-progress, 0) * 16deg)); }
+  .fullscreen-player-album-progress { color:var(--text-secondary); font-size:11px; font-variant-numeric:tabular-nums; }
+  #fullscreenPlayerAlbumProgress[hidden] { display:none; }
   .album-mini-tracklist {
     position:static;
     flex:0 0 auto;
@@ -6938,6 +6941,7 @@
   <div class="fullscreen-player-info">
     <strong id="fullscreenPlayerTrack" class="fullscreen-player-track"></strong>
     <span id="fullscreenPlayerArtist" class="fullscreen-player-artist"></span>
+    <span id="fullscreenPlayerAlbumProgress" class="fullscreen-player-album-progress" hidden></span>
     <div class="fullscreen-player-progress"><span id="fullscreenPlayerProgressBar"></span><input type="range" id="fullscreenPlayerSeek" min="0" max="0" value="0" step="1" aria-label="Wiedergabeposition im Vollbild" disabled></div>
     <div class="fullscreen-player-time"><span id="fullscreenPlayerPosition">0:00</span><span id="fullscreenPlayerDuration">0:00</span></div>
     <div class="fullscreen-player-controls">
@@ -15958,6 +15962,31 @@ function runFullscreenPlayerAlbumChange() {
   }, 1150);
 }
 
+function getListeningTrackDurationSeconds(track) {
+  if (!track || typeof track === 'string') return 0;
+  if (Number.isFinite(Number(track.duration_ms)) && Number(track.duration_ms) > 0) return Number(track.duration_ms) / 1000;
+  if (typeof track.duration === 'number' && Number.isFinite(track.duration) && track.duration > 0) return track.duration;
+  const text = String(track.duration || '').trim();
+  if (!/^\d+:\d{2}(?::\d{2})?$/.test(text)) return 0;
+  const parts = text.split(':').map(Number);
+  if (parts.slice(1).some(value => value > 59)) return 0;
+  return parts.reduce((sum,value) => sum * 60 + value, 0);
+}
+function getListeningAlbumTimeline(player, positionSeconds, currentDurationSeconds) {
+  const position = Math.max(0, Number(positionSeconds) || 0);
+  const duration = Math.max(0, Number(currentDurationSeconds) || 0);
+  const fallback = {isAlbum:false,elapsed:Math.min(position,duration),total:duration,index:0,count:1,progress:duration > 0 ? Math.min(position / duration,1) : 0};
+  if (player?.dataset.provider !== 'spotify') return fallback;
+  let durations;
+  try { durations = JSON.parse(player.dataset.trackDurations || '[]'); } catch { return fallback; }
+  const index = Number(player.dataset.currentTrackIndex);
+  if (!durations.length || !Number.isInteger(index) || index < 0 || index >= durations.length
+    || durations.some(value => !Number.isFinite(value) || value <= 0)) return fallback;
+  const total = durations.reduce((sum,value) => sum + value,0);
+  const elapsed = durations.slice(0,index).reduce((sum,value) => sum + value,0) + Math.min(position,durations[index]);
+  return {isAlbum:durations.length > 1,isEstimate:player.dataset.trackDurationSource !== 'spotify',elapsed,total,index,count:durations.length,progress:Math.max(0,Math.min(elapsed / total,1))};
+}
+
 function syncFullscreenPlayer() {
   if (!isFullscreenPlayerOpen()) return;
   applyFullscreenPlayerPresentation();
@@ -16029,6 +16058,11 @@ function syncFullscreenPlayer() {
   const progress = duration > 0 ? Math.min((fullscreenSeekDragging ? Number(fullSeek.value) : position) / duration, 1) : 0;
   document.getElementById('fullscreenPlayerProgressBar').style.width = `${progress * 100}%`;
   overlay.style.setProperty('--track-progress', progress.toFixed(3));
+  const timeline = getListeningAlbumTimeline(miniPlayer, (fullscreenSeekDragging ? Number(fullSeek.value) : position) / scale, duration / scale);
+  overlay.style.setProperty('--album-progress', timeline.progress.toFixed(5));
+  const albumProgress = document.getElementById('fullscreenPlayerAlbumProgress');
+  albumProgress.hidden = !timeline.isAlbum;
+  albumProgress.textContent = timeline.isAlbum ? `Album${timeline.isEstimate ? " (gespeicherte Titelliste)" : ""} ${formatListeningTime(timeline.elapsed)} / ${formatListeningTime(timeline.total)} · Titel ${timeline.index + 1} von ${timeline.count}` : '';
   renderFullscreenPlayerShelf();
 }
 
@@ -17808,6 +17842,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     toggle.disabled = !controllerReady;
     previous.disabled = !controllerReady || tracks.length < 2 || !tracks.some(track => track.uri);
     next.disabled = previous.disabled;
+    player.dataset.currentTrackIndex = String(currentIndex);
     favorite.dataset.trackUri = tracks[currentIndex]?.uri || playingUri;
     favorite.disabled = !isSpotifyIntegrationAvailable() || favorite.dataset.saving === 'true' || !controllerReady || !/^spotify:track:/.test(favorite.dataset.trackUri);
     trackList.querySelectorAll('.album-mini-track').forEach((button, index) => {
@@ -17825,6 +17860,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       && Number.isInteger(Number(state.playbackContextPosition));
     const reportedIndex = hasReportedIndex ? Number(state.playbackContextPosition) : -1;
     const matchingIndex = reportedUri ? tracks.findIndex(track => track.uri === reportedUri) : -1;
+    const reportedName = state.track_window?.current_track?.name || state.currentTrack?.name || state.name || '';
+    const normalizeTrackName = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    const matchingNames = reportedName ? tracks.map((track,index) => normalizeTrackName(track.title) === normalizeTrackName(reportedName) ? index : -1).filter(index => index >= 0) : [];
+    const nameIndex = matchingNames.length === 1 ? matchingNames[0] : -1;
     const pendingIndex = pendingAutoAdvancedTrackUri
       ? tracks.findIndex(track => track.uri === pendingAutoAdvancedTrackUri)
       : -1;
@@ -17841,8 +17880,12 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     } else if (matchingIndex >= 0) {
       playingUri = reportedUri;
       currentIndex = matchingIndex;
+    } else if (nameIndex >= 0) {
+      currentIndex = nameIndex;
+      playingUri = reportedUri || tracks[currentIndex].uri || playingUri;
     } else if (reportedUri) {
       playingUri = reportedUri;
+      if (!tracks[currentIndex]?.uri || tracks[currentIndex].uri !== reportedUri) currentIndex = -1;
     }
     if (currentIndex >= 0 && tracks[currentIndex]) {
       const activeUri = tracks[currentIndex].uri;
@@ -17866,8 +17909,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     });
     updateControls();
   };
-  const renderTracks = entries => {
+  const renderTracks = (entries, timingSource = 'saved') => {
     tracks = entries;
+    player.dataset.trackDurationSource = timingSource;
+    player.dataset.trackDurations = JSON.stringify(tracks.map(getListeningTrackDurationSeconds));
     player.dataset.trackState = tracks.length ? 'ready' : 'loading';
     player.dataset.trackMessage = tracks.length && !tracks.some(track => track.uri) ? 'Für die direkte Titelauswahl ist eine Spotify-Verbindung erforderlich.' : '';
     trackList.replaceChildren();
@@ -17922,6 +17967,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const fallbackTracks = (Array.isArray(item?.tracklist) ? item.tracklist : []).map(track => ({
     title: typeof track === 'string' ? getListeningDisplayText(track, 'Unbenannter Track') : getListeningDisplayText(track.title, 'Unbenannter Track'),
     duration: typeof track === 'string' ? '' : track.duration || '',
+    duration_ms: typeof track === 'string' ? 0 : Number(track.duration_ms) || 0,
     uri: typeof track === 'string' ? '' : track.uri || track.spotifyUri || ''
   }));
   renderTracks(fallbackTracks);
@@ -18039,20 +18085,25 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         player.dataset.trackMessage = isSpotifyIntegrationAvailable() ? 'Spotify verbinden, um die Albumtitel zu laden und einzeln auszuwählen.' : 'Die Spotify-Titelliste benötigt die Verbindung auf vinyl.elkevinio.de.';
         return;
       }
-      const params = new URLSearchParams({ limit: '50', market: 'DE' });
-      const response = await fetch(`https://api.spotify.com/v1/albums/${albumId}/tracks?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: request.signal
-      });
-      if (!response.ok) throw new Error(`Spotify-Titelliste antwortete mit HTTP ${response.status}`);
-      const data = await response.json();
-      if (!host.isConnected || request.signal.aborted) return;
-      const spotifyTracks = (data.items || []).map(track => ({
-        uri: track.uri,
-        title: getListeningDisplayText(track.name, 'Unbenannter Track'),
-        duration_ms: track.duration_ms
-      }));
-      if (spotifyTracks.length) renderTracks(spotifyTracks);
+      const params = new URLSearchParams({ limit:'50', market:'DE' });
+      const albumTracksPath = `/v1/albums/${encodeURIComponent(albumId)}/tracks`;
+      let nextUrl = `https://api.spotify.com${albumTracksPath}?${params}`;
+      const spotifyTracks = [];
+      const visited = new Set();
+      while (nextUrl && !visited.has(nextUrl)) {
+        visited.add(nextUrl);
+        const response = await fetch(nextUrl, {headers:{Authorization:`Bearer ${token}`},signal:request.signal});
+        if (!response.ok) throw new Error(`Spotify-Titelliste antwortete mit HTTP ${response.status}`);
+        const data = await response.json();
+        if (!host.isConnected || request.signal.aborted) return;
+        spotifyTracks.push(...(data.items || []).map(track => ({uri:track.uri,title:getListeningDisplayText(track.name,'Unbenannter Track'),duration_ms:track.duration_ms})));
+        if (data.next) {
+          const next = new URL(data.next);
+          if (next.origin !== 'https://api.spotify.com' || next.pathname !== albumTracksPath) throw new Error('Ungültige Spotify-Titellisten-Seite.');
+          nextUrl = next.href;
+        } else nextUrl = '';
+      }
+      if (spotifyTracks.length) renderTracks(spotifyTracks, 'spotify');
     }).catch(error => {
       if (error.name !== 'AbortError') {
         player.dataset.trackState = 'error';
