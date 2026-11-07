@@ -1899,6 +1899,959 @@
   .album-mini-control:disabled { opacity:.35; cursor:not-allowed; }
   .album-mini-control:hover:not(:disabled) { border-color:var(--accent-border); color:var(--accent); }
   .album-mini-queue-next[hidden] { display:none; }
+  .fullscreen-player-overlay {
+    position:fixed;
+    inset:0;
+    z-index:2147483646;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:clamp(16px, 3vh, 32px);
+    padding:max(20px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    background:radial-gradient(ellipse at 50% 28%, #23232c 0%, #0e0e11 72%);
+  }
+  .fullscreen-player-overlay[hidden] { display:none; }
+  body.fullscreen-player-open .album-listening-dock { display:none; }
+  .fullscreen-player-top-actions {
+    position:absolute;
+    top:max(14px, env(safe-area-inset-top));
+    right:16px;
+    z-index:5;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .fullscreen-player-top-actions .icon-btn {
+    width:38px;
+    height:38px;
+    color:var(--text-secondary);
+  }
+  .fullscreen-player-top-actions .icon-btn[hidden], .room-settings-grid label[hidden] { display:none; }
+  .fullscreen-player-top-actions .icon-btn:hover { color:var(--text-primary); }
+  .fullscreen-player-menu {
+    position:absolute;
+    top:calc(max(14px, env(safe-area-inset-top)) + 48px);
+    right:0;
+    bottom:0;
+    z-index:4;
+    display:flex;
+    flex-direction:column;
+    width:min(360px, 92vw);
+    padding:max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+    border-left:1px solid var(--border-strong);
+    background:var(--surface-2);
+    box-shadow:-12px 0 40px rgba(0,0,0,.5);
+  }
+  .fullscreen-player-menu[hidden] { display:none; }
+  .fullscreen-player-menu-header { display:flex; flex:0 0 auto; flex-direction:column; gap:10px; margin-bottom:10px; }
+  .fullscreen-player-menu-header input {
+    width:100%;
+    min-height:38px;
+    padding:0 12px;
+    border:1px solid var(--border-strong);
+    border-radius:8px;
+    background:var(--surface-1);
+    color:var(--text-primary);
+    font-size:14px;
+  }
+  .fullscreen-player-menu-filter[hidden] { display:none; }
+  .fullscreen-player-menu-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .fullscreen-player-menu-heading strong { font-size:15px; }
+  .fullscreen-player-menu-heading button { width:32px; min-width:32px; height:32px; padding:0; font-size:21px; }
+  .fullscreen-player-menu-filter { display:flex; gap:6px; }
+  .fullscreen-player-menu-filter button {
+    flex:1;
+    min-height:32px;
+    padding:0 12px;
+    border:1px solid var(--border-strong);
+    border-radius:8px;
+    background:transparent;
+    color:var(--text-secondary);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .fullscreen-player-menu-filter button.is-active {
+    border-color:var(--accent-border);
+    background:var(--accent-bg);
+    color:var(--accent);
+  }
+  .fullscreen-player-menu-list {
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    min-height:0;
+    margin:0;
+    padding:0;
+    list-style:none;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  .fullscreen-player-menu-item {
+    display:grid;
+    grid-template-columns:44px minmax(0, 1fr) auto;
+    align-items:center;
+    gap:10px;
+    padding:6px 2px;
+    border-bottom:0.5px solid var(--border);
+  }
+  .fullscreen-player-menu-item img {
+    width:44px;
+    height:44px;
+    border-radius:6px;
+    background:var(--surface-1);
+    object-fit:cover;
+  }
+  .fullscreen-player-menu-item-meta { min-width:0; }
+  .fullscreen-player-menu-item-title {
+    display:block;
+    overflow:hidden;
+    color:var(--text-primary);
+    font-size:13px;
+    font-weight:600;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .fullscreen-player-menu-item-artist {
+    display:block;
+    overflow:hidden;
+    color:var(--text-secondary);
+    font-size:12px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .fullscreen-player-menu-item-actions { display:flex; gap:6px; }
+  .fullscreen-player-menu-item-actions button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:32px;
+    height:32px;
+    min-width:32px;
+    padding:0;
+    border:0;
+    border-radius:50%;
+    background:var(--surface-3);
+    color:var(--text-primary);
+    cursor:pointer;
+  }
+  .fullscreen-player-menu-item-actions button:hover:not(:disabled) { color:var(--accent); }
+  .fullscreen-player-menu-item-actions button:disabled { opacity:.35; cursor:not-allowed; }
+  .fullscreen-player-menu-item-actions button.is-added { color:var(--accent); }
+  .fullscreen-player-menu-item-actions svg { display:block; width:16px; height:16px; }
+  .fullscreen-player-menu-empty { padding:18px 4px; color:var(--text-secondary); font-size:13px; text-align:center; }
+  .fullscreen-player-queue-panel {
+    position:absolute;
+    top:calc(max(14px, env(safe-area-inset-top)) + 48px);
+    right:16px;
+    z-index:4;
+    width:min(340px, 92vw);
+    max-height:min(60vh, 480px);
+    padding:12px;
+    border:1px solid var(--border-strong);
+    border-radius:12px;
+    background:var(--surface-2);
+    box-shadow:0 8px 32px rgba(0,0,0,.65);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+  .fullscreen-player-queue-panel[hidden] { display:none; }
+  .fullscreen-player-stage {
+    position:relative;
+    display:flex;
+    flex:1 1 auto;
+    align-items:center;
+    justify-content:center;
+    gap:clamp(24px, 6vw, 80px);
+    width:100%;
+    max-width:1100px;
+    min-height:0;
+  }
+  .fullscreen-player-room {
+    position:absolute;
+    inset:0;
+    z-index:-1;
+    overflow:hidden;
+    background:#060609;
+    opacity:0;
+    transition:opacity .55s ease;
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-room { opacity:1; }
+  .fullscreen-player-room::after {
+    content:'';
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:radial-gradient(ellipse 90% 80% at 50% 42%, transparent 55%, rgba(0,0,0,.5) 100%);
+  }
+  .fullscreen-player-room-wall {
+    position:absolute;
+    inset:0 0 30% 0;
+    background:
+      radial-gradient(ellipse 52% 70% at 10% 44%, rgba(255,45,149,.16) 0%, transparent 66%),
+      radial-gradient(ellipse 38% 45% at 24% 16%, rgba(168,85,247,.09) 0%, transparent 65%),
+      radial-gradient(ellipse 52% 70% at 90% 44%, rgba(0,212,255,.14) 0%, transparent 66%),
+      linear-gradient(180deg, #15151b 0%, #0f0f13 60%, #0a0a0d 100%);
+  }
+  .fullscreen-player-room-floor {
+    position:absolute;
+    left:-30%;
+    right:-30%;
+    bottom:-4%;
+    height:64%;
+    transform:perspective(1000px) rotateX(58deg);
+    transform-origin:50% 100%;
+    background:
+      radial-gradient(ellipse 32% 40% at 26% 55%, rgba(255,45,149,.13) 0%, transparent 70%),
+      radial-gradient(ellipse 32% 40% at 74% 55%, rgba(0,212,255,.12) 0%, transparent 70%),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.65) 0 2px, transparent 2px 120px),
+      repeating-linear-gradient(90deg, #1b140e 0 60px, #130e08 60px 120px),
+      linear-gradient(180deg, #0d0a07 0%, #070503 100%);
+    box-shadow:inset 0 60px 90px rgba(0,0,0,.7);
+  }
+  .fullscreen-player-room-rug {
+    position:absolute;
+    left:50%;
+    bottom:2%;
+    width:calc(var(--shelf-w, 34%) * 0.95);
+    height:15%;
+    transform:translateX(-50%) perspective(700px) rotateX(48deg);
+    border-radius:6px;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 2px, transparent 2px 7px),
+      linear-gradient(160deg, #15152a 0%, #0b0b16 100%);
+    box-shadow:0 8px 26px rgba(0,0,0,.65), inset 0 0 0 2px rgba(140,90,220,.16);
+  }
+  .fullscreen-player-poster-form { position:absolute; z-index:6; top:80px; left:50%; transform:translateX(-50%); width:min(360px, 90vw); padding:18px; display:flex; flex-direction:column; gap:12px; border:1px solid var(--border-strong); border-radius:12px; background:var(--surface-2); box-shadow:0 12px 40px #0009; }
+  .fullscreen-player-poster-form[hidden] { display:none; }
+  .fullscreen-player-poster-form input { width:100%; min-height:38px; }
+  .fullscreen-player-poster-form small { color:var(--text-secondary); }
+  .fullscreen-player-poster-form > div { display:flex; justify-content:flex-end; gap:8px; }
+  .fullscreen-player-room-poster {
+    display:none;
+    z-index:1;
+    cursor:context-menu;
+    position:absolute;
+    left:50%;
+    top:3%;
+    width:min(19%, 220px, 26vh);
+    aspect-ratio:10/7;
+    padding:7px;
+    background:#08080b;
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 14px 40px rgba(0,0,0,.75), 0 0 28px rgba(255,45,149,.14);
+    transform:translateX(-50%);
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-room-poster { display:block; }
+  .fullscreen-player-room-poster img { position:absolute; inset:7px; width:calc(100% - 14px); height:calc(100% - 14px); object-fit:cover; z-index:1; }
+  .fullscreen-player-room-poster.has-image::before,
+  .fullscreen-player-room-poster.has-image::after { display:none; }
+  .fullscreen-player-room-poster:focus-visible { outline:2px solid var(--accent); }
+  .fullscreen-player-room-poster::before {
+    content:'';
+    position:absolute;
+    inset:7px;
+    background:
+      radial-gradient(circle at 50% 36%, rgba(255,150,90,.95) 0%, rgba(255,45,149,.9) 40%, transparent 64%),
+      repeating-linear-gradient(0deg, transparent 0 9px, rgba(255,45,149,.16) 9px 10px),
+      linear-gradient(180deg, #2b0f45 0%, #3d1454 48%, #150a28 100%);
+  }
+  .fullscreen-player-room-poster::after {
+    content:'';
+    position:absolute;
+    left:7px;
+    right:7px;
+    bottom:7px;
+    height:48%;
+    background:
+      linear-gradient(180deg, #0a0614, #0a0614) 1% 100%/9% 58% no-repeat,
+      linear-gradient(180deg, #0a0614, #0a0614) 12% 100%/7% 78% no-repeat,
+      linear-gradient(180deg, #0a0614, #0a0614) 21% 100%/10% 50% no-repeat,
+      linear-gradient(180deg, #0a0614, #0a0614) 33% 100%/8% 90% no-repeat,
+      linear-gradient(180deg, #0a0614, #0a0614) 43% 100%/11% 64% no-repeat,
+      linear-gradient(180deg, #0a0614, #0a0614) 56% 100%/8% 82% no-repeat,
+      linear-gradient(180deg, #0a0614, #0a0614) 66% 100%/10% 54% no-repeat,
+      linear-gradient(180deg, #0a0614, #0a0614) 78% 100%/8% 72% no-repeat,
+      linear-gradient(180deg, #0a0614, #0a0614) 88% 100%/10% 60% no-repeat,
+      linear-gradient(180deg, rgba(255,45,149,.28) 0%, rgba(5,3,8,.92) 55%) 0 100%/100% 32% no-repeat;
+  }
+  .fullscreen-player-shelf {
+    position:absolute;
+    display:grid;
+    gap:8px;
+    padding:10px;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:5px;
+    background:linear-gradient(180deg, #1b1b21 0%, #101014 100%);
+    box-shadow:0 30px 60px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .fullscreen-player-shelf-cube {
+    position:relative;
+    display:flex;
+    align-items:flex-end;
+    gap:1px;
+    min-width:0;
+    padding:5px 7px 9px;
+    border-radius:2px;
+    overflow:hidden;
+    box-shadow:
+      inset 0 14px 26px rgba(0,0,0,.92),
+      inset 0 -4px 10px rgba(255,255,255,.03),
+      inset 0 0 0 1px rgba(0,0,0,.7);
+  }
+  button.fullscreen-player-shelf-cube { appearance:none; border:0; font:inherit; cursor:pointer; }
+  button.fullscreen-player-shelf-cube:hover,
+  button.fullscreen-player-shelf-cube:focus-visible,
+  button.fullscreen-player-shelf-cube.is-selected { outline:2px solid #ff2d95; outline-offset:-2px; }
+  .fullscreen-player-compartment-reset[hidden] { display:none; }
+  .fullscreen-player-compartment-reset { width:100%; color:var(--text-primary); background:var(--surface-1); border:1px solid var(--border); border-radius:6px; padding:8px; cursor:pointer; text-align:left; }
+  .fullscreen-player-shelf-left {
+    display:none;
+    z-index:1;
+    left:50%;
+    bottom:var(--shelf-bottom, 11%);
+    width:var(--shelf-w, 40%);
+    aspect-ratio:2/1.12;
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:1fr 1fr;
+    transform:translateX(-50%);
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-shelf-left { display:grid; }
+  .fullscreen-player-shelf-left .fullscreen-player-shelf-cube {
+    background:
+      linear-gradient(135deg, rgba(255,45,149,.07) 0%, transparent 50%),
+      linear-gradient(225deg, rgba(0,212,255,.06) 0%, transparent 50%),
+      linear-gradient(180deg, #08080b 0%, #040405 100%);
+  }
+  .fullscreen-player-shelf-left::before {
+    content:'';
+    position:absolute;
+    left:-1px;
+    right:-1px;
+    bottom:100%;
+    height:calc(var(--shelf-w) * 0.48);
+    transform:perspective(var(--scene-perspective, 1400px)) rotateX(var(--surface-tilt, 62deg));
+    transform-origin:50% 100%;
+    pointer-events:none;
+    background:linear-gradient(180deg, #232329 0%, #15151a 100%);
+  }
+  .fullscreen-player-shelf-cube.is-removed {
+    padding:0;
+    background:linear-gradient(180deg, #17171c 0%, #101014 100%);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.7);
+  }
+  .fullscreen-player-shelf-cube.is-display {
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    min-height:0;
+    aspect-ratio:1;
+    box-shadow:none;
+    border-radius:0;
+  }
+  .fullscreen-player-shelf-left.is-display-shelf { padding:6px; gap:6px; }
+  .fullscreen-player-shelf-cube.is-display img {
+    width:100%;
+    height:100%;
+    aspect-ratio:1;
+    border-radius:0;
+    object-fit:cover;
+    box-shadow:none;
+  }
+  .fullscreen-player-shelf-record {
+    position:relative;
+    overflow:hidden;
+    flex:0 0 auto;
+    width:var(--spine-w, 5px);
+    height:var(--spine-h, 88%);
+    border-radius:1px 1px 0 0;
+    background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 30%), var(--spine-color, #1a1a20);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.45);
+  }
+  .fullscreen-player-shelf-record img { position:absolute; left:0; top:0; height:100%; width:auto; max-width:none; pointer-events:none; }
+  .fullscreen-player-shelf-record.is-cd { height:calc(var(--spine-h, 88%) * 0.72); }
+  .fullscreen-player-shelf-picker { display:none; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-shelf-picker:not([hidden]) {
+    display:flex;
+    position:absolute;
+    left:14px;
+    bottom:12px;
+    z-index:3;
+    align-items:center;
+    gap:8px;
+    padding:7px 10px;
+    border:1px solid var(--border-strong);
+    border-radius:10px;
+    background:rgba(10,10,14,.85);
+    box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  .fullscreen-player-shelf-picker label {
+    color:var(--text-muted);
+    font-size:11px;
+  }
+  .fullscreen-player-shelf-picker select {
+    max-width:180px;
+    padding:4px 6px;
+    border:1px solid var(--border-strong);
+    border-radius:7px;
+    background:var(--surface-2);
+    color:var(--text-primary);
+    font-size:12px;
+  }
+  .fullscreen-player-left {
+    display:flex;
+    flex:0 0 auto;
+    flex-direction:column;
+    align-items:center;
+    min-width:0;
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-stage {
+    display:block;
+    max-width:none;
+    --shelf-w:min(31vw, 49vh);
+    --shelf-bottom:11%;
+    --shelf-hf:0.56;
+    --surface-tilt:48deg;
+    --scene-perspective:1400px;
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-left,
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-right { display:contents; }
+  .fullscreen-player-turntable {
+    position:relative;
+    display:flex;
+    flex:0 0 auto;
+    align-items:center;
+    justify-content:center;
+    width:min(46vh, 40vw, 470px);
+    aspect-ratio:1;
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:18px;
+    background:linear-gradient(145deg, #2b2b33, #16161a);
+    box-shadow:0 24px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+    transition:transform .55s ease;
+  }
+  .fullscreen-player-plinth-side { display:none; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-turntable {
+    position:absolute;
+    z-index:2;
+    left:calc(50% - var(--shelf-w) * 0.46);
+    bottom:calc(var(--shelf-bottom) + var(--shelf-w) * var(--shelf-hf) + 22px);
+    width:calc(var(--shelf-w) * 0.52);
+    aspect-ratio:1.24;
+    transform-style:preserve-3d;
+    transform:perspective(var(--scene-perspective)) rotateX(var(--surface-tilt)) scale(.96);
+    transform-origin:50% 100%;
+    border-radius:7px;
+    box-shadow:0 16px 28px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .fullscreen-player-dustcover { display:none; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-dustcover {
+    display:block;
+    position:absolute;
+    left:0;
+    right:0;
+    top:0;
+    height:96%;
+    border:1px solid rgba(255,255,255,.22);
+    border-radius:16px 16px 0 0;
+    background:linear-gradient(180deg, rgba(190,210,255,.14) 0%, rgba(190,210,255,.04) 55%, rgba(255,45,149,.07) 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 24px rgba(190,210,255,.05);
+    transform:rotateX(-102deg);
+    transform-origin:50% 0;
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-plinth-side {
+    display:block;
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    height:clamp(6px, calc(var(--shelf-w) * .035), 12px);
+    transform:rotateX(-90deg);
+    transform-origin:50% 0;
+    border-radius:0 0 4px 4px;
+    background:linear-gradient(180deg, #1c1c21, #0a0a0c);
+    box-shadow:0 18px 30px rgba(0,0,0,.75);
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-plinth-side::before {
+    content:'';
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:1px;
+    background:rgba(255,255,255,.08);
+  }
+  .fullscreen-player-platter {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:84%;
+    aspect-ratio:1;
+    border-radius:50%;
+    background:radial-gradient(circle, #26262d 0%, #0f0f12 76%);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.05), inset 0 4px 18px rgba(0,0,0,.7);
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-platter {
+    background:radial-gradient(circle, #2e2e36 0%, #17171b 58%, #0b0b0d 100%);
+    box-shadow:
+      inset 0 0 0 2px rgba(255,255,255,.07),
+      inset 0 10px 24px rgba(0,0,0,.85),
+      0 2px 6px rgba(0,0,0,.6);
+  }
+  .fullscreen-player-vinyl {
+    position:relative;
+    width:96.5%;
+    aspect-ratio:1;
+    border:1px solid rgba(255,255,255,.65);
+    border-radius:50%;
+    background-color:var(--vinyl-base, #111);
+    background-image:var(--vinyl-art, none), repeating-radial-gradient(circle, transparent 0 4px, rgba(255,255,255,.1) 4.5px 5px, transparent 5.5px 9px);
+    background-size:cover;
+    box-shadow:0 2px 12px rgba(0,0,0,.55);
+    overflow:hidden;
+    animation:fullscreenVinylSpin 1.8s linear infinite;
+    animation-play-state:paused;
+  }
+  .fullscreen-player-overlay.is-playing .fullscreen-player-vinyl { animation-play-state:running; }
+  @keyframes fullscreenVinylSpin { to { transform:rotate(360deg); } }
+  .fullscreen-player-overlay.is-changing-album .fullscreen-player-vinyl {
+    animation:fullscreenVinylSpin 1.8s linear infinite, fullscreenVinylLiftOff 1.15s ease-in forwards;
+    animation-play-state:paused, running;
+  }
+  .fullscreen-player-overlay.is-changing-album.is-changing-in .fullscreen-player-vinyl {
+    animation:fullscreenVinylSpin 1.8s linear infinite, fullscreenVinylDropOn 1.15s ease-out forwards;
+    animation-play-state:paused, running;
+  }
+  .fullscreen-player-overlay.is-changing-album .fullscreen-player-cover {
+    animation:fullscreenCoverSwapOut 1.15s ease-in forwards;
+  }
+  .fullscreen-player-overlay.is-changing-album.is-changing-in .fullscreen-player-cover {
+    animation:fullscreenCoverSwapIn 1.15s ease-out forwards;
+  }
+  .fullscreen-player-overlay.is-changing-album .fullscreen-player-tonearm-rod {
+    transform:rotate(4deg);
+    transition:transform .5s ease;
+  }
+  @keyframes fullscreenVinylLiftOff {
+    0% { transform:translate(0, 0) scale(1); opacity:1; }
+    30% { transform:translate(0, -14%) scale(1.02); opacity:1; }
+    100% { transform:translate(72%, -14%) scale(.96); opacity:0; }
+  }
+  @keyframes fullscreenVinylDropOn {
+    0% { transform:translate(72%, -14%) scale(.96); opacity:0; }
+    55% { transform:translate(0, -14%) scale(1.02); opacity:1; }
+    100% { transform:translate(0, 0) scale(1); opacity:1; }
+  }
+  @keyframes fullscreenCoverSwapOut {
+    0% { opacity:1; transform:scale(1); }
+    100% { opacity:0; transform:scale(.94); }
+  }
+  @keyframes fullscreenCoverSwapIn {
+    0% { opacity:0; transform:scale(.94); }
+    100% { opacity:1; transform:scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fullscreen-player-vinyl { animation:none; }
+  }
+  .fullscreen-player-tonearm-pivot {
+    position:absolute;
+    top:5.5%;
+    right:6%;
+    width:11%;
+    aspect-ratio:1;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #3c3c45, #131316);
+    box-shadow:0 2px 6px rgba(0,0,0,.65), inset 0 1px 1px rgba(255,255,255,.16);
+  }
+  .fullscreen-player-tonearm-rod {
+    position:absolute;
+    top:calc(5.5% + 5.5%);
+    right:calc(6% + 5.5% - 2px);
+    width:4px;
+    height:56%;
+    border-radius:2px;
+    background:linear-gradient(90deg, #4b4b54, #1b1b1f);
+    box-shadow:0 1px 3px rgba(0,0,0,.5);
+    transform-origin:top center;
+    transform:rotate(4deg);
+    transition:transform .7s ease;
+  }
+  .fullscreen-player-tonearm-rod::after {
+    content:'';
+    position:absolute;
+    bottom:-7px;
+    left:50%;
+    width:10px;
+    height:14px;
+    border-radius:2px;
+    background:linear-gradient(180deg, #3a3a42, #17171a);
+    box-shadow:0 1px 3px rgba(0,0,0,.6);
+    transform:translateX(-50%) rotate(6deg);
+  }
+  .fullscreen-player-overlay.is-playing .fullscreen-player-tonearm-rod {
+    transform:rotate(calc(16deg + var(--track-progress, 0) * 16deg));
+    transition:transform 1s linear;
+  }
+  .fullscreen-player-cover {
+    display:block;
+    flex:0 0 auto;
+    width:min(46vh, 36vw, 430px);
+    aspect-ratio:1;
+    border-radius:12px;
+    background:var(--surface-1);
+    box-shadow:0 20px 50px rgba(0,0,0,.6);
+    object-fit:cover;
+    transition:transform .55s ease;
+  }
+  .fullscreen-player-right {
+    display:flex;
+    flex:0 0 auto;
+    align-items:center;
+    justify-content:center;
+  }
+  .fullscreen-player-cover-stand { display:contents; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-cover-stand {
+    display:block;
+    z-index:2;
+    position:absolute;
+    left:calc(50% + var(--shelf-w) * 0.10);
+    bottom:calc(var(--shelf-bottom) + var(--shelf-w) * var(--shelf-hf) + 32px);
+    width:calc(var(--shelf-w) * 0.34);
+    aspect-ratio:1;
+    background:#28242a;
+    border-radius:1px;
+    transform-style:preserve-3d;
+    transform-origin:50% 100%;
+    transform:perspective(var(--scene-perspective)) rotateX(-12deg) rotateY(-24deg) rotateZ(4deg);
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-cover-stand::before {
+    content:'';
+    position:absolute;
+    bottom:-3px;
+    left:-6%;
+    right:-6%;
+    height:5px;
+    border-radius:1px;
+    background:linear-gradient(#65616a,#25232b);
+    transform:translateZ(1px);
+    box-shadow:0 7px 12px #0009;
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-cover-stand::after {
+    content:'';
+    position:absolute;
+    left:100%;
+    top:0;
+    width:4px;
+    height:100%;
+    background:linear-gradient(90deg,#aaa1a0,#494048 45%,#211d24);
+    transform:rotateY(90deg);
+    transform-origin:0 50%;
+    backface-visibility:visible;
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-cover-stand:has(> .fullscreen-player-cover[hidden]) { display:none; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-cover {
+    width:100%;
+    height:100%;
+    aspect-ratio:1;
+    object-fit:cover;
+    border-radius:1px;
+    transform:translateZ(2px);
+    box-shadow:0 1px 0 #ffffff25,0 3px 6px #0007;
+  }
+  .fullscreen-player-cover[hidden] { display:none; }
+  @media (max-width: 700px) {
+    .fullscreen-player-stage { flex-direction:column; gap:18px; }
+    .fullscreen-player-turntable { width:min(38vh, 72vw); }
+    .fullscreen-player-cover { width:min(20vh, 42vw); }
+    .fullscreen-player-overlay.is-angled-view .fullscreen-player-stage { --shelf-w:min(76vw, 36vh); --shelf-bottom:12%; }
+    .fullscreen-player-room-poster { width:44%; }
+    .fullscreen-player-overlay.is-angled-view .fullscreen-player-eq { height:34px; gap:2px; padding:5px 6px; }
+  }
+  .fullscreen-player-info {
+    display:flex;
+    flex:0 0 auto;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    width:min(640px, 100%);
+    text-align:center;
+  }
+  .fullscreen-player-track {
+    max-width:100%;
+    overflow:hidden;
+    color:var(--text-primary);
+    font-size:clamp(17px, 2.4vw, 22px);
+    font-weight:700;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .fullscreen-player-artist {
+    max-width:100%;
+    overflow:hidden;
+    color:var(--text-secondary);
+    font-size:clamp(13px, 1.8vw, 15px);
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .fullscreen-player-progress {
+    width:100%;
+    height:4px;
+    margin-top:8px;
+    border-radius:2px;
+    background:rgba(255,255,255,.12);
+    overflow:hidden;
+  }
+  .fullscreen-player-progress span {
+    display:block;
+    width:0;
+    height:100%;
+    border-radius:2px;
+    background:var(--accent, #fff);
+    transition:width .45s linear;
+  }
+  .fullscreen-player-controls {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    margin-top:12px;
+  }
+  .fullscreen-player-controls .album-mini-control {
+    flex-basis:44px;
+    width:44px;
+    height:44px;
+    min-width:44px;
+  }
+  .fullscreen-player-controls .album-mini-control.primary {
+    flex-basis:56px;
+    width:56px;
+    height:56px;
+    min-width:56px;
+  }
+  .fullscreen-player-controls .album-mini-control svg { width:20px; height:20px; }
+  .fullscreen-player-controls .album-mini-control.primary svg { width:24px; height:24px; }
+  .fullscreen-player-eq {
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    gap:3px;
+    width:min(46vh, 40vw, 470px);
+    height:64px;
+    margin-bottom:14px;
+    padding:10px 12px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:8px;
+    background:linear-gradient(180deg, #1e1e22, #0c0c0e);
+    box-shadow:0 10px 24px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+    transform:perspective(900px) rotateX(10deg) rotateY(10deg);
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-eq {
+    display:flex;
+    position:absolute;
+    left:50%;
+    top:calc(3% + var(--poster-height, 154px) + 12px);
+    z-index:1;
+    width:min(150px, var(--poster-width, 150px));
+    height:56px;
+    margin-bottom:0;
+    transform:translateX(-50%) perspective(900px) rotateX(8deg);
+  }
+  .fullscreen-player-eq span {
+    flex:1 1 0;
+    min-width:2px;
+    border-radius:2px 2px 0 0;
+    background:var(--accent, #fff);
+    opacity:.85;
+    box-shadow:0 0 6px var(--accent, #fff);
+    transform-origin:bottom;
+    animation:fullscreenEqBounce 1s ease-in-out infinite;
+    animation-play-state:paused;
+  }
+  .fullscreen-player-overlay.is-playing .fullscreen-player-eq span { animation-play-state:running; }
+  @keyframes fullscreenEqBounce {
+    0%, 100% { transform:scaleY(.25); }
+    50% { transform:scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fullscreen-player-eq span { animation:none; transform:scaleY(.5); }
+  }
+  .fullscreen-player-poster-form { top:64px; max-height:calc(100dvh - 90px); overflow-y:auto; width:min(420px, 94vw); }
+  .room-settings-grid { display:grid !important; grid-template-columns:1fr 1fr; gap:12px !important; }
+  .room-settings-grid label { display:flex; flex-direction:column; gap:5px; font-size:12px; color:var(--text-secondary); min-width:0; }
+  .room-settings-grid input[type="color"] { width:100%; height:34px; min-height:34px; padding:2px; cursor:pointer; }
+  .room-settings-grid select { width:100%; min-height:34px; }
+  .room-settings-actions { flex-wrap:wrap; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-room-poster { aspect-ratio:2.6; border:5px solid #29292d; padding:4px; background:#101014; box-shadow:0 3px 0 #08080a, 0 10px 14px #000b, 0 22px 36px #0006, inset 0 0 0 1px #ffffff30; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-eq { width:var(--shelf-w); height:clamp(32px, 7vh, 56px); border:5px solid #29292d; border-radius:5px; padding:6px 10px; transform:translateX(-50%); background:linear-gradient(#17171c,#08080b); box-shadow:0 3px 0 #08080a, 0 10px 14px #000b, 0 22px 36px #0006, inset 0 0 0 1px #ffffff20; }
+  .fullscreen-player-room-wall { background:radial-gradient(ellipse at 0% 45%,color-mix(in srgb,var(--room-light-left) 28%,transparent),transparent 65%),radial-gradient(ellipse at 100% 45%,color-mix(in srgb,var(--room-light-right) 28%,transparent),transparent 65%),var(--room-wall-pattern),linear-gradient(var(--room-wall),color-mix(in srgb,var(--room-wall) 65%,black)); }
+  .fullscreen-player-room-floor { background:radial-gradient(ellipse at 20% 60%,color-mix(in srgb,var(--room-light-left) 16%,transparent),transparent 65%),radial-gradient(ellipse at 80% 60%,color-mix(in srgb,var(--room-light-right) 16%,transparent),transparent 65%),var(--room-floor-pattern),var(--room-floor); }
+  .fullscreen-player-shelf-left { background:linear-gradient(color-mix(in srgb,var(--room-shelf) 90%,white),var(--room-shelf)); border-color:color-mix(in srgb,var(--room-shelf) 70%,white); }
+  .fullscreen-player-shelf-left::before { background:linear-gradient(color-mix(in srgb,var(--room-shelf) 85%,white),var(--room-shelf)); }
+  .fullscreen-player-shelf-left .fullscreen-player-shelf-cube { background:linear-gradient(120deg,color-mix(in srgb,var(--room-light-left) 7%,transparent),color-mix(in srgb,var(--room-light-right) 7%,transparent)),color-mix(in srgb,var(--room-shelf) 35%,black); }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-turntable { background:linear-gradient(145deg,color-mix(in srgb,var(--room-turntable) 80%,white),var(--room-turntable)); }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-plinth-side { background:linear-gradient(var(--room-turntable),color-mix(in srgb,var(--room-turntable) 60%,black)); }
+  .fullscreen-player-eq span { background:var(--room-equalizer); box-shadow:0 0 7px var(--room-equalizer); }
+  .fullscreen-player-room-rug { width:calc(var(--shelf-w) * var(--room-rug-scale)); height:20%; background:var(--room-rug-pattern, repeating-linear-gradient(0deg,#ffffff09 0 1px,transparent 1px 4px)),var(--room-rug); box-shadow:0 10px 18px #0008,inset 0 0 0 3px #ffffff15,inset 0 0 0 8px #0003; }
+  [data-rug-style="off"] .fullscreen-player-room-rug { display:none; }
+  [data-rug-style="plain"] { --room-rug-pattern:linear-gradient(transparent,transparent); }
+  [data-rug-style="stripes"] { --room-rug-pattern:repeating-linear-gradient(90deg,#ffffff16 0 10px,#0002 10px 20px); }
+  [data-rug-style="geometric"] { --room-rug-pattern:repeating-linear-gradient(45deg,transparent 0 18px,#ffffff20 18px 20px),repeating-linear-gradient(-45deg,transparent 0 18px,#ffffff20 18px 20px); }
+  [data-rug-shape="round"] .fullscreen-player-room-rug { border-radius:50%; }
+  [data-rug-shape="rounded"] .fullscreen-player-room-rug { border-radius:24%; }
+  .room-speaker,.room-subwoofer { display:none; pointer-events:none; position:absolute; z-index:1; background:linear-gradient(110deg,color-mix(in srgb,var(--room-speaker) 80%,white),var(--room-speaker) 30%,color-mix(in srgb,var(--room-speaker) 70%,black)); border:1px solid #ffffff20; border-radius:6px; box-shadow:8px 12px 20px #0009,inset -5px 0 0 #0005,inset 2px 0 0 #ffffff10; }
+  .room-speaker { width:var(--room-speaker-width, clamp(62px,8vw,112px)); bottom:var(--shelf-bottom); height:calc(var(--shelf-w) * .76); }
+  .room-speaker-left { right:calc(50% + var(--shelf-w) * .5 + var(--room-speaker-gap, 36px)); }
+  .room-speaker-right { left:calc(50% + var(--shelf-w) * .5 + var(--room-speaker-gap, 36px)); }
+  .speaker-driver,.speaker-tweeter { position:absolute; display:block; left:16%; width:68%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,#17171a 0 13%,#030304 14% 20%,#39393c 22%,#151518 50%,#050506 53% 62%,#424246 64%,#080809 70%); box-shadow:0 2px 5px #000b,inset 0 0 0 1px #ffffff20; }
+  .speaker-driver { top:30%; }
+  .speaker-woofer { top:auto; bottom:9%; }
+  .speaker-tweeter { width:26%; left:37%; top:9%; background:radial-gradient(circle,#c2bba3,#4c493f 22%,#0a0a0c 28% 54%,#353539 56%,#08080a 65%); }
+  .speaker-foot { position:absolute; left:-9%; right:-9%; bottom:-8px; height:10px; border-radius:3px; background:linear-gradient(#55555a,#131316); box-shadow:0 6px 10px #0008; }
+  .speaker-horn,.speaker-amplifier,.speaker-cable { display:none; }
+  .room-subwoofer { width:var(--room-sub-width, clamp(60px,8vw,105px)); aspect-ratio:1.1; bottom:var(--shelf-bottom); }
+  .room-subwoofer-right { left:calc(50% + var(--shelf-w) * .5 + var(--room-speaker-gap, 36px) + var(--room-speaker-width, clamp(62px,8vw,112px)) + var(--room-sub-gap, 18px)); }
+  .room-subwoofer-left { right:calc(50% + var(--shelf-w) * .5 + var(--room-speaker-gap, 36px) + var(--room-speaker-width, clamp(62px,8vw,112px)) + var(--room-sub-gap, 18px)); }
+  .room-subwoofer .speaker-driver { top:10%; left:15%; width:70%; }
+  .room-subwoofer > span { position:absolute; width:50%; left:25%; height:4px; bottom:8%; border-radius:4px; background:#040405; }
+  @media (min-width:760px) and (min-height:500px) {
+    .is-angled-view[data-speakers="low"] .room-speaker,.is-angled-view[data-speakers="mid"] .room-speaker,.is-angled-view[data-speakers="high"] .room-speaker { display:block; }
+    .is-angled-view[data-speakers="mid"] .room-subwoofer-right,.is-angled-view[data-speakers="high"] .room-subwoofer { display:block; }
+  }
+  [data-speakers="low"] .room-speaker { height:auto; aspect-ratio:.66; bottom:calc(var(--shelf-bottom) + var(--shelf-w) * var(--shelf-hf) + 15px); width:clamp(48px,6vw,82px); border:4px solid #303036; box-shadow:0 5px 0 #09090b,5px 12px 20px #000a; }
+  [data-speakers="low"] .speaker-driver { top:auto; bottom:12%; }
+  [data-speakers="low"] .speaker-woofer,[data-speakers="low"] .speaker-foot { display:none; }
+  [data-speakers="high"] .room-speaker { height:calc(var(--shelf-w) * .95); border:2px solid #a68b50; border-radius:12px 12px 4px 4px; background:linear-gradient(100deg,#261a10,var(--room-speaker) 20% 80%,#392916); }
+  [data-speakers="high"] .speaker-horn { display:block; position:absolute; left:8%; right:8%; top:4%; height:22%; border-radius:50% 50% 35% 35%; background:radial-gradient(ellipse,#080604 0 9%,#513813 11%,#d9b564 35%,#765220 53%,#f1d38b 58%,#4c3318 65%,transparent 67%); filter:drop-shadow(0 4px 3px #0009); }
+  [data-speakers="high"] .speaker-tweeter { top:27%; }
+  [data-speakers="high"] .room-speaker > .speaker-driver { top:38%; left:19%; width:62%; background:radial-gradient(circle,#d5b771 0 9%,#6e5227 11% 17%,#222225 19% 48%,#080809 51% 60%,#b59750 62% 64%,#101014 66%); }
+  [data-speakers="high"] .room-speaker > .speaker-woofer { top:auto; bottom:7%; }
+  [data-speakers="high"] .speaker-amplifier { display:flex; align-items:flex-end; justify-content:space-evenly; position:absolute; bottom:100%; left:0; right:0; height:18px; border:2px solid #a58a4d; border-radius:3px; background:linear-gradient(#36363b,#131317); }
+  .speaker-amplifier b { width:14%; height:25px; margin-bottom:15px; border:1px solid #ffe6a06b; border-radius:6px 6px 2px 2px; background:linear-gradient(90deg,#ffffff15,#f6af3a66,#ffffff15); box-shadow:inset 0 -5px 8px #ff8c3066,0 0 10px #ffb13b33; }
+  @media (max-width:700px) {
+    .fullscreen-player-poster-form { top:64px; max-height:calc(100dvh - 80px); padding:14px; }
+    .fullscreen-player-top-actions { gap:5px; right:10px; }
+    .fullscreen-player-top-actions .icon-btn { width:34px; height:34px; min-width:34px; }
+    .room-settings-actions button { min-height:38px; }
+    .fullscreen-player-menu { width:min(330px,calc(100vw - 20px)); }
+  }
+  body.fullscreen-player-open { overflow:hidden; }
+  .fullscreen-player-overlay { overflow:hidden; }
+  .room-settings-heading { position:sticky; top:-18px; z-index:2; justify-content:space-between !important; align-items:center; padding:8px 0; background:var(--surface-2); }
+  .room-settings-heading button { width:36px; min-width:36px; height:36px; padding:0; font-size:22px; }
+  @media (max-width:700px) {
+    .fullscreen-player-top-actions .icon-btn { width:40px; height:40px; min-width:40px; }
+    .fullscreen-player-overlay.is-angled-view .fullscreen-player-room-poster { top:56px; }
+    .fullscreen-player-overlay.is-angled-view .fullscreen-player-eq { top:calc(56px + var(--poster-height, 95px) + 12px); }
+    .room-settings-heading { top:-14px; }
+  }
+  @media (max-width:700px) {
+    .fullscreen-player-overlay.is-angled-view .fullscreen-player-shelf-picker { bottom:0; }
+  }
+  /* Keep live scene and room controls in separate areas. */
+  .fullscreen-player-overlay { --room-panel-width:clamp(290px, 30vw, 360px); }
+  .fullscreen-player-poster-form { left:auto; right:16px; top:64px; bottom:16px; width:var(--room-panel-width); max-height:none; transform:none; margin:0; overscroll-behavior:contain; }
+  .fullscreen-player-overlay:has(#fullscreenPlayerPosterForm:not([hidden])) { padding-right:calc(var(--room-panel-width) + 40px); }
+  .fullscreen-player-overlay:has(#fullscreenPlayerPosterForm:not([hidden])) .fullscreen-player-stage {
+    --room-speaker-width:min(8vw, calc(var(--shelf-w) * .28));
+    --room-sub-width:min(8vw, calc(var(--shelf-w) * .26));
+    --room-speaker-gap:calc(var(--shelf-w) * .10);
+    --room-sub-gap:calc(var(--shelf-w) * .06);
+  }
+  @media (max-width:700px) {
+    .fullscreen-player-overlay:has(#fullscreenPlayerPosterForm:not([hidden])) { padding-right:24px; }
+    .fullscreen-player-poster-form { top:50dvh; bottom:0; left:0; right:0; width:100%; height:50dvh; max-height:none; border-radius:16px 16px 0 0; padding:12px 14px max(18px, env(safe-area-inset-bottom)); box-shadow:0 -8px 30px #0008; }
+    .fullscreen-player-overlay:has(#fullscreenPlayerPosterForm:not([hidden])) .fullscreen-player-stage { position:absolute; left:12px; right:12px; top:60px; bottom:50dvh; width:auto; --shelf-bottom:7%; }
+    .fullscreen-player-overlay:has(#fullscreenPlayerPosterForm:not([hidden])) .fullscreen-player-info { display:none; }
+    .fullscreen-player-overlay:has(#fullscreenPlayerPosterForm:not([hidden])) .fullscreen-player-room-poster { top:4px; }
+    .fullscreen-player-overlay:has(#fullscreenPlayerPosterForm:not([hidden])) .fullscreen-player-eq { top:calc(4px + var(--poster-height) + 8px); }
+    .fullscreen-player-overlay:has(#fullscreenPlayerPosterForm:not([hidden])) .fullscreen-player-shelf-picker { display:none; }
+    .fullscreen-player-poster-form .room-settings-heading { top:-12px; }
+    .fullscreen-player-poster-form .room-settings-grid { gap:10px !important; }
+    .fullscreen-player-poster-form input,.fullscreen-player-poster-form select { font-size:16px; }
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-turntable { box-shadow:0 7px 12px #0007,inset 0 0 0 1px #ffffff14; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-platter { position:absolute; left:6%; top:7%; width:72%; transform:translateZ(5px); transform-style:preserve-3d; background:radial-gradient(circle,#38383e 0 64%,#818187 65%,#222226 68% 74%,#77777d 75%,#17171b 79%); box-shadow:0 1px 0 #99999f,0 3px 0 #242429,0 5px 0 #101013,0 8px 8px #0009; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-platter::before { content:''; position:absolute; inset:1.75%; border-radius:50%; background:#08080a; transform:translateZ(-1px); box-shadow:0 2px 0 #030304; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-platter::after { content:''; position:absolute; left:50%; top:50%; width:3%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 30% 25%,#fff,#85858d 40%,#232327 75%); transform:translate(-50%,-50%) translateZ(7px); box-shadow:1px 2px 2px #000b; pointer-events:none; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-vinyl { translate:0 0 2px; border-color:#ffffff38; box-shadow:0 1px 0 #323238,0 2px 0 #050506,0 4px 4px #000b,inset 0 0 0 1px #ffffff12; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-tonearm-pivot { translate:0 0 10px; width:9%; right:7%; top:8%; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-tonearm-rod { translate:0 0 12px; right:calc(7% + 4.5% - 2px); top:12.5%; width:3px; height:57%; background:linear-gradient(90deg,#b9b9c3,#52525b 40%,#17171d); }
+    .fullscreen-player-overlay.is-split-layout { padding:12px; gap:0; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-stage { position:absolute; top:12px; bottom:12px; left:12px; right:auto; width:54%; max-width:none; height:auto; flex-direction:row; gap:16px; }
+    .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-stage { --shelf-bottom:10%; }
+    .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-shelf-left { left:50%; }
+    .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-turntable { left:calc(50% - var(--shelf-w) * .46); }
+    .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-cover-stand { left:calc(50% + var(--shelf-w) * .10); }
+    .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-room-rug { left:50%; }
+    .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-room-poster,
+    .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-eq { display:none; }
+    .fullscreen-player-overlay.is-split-layout.is-angled-view:not(.has-speaker-space) .room-speaker,
+    .fullscreen-player-overlay.is-split-layout.is-angled-view:not(.has-speaker-space) .room-subwoofer { display:none; }
+    .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-shelf-picker { left:8px; bottom:0; max-width:calc(100% - 16px); }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-info { position:absolute; top:68px; bottom:18px; right:20px; width:calc(46% - 44px); display:flex; justify-content:center; gap:10px; overflow-y:auto; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-track { font-size:clamp(17px, 2.7vw, 26px); white-space:normal; line-height:1.25; max-height:3.75em; flex-shrink:0; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-artist { font-size:13px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-progress { margin-top:8px; flex-shrink:0; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-controls { margin-top:8px; gap:12px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-controls .album-mini-control { width:44px; height:44px; min-width:44px; flex-basis:44px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-controls .album-mini-control.primary { width:56px; height:56px; min-width:56px; flex-basis:56px; }
+    .fullscreen-player-overlay.is-split-layout:not(.is-angled-view) .fullscreen-player-turntable { width:min(38vh, 28vw); }
+    .fullscreen-player-overlay.is-split-layout:not(.is-angled-view) .fullscreen-player-cover { width:min(28vh, 20vw); }
+    .fullscreen-player-overlay.is-split-layout:has(#fullscreenPlayerPosterForm:not([hidden])) .fullscreen-player-poster-form { top:64px; bottom:12px; right:12px; left:auto; width:clamp(250px, 38vw, 340px); height:auto; max-height:none; border-radius:12px; }
+    .fullscreen-player-overlay.is-split-layout:has(#fullscreenPlayerPosterForm:not([hidden])) .fullscreen-player-stage { left:12px; right:auto; top:12px; bottom:12px; width:calc(100% - clamp(250px, 38vw, 340px) - 36px); }
+    .fullscreen-player-overlay.is-split-layout:has(#fullscreenPlayerPosterForm:not([hidden])) .fullscreen-player-info { display:none; }
+  .fullscreen-player-overlay.is-split-layout .fullscreen-player-stage { --room-speaker-width:calc(var(--shelf-w) * .28); --room-sub-width:calc(var(--shelf-w) * .26); --room-speaker-gap:calc(var(--shelf-w) * .10); --room-sub-gap:calc(var(--shelf-w) * .06); }
+  .fullscreen-player-camera { display:contents; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-camera { display:block; position:absolute; inset:0; transform-origin:50% var(--camera-focus-y, 50%); }
+  .fullscreen-player-overlay.is-angled-view.is-detail-zoom .fullscreen-player-stage { overflow:hidden; border-radius:6px; }
+  .fullscreen-player-overlay.is-angled-view.is-detail-zoom .fullscreen-player-camera { transform:translateY(calc(50% - var(--camera-focus-y))) scale(var(--camera-zoom, 2.1)); }
+  .fullscreen-player-overlay.is-split-layout { --camera-zoom:1.7; }
+  .fullscreen-player-top-actions button[aria-pressed="true"] { color:var(--accent); border-color:var(--accent); }
+  @media (max-width:480px) {
+    .fullscreen-player-top-actions { gap:4px; right:8px; }
+    .fullscreen-player-top-actions .icon-btn { width:38px; min-width:38px; height:38px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-stage { width:49%; left:6px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-info { width:calc(51% - 20px); right:8px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-controls { gap:5px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-controls .album-mini-control { width:32px; height:32px; min-width:32px; flex-basis:32px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-controls .album-mini-control.primary { width:42px; height:42px; min-width:42px; flex-basis:42px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-track { font-size:16px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-shelf-picker { max-width:100%; padding:6px; gap:4px; }
+    .fullscreen-player-overlay.is-split-layout .fullscreen-player-shelf-picker select { min-width:0; max-width:100px; }
+  }
+  @media (max-width:700px) {
+    .fullscreen-player-overlay { --camera-zoom:1.35; }
+    .fullscreen-player-overlay.is-split-layout { --camera-zoom:1.4; }
+  }
+  @media (max-width:1000px) and (max-height:500px) {
+    .fullscreen-player-overlay,.fullscreen-player-overlay.is-split-layout { --camera-zoom:1.4; }
+  }
+  .fullscreen-audio-settings { display:flex; flex-direction:column; gap:9px; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-1); }
+  .fullscreen-audio-settings strong { font-size:13px; }
+  .fullscreen-audio-settings p { margin:0; }
+  .fullscreen-audio-settings button { width:100%; min-height:38px; }
+  #fullscreenPlayerEq.is-live-audio span { animation:none; transform:scaleY(var(--eq-level, .018)); transition:transform var(--eq-transition, 108ms) linear; }
+  .fullscreen-player-progress { position:relative; height:26px; overflow:visible; background:transparent; margin-top:4px; flex-shrink:0; }
+  .fullscreen-player-progress::before { content:''; position:absolute; top:50%; left:0; right:0; height:4px; transform:translateY(-50%); background:#ffffff20; border-radius:3px; pointer-events:none; }
+  .fullscreen-player-progress > #fullscreenPlayerProgressBar { position:absolute; top:50%; height:4px; transform:translateY(-50%); pointer-events:none; }
+  .fullscreen-player-progress.is-seeking > span { transition:none; }
+  #fullscreenPlayerSeek { position:absolute; inset:0; width:100%; height:100%; padding:0; margin:0; min-height:0; border:0; appearance:none; -webkit-appearance:none; background:transparent; cursor:pointer; touch-action:pan-y; }
+  #fullscreenPlayerSeek::-webkit-slider-runnable-track { height:4px; background:transparent; }
+  #fullscreenPlayerSeek::-moz-range-track { height:4px; background:transparent; }
+  #fullscreenPlayerSeek::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; width:14px; height:14px; margin-top:-5px; border:2px solid #fff; border-radius:50%; background:var(--accent); box-shadow:0 1px 5px #0008; }
+  #fullscreenPlayerSeek::-moz-range-thumb { width:11px; height:11px; border:2px solid #fff; border-radius:50%; background:var(--accent); box-shadow:0 1px 5px #0008; }
+  #fullscreenPlayerSeek:disabled { cursor:default; opacity:.4; }
+  #fullscreenPlayerSeek:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+  .fullscreen-player-time { display:flex; justify-content:space-between; width:100%; margin-top:-6px; color:var(--text-secondary); font-size:11px; font-variant-numeric:tabular-nums; }
+  #fullscreenPlayerFavorite[hidden],#fullscreenPlayerActionStatus[hidden] { display:none; }
+  #fullscreenPlayerActionStatus { max-width:100%; margin:0; font-size:12px; }
+  @media (pointer:coarse) { .fullscreen-player-progress { height:32px; } }
+  #fullscreenAudioStatus[hidden] { display:none; }
+  .audio-responsiveness { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px; }
+  #fullscreenAudioResponsiveness { width:100%; min-height:28px; padding:0; accent-color:var(--accent); cursor:pointer; }
+  .audio-responsiveness output,.audio-responsiveness-ends { color:var(--text-secondary); font-size:11px; }
+  .audio-responsiveness-ends { display:flex; justify-content:space-between; gap:12px; }
   .album-mini-tracklist {
     position:static;
     flex:0 0 auto;
@@ -2780,13 +3733,15 @@
     pointer-events: none;
     overflow: hidden;
   }
-  .vinyl-card-preview.is-clear {
+  .vinyl-card-preview.is-clear,
+  .fullscreen-player-vinyl.is-clear {
     background-image: var(--vinyl-art, none), repeating-radial-gradient(circle, transparent 0 3px, rgba(0,0,0,.34) 3.5px 4px, rgba(255,255,255,.52) 4.5px 5px, transparent 5.5px 8px), linear-gradient(135deg, rgba(255,255,255,.28), transparent 24% 72%, rgba(0,0,0,.18));
     border-color: rgba(255,255,255,.9);
     box-shadow: 0 2px 12px rgba(0,0,0,.55), 0 0 0 1.5px rgba(255,255,255,.55), inset 0 0 0 1px rgba(255,255,255,.35);
   }
   .vinyl-card-preview.is-cd:not(.is-picture-disc),
-  .vinyl-editor-disc.is-cd:not(.is-picture-disc) {
+  .vinyl-editor-disc.is-cd:not(.is-picture-disc),
+  .fullscreen-player-vinyl.is-cd:not(.is-picture-disc) {
     background-color:#c8cbd0;
     background-image:
       radial-gradient(circle at 34% 30%, rgba(255,255,255,.95), transparent 3%),
@@ -2794,9 +3749,11 @@
     border-color:rgba(255,255,255,.82);
   }
   .vinyl-card-preview.is-cd::after,
-  .vinyl-editor-disc.is-cd:not(.is-picture-disc)::after { display:none; }
+  .vinyl-editor-disc.is-cd:not(.is-picture-disc)::after,
+  .fullscreen-player-vinyl.is-cd::after { display:none; }
   .vinyl-card-preview.is-picture-disc,
-  .vinyl-editor-disc.is-picture-disc { background-color:var(--picture-background, #111); background-image:none; }
+  .vinyl-editor-disc.is-picture-disc,
+  .fullscreen-player-vinyl.is-picture-disc { background-color:var(--picture-background, #111); background-image:none; }
   .cd-picture-art { position:absolute; left:calc(50% + var(--picture-x, 0%)); top:calc(50% + var(--picture-y, 0%)); z-index:0; width:100%; height:100%; object-fit:contain; transform:translate(-50%, -50%) scale(var(--picture-zoom, 1)) rotate(var(--picture-rotation, 0deg)); transform-origin:center; touch-action:none; }
   .cd-picture-color-marker { position:absolute; z-index:3; left:var(--marker-x, 50%); top:var(--marker-y, 50%); width:18px; height:18px; border:2px solid #fff; border-radius:50%; box-shadow:0 0 0 2px #111, 0 1px 5px #000; transform:translate(-50%,-50%); pointer-events:none; }
   .vinyl-editor-disc.is-picture-marker-mode { cursor:crosshair; }
@@ -2804,9 +3761,11 @@
   .vinyl-editor-disc.is-picture-disc { cursor:grab; }
   .vinyl-editor-disc.is-picture-disc.is-picture-dragging { cursor:grabbing; }
   .vinyl-card-preview.is-picture-disc::after,
-  .vinyl-editor-disc.is-picture-disc::after { display:none; }
+  .vinyl-editor-disc.is-picture-disc::after,
+  .fullscreen-player-vinyl.is-picture-disc::after { display:none; }
   .vinyl-card-preview.is-cd::before,
-  .vinyl-editor-disc.is-cd::before {
+  .vinyl-editor-disc.is-cd::before,
+  .fullscreen-player-vinyl.is-cd::before {
     width:11%;
     background:rgba(0,0,0,.88);
     border:0;
@@ -2834,7 +3793,7 @@
   @media (prefers-reduced-motion: reduce) {
     .vinyl-liquid-fill { animation: none; }
   }
-  .vinyl-card-preview::after, .vinyl-editor-disc::after {
+  .vinyl-card-preview::after, .vinyl-editor-disc::after, .fullscreen-player-vinyl::after {
     content: '';
     position: absolute;
     width: 30%;
@@ -2848,7 +3807,7 @@
     box-shadow: inset 0 0 0 2px rgba(0,0,0,.12);
     z-index: 1;
   }
-  .vinyl-card-preview::before, .vinyl-editor-disc::before {
+  .vinyl-card-preview::before, .vinyl-editor-disc::before, .fullscreen-player-vinyl::before {
     content: '';
     position: absolute;
     z-index: 2;
@@ -3661,6 +4620,7 @@
   .spotify-import-box .spotify-playlist-import-status { margin:0 0 4px; }
   .storage-result-overlay { z-index: 115; }
   #albumListeningOverlay { z-index: 150; }
+  body.fullscreen-player-open #albumListeningOverlay { z-index: 2147483647; }
   .wash-mode-overlay { z-index: 99; }
   .shop-mode-overlay { z-index: 99; background:var(--surface-1); padding:0; align-items:stretch; justify-content:center; inset:var(--shop-top, 0px) 0 0 0; }
   body.shop-active .header-stats, body.shop-active .header-info-row, body.shop-active .wrap { display:none !important; }
@@ -5239,7 +6199,7 @@
           <path d="M5 15H4C3.44772 15 3 14.5523 3 14V4C3 3.44772 3.44772 3 4 3H14C14.5523 3 15 3.44772 15 4V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
       </button>
-      <button id="showAlbumMiniPlayerBtn" class="icon-btn" type="button" title="Mini-Player öffnen" aria-label="Mini-Player öffnen" style="display:none;">♫︎</button>
+      <button id="showAlbumMiniPlayerBtn" class="icon-btn" type="button" title="Musikplayer im Vollbild öffnen" aria-label="Musikplayer im Vollbild öffnen">♫︎</button>
       <button id="storageRandomPickBtn" class="icon-btn" type="button" title="Zufälliges einsortiertes Vinyl auswählen" aria-label="Zufälliges einsortiertes Vinyl auswählen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>
       </button>
@@ -5875,6 +6835,103 @@
   </section>
 </aside>
 
+<div id="fullscreenPlayerOverlay" class="fullscreen-player-overlay" role="dialog" aria-modal="true" aria-label="Musikplayer im Vollbild" hidden>
+  <div class="fullscreen-player-top-actions">
+    <button type="button" id="fullscreenPlayerRoomSettings" class="icon-btn" aria-label="Raum gestalten" title="Raum gestalten" aria-expanded="false">⚙</button>
+    <button type="button" id="fullscreenPlayerQueueToggle" class="icon-btn" title="Warteschlange einblenden" aria-label="Warteschlange einblenden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m18 15 3 3-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button type="button" id="fullscreenPlayerLayoutToggle" class="icon-btn" title="Links-rechts-Ansicht" aria-label="Links-rechts-Ansicht" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M13 4v16" stroke="currentColor" stroke-width="1.7"/></svg></button>
+    <button type="button" id="fullscreenPlayerZoomToggle" class="icon-btn" title="Plattenspieler und Cover vergrößern" aria-label="Plattenspieler und Cover vergrößern" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 6 6M7 10h6M10 7v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
+    <button type="button" id="fullscreenPlayerViewToggle" class="icon-btn" title="Schräge Ansicht" aria-label="Schräge Ansicht"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="13" rx="9" ry="4.5" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="1.2" fill="currentColor"/></svg></button>
+    <button type="button" id="fullscreenPlayerMenuToggle" class="icon-btn" title="Sammlung einblenden" aria-label="Sammlung einblenden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button type="button" id="closeFullscreenPlayerBtn" class="icon-btn fullscreen-player-close" title="Vollbild schließen" aria-label="Vollbild schließen"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+  </div>
+  <aside id="fullscreenPlayerMenu" class="fullscreen-player-menu" aria-label="Sammlung durchsuchen" hidden>
+    <div class="fullscreen-player-menu-header">
+      <div class="fullscreen-player-menu-heading"><strong id="fullscreenPlayerMenuTitle">Sammlung</strong><button type="button" id="fullscreenPlayerMenuClose" aria-label="Albumauswahl schließen">×</button></div>
+      <span id="fullscreenPlayerMenuCount" class="settings-panel-hint" aria-live="polite"></span>
+      <input type="search" id="fullscreenPlayerMenuSearch" placeholder="Sammlung durchsuchen …" aria-label="Sammlung durchsuchen" autocomplete="off">
+      <div class="fullscreen-player-menu-filter" role="group" aria-label="Sammlungsfilter">
+        <button type="button" data-menu-filter="all" class="is-active">Alle</button>
+        <button type="button" data-menu-filter="owned">Im Besitz</button>
+      </div>
+    </div>
+    <button type="button" id="fullscreenPlayerCompartmentReset" class="fullscreen-player-compartment-reset" hidden></button>
+    <ol id="fullscreenPlayerMenuList" class="fullscreen-player-menu-list"></ol>
+  </aside>
+  <form id="fullscreenPlayerPosterForm" class="fullscreen-player-poster-form" aria-label="Raum gestalten" hidden>
+    <div class="room-settings-heading"><strong>Raum gestalten</strong><button type="button" id="fullscreenRoomClose" aria-label="Raum-Menü schließen">×</button></div>
+    <section class="fullscreen-audio-settings" aria-label="Audio-Equalizer">
+      <strong>Audio-Equalizer</strong>
+      <button type="button" id="fullscreenAudioConnect">Audio mit Equalizer verbinden</button>
+      <p id="fullscreenAudioStatus" class="settings-panel-hint audio-status-error" role="status" aria-live="polite" hidden></p>
+      <label class="audio-responsiveness" for="fullscreenAudioResponsiveness">Responsiveness <output id="fullscreenAudioResponsivenessValue">40%</output></label>
+      <input type="range" id="fullscreenAudioResponsiveness" min="0" max="100" step="1" value="40" aria-label="Responsiveness">
+      <div class="audio-responsiveness-ends"><span>Stark geglättet</span><span>Direkt</span></div>
+    </section>
+    <div class="room-settings-grid" id="fullscreenPlayerRoomFields"></div>
+    <label for="fullscreenPlayerPosterUrl">Wandbild · Bild-URL</label>
+    <input id="fullscreenPlayerPosterUrl" type="url" placeholder="https://…/bild.jpg" aria-label="Bild-URL">
+    <small>Direkter Link zu einem Bild. Leer lassen für das Standardbild.</small>
+    <p id="fullscreenRoomCloudStatus" class="settings-panel-hint" role="status">Raumeinstellungen werden geladen …</p>
+    <button type="button" id="fullscreenRoomSave">Jetzt synchronisieren</button>
+    <small>Lautsprecher erscheinen ab 760 px Breite und 500 px Höhe. Auf dem Handy bleiben sie ausgeblendet.</small>
+    <div class="room-settings-actions"><button type="button" id="fullscreenPlayerRoomReset">Zurücksetzen</button><button type="button" id="fullscreenPlayerPosterCancel">Schließen</button><button type="submit">Übernehmen</button></div>
+  </form>
+  <div class="fullscreen-player-stage">
+    <div class="fullscreen-player-camera">
+    <div class="fullscreen-player-room">
+      <div class="fullscreen-player-room-wall"></div>
+      <div class="fullscreen-player-room-floor"></div>
+      <div class="fullscreen-player-room-rug"></div>
+    </div>
+    <div class="fullscreen-player-room-poster" role="button" tabindex="0" aria-label="Wandbild ändern" title="Rechtsklick: Wandbild per Bild-URL ändern"></div>
+    <div id="fullscreenPlayerEq" class="fullscreen-player-eq" aria-hidden="true"></div>
+    <div class="room-speaker room-speaker-left" aria-hidden="true"><div class="speaker-horn"></div><i class="speaker-tweeter"></i><i class="speaker-driver"></i><i class="speaker-driver speaker-woofer"></i><div class="speaker-amplifier"><b></b><b></b><b></b><b></b></div><span class="speaker-foot"></span></div>
+    <div class="room-speaker room-speaker-right" aria-hidden="true"><div class="speaker-horn"></div><i class="speaker-tweeter"></i><i class="speaker-driver"></i><i class="speaker-driver speaker-woofer"></i><div class="speaker-amplifier"><b></b><b></b><b></b><b></b></div><span class="speaker-foot"></span></div>
+    <div class="room-subwoofer room-subwoofer-left" aria-hidden="true"><i class="speaker-driver"></i><span></span></div>
+    <div class="room-subwoofer room-subwoofer-right" aria-hidden="true"><i class="speaker-driver"></i><span></span></div>
+    <div class="fullscreen-player-shelf fullscreen-player-shelf-left" aria-label="Regalfächer"></div>
+    <div class="fullscreen-player-left">
+      <div class="fullscreen-player-turntable" aria-hidden="true">
+        <span class="fullscreen-player-dustcover"></span>
+        <span class="fullscreen-player-plinth-side"></span>
+        <div class="fullscreen-player-platter">
+          <div id="fullscreenPlayerVinyl" class="fullscreen-player-vinyl"></div>
+        </div>
+        <span class="fullscreen-player-tonearm-pivot"></span>
+        <span class="fullscreen-player-tonearm-rod"></span>
+      </div>
+    </div>
+    <div class="fullscreen-player-right">
+      <div class="fullscreen-player-cover-stand">
+        <img id="fullscreenPlayerCover" class="fullscreen-player-cover" alt="Album-Cover" hidden>
+      </div>
+    </div>
+    </div>
+    <div class="fullscreen-player-shelf-picker" id="fullscreenPlayerShelfPicker" hidden>
+      <label for="fullscreenPlayerShelfSelect">Regal</label>
+      <select id="fullscreenPlayerShelfSelect" aria-label="Regal für die 3D-Ansicht wählen"></select>
+    </div>
+  </div>
+  <section id="fullscreenPlayerQueuePanel" class="fullscreen-player-queue-panel" aria-label="Warteschlange" hidden>
+    <h2 class="album-queue-heading">Warteschlange</h2>
+    <ol id="fullscreenPlayerQueueList" class="album-queue-list"></ol>
+  </section>
+  <div class="fullscreen-player-info">
+    <strong id="fullscreenPlayerTrack" class="fullscreen-player-track"></strong>
+    <span id="fullscreenPlayerArtist" class="fullscreen-player-artist"></span>
+    <div class="fullscreen-player-progress"><span id="fullscreenPlayerProgressBar"></span><input type="range" id="fullscreenPlayerSeek" min="0" max="0" value="0" step="1" aria-label="Wiedergabeposition im Vollbild" disabled></div>
+    <div class="fullscreen-player-time"><span id="fullscreenPlayerPosition">0:00</span><span id="fullscreenPlayerDuration">0:00</span></div>
+    <div class="fullscreen-player-controls">
+      <button type="button" id="fullscreenPlayerPrev" class="album-mini-control" title="Vorheriger Titel" aria-label="Vorheriger Titel"></button>
+      <button type="button" id="fullscreenPlayerToggle" class="album-mini-control primary" title="Wiedergabe starten" aria-label="Wiedergabe starten"></button>
+      <button type="button" id="fullscreenPlayerNext" class="album-mini-control" title="Nächster Titel" aria-label="Nächster Titel"></button>
+      <button type="button" id="fullscreenPlayerFavorite" class="album-mini-control" aria-label="Zu deinen Spotify-Lieblingssongs hinzufügen" title="Zu deinen Spotify-Lieblingssongs hinzufügen" hidden></button>
+    </div>
+    <p id="fullscreenPlayerActionStatus" class="settings-panel-hint" role="status" aria-live="polite" hidden></p>
+  </div>
+</div>
+
 <aside class="docs-panel" id="docsPanel" aria-label="Hilfe und Dokumentation" aria-hidden="true">
   <div class="docs-header">
     <h2>Hilfe &amp; Doku</h2>
@@ -6020,6 +7077,8 @@
 <ul>
 <li><b>Anhören</b> auf Karten, im Waschmodus und in der Zufallsauswahl. In fremden Sammlungen kannst du Alben anhören, ohne sie hinzuzufügen.</li>
 <li>Der Mini-Player liegt fest am Rand, bleibt bei Fensterwechseln offen und lässt sich minimieren/aufklappen. Zuklappen blendet ihn nur aus, die Wiedergabe läuft weiter.</li>
+<li>Das Plattenspieler-Symbol im Mini-Player oder ♫︎ oben in der Kopfleiste öffnet den Vollbild-Player: links dreht sich die Platte im gestalteten Vinyl-Design auf einem Plattenspieler, rechts das Cover, unten Titel, Interpret, Fortschritt und Play/Pause. Schließen per × oder Escape.</li>
+<li>Im Vollbild lässt sich oben rechts zwischen Draufsicht und schräger 3D-Ansicht umschalten (wird gespeichert). Die 3D-Ansicht zeigt frontal ein Regal aus deiner Lageransicht in einer dunklen Cyberpunk-Wand mit Magenta- und Cyan-Beleuchtung, Holzboden und Synthwave-Poster: Unten links wählst du, welches Regal angezeigt wird (wird gespeichert) – seine Fächer sind mit den dort einsortierten Vinyls als farbige Rücken gefüllt, Display-Regale zeigen das Cover. Auf der Regaloberseite stehen der Plattenspieler mit geöffneter Staubhaube und das Albumcover auf einem Aufsteller, ein grafischer Equalizer in einer Metallbox hängt an der Wand. Der Tonarm wandert mit dem Fortschritt des Titels von außen nach innen. Beim Albumwechsel wird die Platte angehoben, ins Cover geschoben und die neue Platte aufgelegt. Unten stehen Titel, Interpret, Fortschritt sowie Zurück/Play-Pause/Skip. Über das Warteschlangen-Symbol siehst du die Queue und kannst Alben verschieben oder entfernen. Das Seitenmenü öffnet deine Sammlung: Suche oben, Filter „Alle“ / „Im Besitz“, pro Album zwei Buttons – „In die Warteschlange“ (mit Spotify-Albumlink) und „Direkt abspielen“.</li>
 <li>Es gibt eine Warteschlange (Queue).</li>
 <li>Einstellungen →︎ „Album anhören“: Anbieter (Apple Music, Spotify, YouTube) ein-/ausschalten und per Pfeil oder Drag sortieren.</li>
 </ul>
@@ -8301,6 +9360,7 @@ auth.onAuthStateChanged(async user => {
       appLoadingCount = 0;
       hideAppLoading(true);
     }
+    await loadFullscreenRoomStyle(user.uid);
     await loadListeningCredentials(user.uid);
     await restoreListeningSession();
     await completeSpotifyAuthCallback().catch(error => {
@@ -8312,6 +9372,7 @@ auth.onAuthStateChanged(async user => {
     document.body.classList.remove('user-menu-open');
   } else {
     currentUid = null;
+    resetFullscreenRoomSession();
     currentUsername = null;
     spotifyClientId = '';
     youtubeApiKey = '';
@@ -9276,7 +10337,7 @@ document.getElementById('reauthorizeSpotifyPlaylistBtn')?.addEventListener('clic
   });
 });
 const spotifyRedirectUriElement = document.getElementById('spotifyRedirectUri');
-if (spotifyRedirectUriElement) spotifyRedirectUriElement.textContent = getSpotifyRedirectUri() || 'Nicht verfügbar bei file://';
+if (spotifyRedirectUriElement) spotifyRedirectUriElement.textContent = getSpotifyRedirectUri() || 'Nur auf https://vinyl.elkevinio.de verfügbar';
 document.getElementById('spotifyConnectBtn')?.addEventListener('click', () => {
   const token = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
   if ((token?.accessToken && (Number(token.expiresAt) > Date.now() || token.refreshToken))
@@ -14666,11 +15727,8 @@ async function restoreListeningSession() {
 
 function updateAlbumMiniPlayerButton() {
   const button = document.getElementById('showAlbumMiniPlayerBtn');
-  const dock = document.getElementById('albumListeningDock');
-  if (!button || !dock) return;
-  const hasListeningSession = !!currentListeningAlbum || listeningAlbumQueue.length > 0;
-  const isHidden = dock.hidden || dock.classList.contains('is-hidden');
-  button.style.display = hasListeningSession && isHidden ? '' : 'none';
+  if (!button) return;
+  button.style.display = '';
 }
 
 function hideAlbumMiniPlayer() {
@@ -14812,6 +15870,1255 @@ function createAlbumPlayerSettingsToggle() {
   return button;
 }
 
+function createFullscreenPlayerToggle() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'album-queue-toggle album-mini-fullscreen-toggle';
+  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="3.5" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="12.2" r="5.4" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="12.2" r="1.1" fill="currentColor"/><circle cx="17.9" cy="6.1" r="1.5" stroke="currentColor" stroke-width="1.4"/><path d="m17.9 6.1-2.9 9.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  button.title = 'Vollbild-Player öffnen';
+  button.setAttribute('aria-label', button.title);
+  button.addEventListener('click', openFullscreenPlayer);
+  return button;
+}
+
+function isFullscreenPlayerOpen() {
+  return document.getElementById('fullscreenPlayerOverlay')?.hidden === false;
+}
+
+let fullscreenPlayerRenderedAlbum = null;
+let fullscreenSeekDragging = false;
+let fullscreenSeekSource = null;
+let fullscreenSeekWheelAt = 0;
+
+function renderFullscreenPlayerVinyl() {
+  const vinyl = document.getElementById('fullscreenPlayerVinyl');
+  if (!vinyl) return;
+  const item = currentListeningAlbum || {};
+  const design = normalizeVinylDesign(item);
+  const record = getVinylRecordForItem(item);
+  vinyl.className = `fullscreen-player-vinyl ${record.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${getDiscMediaClasses(item)}`.replace(/\s+/g, ' ').trim();
+  vinyl.style.cssText = `--picture-background:${design.pictureBackgroundColor};--vinyl-base:${hexToRgba(record.baseColor, 1 - record.transparency / 100)};--vinyl-label:${record.labelColor};--vinyl-art:${getVinylSvgData(record)}`;
+  vinyl.innerHTML = `${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(record, design.discStyle)}`;
+}
+
+function renderFullscreenPlayerCover() {
+  const cover = document.getElementById('fullscreenPlayerCover');
+  if (!cover) return;
+  const coverUrl = currentListeningAlbum?.coverUrl || '';
+  cover.hidden = !coverUrl;
+  if (coverUrl && cover.getAttribute('src') !== coverUrl) cover.src = coverUrl;
+}
+
+let fullscreenPlayerObserver = null;
+let fullscreenPlayerSyncTimer = null;
+let fullscreenPlayerChangeTimer = null;
+let fullscreenPlayerChanging = false;
+
+function getListeningPrimaryToggle() {
+  return document.querySelector('#albumListeningDockContent .album-mini-control.primary');
+}
+
+function runFullscreenPlayerAlbumChange() {
+  const overlay = document.getElementById('fullscreenPlayerOverlay');
+  if (!overlay || fullscreenPlayerChanging) return;
+  fullscreenPlayerChanging = true;
+  overlay.classList.add('is-changing-album');
+  overlay.classList.remove('is-changing-in');
+  if (fullscreenPlayerChangeTimer) window.clearTimeout(fullscreenPlayerChangeTimer);
+  fullscreenPlayerChangeTimer = window.setTimeout(() => {
+    fullscreenPlayerRenderedAlbum = currentListeningAlbum;
+    renderFullscreenPlayerVinyl();
+    renderFullscreenPlayerCover();
+    overlay.classList.add('is-changing-in');
+    fullscreenPlayerChangeTimer = window.setTimeout(() => {
+      overlay.classList.remove('is-changing-album', 'is-changing-in');
+      fullscreenPlayerChanging = false;
+      fullscreenPlayerChangeTimer = null;
+    }, 1150);
+  }, 1150);
+}
+
+function syncFullscreenPlayer() {
+  if (!isFullscreenPlayerOpen()) return;
+  applyFullscreenPlayerPresentation();
+  const overlay = document.getElementById('fullscreenPlayerOverlay');
+  if (fullscreenPlayerRenderedAlbum !== currentListeningAlbum) {
+    if (fullscreenPlayerRenderedAlbum && currentListeningAlbum) {
+      runFullscreenPlayerAlbumChange();
+    } else {
+      fullscreenPlayerRenderedAlbum = currentListeningAlbum;
+      renderFullscreenPlayerVinyl();
+      renderFullscreenPlayerCover();
+    }
+  }
+  const dockContent = document.getElementById('albumListeningDockContent');
+  const hasSession = !!currentListeningAlbum;
+  const track = dockContent?.querySelector('.album-mini-track-title')?.textContent?.trim()
+    || currentListeningAlbum?.title
+    || (hasSession ? '' : 'Nichts wird abgespielt');
+  const artist = dockContent?.querySelector('.album-mini-artist')?.textContent?.trim()
+    || currentListeningAlbum?.artist
+    || (hasSession ? '' : 'Wähle ein Album aus deiner Sammlung');
+  document.getElementById('fullscreenPlayerTrack').textContent = track;
+  document.getElementById('fullscreenPlayerArtist').textContent = artist;
+  const sourceToggle = getListeningPrimaryToggle();
+  const isPlaying = sourceToggle?.getAttribute('aria-label') === 'Wiedergabe pausieren';
+  overlay.classList.toggle('is-playing', isPlaying);
+  const toggle = document.getElementById('fullscreenPlayerToggle');
+  toggle.innerHTML = isPlaying ? LISTENING_ICON_SVG.pause : LISTENING_ICON_SVG.play;
+  toggle.title = isPlaying ? 'Wiedergabe pausieren' : 'Wiedergabe starten';
+  toggle.setAttribute('aria-label', toggle.title);
+  toggle.disabled = !sourceToggle || sourceToggle.disabled;
+  const prevSource = dockContent?.querySelector('.album-mini-control[aria-label="Vorheriger Titel"]');
+  const nextSource = dockContent?.querySelector('.album-mini-control[aria-label="Nächster Titel"]');
+  const prev = document.getElementById('fullscreenPlayerPrev');
+  const next = document.getElementById('fullscreenPlayerNext');
+  prev.innerHTML = LISTENING_ICON_SVG.previous;
+  next.innerHTML = LISTENING_ICON_SVG.next;
+  prev.disabled = !prevSource || prevSource.disabled;
+  next.disabled = !nextSource || nextSource.disabled;
+  const seek = dockContent?.querySelector('.album-mini-seek');
+  const fullSeek = document.getElementById('fullscreenPlayerSeek');
+  if (fullscreenSeekDragging && seek !== fullscreenSeekSource) fullscreenSeekDragging = false;
+  const duration = Number(seek?.max) || 0;
+  const scale = seek?.dataset.seekUnit === 'milliseconds' ? 1000 : 1;
+  fullSeek.disabled = !seek || seek.disabled || !Number.isFinite(duration) || duration <= 0;
+  fullSeek.max = String(duration);
+  fullSeek.step = String(scale);
+  if (!fullscreenSeekDragging) fullSeek.value = String(Number(seek?.value) || 0);
+  document.getElementById('fullscreenPlayerPosition').textContent = formatListeningTime(Number(fullSeek.value) / scale);
+  document.getElementById('fullscreenPlayerDuration').textContent = formatListeningTime(duration / scale);
+  fullSeek.setAttribute('aria-valuetext', `${formatListeningTime(Number(fullSeek.value) / scale)} von ${formatListeningTime(duration / scale)}`);
+  const sourceFavorite = dockContent?.querySelector('[data-listening-favorite="spotify"]');
+  const favorite = document.getElementById('fullscreenPlayerFavorite');
+  favorite.hidden = !sourceFavorite;
+  favorite.disabled = !sourceFavorite || sourceFavorite.disabled || !isSpotifyIntegrationAvailable();
+  favorite.innerHTML = sourceFavorite?.innerHTML || LISTENING_ICON_SVG.favorite;
+  favorite.title = sourceFavorite?.title || 'Zu deinen Spotify-Lieblingssongs hinzufügen';
+  if (sourceFavorite && !isSpotifyIntegrationAvailable()) favorite.title = 'Spotify-Lieblingssongs sind nur auf vinyl.elkevinio.de verfügbar';
+  favorite.setAttribute('aria-label', favorite.title);
+  const actionStatus = document.getElementById('fullscreenPlayerActionStatus');
+  actionStatus.hidden = !sourceFavorite?.dataset.favoriteMessage;
+  actionStatus.textContent = sourceFavorite?.dataset.favoriteMessage || '';
+  const position = Number(seek?.value) || 0;
+  const progress = duration > 0 ? Math.min((fullscreenSeekDragging ? Number(fullSeek.value) : position) / duration, 1) : 0;
+  document.getElementById('fullscreenPlayerProgressBar').style.width = `${progress * 100}%`;
+  overlay.style.setProperty('--track-progress', progress.toFixed(3));
+  renderFullscreenPlayerShelf();
+}
+
+function openFullscreenPlayer() {
+  const overlay = document.getElementById('fullscreenPlayerOverlay');
+  const dock = document.getElementById('albumListeningDock');
+  if (!overlay || !dock) return;
+  fullscreenPlayerRenderedAlbum = currentListeningAlbum;
+  renderFullscreenPlayerVinyl();
+  renderFullscreenPlayerCover();
+  overlay.hidden = false;
+  document.body.classList.add('fullscreen-player-open');
+  syncFullscreenPlayer();
+  const dockContent = document.getElementById('albumListeningDockContent');
+  fullscreenPlayerObserver?.disconnect();
+  if (dockContent) {
+    fullscreenPlayerObserver = new MutationObserver(syncFullscreenPlayer);
+    fullscreenPlayerObserver.observe(dockContent, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-label', 'src', 'hidden', 'class']
+    });
+  }
+  if (fullscreenPlayerSyncTimer) window.clearInterval(fullscreenPlayerSyncTimer);
+  fullscreenPlayerSyncTimer = window.setInterval(syncFullscreenPlayer, 500);
+}
+
+function closeFullscreenPlayer() {
+  const overlay = document.getElementById('fullscreenPlayerOverlay');
+  if (!overlay || overlay.hidden) return;
+  overlay.hidden = true;
+  fullscreenSeekDragging = false;
+  fullscreenSeekSource = null;
+  document.getElementById('fullscreenPlayerSeek').parentElement.classList.remove('is-seeking');
+  stopFullscreenAudioAnalysis();
+  document.body.classList.remove('fullscreen-player-open');
+  fullscreenPlayerRenderedAlbum = null;
+  fullscreenPlayerObserver?.disconnect();
+  fullscreenPlayerObserver = null;
+  if (fullscreenPlayerSyncTimer) window.clearInterval(fullscreenPlayerSyncTimer);
+  fullscreenPlayerSyncTimer = null;
+  if (fullscreenPlayerChangeTimer) window.clearTimeout(fullscreenPlayerChangeTimer);
+  fullscreenPlayerChangeTimer = null;
+  fullscreenPlayerChanging = false;
+  overlay.classList.remove('is-changing-album', 'is-changing-in');
+  setFullscreenPlayerMenuOpen(false);
+  setFullscreenPlayerQueueOpen(false);
+  setFullscreenRoomSettingsOpen(false);
+}
+
+function previewFullscreenPlayerSeek() {
+  const input = document.getElementById('fullscreenPlayerSeek');
+  const source = document.querySelector('#albumListeningDockContent .album-mini-seek');
+  if (input.disabled || !source) return;
+  fullscreenSeekDragging = true;
+  fullscreenSeekSource = source;
+  const scale = source.dataset.seekUnit === 'milliseconds' ? 1000 : 1;
+  const duration = Number(input.max) || 0;
+  document.getElementById('fullscreenPlayerPosition').textContent = formatListeningTime(Number(input.value) / scale);
+  input.setAttribute('aria-valuetext', `${formatListeningTime(Number(input.value) / scale)} von ${formatListeningTime(duration / scale)}`);
+  document.getElementById('fullscreenPlayerProgressBar').style.width = `${duration ? Number(input.value) / duration * 100 : 0}%`;
+  input.parentElement.classList.add('is-seeking');
+}
+function commitFullscreenPlayerSeek() {
+  const input = document.getElementById('fullscreenPlayerSeek');
+  const source = document.querySelector('#albumListeningDockContent .album-mini-seek');
+  const valid = !input.disabled && source && !source.disabled && source === fullscreenSeekSource;
+  fullscreenSeekDragging = false;
+  input.parentElement.classList.remove('is-seeking');
+  if (valid) {
+    source.value = String(Math.max(0, Math.min(Number(source.max) || 0, Number(input.value) || 0)));
+    source.dispatchEvent(new Event('input', { bubbles:true }));
+    source.dispatchEvent(new Event('change', { bubbles:true }));
+  }
+  syncFullscreenPlayer();
+}
+const fullscreenSeekInput = document.getElementById('fullscreenPlayerSeek');
+fullscreenSeekInput.addEventListener('input', previewFullscreenPlayerSeek);
+fullscreenSeekInput.addEventListener('change', commitFullscreenPlayerSeek);
+fullscreenSeekInput.addEventListener('pointerdown', () => {
+  fullscreenSeekSource = document.querySelector('#albumListeningDockContent .album-mini-seek');
+  fullscreenSeekDragging = true;
+});
+fullscreenSeekInput.addEventListener('pointercancel', () => {
+  fullscreenSeekDragging = false;
+  fullscreenSeekInput.parentElement.classList.remove('is-seeking');
+  syncFullscreenPlayer();
+});
+fullscreenSeekInput.addEventListener('wheel', event => {
+  if (fullscreenSeekInput.disabled || !(event.deltaY || event.deltaX)) return;
+  event.preventDefault();
+  const now = performance.now();
+  if (now - fullscreenSeekWheelAt < 80) return;
+  fullscreenSeekWheelAt = now;
+  const source = document.querySelector('#albumListeningDockContent .album-mini-seek');
+  const scale = source?.dataset.seekUnit === 'milliseconds' ? 1000 : 1;
+  const direction = (event.deltaY || event.deltaX) < 0 ? 1 : -1;
+  fullscreenSeekInput.value = String(Math.max(0, Math.min(Number(fullscreenSeekInput.max), Number(fullscreenSeekInput.value) + direction * 5 * scale)));
+  previewFullscreenPlayerSeek();
+  commitFullscreenPlayerSeek();
+}, { passive:false });
+document.getElementById('fullscreenPlayerFavorite').addEventListener('click', () => {
+  const source = document.querySelector('#albumListeningDockContent [data-listening-favorite="spotify"]');
+  if (!source || source.disabled || !isSpotifyIntegrationAvailable()) return;
+  source.click();
+  syncFullscreenPlayer();
+});
+
+document.getElementById('closeFullscreenPlayerBtn').addEventListener('click', closeFullscreenPlayer);
+document.getElementById('fullscreenPlayerToggle').addEventListener('click', () => {
+  getListeningPrimaryToggle()?.click();
+});
+document.getElementById('fullscreenPlayerPrev').addEventListener('click', () => {
+  document.querySelector('#albumListeningDockContent .album-mini-control[aria-label="Vorheriger Titel"]')?.click();
+});
+document.getElementById('fullscreenPlayerNext').addEventListener('click', () => {
+  document.querySelector('#albumListeningDockContent .album-mini-control[aria-label="Nächster Titel"]')?.click();
+});
+
+(function buildFullscreenPlayerEq() {
+  const eq = document.getElementById('fullscreenPlayerEq');
+  if (!eq) return;
+  const bars = 18;
+  for (let index = 0; index < bars; index += 1) {
+    const bar = document.createElement('span');
+    bar.style.height = `${30 + Math.round(Math.abs(Math.sin(index * 1.7)) * 70)}%`;
+    bar.style.animationDuration = `${(0.7 + (index % 5) * 0.12).toFixed(2)}s`;
+    bar.style.animationDelay = `${(index * 0.06).toFixed(2)}s`;
+    eq.append(bar);
+  }
+})();
+
+// Live audio is session-only. Permission and media streams are never persisted.
+let fullscreenAudioSession = null;
+
+function fullscreenAudioSupported() {
+  return !!(window.isSecureContext && navigator.mediaDevices?.getDisplayMedia
+    && (window.AudioContext || window.webkitAudioContext));
+}
+function updateFullscreenAudioUi(message = '', isError = false) {
+  const button = document.getElementById('fullscreenAudioConnect');
+  const status = document.getElementById('fullscreenAudioStatus');
+  const pending = fullscreenAudioSession && !fullscreenAudioSession.connected;
+  button.disabled = !!pending || !fullscreenAudioSupported();
+  button.textContent = pending ? 'Freigabe wird geöffnet …'
+    : fullscreenAudioSession?.connected ? 'Audio-Verbindung trennen' : 'Audio mit Equalizer verbinden';
+  button.setAttribute('aria-pressed', String(!!fullscreenAudioSession?.connected));
+  status.hidden = !isError && fullscreenAudioSupported();
+  if (message) status.textContent = message;
+  else if (!fullscreenAudioSupported()) status.textContent = 'Tab-Audio-Freigabe ist in diesem Browser nicht verfügbar. Öffne die Seite in einem unterstützten Desktop-Browser.';
+  else if (!fullscreenAudioSession) status.textContent = 'Dekorative Animation · kein Audio verbunden.';
+}
+function stopFullscreenAudioAnalysis(message = '', isError = false) {
+  const session = fullscreenAudioSession;
+  fullscreenAudioSession = null;
+  if (session) {
+    if (session.frame) cancelAnimationFrame(session.frame);
+    session.source?.disconnect();
+    session.analyser?.disconnect();
+    session.stream?.getTracks().forEach(track => { track.onended = null; track.stop(); });
+    if (session.context && session.context.state !== 'closed') void session.context.close().catch(() => {});
+  }
+  const eq = document.getElementById('fullscreenPlayerEq');
+  eq?.classList.remove('is-live-audio');
+  eq?.querySelectorAll('span').forEach(bar => {
+    if (bar.dataset.decorativeHeight) bar.style.height = bar.dataset.decorativeHeight;
+    bar.style.removeProperty('--eq-level');
+  });
+  updateFullscreenAudioUi(message, isError);
+}
+function getFullscreenAudioBandLevels(data, sampleRate, fftSize, count) {
+  const levels = [];
+  const minFrequency = 45;
+  const maxFrequency = Math.min(16000, sampleRate / 2);
+  for (let index = 0; index < count; index += 1) {
+    const fromHz = minFrequency * (maxFrequency / minFrequency) ** (index / count);
+    const toHz = minFrequency * (maxFrequency / minFrequency) ** ((index + 1) / count);
+    const from = Math.min(data.length - 1, Math.max(0, Math.floor(fromHz * fftSize / sampleRate)));
+    const to = Math.min(data.length, Math.max(from + 1, Math.ceil(toHz * fftSize / sampleRate)));
+    let energy = 0;
+    for (let bin = from; bin < to; bin += 1) energy += (data[bin] / 255) ** 2;
+    levels.push(Math.max(0.018, Math.min(1, Math.sqrt(energy / (to - from)) ** 0.8)));
+  }
+  return levels;
+}
+function animateFullscreenAudio(session, now) {
+  if (fullscreenAudioSession !== session || !session.connected) return;
+  session.analyser.getByteFrequencyData(session.data);
+  const levels = getFullscreenAudioBandLevels(session.data, session.context.sampleRate, session.analyser.fftSize, session.bars.length);
+  session.bars.forEach((bar, index) => bar.style.setProperty('--eq-level', levels[index].toFixed(3)));
+  if (levels.some(level => level > 0.06)) session.lastSignal = now;
+  const silent = now - session.lastSignal > 5000;
+  if (silent !== session.silent) {
+    session.silent = silent;
+    updateFullscreenAudioUi(silent
+      ? 'Verbunden, aber kein Ton erkannt. Spiele Musik ab und prüfe, ob „Tab-Audio teilen“ aktiviert ist. Geschützte Quellen können stumm bleiben.'
+      : 'Live-Analyse aktiv · Frequenzen aus dem freigegebenen Tab.', silent);
+  }
+  session.frame = requestAnimationFrame(time => animateFullscreenAudio(session, time));
+}
+async function startFullscreenAudioAnalysis() {
+  if (!fullscreenAudioSupported()) { updateFullscreenAudioUi(); return; }
+  if (fullscreenAudioSession) return;
+  const session = { connected:false, stream:null, context:null, frame:0, source:null, analyser:null };
+  fullscreenAudioSession = session;
+  updateFullscreenAudioUi('Wähle den Musik-Tab aus und aktiviere „Tab-Audio teilen“.');
+  let request;
+  let contextError;
+  try {
+    // Start capture synchronously from the click, before awaiting anything.
+    request = navigator.mediaDevices.getDisplayMedia({
+      video: { displaySurface:'browser' },
+      audio: { suppressLocalAudioPlayback:false, echoCancellation:false, noiseSuppression:false, autoGainControl:false },
+      preferCurrentTab:true,
+      selfBrowserSurface:'include',
+      systemAudio:'exclude',
+      monitorTypeSurfaces:'exclude'
+    });
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    // Resume during the user gesture; report context errors after settling the picker.
+    try {
+      session.context = new AudioContextClass();
+      contextError = session.context.resume().then(() => null, error => error);
+    } catch (error) { contextError = Promise.resolve(error); }
+    const stream = await request;
+    if (fullscreenAudioSession !== session) { stream.getTracks().forEach(track => track.stop()); return; }
+    session.stream = stream;
+    const audioTracks = stream.getAudioTracks();
+    if (!audioTracks.length) {
+      stopFullscreenAudioAnalysis('Kein Tab-Audio freigegeben. Erneut verbinden und „Tab-Audio teilen“ aktivieren.', true);
+      return;
+    }
+    const error = await contextError;
+    if (fullscreenAudioSession !== session) return;
+    if (error) throw error;
+    session.source = session.context.createMediaStreamSource(new MediaStream(audioTracks));
+    session.analyser = session.context.createAnalyser();
+    applyFullscreenAudioResponsiveness(session);
+    session.analyser.minDecibels = -90;
+    session.analyser.maxDecibels = -15;
+    // No connection to destination: playback stays with the original player.
+    session.source.connect(session.analyser);
+    const eq = document.getElementById('fullscreenPlayerEq');
+    session.bars = [...eq.querySelectorAll('span')];
+    session.bars.forEach(bar => { bar.dataset.decorativeHeight = bar.style.height; bar.style.height = '100%'; });
+    session.data = new Uint8Array(session.analyser.frequencyBinCount);
+    session.connected = true;
+    session.lastSignal = performance.now();
+    session.silent = false;
+    stream.getTracks().forEach(track => { track.onended = () => {
+      if (fullscreenAudioSession === session) stopFullscreenAudioAnalysis('Audio-Freigabe beendet. Dekorative Animation ist wieder aktiv.');
+    }; });
+    // Video is never rendered, recorded or transmitted. Keep its track until disconnect.
+    eq.classList.add('is-live-audio');
+    updateFullscreenAudioUi('Live-Analyse aktiv · Frequenzen aus dem freigegebenen Tab.');
+    session.frame = requestAnimationFrame(time => animateFullscreenAudio(session, time));
+  } catch (error) {
+    if (fullscreenAudioSession !== session) return;
+    const message = ['NotAllowedError','AbortError'].includes(error?.name)
+      ? 'Freigabe abgebrochen oder nicht erlaubt. Dekorative Animation bleibt aktiv.'
+      : 'Audio konnte nicht verbunden werden. Wähle einen Browser-Tab mit Ton oder probiere einen unterstützten Desktop-Browser.';
+    stopFullscreenAudioAnalysis(message, true);
+  }
+}
+document.getElementById('fullscreenAudioConnect').addEventListener('click', () => {
+  if (fullscreenAudioSession?.connected) stopFullscreenAudioAnalysis('Audio-Verbindung getrennt. Dekorative Animation ist wieder aktiv.');
+  else void startFullscreenAudioAnalysis();
+});
+window.addEventListener('pagehide', () => stopFullscreenAudioAnalysis());
+updateFullscreenAudioUi();
+
+const FULLSCREEN_ROOM_STORAGE_KEY = 'fullscreenPlayerRoomStyleV1';
+const fullscreenRoomDefaults = { floor:'#362619', floorType:'wood', wall:'#15151b', wallPattern:'concrete', shelf:'#19191f', turntable:'#202027', equalizer:'#a855f7', lightLeft:'#ff2d95', lightRight:'#00d4ff', rug:'#20203b', rugStyle:'woven', rugShape:'rectangle', rugSize:'medium', speakers:'low', speakerColor:'#202025', wallpaper:'', layout:'auto', zoom:'off', responsiveness:40 };
+let fullscreenRoomStyle = { ...fullscreenRoomDefaults };
+try {
+  const saved = JSON.parse(localStorage.getItem(FULLSCREEN_ROOM_STORAGE_KEY) || '{}');
+  Object.keys(fullscreenRoomDefaults).forEach(key => {
+    if (typeof saved[key] === 'string' || (key === 'responsiveness' && Number.isFinite(saved[key]))) fullscreenRoomStyle[key] = saved[key];
+  });
+} catch {}
+const fullscreenRoomPatterns = {
+  wood:'repeating-linear-gradient(90deg, #0007 0 2px, transparent 2px 60px), repeating-linear-gradient(0deg, #ffffff05 0 1px, transparent 1px 5px)',
+  tiles:'repeating-linear-gradient(90deg, #0006 0 2px, transparent 2px 65px), repeating-linear-gradient(0deg, #0006 0 2px, transparent 2px 65px)',
+  concrete:'repeating-linear-gradient(35deg, #ffffff03 0 1px, transparent 1px 4px)',
+  plain:'linear-gradient(transparent, transparent)',
+  bricks:'repeating-linear-gradient(0deg, transparent 0 30px, #0005 30px 32px), repeating-linear-gradient(90deg, transparent 0 80px, #0003 80px 82px)',
+  stripes:'repeating-linear-gradient(90deg, #ffffff08 0 18px, transparent 18px 36px)',
+  grid:'repeating-linear-gradient(0deg, transparent 0 35px, #ffffff12 35px 36px), repeating-linear-gradient(90deg, transparent 0 35px, #ffffff12 35px 36px)'
+};
+function getFullscreenPlayerMobileMode() {
+  if (Math.min(window.innerWidth, window.innerHeight) >= 600) return '';
+  return window.innerHeight >= window.innerWidth ? 'portrait' : 'landscape';
+}
+
+function getFullscreenPlayerLayout() {
+  const mobileMode = getFullscreenPlayerMobileMode();
+  if (mobileMode) return mobileMode === 'portrait' ? 'stacked' : 'split';
+  if (['split', 'stacked'].includes(fullscreenRoomStyle.layout)) return fullscreenRoomStyle.layout;
+  return window.innerHeight <= 700 && window.innerWidth >= 480 && window.innerWidth > window.innerHeight ? 'split' : 'stacked';
+}
+function applyFullscreenPlayerPresentation() {
+  const overlay = document.getElementById('fullscreenPlayerOverlay');
+  if (!overlay) return;
+  const mobileMode = getFullscreenPlayerMobileMode();
+  const zoomEnabled = fullscreenRoomStyle.zoom === 'on' && mobileMode !== 'portrait';
+  const split = getFullscreenPlayerLayout() === 'split';
+  overlay.classList.toggle('is-split-layout', split);
+  overlay.classList.toggle('is-detail-zoom', zoomEnabled);
+  const stage = document.querySelector('.fullscreen-player-stage');
+  const rect = stage.getBoundingClientRect();
+  overlay.classList.toggle('has-speaker-space', window.innerWidth >= 1100 && window.innerHeight >= 500 && rect.width >= 650);
+
+  const layout = document.getElementById('fullscreenPlayerLayoutToggle');
+  layout.hidden = !!mobileMode;
+  layout.setAttribute('aria-pressed', String(split));
+  layout.title = split ? 'Oben-unten-Ansicht' : 'Links-rechts-Ansicht';
+  layout.setAttribute('aria-label', layout.title);
+  const zoom = document.getElementById('fullscreenPlayerZoomToggle');
+  zoom.hidden = mobileMode === 'portrait';
+  zoom.setAttribute('aria-pressed', String(zoomEnabled));
+  document.querySelector('[data-room-style="layout"]')?.closest('label').toggleAttribute('hidden', !!mobileMode);
+  document.querySelector('[data-room-style="zoom"]')?.closest('label').toggleAttribute('hidden', mobileMode === 'portrait');
+  zoom.title = zoomEnabled ? 'Komplettansicht anzeigen' : 'Plattenspieler und Cover vergrößern';
+  zoom.setAttribute('aria-label', zoom.title);
+}
+document.getElementById('fullscreenPlayerLayoutToggle').addEventListener('click', () => {
+  fullscreenRoomStyle.layout = getFullscreenPlayerLayout() === 'split' ? 'stacked' : 'split';
+  applyFullscreenPlayerPresentation();
+  renderFullscreenPlayerShelf();
+  persistFullscreenRoomStyle();
+});
+document.getElementById('fullscreenPlayerZoomToggle').addEventListener('click', () => {
+  fullscreenRoomStyle.zoom = fullscreenRoomStyle.zoom === 'on' ? 'off' : 'on';
+  if (fullscreenRoomStyle.zoom === 'on' && getFullscreenPlayerView() !== 'angled') {
+    localStorage.setItem(FULLSCREEN_PLAYER_VIEW_KEY, 'angled');
+    applyFullscreenPlayerView();
+  }
+  applyFullscreenPlayerPresentation();
+  renderFullscreenPlayerShelf();
+  persistFullscreenRoomStyle();
+});
+
+window.addEventListener('resize', () => {
+  if (!isFullscreenPlayerOpen()) return;
+  applyFullscreenPlayerPresentation();
+  renderFullscreenPlayerShelf();
+});
+
+function applyFullscreenAudioResponsiveness(session = fullscreenAudioSession) {
+  const value = Math.max(0, Math.min(100, Number(fullscreenRoomStyle.responsiveness) || 0));
+  const response = value / 100;
+  const input = document.getElementById('fullscreenAudioResponsiveness');
+  input.value = String(value);
+  input.setAttribute('aria-valuetext', value === 100 ? 'Direkt' : value === 0 ? 'Stark geglättet' : `${value} Prozent`);
+  document.getElementById('fullscreenAudioResponsivenessValue').textContent = `${value}%`;
+  document.getElementById('fullscreenPlayerEq').style.setProperty('--eq-transition', `${Math.round(180 * (1 - response))}ms`);
+  if (session?.analyser) {
+    session.analyser.smoothingTimeConstant = 0.96 * (1 - response) ** 0.7;
+    const size = response >= 0.85 ? 512 : response >= 0.6 ? 1024 : response >= 0.3 ? 2048 : 4096;
+    if (session.analyser.fftSize !== size) session.analyser.fftSize = size;
+    if (session.data?.length !== session.analyser.frequencyBinCount) session.data = new Uint8Array(session.analyser.frequencyBinCount);
+  }
+}
+document.getElementById('fullscreenAudioResponsiveness').addEventListener('input', event => {
+  fullscreenRoomStyle.responsiveness = Number(event.target.value);
+  applyFullscreenAudioResponsiveness();
+  persistFullscreenRoomStyle();
+});
+function commitFullscreenRoomSettings() {
+  const input = document.getElementById('fullscreenPlayerPosterUrl');
+  const url = input.value.trim();
+  let valid = !url;
+  try { valid = !url || ['http:', 'https:'].includes(new URL(url).protocol); } catch {}
+  if (valid && url !== fullscreenRoomStyle.wallpaper) {
+    fullscreenRoomStyle.wallpaper = url;
+    setFullscreenPlayerPoster(url);
+    persistFullscreenRoomStyle();
+  }
+  if (fullscreenRoomDirty) void saveFullscreenRoomStyle();
+}
+window.addEventListener('pagehide', () => {
+  if (!document.getElementById('fullscreenPlayerPosterForm').hidden) commitFullscreenRoomSettings();
+  else if (fullscreenRoomDirty) void saveFullscreenRoomStyle();
+});
+
+function applyFullscreenRoomStyle() {
+  applyFullscreenAudioResponsiveness();
+  applyFullscreenPlayerPresentation();
+  const overlay = document.getElementById('fullscreenPlayerOverlay');
+  Object.entries({floor:'floor',wall:'wall',shelf:'shelf',turntable:'turntable',equalizer:'equalizer',lightLeft:'light-left',lightRight:'light-right',rug:'rug',speakerColor:'speaker'}).forEach(([key,variable]) => {
+    const value = /^#[0-9a-f]{6}$/i.test(fullscreenRoomStyle[key]) ? fullscreenRoomStyle[key] : fullscreenRoomDefaults[key];
+    overlay.style.setProperty(`--room-${variable}`, value);
+  });
+  overlay.style.setProperty('--room-floor-pattern', fullscreenRoomPatterns[fullscreenRoomStyle.floorType] || fullscreenRoomPatterns.wood);
+  overlay.style.setProperty('--room-wall-pattern', fullscreenRoomPatterns[fullscreenRoomStyle.wallPattern] || fullscreenRoomPatterns.concrete);
+  overlay.dataset.rugStyle = fullscreenRoomStyle.rugStyle;
+  overlay.dataset.rugShape = fullscreenRoomStyle.rugShape;
+  overlay.dataset.speakers = fullscreenRoomStyle.speakers;
+  overlay.style.setProperty('--room-rug-scale', ({small:0.8,medium:1.1,large:1.45})[fullscreenRoomStyle.rugSize] || 1.1);
+}
+const fullscreenRoomFields = document.getElementById('fullscreenPlayerRoomFields');
+[
+  ['layout','Anordnung',{auto:'Automatisch',stacked:'Oben / unten',split:'Links / rechts'}],
+  ['zoom','Kamera',{off:'Komplettansicht',on:'Player und Cover'}],
+  ['floorType','Bodenart',{wood:'Holzdielen',tiles:'Fliesen',concrete:'Beton',plain:'Glatt'}],
+  ['floor','Bodenfarbe'], ['wall','Wandfarbe'],
+  ['wallPattern','Wandtextur / Muster',{concrete:'Beton',plain:'Glatt',bricks:'Backstein',stripes:'Streifen',grid:'Raster'}],
+  ['shelf','Regalfarbe'], ['turntable','Plattenspieler'], ['equalizer','Equalizer'],
+  ['lightLeft','Licht links'], ['lightRight','Licht rechts'],
+  ['rug','Teppichfarbe'],
+  ['rugStyle','Teppichmuster',{woven:'Gewebt',plain:'Einfarbig',geometric:'Rauten',stripes:'Streifen',off:'Kein Teppich'}],
+  ['rugShape','Teppichform',{rectangle:'Rechteckig',round:'Rund',rounded:'Abgerundet'}],
+  ['rugSize','Teppichgröße',{small:'Klein',medium:'Mittel',large:'Groß'}],
+  ['speakers','Lautsprecher',{off:'Aus',low:'Low · Wandboxen',mid:'Mid · Tower + 1 Sub',high:'High · High-End + 2 Subs'}],
+  ['speakerColor','Lautsprecherfarbe']
+].forEach(([key,title,options]) => {
+  const label = document.createElement('label');
+  label.textContent = title;
+  const input = document.createElement(options ? 'select' : 'input');
+  if (options) Object.entries(options).forEach(([value,text]) => {
+    const option = document.createElement('option'); option.value = value; option.textContent = text; input.append(option);
+  });
+  else input.type = 'color';
+  input.value = fullscreenRoomStyle[key];
+  input.dataset.roomStyle = key;
+  input.addEventListener('input', () => {
+    fullscreenRoomStyle[key] = input.value;
+    applyFullscreenRoomStyle();
+    persistFullscreenRoomStyle();
+  });
+  label.append(input); fullscreenRoomFields.append(label);
+});
+applyFullscreenRoomStyle();
+document.getElementById('fullscreenPlayerRoomSettings').addEventListener('click', event => {
+  const form = document.getElementById('fullscreenPlayerPosterForm');
+  if (form.hidden) changeFullscreenPlayerPoster(event);
+  else setFullscreenRoomSettingsOpen(false);
+  event.currentTarget.setAttribute('aria-expanded', String(!form.hidden));
+});
+document.getElementById('fullscreenPlayerRoomReset').addEventListener('click', () => {
+  fullscreenRoomStyle = { ...fullscreenRoomDefaults };
+  localStorage.removeItem(FULLSCREEN_ROOM_STORAGE_KEY);
+  localStorage.removeItem('fullscreenPlayerPosterUrl');
+  document.getElementById('fullscreenPlayerPosterUrl').value = '';
+  fullscreenRoomFields.querySelectorAll('[data-room-style]').forEach(input => input.value = fullscreenRoomStyle[input.dataset.roomStyle]);
+  applyFullscreenRoomStyle(); setFullscreenPlayerPoster('');
+  persistFullscreenRoomStyle();
+});
+
+let fullscreenRoomSaveTimer = null;
+let fullscreenRoomSaveQueue = Promise.resolve();
+let fullscreenRoomLoadedUid = null;
+let fullscreenRoomDirty = false;
+
+function updateFullscreenRoomStatus(message) {
+  document.getElementById('fullscreenRoomCloudStatus').textContent = message;
+}
+function normalizeFullscreenRoomStyle(raw) {
+  const result = { ...fullscreenRoomDefaults };
+  const choices = {layout:['auto','stacked','split'],zoom:['off','on'],floorType:['wood','tiles','concrete','plain'],wallPattern:['concrete','plain','bricks','stripes','grid'],rugStyle:['woven','plain','geometric','stripes','off'],rugShape:['rectangle','round','rounded'],rugSize:['small','medium','large'],speakers:['off','low','mid','high']};
+  Object.keys(result).forEach(key => {
+    const value = raw?.[key];
+    if (key === 'responsiveness') {
+      if (typeof value === 'number' && Number.isFinite(value)) result[key] = Math.max(0, Math.min(100, Math.round(value)));
+    } else if (key === 'wallpaper') {
+      try { if (value && ['http:','https:'].includes(new URL(value).protocol)) result[key] = value; } catch {}
+    } else if (choices[key]) {
+      if (choices[key].includes(value)) result[key] = value;
+    } else if (/^#[0-9a-f]{6}$/i.test(value || '')) result[key] = value;
+  });
+  return result;
+}
+function refreshFullscreenRoomControls() {
+  fullscreenRoomFields.querySelectorAll('[data-room-style]').forEach(input => input.value = fullscreenRoomStyle[input.dataset.roomStyle]);
+  document.getElementById('fullscreenPlayerPosterUrl').value = fullscreenRoomStyle.wallpaper;
+  applyFullscreenRoomStyle();
+  setFullscreenPlayerPoster(fullscreenRoomStyle.wallpaper);
+}
+function resetFullscreenRoomSession() {
+  stopFullscreenAudioAnalysis();
+  clearTimeout(fullscreenRoomSaveTimer);
+  fullscreenRoomLoadedUid = null;
+  fullscreenRoomDirty = false;
+  fullscreenRoomStyle = { ...fullscreenRoomDefaults };
+  refreshFullscreenRoomControls();
+}
+function persistFullscreenRoomStyle() {
+  fullscreenRoomDirty = true;
+  const uid = currentUid;
+  if (uid) {
+    localStorage.setItem(`${FULLSCREEN_ROOM_STORAGE_KEY}:${uid}`, JSON.stringify(fullscreenRoomStyle));
+    localStorage.setItem(`${FULLSCREEN_ROOM_STORAGE_KEY}:${uid}:pending`, 'true');
+  }
+  clearTimeout(fullscreenRoomSaveTimer);
+  updateFullscreenRoomStatus(uid ? 'Änderungen werden gespeichert …' : 'Zum Speichern im Profil bitte anmelden.');
+  fullscreenRoomSaveTimer = setTimeout(() => { void saveFullscreenRoomStyle(); }, 600);
+}
+async function saveFullscreenRoomStyle() {
+  clearTimeout(fullscreenRoomSaveTimer);
+  const uid = currentUid;
+  if (!uid || fullscreenRoomLoadedUid !== uid) {
+    updateFullscreenRoomStatus(uid ? 'Profil noch nicht geladen. Bitte erneut synchronisieren.' : 'Zum Speichern im Profil bitte anmelden.');
+    return;
+  }
+  const style = normalizeFullscreenRoomStyle(fullscreenRoomStyle);
+  localStorage.setItem(`${FULLSCREEN_ROOM_STORAGE_KEY}:${uid}`, JSON.stringify(style));
+  localStorage.setItem(`${FULLSCREEN_ROOM_STORAGE_KEY}:${uid}:pending`, 'true');
+  fullscreenRoomSaveQueue = fullscreenRoomSaveQueue.catch(() => {}).then(async () => {
+    if (currentUid !== uid) return;
+    try {
+      await trackFirebaseRequest(db.collection('users').doc(uid).collection('privateSettings').doc('playerRoom').set({version:1,style}));
+      if (currentUid === uid && JSON.stringify(style) === JSON.stringify(normalizeFullscreenRoomStyle(fullscreenRoomStyle))) {
+        fullscreenRoomDirty = false;
+        localStorage.removeItem(`${FULLSCREEN_ROOM_STORAGE_KEY}:${uid}:pending`);
+        updateFullscreenRoomStatus('Im Firebase-Profil gespeichert.');
+      }
+      return true;
+    } catch (error) {
+      if (currentUid === uid) fullscreenRoomDirty = true;
+      console.error('Raumgestaltung konnte nicht gespeichert werden:', error);
+      if (currentUid === uid) updateFullscreenRoomStatus('Cloud-Speichern fehlgeschlagen. Lokal gesichert – mit „Jetzt synchronisieren“ erneut versuchen.');
+      return false;
+    }
+  });
+  return await fullscreenRoomSaveQueue;
+}
+async function loadFullscreenRoomStyle(uid) {
+  fullscreenRoomLoadedUid = null;
+  fullscreenRoomDirty = false;
+  updateFullscreenRoomStatus('Raumeinstellungen werden geladen …');
+  let cache = null;
+  try { cache = JSON.parse(localStorage.getItem(`${FULLSCREEN_ROOM_STORAGE_KEY}:${uid}`) || 'null'); } catch {}
+  if (cache && currentUid === uid) {
+    fullscreenRoomStyle = normalizeFullscreenRoomStyle(cache);
+    refreshFullscreenRoomControls();
+    fullscreenRoomDirty = localStorage.getItem(`${FULLSCREEN_ROOM_STORAGE_KEY}:${uid}:pending`) === 'true';
+  }
+  try {
+    const snapshot = await trackFirebaseRequest(db.collection('users').doc(uid).collection('privateSettings').doc('playerRoom').get());
+    if (currentUid !== uid) return;
+    fullscreenRoomLoadedUid = uid;
+    if (fullscreenRoomDirty) { await saveFullscreenRoomStyle(); return; }
+    if (snapshot.exists) {
+      fullscreenRoomStyle = normalizeFullscreenRoomStyle(snapshot.data().style);
+      localStorage.setItem(`${FULLSCREEN_ROOM_STORAGE_KEY}:${uid}`, JSON.stringify(fullscreenRoomStyle));
+      refreshFullscreenRoomControls();
+      updateFullscreenRoomStatus('Aus deinem Firebase-Profil geladen.');
+    } else {
+      // Adopt the previous local room only once; never copy it into another account.
+      let legacy = null;
+      try { legacy = JSON.parse(localStorage.getItem(FULLSCREEN_ROOM_STORAGE_KEY) || 'null'); } catch {}
+      fullscreenRoomStyle = normalizeFullscreenRoomStyle(cache || (legacy ? {...legacy,wallpaper:localStorage.getItem('fullscreenPlayerPosterUrl') || legacy.wallpaper} : {}));
+      refreshFullscreenRoomControls();
+      const saved = await saveFullscreenRoomStyle();
+      if (saved) {
+        localStorage.removeItem(FULLSCREEN_ROOM_STORAGE_KEY);
+        localStorage.removeItem('fullscreenPlayerPosterUrl');
+      }
+    }
+  } catch (error) {
+    if (currentUid !== uid) return;
+    // Keep retries available even when the initial read is unavailable.
+    fullscreenRoomLoadedUid = uid;
+    if (!cache) { fullscreenRoomStyle = { ...fullscreenRoomDefaults }; refreshFullscreenRoomControls(); }
+    updateFullscreenRoomStatus('Cloud-Laden fehlgeschlagen. Mit „Jetzt synchronisieren“ erneut versuchen.');
+    console.error('Raumgestaltung konnte nicht geladen werden:', error);
+  }
+}
+document.getElementById('fullscreenRoomSave').addEventListener('click', () => {
+  if (fullscreenRoomDirty) void saveFullscreenRoomStyle();
+  else if (currentUid) void loadFullscreenRoomStyle(currentUid);
+});
+
+const FULLSCREEN_POSTER_STORAGE_KEY = 'fullscreenPlayerPosterUrl';
+
+function setFullscreenPlayerPoster(url) {
+  const poster = document.querySelector('.fullscreen-player-room-poster');
+  if (!poster) return;
+  poster.querySelector('img')?.remove();
+  poster.classList.remove('has-image');
+  if (!url) return;
+  const image = document.createElement('img');
+  image.alt = 'Eigenes Wandbild';
+  image.addEventListener('load', () => poster.classList.add('has-image'), { once: true });
+  image.addEventListener('error', () => {
+    image.remove();
+    poster.classList.remove('has-image');
+    poster.title = 'Bild konnte nicht geladen werden. Rechtsklick: andere Bild-URL wählen';
+  }, { once: true });
+  image.src = url;
+  poster.append(image);
+}
+
+function setFullscreenRoomSettingsOpen(isOpen) {
+  const form = document.getElementById('fullscreenPlayerPosterForm');
+  if (!isOpen && !form.hidden) commitFullscreenRoomSettings();
+  form.hidden = !isOpen;
+  document.getElementById('fullscreenPlayerRoomSettings').setAttribute('aria-expanded', String(isOpen));
+  if (isOpen) {
+    setFullscreenPlayerMenuOpen(false);
+    setFullscreenPlayerQueueOpen(false);
+    if (getFullscreenPlayerView() !== 'angled') {
+      localStorage.setItem(FULLSCREEN_PLAYER_VIEW_KEY, 'angled');
+      applyFullscreenPlayerView();
+    }
+  }
+  if (isFullscreenPlayerOpen()) renderFullscreenPlayerShelf();
+}
+
+function changeFullscreenPlayerPoster(event) {
+  event.preventDefault();
+  const form = document.getElementById('fullscreenPlayerPosterForm');
+  const input = document.getElementById('fullscreenPlayerPosterUrl');
+  input.value = fullscreenRoomStyle.wallpaper || '';
+  setFullscreenRoomSettingsOpen(true);
+  form.scrollTop = 0;
+  form.querySelector('select')?.focus({ preventScroll: true });
+}
+
+document.getElementById('fullscreenRoomClose').addEventListener('click', () => {
+  setFullscreenRoomSettingsOpen(false);
+  document.getElementById('fullscreenPlayerRoomSettings').focus();
+});
+document.getElementById('fullscreenPlayerPosterCancel').addEventListener('click', () => {
+  setFullscreenRoomSettingsOpen(false);
+});
+document.getElementById('fullscreenPlayerPosterForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const input = document.getElementById('fullscreenPlayerPosterUrl');
+  const url = input.value.trim();
+  input.setCustomValidity('');
+  if (url) {
+    try {
+      if (!['https:', 'http:'].includes(new URL(url).protocol)) throw new Error('invalid');
+    } catch {
+      input.setCustomValidity('Bitte eine Bild-URL mit https:// oder http:// eingeben.');
+      input.reportValidity();
+      return;
+    }
+  }
+  if (url) localStorage.setItem(FULLSCREEN_POSTER_STORAGE_KEY, url);
+  else localStorage.removeItem(FULLSCREEN_POSTER_STORAGE_KEY);
+  fullscreenRoomStyle.wallpaper = url;
+  persistFullscreenRoomStyle();
+  setFullscreenPlayerPoster(url);
+  setFullscreenRoomSettingsOpen(false);
+});
+document.getElementById('fullscreenPlayerPosterUrl').addEventListener('input', event => event.target.setCustomValidity(''));
+document.getElementById('fullscreenPlayerPosterForm').addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  event.stopPropagation();
+  setFullscreenRoomSettingsOpen(false);
+  document.getElementById('fullscreenPlayerRoomSettings').focus();
+});
+
+const fullscreenPlayerPoster = document.querySelector('.fullscreen-player-room-poster');
+fullscreenPlayerPoster?.addEventListener('contextmenu', changeFullscreenPlayerPoster);
+fullscreenPlayerPoster?.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') changeFullscreenPlayerPoster(event);
+});
+setFullscreenPlayerPoster(fullscreenRoomStyle.wallpaper || localStorage.getItem(FULLSCREEN_POSTER_STORAGE_KEY) || '');
+
+const FULLSCREEN_SHELF_STORAGE_KEY = 'fullscreenPlayerShelfId';
+let fullscreenPlayerShelfSignature = '';
+let fullscreenPlayerCompartment = null;
+
+function getFullscreenPlayerShelf() {
+  if (!Array.isArray(shelfLocations) || !shelfLocations.length) return null;
+  const savedId = localStorage.getItem(FULLSCREEN_SHELF_STORAGE_KEY) || '';
+  return shelfLocations.find(shelf => shelf.id === savedId) || shelfLocations[0];
+}
+
+function getFullscreenShelfCompartmentItems(shelf, compartmentNumber) {
+  const items = ownCollection.filter(item => item.owned && item.shelfId === shelf.id
+    && Number(item.shelfCompartment) === Number(compartmentNumber));
+  return getCustomOrderedStorageItems(items, shelf.compartmentSortOrders?.[compartmentNumber] || [],
+    compareStorageItemsWithSettings(getStorageSortSettings(shelf, compartmentNumber)),
+    shelf.compartmentManualSorts?.[compartmentNumber] || shelf.compartmentSortModes?.[compartmentNumber] === 'custom');
+}
+
+function createFullscreenShelfSpine(item) {
+  const spine = document.createElement('span');
+  spine.className = 'fullscreen-player-shelf-record';
+  if (isCdItem(item)) spine.classList.add('is-cd');
+  const count = Math.max(1, normalizeVinylDesign(item).records.length);
+  spine.style.setProperty('--spine-w', `${3 + (count - 1) * 2}px`);
+  spine.style.setProperty('--spine-h', '88%');
+  if (item.coverUrl) {
+    const edge = document.createElement('img');
+    edge.src = item.coverUrl;
+    edge.alt = '';
+    edge.loading = 'lazy';
+    edge.addEventListener('error', () => edge.remove(), { once: true });
+    spine.append(edge);
+  }
+  spine.title = [item.artist, item.title].filter(Boolean).join(' – ');
+  return spine;
+}
+
+function renderFullscreenPlayerShelf() {
+  const stage = document.querySelector('.fullscreen-player-stage');
+  const shelfElement = document.querySelector('.fullscreen-player-shelf-left');
+  const picker = document.getElementById('fullscreenPlayerShelfPicker');
+  const select = document.getElementById('fullscreenPlayerShelfSelect');
+  if (!stage || !shelfElement || !picker || !select) return;
+  const shelf = getFullscreenPlayerShelf();
+  const columns = shelf ? shelf.columns : 2;
+  const rows = shelf ? shelf.rows : 2;
+  const capacity = columns * rows;
+  const removed = shelf ? shelf.removedCompartments : [];
+  const stageRect = stage.getBoundingClientRect();
+  const stageHeight = stageRect.height || window.innerHeight * 0.7;
+  const stageWidth = stageRect.width || window.innerWidth;
+  let signature = [
+    shelf?.id || 'default',
+    fullscreenPlayerCompartment ? `${fullscreenPlayerCompartment.shelfId}:${fullscreenPlayerCompartment.number}` : '',
+    shelfLocations.map(entry => `${entry.id}:${entry.name}:${entry.rows}:${entry.columns}:${entry.mode}:${entry.removedCompartments.join('.')}`).join('|'),
+    `${window.innerWidth}x${window.innerHeight}`,
+    Math.round(stageHeight),
+    Math.round(stageWidth),
+    getFullscreenPlayerLayout(),
+    document.getElementById('fullscreenPlayerOverlay').classList.contains('has-speaker-space')
+  ].join('~');
+  const compartmentItems = new Map();
+  if (shelf) {
+    for (let number = 1; number <= capacity; number += 1) {
+      if (removed.includes(number)) continue;
+      const items = getFullscreenShelfCompartmentItems(shelf, number);
+      compartmentItems.set(number, items);
+      signature += `~${number}:${items.map(item => item.id).join(',')}`;
+    }
+  }
+  picker.hidden = !shelfLocations.length;
+  if (shelfLocations.length) {
+    const optionsSignature = shelfLocations.map(entry => `${entry.id}=${entry.name}`).join('|');
+    if (select.dataset.optionsSignature !== optionsSignature) {
+      select.dataset.optionsSignature = optionsSignature;
+      select.replaceChildren(...shelfLocations.map(entry => {
+        const option = document.createElement('option');
+        option.value = entry.id;
+        option.textContent = entry.name;
+        return option;
+      }));
+    }
+    select.value = shelf?.id || '';
+  }
+  if (signature === fullscreenPlayerShelfSignature) return;
+  fullscreenPlayerShelfSignature = signature;
+  const isDisplayShelf = shelf?.mode === 'display';
+  shelfElement.classList.toggle('is-display-shelf', isDisplayShelf);
+  let heightFactor = rows * (isDisplayShelf ? 1 : 0.56) / columns;
+  const isMobile = window.matchMedia('(max-width: 700px)').matches;
+  const compactLandscape = getFullscreenPlayerLayout() === 'split';
+  const speakerSpace = document.getElementById('fullscreenPlayerOverlay').classList.contains('has-speaker-space');
+  const baseWidth = compactLandscape
+    ? Math.min(stageWidth * (speakerSpace ? 0.38 : 0.64), window.innerHeight * 0.72)
+    : isMobile
+    ? Math.min(window.innerWidth * 0.76, window.innerHeight * 0.36)
+    : Math.min(stageWidth * 0.31, window.innerHeight * 0.49);
+  const mobileRoomPreview = isMobile && !compactLandscape && !document.getElementById('fullscreenPlayerPosterForm').hidden;
+  const maxWidthByHeight = mobileRoomPreview
+    ? (stageHeight * 0.94 - 54) / (heightFactor + 0.95)
+    : compactLandscape
+    ? stageHeight * 0.82 / (heightFactor + 0.48)
+    : (stageHeight * 0.90 - 100) / (heightFactor + 1.05);
+  const shelfWidth = Math.max(80, Math.min(baseWidth, maxWidthByHeight));
+  const roundedShelfWidth = Math.round(shelfWidth);
+  if (isDisplayShelf) {
+    const cellSize = Math.max(1, (roundedShelfWidth - 14 - 6 * (columns - 1)) / columns);
+    heightFactor = (14 + rows * cellSize + 6 * (rows - 1)) / roundedShelfWidth;
+  }
+  stage.style.setProperty('--shelf-w', `${roundedShelfWidth}px`);
+  stage.style.setProperty('--shelf-hf', heightFactor.toFixed(4));
+  const shelfBottomRatio = getFullscreenPlayerLayout() === 'split' ? 0.10 : (isMobile ? 0.12 : 0.11);
+  const focusY = stageHeight * (1 - shelfBottomRatio) - Math.round(shelfWidth) * (heightFactor + 0.18);
+  stage.style.setProperty('--camera-focus-y', `${Math.max(0, Math.min(stageHeight, focusY))}px`);
+  const poster = document.querySelector('.fullscreen-player-room-poster');
+  if (poster) {
+    const posterWidth = Math.round(shelfWidth);
+    poster.style.width = `${posterWidth}px`;
+    stage.style.setProperty('--poster-width', `${posterWidth}px`);
+    stage.style.setProperty('--poster-height', `${posterWidth / 2.6}px`);
+  }
+  shelfElement.style.aspectRatio = `1 / ${heightFactor.toFixed(5)}`;
+  shelfElement.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+  shelfElement.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  shelfElement.replaceChildren();
+  for (let number = 1; number <= capacity; number += 1) {
+    const cube = document.createElement(shelf && !removed.includes(number) ? 'button' : 'span');
+    cube.className = 'fullscreen-player-shelf-cube';
+    if (removed.includes(number)) {
+      cube.classList.add('is-removed');
+    } else if (shelf) {
+      cube.type = 'button';
+      cube.title = getShelfCompartmentLabel(shelf, number);
+      cube.setAttribute('aria-label', `${cube.title}: Alben auswählen`);
+      const selected = fullscreenPlayerCompartment?.shelfId === shelf.id && fullscreenPlayerCompartment.number === number;
+      cube.classList.toggle('is-selected', selected);
+      cube.setAttribute('aria-pressed', String(selected));
+      cube.addEventListener('click', () => {
+        fullscreenPlayerCompartment = { shelfId: shelf.id, number };
+        fullscreenPlayerMenuFilter = 'all';
+        document.querySelectorAll('#fullscreenPlayerMenu [data-menu-filter]').forEach(button => {
+          button.classList.toggle('is-active', button.dataset.menuFilter === 'all');
+        });
+        document.getElementById('fullscreenPlayerMenuSearch').value = '';
+        renderFullscreenPlayerShelf();
+        setFullscreenPlayerMenuOpen(true);
+      });
+      const items = compartmentItems.get(number) || [];
+      if (shelf.mode === 'display') {
+        cube.classList.add('is-display');
+        const item = items[0];
+        if (item?.coverUrl) {
+          const cover = document.createElement('img');
+          cover.src = item.coverUrl;
+          cover.alt = '';
+          cover.loading = 'lazy';
+          cube.append(cover);
+        } else if (item) {
+          cube.append(createFullscreenShelfSpine(item));
+        }
+      } else {
+        items.slice(0, 40).forEach(item => cube.append(createFullscreenShelfSpine(item)));
+      }
+    }
+    shelfElement.append(cube);
+  }
+}
+
+document.getElementById('fullscreenPlayerShelfSelect').addEventListener('change', event => {
+  localStorage.setItem(FULLSCREEN_SHELF_STORAGE_KEY, event.target.value);
+  fullscreenPlayerCompartment = null;
+  fullscreenPlayerShelfSignature = '';
+  renderFullscreenPlayerShelf();
+  renderFullscreenPlayerMenu();
+});
+
+let fullscreenPlayerMenuFilter = 'all';
+
+function isFullscreenPlayerMenuOpen() {
+  return document.getElementById('fullscreenPlayerMenu')?.hidden === false;
+}
+
+function setFullscreenPlayerMenuOpen(isOpen) {
+  if (isOpen) setFullscreenRoomSettingsOpen(false);
+  const menu = document.getElementById('fullscreenPlayerMenu');
+  const toggle = document.getElementById('fullscreenPlayerMenuToggle');
+  if (!menu || !toggle) return;
+  menu.hidden = !isOpen;
+  toggle.setAttribute('aria-expanded', String(isOpen));
+  toggle.title = isOpen ? 'Sammlung ausblenden' : 'Sammlung einblenden';
+  toggle.setAttribute('aria-label', toggle.title);
+  if (isOpen) {
+    renderFullscreenPlayerMenu();
+    document.getElementById('fullscreenPlayerMenuSearch')?.focus();
+  }
+}
+
+function getFullscreenPlayerMenuItems() {
+  const query = (document.getElementById('fullscreenPlayerMenuSearch')?.value || '').trim().toLowerCase();
+  let source = ownCollection;
+  if (fullscreenPlayerCompartment) {
+    const shelf = shelfLocations.find(entry => entry.id === fullscreenPlayerCompartment.shelfId);
+    source = shelf && isValidShelfCompartment(shelf, fullscreenPlayerCompartment.number)
+      ? getFullscreenShelfCompartmentItems(shelf, fullscreenPlayerCompartment.number) : [];
+  }
+  return source.filter(item => {
+    if (!fullscreenPlayerCompartment && fullscreenPlayerMenuFilter === 'owned' && !item.owned) return false;
+    return !query || `${item.title || ''} ${item.artist || ''}`.toLowerCase().includes(query);
+  });
+}
+
+function playAlbumFromFullscreenMenu(item) {
+  openAlbumListening(item);
+}
+
+function renderFullscreenPlayerMenu() {
+  const list = document.getElementById('fullscreenPlayerMenuList');
+  if (!list) return;
+  const reset = document.getElementById('fullscreenPlayerCompartmentReset');
+  const shelf = shelfLocations.find(entry => entry.id === fullscreenPlayerCompartment?.shelfId);
+  const isCompartment = !!fullscreenPlayerCompartment;
+  const label = shelf ? `${shelf.name} · ${getShelfCompartmentLabel(shelf, fullscreenPlayerCompartment.number)}` : 'Fachinhalt';
+  document.getElementById('fullscreenPlayerMenuTitle').textContent = isCompartment ? label : 'Gesamte Sammlung';
+  document.getElementById('fullscreenPlayerMenu').setAttribute('aria-label', isCompartment ? label : 'Sammlung durchsuchen');
+  const search = document.getElementById('fullscreenPlayerMenuSearch');
+  search.placeholder = isCompartment ? 'Dieses Fach durchsuchen …' : 'Sammlung durchsuchen …';
+  search.setAttribute('aria-label', isCompartment ? 'Dieses Fach durchsuchen' : 'Sammlung durchsuchen');
+  document.querySelector('#fullscreenPlayerMenu .fullscreen-player-menu-filter').hidden = isCompartment;
+  reset.hidden = !isCompartment;
+  reset.textContent = '← Gesamte Sammlung';
+  const toggle = document.getElementById('fullscreenPlayerMenuToggle');
+  if (isFullscreenPlayerMenuOpen()) {
+    toggle.title = isCompartment ? 'Gesamte Sammlung öffnen' : 'Sammlung ausblenden';
+    toggle.setAttribute('aria-label', toggle.title);
+  }
+  list.replaceChildren();
+  const items = getFullscreenPlayerMenuItems();
+  document.getElementById('fullscreenPlayerMenuCount').textContent = `${items.length} ${items.length === 1 ? 'Album' : 'Alben'}${isCompartment ? ' in diesem Fach' : ''}`;
+  if (!items.length) {
+    const empty = document.createElement('li');
+    empty.className = 'fullscreen-player-menu-empty';
+    empty.textContent = fullscreenPlayerCompartment && !search.value.trim() ? 'Dieses Fach ist leer.' : 'Keine Alben gefunden.';
+    list.append(empty);
+    return;
+  }
+  items.forEach(item => {
+    const row = document.createElement('li');
+    row.className = 'fullscreen-player-menu-item';
+    const cover = document.createElement('img');
+    cover.alt = '';
+    cover.loading = 'lazy';
+    cover.hidden = !item.coverUrl;
+    if (item.coverUrl) {
+      cover.src = item.coverUrl;
+      cover.addEventListener('error', () => { cover.hidden = true; }, { once: true });
+    }
+    const meta = document.createElement('div');
+    meta.className = 'fullscreen-player-menu-item-meta';
+    const title = document.createElement('strong');
+    title.className = 'fullscreen-player-menu-item-title';
+    title.textContent = getListeningDisplayText(item.title, 'Unbenanntes Album');
+    const artist = document.createElement('span');
+    artist.className = 'fullscreen-player-menu-item-artist';
+    artist.textContent = getListeningDisplayText(item.artist, 'Unbekannter Interpret');
+    meta.append(title, artist);
+    const actions = document.createElement('div');
+    actions.className = 'fullscreen-player-menu-item-actions';
+    const url = getSupportedListeningUrl(item.spotifyAlbumUrl || item.listeningUrl);
+    const queueable = !!(url && getSpotifyEmbedUrl(url) && getSpotifyAlbumId(url));
+    const queue = document.createElement('button');
+    queue.type = 'button';
+    queue.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 4v4M16 6h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    queue.title = queueable ? 'In die Warteschlange' : 'Nur mit Spotify-Albumlink möglich';
+    queue.setAttribute('aria-label', queue.title);
+    queue.disabled = !queueable;
+    queue.addEventListener('click', () => {
+      if (queueAlbumForListening(item, url)) {
+        queue.classList.add('is-added');
+        window.setTimeout(() => queue.classList.remove('is-added'), 1200);
+      }
+    });
+    const play = document.createElement('button');
+    play.type = 'button';
+    play.innerHTML = LISTENING_ICON_SVG.play;
+    play.title = 'Direkt abspielen';
+    play.setAttribute('aria-label', play.title);
+    play.addEventListener('click', () => playAlbumFromFullscreenMenu(item));
+    actions.append(queue, play);
+    row.append(cover, meta, actions);
+    list.append(row);
+  });
+}
+
+document.getElementById('fullscreenPlayerMenuClose').addEventListener('click', () => setFullscreenPlayerMenuOpen(false));
+document.getElementById('fullscreenPlayerMenuToggle').addEventListener('click', () => {
+  if (fullscreenPlayerCompartment) {
+    fullscreenPlayerCompartment = null;
+    document.getElementById('fullscreenPlayerMenuSearch').value = '';
+    renderFullscreenPlayerShelf();
+    setFullscreenPlayerMenuOpen(true);
+  } else setFullscreenPlayerMenuOpen(!isFullscreenPlayerMenuOpen());
+});
+
+function isFullscreenPlayerQueueOpen() {
+  return document.getElementById('fullscreenPlayerQueuePanel')?.hidden === false;
+}
+
+function setFullscreenPlayerQueueOpen(isOpen) {
+  if (isOpen) setFullscreenRoomSettingsOpen(false);
+  const panel = document.getElementById('fullscreenPlayerQueuePanel');
+  const toggle = document.getElementById('fullscreenPlayerQueueToggle');
+  if (!panel || !toggle) return;
+  panel.hidden = !isOpen;
+  toggle.setAttribute('aria-expanded', String(isOpen));
+  toggle.title = isOpen ? 'Warteschlange ausblenden' : 'Warteschlange einblenden';
+  toggle.setAttribute('aria-label', toggle.title);
+  if (isOpen) renderFullscreenPlayerQueue();
+}
+
+function renderFullscreenPlayerQueue() {
+  const list = document.getElementById('fullscreenPlayerQueueList');
+  if (!list) return;
+  list.replaceChildren();
+  if (!listeningAlbumQueue.length) {
+    const empty = document.createElement('li');
+    empty.className = 'album-queue-empty';
+    empty.textContent = 'Noch keine Alben in der Warteschlange.';
+    list.append(empty);
+    return;
+  }
+  listeningAlbumQueue.forEach((item, index) => {
+    const row = document.createElement('li');
+    row.className = 'album-queue-item';
+    const main = document.createElement('div');
+    main.className = 'album-queue-item-main';
+    if (item.coverUrl) {
+      const cover = document.createElement('img');
+      cover.className = 'album-queue-cover';
+      cover.src = item.coverUrl;
+      cover.alt = '';
+      cover.addEventListener('error', () => cover.remove(), { once: true });
+      main.append(cover);
+    }
+    const copy = document.createElement('div');
+    copy.className = 'album-queue-item-copy';
+    const title = document.createElement('strong');
+    title.className = 'album-queue-item-title';
+    title.textContent = getDisplayName(item.title) || 'Album';
+    const artist = document.createElement('span');
+    artist.className = 'album-queue-item-artist';
+    artist.textContent = getArtistDisplayName(item);
+    copy.append(title, artist);
+    main.append(copy);
+    const actions = document.createElement('div');
+    actions.className = 'album-queue-item-actions';
+    const moveUp = document.createElement('button');
+    moveUp.type = 'button';
+    moveUp.textContent = '↑︎';
+    moveUp.title = 'Album nach oben verschieben';
+    moveUp.setAttribute('aria-label', moveUp.title);
+    moveUp.disabled = index === 0;
+    moveUp.addEventListener('click', () => moveQueuedAlbum(index, -1));
+    const moveDown = document.createElement('button');
+    moveDown.type = 'button';
+    moveDown.textContent = '↓︎';
+    moveDown.title = 'Album nach unten verschieben';
+    moveDown.setAttribute('aria-label', moveDown.title);
+    moveDown.disabled = index === listeningAlbumQueue.length - 1;
+    moveDown.addEventListener('click', () => moveQueuedAlbum(index, 1));
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = '×';
+    remove.title = 'Album aus der Warteschlange entfernen';
+    remove.setAttribute('aria-label', remove.title);
+    remove.addEventListener('click', () => {
+      listeningAlbumQueue.splice(index, 1);
+      updateAlbumQueueControls();
+    });
+    actions.append(moveUp, moveDown, remove);
+    row.append(main, actions);
+    list.append(row);
+  });
+}
+
+document.getElementById('fullscreenPlayerQueueToggle').addEventListener('click', () => {
+  setFullscreenPlayerQueueOpen(!isFullscreenPlayerQueueOpen());
+});
+
+const FULLSCREEN_PLAYER_VIEW_KEY = 'fullscreenPlayerView';
+const FULLSCREEN_PLAYER_VIEW_ICONS = {
+  top: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="13" rx="9" ry="4.5" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="1.2" fill="currentColor"/></svg>',
+  angled: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>'
+};
+
+function getFullscreenPlayerView() {
+  try {
+    return localStorage.getItem(FULLSCREEN_PLAYER_VIEW_KEY) === 'angled' ? 'angled' : 'top';
+  } catch {
+    return 'top';
+  }
+}
+
+function applyFullscreenPlayerView() {
+  const view = getFullscreenPlayerView();
+  const overlay = document.getElementById('fullscreenPlayerOverlay');
+  const button = document.getElementById('fullscreenPlayerViewToggle');
+  overlay?.classList.toggle('is-angled-view', view === 'angled');
+  applyFullscreenPlayerPresentation();
+  const room = document.querySelector('.fullscreen-player-room');
+  if (room) room.inert = view !== 'angled';
+  if (button) {
+    button.innerHTML = FULLSCREEN_PLAYER_VIEW_ICONS[view];
+    button.title = view === 'angled' ? 'Draufsicht' : 'Schräge Ansicht';
+    button.setAttribute('aria-label', button.title);
+  }
+}
+
+document.getElementById('fullscreenPlayerViewToggle').addEventListener('click', () => {
+  const nextView = getFullscreenPlayerView() === 'angled' ? 'top' : 'angled';
+  try {
+    localStorage.setItem(FULLSCREEN_PLAYER_VIEW_KEY, nextView);
+  } catch (error) {
+    console.error('Ansicht konnte nicht gespeichert werden:', error);
+  }
+  applyFullscreenPlayerView();
+  renderFullscreenPlayerMenu();
+});
+applyFullscreenPlayerView();
+document.getElementById('fullscreenPlayerCompartmentReset').addEventListener('click', () => {
+  fullscreenPlayerCompartment = null;
+  document.getElementById('fullscreenPlayerMenuSearch').value = '';
+  renderFullscreenPlayerShelf();
+  renderFullscreenPlayerMenu();
+});
+document.getElementById('fullscreenPlayerMenuSearch').addEventListener('input', renderFullscreenPlayerMenu);
+document.querySelectorAll('#fullscreenPlayerMenu [data-menu-filter]').forEach(button => {
+  button.addEventListener('click', () => {
+    fullscreenPlayerMenuFilter = button.dataset.menuFilter === 'owned' ? 'owned' : 'all';
+    document.querySelectorAll('#fullscreenPlayerMenu [data-menu-filter]').forEach(other => {
+      other.classList.toggle('is-active', other === button);
+    });
+    renderFullscreenPlayerMenu();
+  });
+});
+document.getElementById('fullscreenPlayerCover').addEventListener('error', event => {
+  event.currentTarget.hidden = true;
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && isFullscreenPlayerOpen()) closeFullscreenPlayer();
+});
+
 function renderListeningAlbumQueue() {
   const list = document.getElementById('albumQueueList');
   if (!list) return;
@@ -14893,6 +17200,7 @@ function updateAlbumQueueControls() {
     button.disabled = listeningAlbumQueue.length === 0;
   });
   renderListeningAlbumQueue();
+  if (isFullscreenPlayerQueueOpen()) renderFullscreenPlayerQueue();
   updateAlbumMiniPlayerButton();
   persistListeningSession();
 }
@@ -14960,7 +17268,7 @@ document.getElementById('albumQueueHeaderToggle').addEventListener('click', () =
   setAlbumQueuePanelOpen(document.getElementById('albumQueuePanel').hidden);
 });
 document.getElementById('albumDockHeaderToggle').addEventListener('click', toggleAlbumDockCollapsed);
-document.getElementById('showAlbumMiniPlayerBtn').addEventListener('click', showAlbumMiniPlayer);
+document.getElementById('showAlbumMiniPlayerBtn').addEventListener('click', openFullscreenPlayer);
 renderListeningAlbumQueue();
 updateAlbumDockToggle();
 updateAlbumMiniPlayerButton();
@@ -14987,7 +17295,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   player.className = 'album-mini-player youtube-mini-player';
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), createAlbumPlayerSettingsToggle(), createAlbumDockToggle());
+  topbar.append(createAlbumQueueToggle(), createFullscreenPlayerToggle(), createAlbumPlayerSettingsToggle(), createAlbumDockToggle());
   const main = document.createElement('div');
   main.className = 'album-mini-main';
   const cover = document.createElement('img');
@@ -15025,6 +17333,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   progress.className = 'album-mini-progress';
   const seek = document.createElement('input');
   seek.className = 'album-mini-seek';
+  seek.dataset.seekUnit = 'seconds';
   seek.type = 'range';
   seek.min = '0';
   seek.max = '0';
@@ -15205,6 +17514,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const favorite = document.createElement('button');
   favorite.type = 'button';
   favorite.className = 'album-mini-control';
+  favorite.dataset.listeningFavorite = 'spotify';
   favorite.innerHTML = LISTENING_ICON_SVG.favorite;
   favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzufügen');
   favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzufügen';
@@ -15231,13 +17541,14 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   favorite.disabled = true;
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), openInSpotify, createAlbumPlayerSettingsToggle(), createAlbumDockToggle());
+  topbar.append(createAlbumQueueToggle(), openInSpotify, createFullscreenPlayerToggle(), createAlbumPlayerSettingsToggle(), createAlbumDockToggle());
   const trackList = document.createElement('ol');
   trackList.className = 'album-mini-tracklist';
   const progress = document.createElement('div');
   progress.className = 'album-mini-progress';
   const seek = document.createElement('input');
   seek.className = 'album-mini-seek';
+  seek.dataset.seekUnit = 'seconds';
   seek.type = 'range';
   seek.min = '0';
   seek.max = '0';
@@ -15372,7 +17683,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     toggle.disabled = !controllerReady;
     previous.disabled = !controllerReady || tracks.length < 2 || !tracks.some(track => track.uri);
     next.disabled = previous.disabled;
-    favorite.disabled = !controllerReady || !/^spotify:track:/.test(tracks[currentIndex]?.uri || playingUri);
+    favorite.dataset.trackUri = tracks[currentIndex]?.uri || playingUri;
+    favorite.disabled = !isSpotifyIntegrationAvailable() || favorite.dataset.saving === 'true' || !controllerReady || !/^spotify:track:/.test(favorite.dataset.trackUri);
     trackList.querySelectorAll('.album-mini-track').forEach((button, index) => {
       button.disabled = !controllerReady || !tracks[index]?.uri;
     });
@@ -15418,6 +17730,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       );
       if (activeUri !== favoriteTrackUri) {
         favoriteTrackUri = activeUri;
+        delete favorite.dataset.favoriteMessage;
         favorite.innerHTML = LISTENING_ICON_SVG.favorite;
         favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzufügen');
         favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzufügen';
@@ -15490,7 +17803,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       if (playbackIsPaused && pendingRestoredTrackUri) {
         spotifyMiniController.loadUri(pendingRestoredTrackUri);
         if (listeningPlaybackState.positionSeconds > 0) {
-          spotifyMiniController.seek(listeningPlaybackState.positionSeconds * 1000);
+          spotifyMiniController.seek(listeningPlaybackState.positionSeconds);
         }
         pendingRestoredTrackUri = '';
         restoringPausedTrack = false;
@@ -15529,16 +17842,19 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   previous.addEventListener('click', () => changeTrack(-1));
   next.addEventListener('click', () => changeTrack(1));
   favorite.addEventListener('click', async () => {
+    if (favorite.dataset.saving === 'true') return;
     const trackUri = tracks[currentIndex]?.uri || playingUri;
     const trackId = trackUri.match(/^spotify:track:([A-Za-z0-9]+)$/)?.[1];
     if (!trackId) return;
     favorite.disabled = true;
+    favorite.dataset.saving = 'true';
+    favorite.dataset.favoriteMessage = 'Wird zu deinen Spotify-Lieblingssongs hinzugefügt …';
     try {
       const token = await getSpotifyAccessToken();
       if (!token) {
         throw new Error('Bitte verbinde Spotify zuerst in den Einstellungen.');
       }
-      const response = await fetch(`https://api.spotify.com/v1/me/tracks?ids=${encodeURIComponent(trackId)}`, {
+      const response = await fetch(`https://api.spotify.com/v1/me/library?uris=${encodeURIComponent(trackUri)}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -15549,6 +17865,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         }
         throw new Error(data.error?.message || `Spotify antwortete mit HTTP ${response.status}`);
       }
+      if (favorite.dataset.trackUri !== trackUri) return;
+      favorite.dataset.favoriteMessage = 'Zu deinen Spotify-Lieblingssongs hinzugefügt.';
       favorite.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 5.1-8.8 10-8.8 10s-8.8-4.9-8.8-10a4.7 4.7 0 0 1 8.8-2.2 4.7 4.7 0 0 1 8.8 2.2Z" fill="currentColor"/></svg>';
       favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzugefügt');
       favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzugefügt';
@@ -15558,8 +17876,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       console.error('Spotify-Lieblingssong konnte nicht gespeichert werden:', error);
       message.hidden = false;
       message.textContent = error.message || 'Der Titel konnte nicht zu deinen Spotify-Lieblingssongs hinzugefügt werden.';
+      if (favorite.dataset.trackUri === trackUri) favorite.dataset.favoriteMessage = message.textContent;
     } finally {
+      delete favorite.dataset.saving;
       updateControls();
+      syncFullscreenPlayer();
     }
   });
   seek.addEventListener('input', () => {
@@ -15743,9 +18064,12 @@ function mountListeningEmbed(container, url, title, item = null, restorePlayback
   return true;
 }
 
+function isSpotifyIntegrationAvailable() {
+  return window.location.protocol === 'https:' && window.location.hostname === 'vinyl.elkevinio.de';
+}
+
 function getSpotifyRedirectUri() {
-  if (!['https:', 'http:'].includes(window.location.protocol)) return '';
-  if (window.location.protocol === 'http:' && !['localhost', '127.0.0.1'].includes(window.location.hostname)) return '';
+  if (!isSpotifyIntegrationAvailable()) return '';
   return `${window.location.origin}${window.location.pathname}`;
 }
 
@@ -16387,13 +18711,22 @@ async function createSpotifyPlaylistFromDialog() {
 function updateSpotifyConnectionStatus(message = '') {
   const status = document.getElementById('spotifyConnectionStatus');
   if (!status) return;
+  const button = document.getElementById('spotifyConnectBtn');
+  if (!isSpotifyIntegrationAvailable()) {
+    status.textContent = 'Spotify-Verbindung ist in der Vorschau deaktiviert. Verbinde Spotify auf vinyl.elkevinio.de.';
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Spotify in der Vorschau deaktiviert';
+    }
+    return;
+  }
+  if (button) button.disabled = false;
   const token = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
   const connected = token?.accessToken
     && (Number(token.expiresAt) > Date.now() || token.refreshToken || getStoredSpotifyRefreshCredential());
   status.textContent = message || (connected
     ? 'Spotify ist für diese Sitzung verbunden.'
     : 'Spotify ist nicht verbunden.');
-  const button = document.getElementById('spotifyConnectBtn');
   if (button) button.textContent = connected ? 'Spotify trennen' : 'Spotify verbinden';
 }
 
@@ -16439,6 +18772,10 @@ function base64UrlEncode(bytes) {
 }
 
 async function connectSpotify() {
+  if (!isSpotifyIntegrationAvailable()) {
+    updateSpotifyConnectionStatus();
+    return;
+  }
   spotifyClientId = document.getElementById('spotifyClientIdInput')?.value.trim() || '';
   const clientId = spotifyClientId;
   const redirectUri = getSpotifyRedirectUri();
@@ -16477,6 +18814,7 @@ async function connectSpotify() {
 }
 
 async function exchangeSpotifyToken(values) {
+  if (!isSpotifyIntegrationAvailable()) throw new Error('Spotify-Verbindung ist nur auf vinyl.elkevinio.de verfügbar.');
   const response = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -16488,6 +18826,10 @@ async function exchangeSpotifyToken(values) {
 }
 
 async function completeSpotifyAuthCallback() {
+  if (!isSpotifyIntegrationAvailable()) {
+    updateSpotifyConnectionStatus();
+    return;
+  }
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   const oauthError = params.get('error');
@@ -16529,6 +18871,7 @@ async function completeSpotifyAuthCallback() {
 }
 
 async function getSpotifyAccessToken() {
+  if (!isSpotifyIntegrationAvailable()) return '';
   const stored = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
   const refreshToken = stored?.refreshToken || getStoredSpotifyRefreshCredential();
   if (!stored?.accessToken && !refreshToken) return '';
@@ -16558,6 +18901,10 @@ async function getSpotifyAccessToken() {
 }
 
 async function restoreSpotifyConnection() {
+  if (!isSpotifyIntegrationAvailable()) {
+    updateSpotifyConnectionStatus();
+    return;
+  }
   const refreshToken = getStoredSpotifyRefreshCredential();
   const sessionToken = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || 'null');
   if (!spotifyClientId) {
