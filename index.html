@@ -2847,6 +2847,8 @@
   #fullscreenPlayerSeek:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
   .fullscreen-player-time { display:flex; justify-content:space-between; width:100%; margin-top:-6px; color:var(--text-secondary); font-size:11px; font-variant-numeric:tabular-nums; }
   #fullscreenPlayerFavorite[hidden],#fullscreenPlayerActionStatus[hidden] { display:none; }
+  #fullscreenSpotifyActions[hidden] { display:none; }
+  #fullscreenSpotifyActions { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
   #fullscreenPlayerActionStatus { max-width:100%; margin:0; font-size:12px; }
   @media (pointer:coarse) { .fullscreen-player-progress { height:32px; } }
   #fullscreenAudioStatus[hidden] { display:none; }
@@ -7130,6 +7132,7 @@
       <button type="button" id="fullscreenPlayerNext" class="album-mini-control" title="Nächster Titel" aria-label="Nächster Titel"></button>
       <button type="button" id="fullscreenPlayerFavorite" class="album-mini-control" aria-label="Zu deinen Spotify-Lieblingssongs hinzufügen" title="Zu deinen Spotify-Lieblingssongs hinzufügen" hidden></button>
     </div>
+    <div id="fullscreenSpotifyActions" hidden><button type="button" data-full-sdk-action="connect">Spotify erneut verbinden</button><button type="button" data-full-sdk-action="embed">Embed verwenden</button></div>
     <p id="fullscreenPlayerActionStatus" class="settings-panel-hint" role="status" aria-live="polite" hidden></p>
   </div>
 </div>
@@ -10548,6 +10551,7 @@ document.getElementById('spotifyConnectBtn')?.addEventListener('click', () => {
     localStorage.removeItem(SPOTIFY_REFRESH_TOKEN_KEY);
     localStorage.setItem(SPOTIFY_AUTO_CONNECT_DISABLED_KEY, 'true');
     localStorage.removeItem(SPOTIFY_AUTO_CONNECT_ATTEMPT_KEY);
+    if(spotifyMiniController?.isWebPlaybackSdk){spotifyMiniController.destroy();spotifyMiniController=null;}
     updateSpotifyConnectionStatus('Spotify wurde getrennt.');
     return;
   }
@@ -15802,6 +15806,99 @@ function loadSpotifyIframeApi() {
   return spotifyIframeApiPromise;
 }
 
+// Mobile uses a real Spotify Connect browser device; desktop keeps the iframe API.
+function shouldUseSpotifyWebPlayback() {
+  const mobile = navigator.userAgentData?.mobile || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    || (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  return !!mobile && isSpotifyIntegrationAvailable();
+}
+let spotifyWebPlaybackPromise = null;
+function loadSpotifyWebPlaybackScript() {
+  if (window.Spotify?.Player) return Promise.resolve(window.Spotify);
+  if (spotifyWebPlaybackPromise) return spotifyWebPlaybackPromise;
+  spotifyWebPlaybackPromise = new Promise((resolve,reject) => {
+    const script = document.createElement('script');
+    const timeout = setTimeout(() => fail(new Error('Spotify Web Playback SDK antwortet nicht.')),20000);
+    const fail = error => { clearTimeout(timeout); script.remove(); spotifyWebPlaybackPromise = null; reject(error); };
+    window.onSpotifyWebPlaybackSDKReady = () => { clearTimeout(timeout); resolve(window.Spotify); };
+    script.src = 'https://sdk.scdn.co/spotify-player.js';
+    script.async = true;
+    script.onerror = () => fail(new Error('Spotify Web Playback SDK konnte nicht geladen werden.'));
+    document.head.append(script);
+  });
+  return spotifyWebPlaybackPromise;
+}
+async function loadSpotifyWebPlaybackApi(onStatus) {
+  const token = await getSpotifyAccessToken();
+  if (!token) throw new Error('Für volle mobile Wiedergabe bitte Spotify mit einem Premium-Konto verbinden.');
+  const session = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || '{}');
+  if (session.scope && !session.scope.split(' ').includes('streaming')) {
+    throw new Error('Spotify bitte erneut verbinden, um die mobile Wiedergabe freizugeben.');
+  }
+  const Spotify = await loadSpotifyWebPlaybackScript();
+  return { createController(target, options, callback) {
+    let destroyed=false,deviceId='',pendingUri=options.uri,pendingPosition=0,state=null,poll=null,polling=false,activated=false;
+    const lifetime = new AbortController();
+    let operation=Promise.resolve(),readyTimeout=null;
+    const listeners=new Map();
+    const emit=(name,data={}) => { if (!destroyed) for(const fn of listeners.get(name)||[]) fn({data}); };
+    const report=(text,fatal=false) => { if(!destroyed) onStatus(text,fatal); };
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:.8,enableMediaSession:true,
+      getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
+    });
+    const pushState=next => {
+      if(destroyed||!next)return;
+      const previous=state;state=next;
+      if(!next.paused)report('');
+      if(!next.paused && (!previous||previous.paused))emit('playback_started',{track_window:next.track_window});
+      emit('playback_update',{isPaused:next.paused,position:next.position,duration:next.duration,track_window:next.track_window,playingURI:next.track_window?.current_track?.uri});
+      if(next.paused && next.position===0 && previous && !previous.paused && previous.duration-previous.position<2500 && previous.track_window?.next_tracks?.length===0)emit('playback_ended');
+    };
+    sdk.addListener('player_state_changed',pushState);
+    sdk.addListener('ready',({device_id})=>{
+      if(destroyed)return;sdkReady();deviceId=device_id;emit('ready');
+      poll=setInterval(async()=>{ if(destroyed||polling||document.hidden||state?.paused)return;polling=true;try{pushState(await sdk.getCurrentState());}catch{}finally{polling=false;} },1000);
+    });
+    function sdkReady(){clearTimeout(readyTimeout);if(poll)clearInterval(poll);}
+    sdk.addListener('not_ready',()=>{sdkReady();deviceId='';report('Spotify-Gerät nicht erreichbar. Bitte Player erneut öffnen oder das Embed verwenden.',true);});
+    sdk.addListener('autoplay_failed',()=>{activated=false;report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');});
+    for(const [name,text] of [
+      ['initialization_error','Dieser Browser kann Spotify Web Playback nicht starten. Du kannst das Embed verwenden.'],
+      ['authentication_error','Spotify bitte erneut verbinden und die mobile Wiedergabe erlauben.'],
+      ['account_error','Spotify Web Playback benötigt Spotify Premium. Du kannst das Embed verwenden.'],
+      ['playback_error','Spotify konnte diesen Titel nicht abspielen. Bitte erneut versuchen oder das Embed verwenden.']
+    ])sdk.addListener(name,()=>{sdkReady();if(name!=='playback_error')sdk.disconnect();report(text,name!=='playback_error');});
+    const run=fn=>{operation=operation.then(async()=>{if(!destroyed)await fn();}).catch(error=>report(error.message||'Spotify-Wiedergabe fehlgeschlagen.'));};
+    const activate=()=>{try{Promise.resolve(sdk.activateElement()).catch(()=>{});}catch{}};
+    const controller={isWebPlaybackSdk:true,
+      addListener(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);},
+      loadUri(uri){pendingUri=uri;pendingPosition=0;},
+      seek(seconds){if(pendingUri)pendingPosition=Math.max(0,Number(seconds)||0)*1000;else run(()=>sdk.seek(Math.max(0,Number(seconds)||0)*1000));},
+      play(){
+        // activateElement must run in the original tap event, before awaiting a token or network request.
+        if(!activated && navigator.userActivation && !navigator.userActivation.isActive){report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');return;}
+        activated=true;activate();run(async()=>{
+          if(!deviceId)throw new Error('Spotify-Gerät ist noch nicht bereit. Bitte erneut versuchen.');
+          if(!pendingUri){await sdk.resume();return;}
+          const uri=pendingUri,position=pendingPosition,accessToken=await getSpotifyAccessToken();
+          if(destroyed)return;if(!accessToken)throw new Error('Bitte Spotify erneut verbinden.');
+          const body=uri.startsWith('spotify:track:')
+            ? (options.uri.startsWith('spotify:album:') ? {context_uri:options.uri,offset:{uri},position_ms:position} : {uris:[uri],position_ms:position})
+            : {context_uri:uri,position_ms:position};
+          const response=await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceId)}`,{method:'PUT',signal:lifetime.signal,headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+          if(destroyed)return;
+          if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(response.status===403?'Für die Wiedergabe sind Spotify Premium und neue Wiedergabeberechtigungen erforderlich. Bitte Spotify erneut verbinden.':data.error?.message||`Spotify-Wiedergabe: HTTP ${response.status}`);}
+          if(pendingUri===uri){pendingUri='';pendingPosition=0;}report('');
+        });
+      },
+      resume(){this.play();},pause(){run(()=>sdk.pause());},
+      destroy(){destroyed=true;lifetime.abort();clearTimeout(readyTimeout);clearInterval(poll);listeners.clear();sdk.disconnect();}
+    };
+    callback(controller);
+    if(!destroyed){readyTimeout=setTimeout(()=>{sdk.disconnect();report('Spotify-Gerät konnte nicht verbunden werden. Bitte erneut versuchen oder das Embed verwenden.',true);},20000);sdk.connect().then(ok=>{if(!ok&&!destroyed){sdkReady();report('Spotify-Gerät konnte nicht verbunden werden.',true);}}).catch(()=>{sdkReady();report('Spotify-Gerät konnte nicht verbunden werden.',true);});}
+  }};
+}
+
 let youtubeIframeApiPromise = null;
 
 function loadYouTubeIframeApi() {
@@ -16233,6 +16330,12 @@ function syncFullscreenPlayer() {
   const actionMessage = sourceFavorite?.dataset.favoriteMessage || playbackMessage || loadingMessage;
   actionStatus.hidden = !actionMessage;
   actionStatus.textContent = actionMessage;
+  const spotifyActions = document.getElementById('fullscreenSpotifyActions');
+  const sourceActions = dockContent?.querySelector('[data-sdk-actions]');
+  spotifyActions.hidden = !sourceActions || sourceActions.hidden;
+  spotifyActions.querySelectorAll('button').forEach(button => {
+    button.onclick = () => sourceActions?.isConnected && sourceActions.querySelector(`[data-sdk-action="${button.dataset.fullSdkAction}"]`)?.click();
+  });
   renderFullscreenPlayerTracks();
   const position = Number(seek?.value) || 0;
   const progress = duration > 0 ? Math.min((fullscreenSeekDragging ? Number(fullSeek.value) : position) / duration, 1) : 0;
@@ -18334,7 +18437,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     });
     updateControls();
     message.textContent = '';
-    message.hidden = true;
+    message.hidden = !player.dataset.sdkNotice;
+    if(player.dataset.sdkNotice)message.textContent=player.dataset.sdkNotice;
     updateCurrentTrack();
   };
   const fallbackTracks = (Array.isArray(item?.tracklist) ? item.tracklist : []).map(track => ({
@@ -18490,7 +18594,30 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     });
   }
 
-  loadSpotifyIframeApi().then(api => {
+  const sdkActions = document.createElement('div');
+  sdkActions.dataset.sdkActions = ''; sdkActions.hidden = true;
+  const reconnect = document.createElement('button');reconnect.type='button';reconnect.dataset.sdkAction='connect';reconnect.textContent='Spotify erneut verbinden';
+  reconnect.addEventListener('click',()=>connectSpotify().catch(error=>sdkStatus(error.message||'Spotify-Verbindung konnte nicht gestartet werden.')));
+  const useEmbed = document.createElement('button');useEmbed.type='button';useEmbed.dataset.sdkAction='embed';useEmbed.textContent='Embed verwenden';
+  sdkActions.append(reconnect,useEmbed);player.append(sdkActions);
+  const sdkStatus = (text,fatal=false) => {
+    if(!host.isConnected)return;
+    player.dataset.sdkNotice=text;
+    message.hidden=!text;message.textContent=text;
+    sdkActions.hidden=!text;
+    if(fatal){controllerReady=false;player.dataset.controllerReady='error';updateControls();}
+    syncFullscreenPlayer();
+  };
+  useEmbed.addEventListener('click',()=>{
+    if(!host.isConnected)return;
+    spotifyMiniController?.destroy();spotifyMiniController=null;controllerReady=false;
+    player.dataset.controllerReady='false';player.dataset.sdkNotice='';sdkActions.hidden=true;
+    message.hidden=false;message.textContent='Spotify-Embed wird geladen …';host.replaceChildren(controllerTarget);
+    initializeController(false);
+  });
+  const initializeController = useSdk => {
+  player.dataset.playbackEngine=useSdk?'web-sdk':'embed';
+  (useSdk ? loadSpotifyWebPlaybackApi(sdkStatus) : loadSpotifyIframeApi()).then(api => {
     if (!host.isConnected) return;
     if (!spotifyUri) throw new Error('Die Spotify-Adresse enthält keine unterstützte Album- oder Titel-ID.');
     activateListeningControllerFrame(host);
@@ -18501,6 +18628,9 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       }
       spotifyMiniController = controller;
       activateListeningControllerFrame(host);
+      if(controller.isWebPlaybackSdk)controller.addListener('playback_ended',()=>{
+        if(currentIndex===tracks.length-1 && listeningAlbumQueue.length)playNextQueuedAlbum();
+      });
       controller.addListener('ready', () => {
         controllerReady = true;
         player.dataset.controllerReady = 'true';
@@ -18545,7 +18675,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           seek.value = String(Math.min(position, playbackDuration));
           progress.style.setProperty('--progress', `${playbackDuration > 0 ? Math.min(position / playbackDuration * 100, 100) : 0}%`);
         }
-        if (albumId && !playbackIsPaused && playbackDuration > 0
+        if (!controller.isWebPlaybackSdk && albumId && !playbackIsPaused && playbackDuration > 0
           && position >= playbackDuration - 0.5 && !lastTrackEndTriggered) {
           lastTrackEndTriggered = true;
           if (currentIndex >= 0 && currentIndex < tracks.length - 1) {
@@ -18576,8 +18706,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     player.dataset.controllerReady = 'error';
     console.error('Spotify Embed API konnte nicht geladen werden:', error);
     message.hidden = false;
-    message.textContent = 'Spotify-Player konnte nicht geladen werden. Bitte die Wiedergabe über Spotify öffnen.';
+    message.textContent = error.message || 'Spotify-Player konnte nicht geladen werden. Bitte die Wiedergabe über Spotify öffnen.';
+    if(useSdk)sdkStatus(message.textContent,true);
   });
+  };
+  initializeController(shouldUseSpotifyWebPlayback());
   return true;
 }
 
@@ -19339,7 +19472,7 @@ async function connectSpotify() {
     updateSpotifyConnectionStatus();
     return;
   }
-  spotifyClientId = document.getElementById('spotifyClientIdInput')?.value.trim() || '';
+  spotifyClientId = document.getElementById('spotifyClientIdInput')?.value.trim() || spotifyClientId;
   const clientId = spotifyClientId;
   const redirectUri = getSpotifyRedirectUri();
   if (!clientId) {
@@ -19368,7 +19501,7 @@ async function connectSpotify() {
     client_id: clientId,
     response_type: 'code',
     redirect_uri: redirectUri,
-    scope: 'user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-private',
+    scope: 'user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-private streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state',
     code_challenge_method: 'S256',
     code_challenge: challenge,
     state
@@ -19420,6 +19553,7 @@ async function completeSpotifyAuthCallback() {
     });
     sessionStorage.setItem(SPOTIFY_TOKEN_KEY, JSON.stringify({
       accessToken: data.access_token,
+      scope: data.scope || '',
       refreshToken: data.refresh_token || '',
       expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000
     }));
@@ -19449,6 +19583,7 @@ async function getSpotifyAccessToken() {
     const data = await exchangeSpotifyToken({ grant_type: 'refresh_token', refresh_token: refreshToken });
     const refreshed = {
       accessToken: data.access_token,
+      scope: data.scope || stored?.scope || '',
       refreshToken: data.refresh_token || refreshToken,
       expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000
     };
