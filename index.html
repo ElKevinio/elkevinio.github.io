@@ -8115,6 +8115,10 @@ function friendlyAuthError(err) {
       return 'Dieser Benutzername ist bereits vergeben.';
     case 'auth/weak-password':
       return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
+    case 'auth/network-request-failed':
+      return 'Der Login-Dienst ist nicht erreichbar. Bitte Internetverbindung und Inhaltsblocker für diese Seite prüfen.';
+    case 'auth/web-storage-unsupported':
+      return 'Der Browser blockiert den benötigten Speicher. Bitte die Seite im normalen Browsermodus öffnen und Website-Speicher zulassen.';
     case 'auth/too-many-requests':
       return 'Zu viele Versuche. Bitte warte kurz und versuche es erneut.';
     default:
@@ -8123,6 +8127,7 @@ function friendlyAuthError(err) {
 }
 
 async function handleAuthSubmit() {
+  if (authSubmitBtn.disabled) return;
   hideAuthError();
   const username = authUsernameInput.value.trim();
   const password = authPasswordInput.value;
@@ -9568,7 +9573,9 @@ async function importUserCollection(uid, username) {
   }
 }
 
-auth.onAuthStateChanged(async user => {
+let authInitializationPhase = 'Anmeldung';
+async function handleAuthStateChange(user) {
+  authInitializationPhase = 'Anmeldung';
   if (user) {
     showAppLoading();
     try {
@@ -9593,19 +9600,27 @@ auth.onAuthStateChanged(async user => {
     authOverlay.classList.add('hidden');
     appRoot.classList.remove('hidden');
     setAuthLoading(false);
+    authInitializationPhase = 'Sammlung laden';
     await loadCloudData(user.uid, userDocSnap);
     } finally {
       appLoadingCount = 0;
       hideAppLoading(true);
     }
-    await loadFullscreenRoomStyle(user.uid);
-    await loadListeningCredentials(user.uid);
-    await restoreListeningSession();
-    await completeSpotifyAuthCallback().catch(error => {
-      console.error('Spotify-Rückmeldung konnte nicht verarbeitet werden:', error);
-      updateSpotifyConnectionStatus(`Spotify-Rückmeldung konnte nicht verarbeitet werden: ${error.message}`);
-    });
-    await restoreSpotifyConnection();
+    // Optionale Integrationen dürfen eine erfolgreiche Anmeldung nicht abbrechen.
+    for (const [phase, task] of [
+      ['Raumeinstellungen', () => loadFullscreenRoomStyle(user.uid)],
+      ['Wiedergabe-Einstellungen', () => loadListeningCredentials(user.uid)],
+      ['Wiedergabesitzung', () => restoreListeningSession()],
+      ['Spotify-Rückmeldung', () => completeSpotifyAuthCallback()],
+      ['Spotify-Verbindung', () => restoreSpotifyConnection()]
+    ]) {
+      try { await task(); }
+      catch (error) {
+        console.error(`${phase} konnte nicht geladen werden:`, error);
+        const detail = error?.code || error?.message || 'unbekannter Fehler';
+        updateSpotifyConnectionStatus(`${phase} konnte nicht geladen werden (${detail}). Bitte erneut verbinden.`);
+      }
+    }
     if (userMenuPanel) userMenuPanel.classList.remove('open');
     document.body.classList.remove('user-menu-open');
   } else {
@@ -9626,6 +9641,18 @@ auth.onAuthStateChanged(async user => {
     appLoadingCount = 0;
     hideAppLoading(true);
   }
+ }
+auth.onAuthStateChanged(user => {
+  void handleAuthStateChange(user).catch(error => {
+    console.error(`Anmeldung fehlgeschlagen bei: ${authInitializationPhase}`, error);
+    appLoadingCount = 0;
+    hideAppLoading(true);
+    setAuthLoading(false);
+    authOverlay.classList.remove('hidden');
+    appRoot.classList.add('hidden');
+    const detail = error?.code || error?.message || 'unbekannter Fehler';
+    showAuthError(`${authInitializationPhase} fehlgeschlagen (${detail}). Bitte erneut anmelden. Deine gespeicherte Sammlung bleibt erhalten.`);
+  });
 });
 
 function saveOwnCollectionData(syncWhileViewingRemote = false) {
@@ -23526,7 +23553,7 @@ ${actionButtons}
             td.textContent = pVal > 0 ? (pVal.toFixed(2).replace(/\.00$/, '') + ' ' + escapeHtml(item.discogsCurrency || '€')) : '';
           } else if (col.key === 'color') {
             const discRecord = getVinylRecordForItem(item);
-            td.innerHTML = `<div class="vinyl-editor-disc table-vinyl-disc ${getDiscMediaClasses(item)}" title="${escapeHtml(getVisibleLabel(item))}" style="${getDiscArtworkBackgroundStyle(item)} --vinyl-base: ${hexToRgba(discRecord.baseColor, 1 - discRecord.transparency / 100)}; --vinyl-label: ${discRecord.labelColor}; --vinyl-art: ${getVinylSvgData(discRecord)};">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(discRecord, normalizeVinylDesign(item).discStyle)}</div>`;
+            td.innerHTML = `<div class="vinyl-editor-disc table-vinyl-disc ${getDiscMediaClasses(item)}" title="${escapeHtml(getVisibleLabel(item))}" style="${getDiscPictureBackgroundStyle(item)} --vinyl-base: ${hexToRgba(discRecord.baseColor, 1 - discRecord.transparency / 100)}; --vinyl-label: ${discRecord.labelColor}; --vinyl-art: ${getVinylSvgData(discRecord)};">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(discRecord, normalizeVinylDesign(item).discStyle)}</div>`;
           } else if (col.key === 'status') {
             td.innerHTML = `<span class="state-pill">${item.owned ? 'Besitze ich' : 'Wunschliste'}</span>`;
           } else if (col.key === 'actions') {
