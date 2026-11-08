@@ -2725,6 +2725,11 @@
   .fullscreen-player-eq span { background:var(--room-equalizer); box-shadow:0 0 7px var(--room-equalizer); }
   .fullscreen-player-room-rug { width:calc(var(--shelf-w) * var(--room-rug-scale)); height:20%; background:var(--room-rug-pattern, repeating-linear-gradient(0deg,#ffffff09 0 1px,transparent 1px 4px)),var(--room-rug); box-shadow:0 10px 18px #0008,inset 0 0 0 3px #ffffff15,inset 0 0 0 8px #0003; }
   [data-rug-style="off"] .fullscreen-player-room-rug { display:none; }
+  [data-rug-style="herringbone"] { --room-rug-pattern:repeating-linear-gradient(45deg,#ffffff20 0 3px,transparent 3px 14px),repeating-linear-gradient(-45deg,#0003 0 3px,transparent 3px 14px); }
+  [data-rug-style="checker"] { --room-rug-pattern:repeating-conic-gradient(#ffffff20 0% 25%,#0002 0% 50%) 0 0 / 34px 34px; }
+  [data-rug-style="kilim"] { --room-rug-pattern:repeating-linear-gradient(0deg,transparent 0 26px,#e7b97845 26px 30px,transparent 30px 38px),repeating-conic-gradient(from 45deg,#e7b97835 0% 25%,transparent 0% 50%) 0 0 / 40px 40px; }
+  [data-rug-style="border"] { --room-rug-pattern:linear-gradient(90deg,#e9d7a840 0 4%,transparent 4% 96%,#e9d7a840 96%),linear-gradient(0deg,#e9d7a840 0 8%,transparent 8% 92%,#e9d7a840 92%),repeating-linear-gradient(90deg,#ffffff08 0 1px,transparent 1px 4px); }
+  [data-rug-style="rings"] { --room-rug-pattern:repeating-radial-gradient(ellipse at center,transparent 0 14px,#ffffff25 14px 17px,transparent 17px 24px,#0002 24px 27px); }
   [data-rug-style="plain"] { --room-rug-pattern:linear-gradient(transparent,transparent); }
   [data-rug-style="stripes"] { --room-rug-pattern:repeating-linear-gradient(90deg,#ffffff16 0 10px,#0002 10px 20px); }
   [data-rug-style="geometric"] { --room-rug-pattern:repeating-linear-gradient(45deg,transparent 0 18px,#ffffff20 18px 20px),repeating-linear-gradient(-45deg,transparent 0 18px,#ffffff20 18px 20px); }
@@ -16984,7 +16989,51 @@ if (fullscreenRoomStyle.wallPattern === 'windows') {
   fullscreenRoomStyle.wallPattern = 'concrete';
   fullscreenRoomStyle.windows = 'on';
 }
+// Kleine statische SVG-Kacheln: Struktur ohne zusätzliche Animationen oder Filter.
+function makeNaturalWallTexture(kind) {
+  let seed=37;
+  const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  const width=360,height=240,shapes=[];
+  if(kind==='brick') {
+    for(let row=-1;row<7;row++) {
+      let x=row%2?-48:-100;
+      while(x<width) {
+        const w=70+random()*48,y=row*40+3;
+        const shade=random()>.45?'#fff':'#000';
+        shapes.push(`<path d="M${x+3} ${y+random()*2}l${w-7} ${random()*2} 1 32-${w-5} 1Z" fill="${shade}" fill-opacity="${.04+random()*.13}" stroke="#000" stroke-opacity=".32" stroke-width="2"/>`);
+        shapes.push(`<path d="M${x+9} ${y+8}l${w*.55} -1m-${w*.36} 17  ${w*.45} 1" fill="none" stroke="#fff" stroke-opacity=".06"/>`);
+        x+=w;
+      }
+    }
+  } else if(kind==='stone') {
+    const points=[];
+    for(let row=0;row<=4;row++){points[row]=[];for(let col=0;col<=5;col++)points[row][col]=[col*72+(col>0&&col<5?(random()-.5)*38:0),row*60+(row>0&&row<4?(random()-.5)*32:0)];}
+    for(let row=0;row<4;row++)for(let col=0;col<5;col++) {
+      const corners=[points[row][col],points[row][col+1],points[row+1][col+1],points[row+1][col]];
+      const cx=corners.reduce((a,p)=>a+p[0],0)/4,cy=corners.reduce((a,p)=>a+p[1],0)/4;
+      const inset=corners.map(([x,y])=>[cx+(x-cx)*.93,cy+(y-cy)*.91]);
+      shapes.push(`<polygon points="${inset.map(p=>p.join(',')).join(' ')}" fill="${random()>.5?'#fff':'#000'}" fill-opacity="${.05+random()*.2}" stroke="#000" stroke-opacity=".4" stroke-width="2" stroke-linejoin="round"/>`);
+      shapes.push(`<path d="M${inset[0]}L${inset[1]}M${cx-12} ${cy+5}l20 -7 10 3" fill="none" stroke="#fff" stroke-opacity=".1"/>`);
+    }
+  } else {
+    for(let row=0;row<6;row++) {
+      const y=row*40;
+      shapes.push(`<rect x="0" y="${y}" width="360" height="39" fill="${row%2?'#fff':'#000'}" fill-opacity=".05"/><path d="M0 ${y}h360" stroke="#000" stroke-opacity=".5" stroke-width="2"/>`);
+      const joint=(row*137)%360;
+      shapes.push(`<path d="M${joint} ${y}v40" stroke="#000" stroke-opacity=".25"/>`);
+      for(let grain=0;grain<5;grain++){const gy=y+5+grain*6;shapes.push(`<path d="M-10 ${gy}Q70 ${gy-5+random()*10} 175 ${gy}T370 ${gy+random()*3}" stroke="${grain%2?'#fff':'#000'}" stroke-opacity=".09" fill="none"/>`);}
+      if(row%2===0)shapes.push(`<ellipse cx="${60+row*45}" cy="${y+20}" rx="12" ry="4" fill="none" stroke="#000" stroke-opacity=".16"/>`);
+    }
+  }
+  const vertical=kind==='woodVertical';
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${vertical?height:width}" height="${vertical?width:height}" viewBox="0 0 ${vertical?height:width} ${vertical?width:height}"><g${vertical?' transform="translate(240 0) rotate(90)"':''}>${shapes.join('')}</g></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
 const fullscreenRoomPatterns = {
+  rusticBrick:makeNaturalWallTexture('brick'),
+  naturalStone:makeNaturalWallTexture('stone'),
+  woodHorizontal:makeNaturalWallTexture('woodHorizontal'),
+  woodVertical:makeNaturalWallTexture('woodVertical'),
   wood:'repeating-linear-gradient(90deg, #0007 0 2px, transparent 2px 60px), repeating-linear-gradient(0deg, #ffffff05 0 1px, transparent 1px 5px)',
   tiles:'repeating-linear-gradient(90deg, #0006 0 2px, transparent 2px 65px), repeating-linear-gradient(0deg, #0006 0 2px, transparent 2px 65px)',
   concrete:'repeating-linear-gradient(35deg, #ffffff03 0 1px, transparent 1px 4px)',
@@ -17277,7 +17326,7 @@ const fullscreenRoomFields = document.getElementById('fullscreenPlayerRoomFields
   ['zoom','Kamera',{off:'Komplettansicht',on:'Player und Cover'}],
   ['floorType','Bodenart',{wood:'Holzdielen',tiles:'Fliesen',concrete:'Beton',plain:'Glatt'}],
   ['floor','Bodenfarbe'], ['wall','Wandfarbe'],
-  ['wallPattern','Wandtextur / Muster',{concrete:'Beton',plain:'Glatt',bricks:'Backstein',stripes:'Streifen',grid:'Raster'}],
+  ['wallPattern','Wandtextur / Muster',{concrete:'Beton',plain:'Glatt',bricks:'Backstein · regelmäßig',rusticBrick:'Ziegel · rustikal',naturalStone:'Naturstein',woodHorizontal:'Holzdielen · horizontal',woodVertical:'Holzdielen · vertikal',stripes:'Streifen',grid:'Raster'}],
   ['windows','Fenster anzeigen',{off:'Aus',on:'An'}],
   ['timeOfDay','Tageszeit',{morning:'Morgen',noon:'Mittag',evening:'Abend',night:'Nacht',realtime:'Echtzeit'}],
   ['windowScene','Fensteraussicht',{cyberpunk:'Cyberpunk-Stadt',alien:'Natur auf Alien-Planet',farm:'Felder im Sonnenuntergang',coast:'Meer · Sonnenaufgang & Leuchtturm'}],
@@ -17285,7 +17334,7 @@ const fullscreenRoomFields = document.getElementById('fullscreenPlayerRoomFields
   ['shelf','Regalfarbe'], ['turntable','Plattenspieler'], ['equalizer','Equalizer'],
   ['lightLeft','Licht links'], ['lightRight','Licht rechts'],
   ['rug','Teppichfarbe'],
-  ['rugStyle','Teppichmuster',{woven:'Gewebt',plain:'Einfarbig',geometric:'Rauten',stripes:'Streifen',off:'Kein Teppich'}],
+  ['rugStyle','Teppichmuster',{woven:'Gewebt',plain:'Einfarbig',geometric:'Rauten',stripes:'Streifen',herringbone:'Fischgrät',checker:'Schachbrett',kilim:'Kelim',border:'Bordüre',rings:'Kreise',off:'Kein Teppich'}],
   ['rugShape','Teppichform',{rectangle:'Rechteckig',round:'Rund',rounded:'Abgerundet'}],
   ['rugSize','Teppichgröße',{small:'Klein',medium:'Mittel',large:'Groß'}],
   ['speakers','Lautsprecher',{off:'Aus',low:'Low · Wandboxen',mid:'Mid · Tower + 1 Sub',high:'High · High-End + 2 Subs'}],
@@ -17335,7 +17384,7 @@ function updateFullscreenRoomStatus(message) {
 }
 function normalizeFullscreenRoomStyle(raw) {
   const result = { ...fullscreenRoomDefaults };
-  const choices = {wallpaperFit:['contain','cover','custom','fill','frame'],timeOfDay:['morning','noon','evening','night','realtime'],layout:['auto','stacked','split'],zoom:['off','on'],floorType:['wood','tiles','concrete','plain'],windows:['off','on'],wallPattern:['concrete','plain','bricks','stripes','grid'],weather:['clear','rain','snow'],windowScene:['cyberpunk','alien','farm','coast'],rugStyle:['woven','plain','geometric','stripes','off'],rugShape:['rectangle','round','rounded'],rugSize:['small','medium','large'],speakers:['off','low','mid','high']};
+  const choices = {wallpaperFit:['contain','cover','custom','fill','frame'],timeOfDay:['morning','noon','evening','night','realtime'],layout:['auto','stacked','split'],zoom:['off','on'],floorType:['wood','tiles','concrete','plain'],windows:['off','on'],wallPattern:['concrete','plain','bricks','rusticBrick','naturalStone','woodHorizontal','woodVertical','stripes','grid'],weather:['clear','rain','snow'],windowScene:['cyberpunk','alien','farm','coast'],rugStyle:['woven','plain','geometric','stripes','herringbone','checker','kilim','border','rings','off'],rugShape:['rectangle','round','rounded'],rugSize:['small','medium','large'],speakers:['off','low','mid','high']};
   Object.keys(result).forEach(key => {
     const value = raw?.[key];
     if (['responsiveness','wallpaperX','wallpaperY'].includes(key)) {
@@ -18802,6 +18851,23 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   let controllerReady = false;
   let playbackIsPaused = true;
   let lastTrackEndTriggered = false;
+  let initialAlbumTrackSelected = restorePlayback;
+  const startFirstAlbumTrack = () => {
+    if (initialAlbumTrackSelected || !albumId || !controllerReady || !tracks[0]?.uri || !host.isConnected) return false;
+    initialAlbumTrackSelected = true;
+    currentIndex = 0; playingUri = tracks[0].uri;
+    pendingAutoAdvancedTrackUri = playingUri;
+    pendingTrackRequestedAt = Date.now(); pendingTrackConfirmedAt = 0;
+    listeningPlaybackState = {trackUri:playingUri,positionSeconds:0};
+    lastTrackEndTriggered = false;
+    updateCurrentTrack();
+    spotifyMiniController.loadUri(playingUri);
+    spotifyMiniController.play();
+    pendingPlaybackPaused = false; pendingPlaybackAt = Date.now();
+    showPlaybackState(false);
+    persistListeningSession();
+    return true;
+  };
   let pendingAutoAdvancedTrackUri = '';
   let pendingTrackRequestedAt = 0;
   let pendingTrackConfirmedAt = 0;
@@ -18929,6 +18995,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       button.addEventListener('click', () => {
         if (!track.uri || !spotifyMiniController || !controllerReady) return;
         try {
+          initialAlbumTrackSelected = true;
           currentIndex = index;
           playingUri = track.uri;
           pendingAutoAdvancedTrackUri = track.uri;
@@ -18957,6 +19024,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     message.hidden = !player.dataset.sdkNotice;
     if(player.dataset.sdkNotice)message.textContent=player.dataset.sdkNotice;
     updateCurrentTrack();
+    if (timingSource === 'spotify') startFirstAlbumTrack();
+    syncFullscreenPlayer();
   };
   const fallbackTracks = (Array.isArray(item?.tracklist) ? item.tracklist : []).map(track => ({
     title: typeof track === 'string' ? getListeningDisplayText(track, 'Unbenannter Track') : getListeningDisplayText(track.title, 'Unbenannter Track'),
@@ -18989,6 +19058,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   });
   const changeTrack = direction => {
     if (!spotifyMiniController || !controllerReady || !tracks.length) return;
+    initialAlbumTrackSelected = true;
     const startIndex = currentIndex < 0 ? (direction > 0 ? -1 : 0) : currentIndex;
     const nextIndex = (startIndex + direction + tracks.length) % tracks.length;
     const track = tracks[nextIndex];
@@ -19171,10 +19241,12 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           updateControls();
           persistListeningPlaybackProgress(true);
         } else {
-          controller.play();
+          if (!startFirstAlbumTrack()) controller.play();
         }
+        syncFullscreenPlayer();
       });
       controller.addListener('playback_started', event => {
+        if (!host.isConnected || spotifyMiniController !== controller) return;
         if (pendingPlaybackPaused === true && Date.now()-pendingPlaybackAt < 8000) { retryPendingEmbedPlayback(); return; }
         if (!acceptsSpotifyTrackState(event.data || {}, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) return;
         if (albumId && currentIndex < 0 && !event.data?.playbackContextPosition) currentIndex = 0;
@@ -19186,6 +19258,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         persistListeningSession();
       });
       controller.addListener('playback_update', event => {
+        if (!host.isConnected || spotifyMiniController !== controller) return;
         const state = event.data || {};
         if (!acceptsSpotifyTrackState(state, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) return;
         if (pendingPlaybackPaused !== null) {
