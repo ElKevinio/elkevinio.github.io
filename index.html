@@ -6346,7 +6346,13 @@
 }
 #cloudSyncBanner {
   position: fixed;
-  z-index: 3000;
+  z-index: 2147483647;
+  top:auto;
+  margin:0;
+  width:auto;
+  max-height:40dvh;
+  overflow-y:auto;
+  flex-wrap:wrap;
   left: 12px;
   right: 12px;
   bottom: max(12px, env(safe-area-inset-bottom));
@@ -6364,6 +6370,9 @@
   text-align: center;
 }
 #cloudSyncBanner[hidden] { display: none; }
+#modalOverlay { z-index:2147483647; margin:0; width:auto; height:auto; border:0; color:var(--text-primary); }
+#modalOverlay .modal-box { max-height:calc(100dvh - 40px); overflow-y:auto; }
+#cloudSyncBanner::backdrop, #modalOverlay::backdrop { background:transparent; pointer-events:none; }
 #cloudSyncBanner[data-state="error"] { border-color: var(--danger); }
 #cloudSyncBanner button {
   flex: 0 0 auto;
@@ -8676,9 +8685,38 @@ async function showCloudSyncDetails() {
   try {await showAlert('Synchronisierungsdetails\n\n'+lines.join('\n\n'));}
   finally {message.style.whiteSpace=previous;}
 }
+let cloudManualRetryRunning = false;
+async function retryCloudSynchronization() {
+  if (!currentUid || !viewingOwnCollection || cloudManualRetryRunning) return;
+  cloudManualRetryRunning = true;
+  const uid = currentUid;
+  try {
+    if (pendingCloudSave) persistPendingCloudSnapshot(getCloudSettingsSnapshot());
+    const snapshot = await trackFirebaseRequest(db.collection('users').doc(uid).get({source:'server'}));
+    if (currentUid !== uid) return;
+    await loadCloudData(uid, snapshot);
+    if (currentUid !== uid) return;
+    if (cloudCollectionIntegrityIssue?.uid === uid) {
+      await showCloudSyncDetails();
+      return;
+    }
+    if (pendingCloudSave) await saveCloudDataNow();
+    else showCloudSyncStatus('Sammlung erneut mit Firebase geprüft. Keine ausstehenden Änderungen.');
+  } catch (error) {
+    console.error('Manuelle Cloud-Synchronisierung fehlgeschlagen:', error);
+    updateCloudSyncBanner(`Firebase konnte nicht erneut geprüft werden: ${error?.message || 'Verbindung fehlgeschlagen'}`, 'error', true);
+  } finally {cloudManualRetryRunning = false;}
+}
 function getCollectionIntegrityMessage() {
   const issue=cloudCollectionIntegrityIssue;
   return issue ? `Sammlung geöffnet: ${issue.actual} Alben geladen, Cloud-Zähler ${issue.expected}. Sammlungssynchronisierung zum Schutz deiner Daten angehalten. Lokale Änderungen bleiben gespeichert.` : '';
+}
+function raiseNotificationLayer(element) {
+  if (typeof element.showPopover === 'function') {
+    element.setAttribute('popover','manual');
+    if (element.matches(':popover-open')) element.hidePopover();
+    element.showPopover();
+  } else document.body.appendChild(element);
 }
 function updateCloudSyncBanner(message, state = 'pending', retry = false) {
   if (cloudCollectionIntegrityIssue?.uid === currentUid) { message=getCollectionIntegrityMessage(); state='error'; retry=false; }
@@ -8691,6 +8729,10 @@ function updateCloudSyncBanner(message, state = 'pending', retry = false) {
   if (pendingCloudSave || cloudCollectionIntegrityIssue?.uid === currentUid) {
     const details=document.createElement('button');details.type='button';details.textContent='Details anzeigen';
     details.addEventListener('click',showCloudSyncDetails);banner.append(details);
+  }
+  if (cloudCollectionIntegrityIssue?.uid === currentUid) {
+    const recheck=document.createElement('button');recheck.type='button';recheck.textContent='Erneut prüfen und synchronisieren';
+    recheck.addEventListener('click',retryCloudSynchronization);banner.append(recheck);
   }
   if (retry) {
     const button = document.createElement('button');
@@ -8705,6 +8747,8 @@ function updateCloudSyncBanner(message, state = 'pending', retry = false) {
     banner.append(button);
   }
   banner.hidden = false;
+  raiseNotificationLayer(banner);
+  if (cloudCollectionIntegrityIssue?.uid === currentUid) return;
   cloudBannerHideTimer = setTimeout(() => {
     banner.hidden = true;
     cloudBannerHideTimer = null;
@@ -10310,6 +10354,7 @@ function showModal({ message, buttons }) {
       if (settled) return;
       settled = true;
       overlay.classList.remove('open');
+      if (typeof overlay.hidePopover === 'function' && overlay.hasAttribute('popover')) overlay.hidePopover();
       overlay.removeEventListener('click', onBackdrop);
       document.removeEventListener('keydown', onKey);
       resolve(value);
@@ -10340,6 +10385,7 @@ function showModal({ message, buttons }) {
     overlay.addEventListener('click', onBackdrop);
     document.addEventListener('keydown', onKey);
     overlay.classList.add('open');
+    raiseNotificationLayer(overlay);
   });
 }
 
