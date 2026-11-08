@@ -7845,6 +7845,7 @@ let cloudSaveInFlightPromise = null;
 let cloudChangeRevision = 0;
 let cloudRetryAttempt = 0;
 let cloudSyncUnavailableReason = null;
+let cloudCollectionIntegrityIssue = null;
 let firebaseActivityCount = 0;
 let firebaseActivityStartedAt = 0;
 let firebaseActivityHoldUntil = 0;
@@ -8263,11 +8264,11 @@ async function loadCloudCollectionDetailed(uid, userData) {
     const root = await trackFirebaseRequest(db.collection('users').doc(uid).get({source:'server'}));
     if (!root.exists) throw error;
     const freshData = root.data();
-    const loaded = await loadCloudCollectionAttempt(uid, freshData, {source:'server'});
+    const loaded = await loadCloudCollectionAttempt(uid, freshData, {source:'server'}, true);
     return {...loaded, rootData:freshData};
   }
 }
-async function loadCloudCollectionAttempt(uid, userData, readOptions) {
+async function loadCloudCollectionAttempt(uid, userData, readOptions, allowCountMismatch = false) {
   if (userData.collectionStorageVersion === 2) {
     const chunkIds = Array.isArray(userData.collectionChunkIds) ? userData.collectionChunkIds : [];
     const chunksRef = getCloudChunksRef(uid);
@@ -8288,7 +8289,8 @@ async function loadCloudCollectionAttempt(uid, userData, readOptions) {
     if (typeof userData.collectionItemCount === 'number' && userData.collectionItemCount !== items.length) {
       const error = new Error(`Sammlungsdaten widersprüchlich (${items.length} geladene, ${userData.collectionItemCount} erwartete Alben). Bitte später erneut versuchen.`);
       error.code = 'collection/count-mismatch';
-      throw error;
+      if (!allowCountMismatch) throw error;
+      return {items,chunkSnapshot,version:2,integrityIssue:{uid,expected:userData.collectionItemCount,actual:items.length}};
     }
     return { items, chunkSnapshot, version: 2 };
   }
@@ -8625,13 +8627,71 @@ function getCloudSettingsSnapshot() {
   }, ts ? { tableSettings: { visible: { ...ts.visible } } } : {});
 }
 
+function getCloudSyncDiagnostics() {
+  const cloudItems=new Map(), localItems=new Map();
+  cloudChunkSnapshot.forEach(json=>JSON.parse(json).forEach(item=>cloudItems.set(getCloudItemDocId(item),item)));
+  const plan=buildCloudCollectionPlan(ownCollection);
+  plan.chunks.forEach(chunk=>JSON.parse(chunk.json).forEach(item=>localItems.set(getCloudItemDocId(item),item)));
+  const lines=[];
+  const name=item=>`${item?.artist || 'Unbekannter Interpret'} – ${item?.title || 'Unbenanntes Album'} (ID: ${item?.id ?? '?'})`;
+  localItems.forEach((item,id)=>{
+    const saved=cloudItems.get(id);
+    if (!saved) lines.push(`Neu, noch nicht synchronisiert: ${name(item)}`);
+    else if (stableCloudJson(saved)!==stableCloudJson(item)) lines.push(`Geändert, noch nicht synchronisiert: ${name(item)}`);
+  });
+  cloudItems.forEach((item,id)=>{if(!localItems.has(id))lines.push(`Lokal entfernt, Cloud-Löschung ausstehend: ${name(item)}`);});
+  plan.images.forEach((image,id)=>{
+    if ((cloudImageSnapshot.has(id)&&cloudImageSnapshot.get(id)!==image)||(!cloudImageSnapshot.has(id)&&!cloudPendingImageIds.has(id))) lines.push(`Bild noch nicht synchronisiert: ${name(localItems.get(id))}`);
+  });
+  const root=cloudRootCache?.uid===currentUid?cloudRootCache.data:null;
+  if(root){
+    if(root.title!==ownCollectionTitle)lines.push('Sammlungsname noch nicht synchronisiert.');
+    const settings=getCloudSettingsSnapshot();
+    for(const key of new Set([...Object.keys(root.settings||{}),...Object.keys(settings)])) {
+      if(stableCloudJson(root.settings?.[key]??null)!==stableCloudJson(settings[key]??null)) lines.push(`Einstellung noch nicht synchronisiert: ${key}`);
+    }
+  }
+  if(fullscreenRoomDirty)lines.push('Raumgestaltung des Musikplayers noch nicht synchronisiert.');
+  const issue=cloudCollectionIntegrityIssue;
+  if(issue?.uid===currentUid){
+    lines.unshift(`Cloud-Zähler: ${issue.expected} Alben. Tatsächlich geladen: ${issue.actual} Alben.`,
+      'Alle angegebenen Sammlungsblöcke wurden gelesen. Der Zähler enthält keine Album-IDs: Welche Alben die Abweichung verursachen, lässt sich daraus nicht sicher bestimmen.');
+    const seen=new Set(),duplicates=[];
+    cloudChunkSnapshot.forEach((json,id)=>{
+      const items=JSON.parse(json);lines.push(`Sammlungsblock ${id}: ${items.length} Alben`);
+      items.forEach(item=>{const key=getCloudItemDocId(item);if(seen.has(key))duplicates.push(name(item));seen.add(key);});
+    });
+    if(duplicates.length)lines.push('Doppelte Album-IDs in der Cloud:',...duplicates);
+    else lines.push('Keine doppelten Album-IDs in den geladenen Blöcken gefunden.');
+    lines.push('Sammlungssynchronisierung angehalten; die folgenden Änderungen sind nur lokal gespeichert.');
+  }
+  if(!lines.length)lines.push('Keine ausstehenden Unterschiede zu den zuletzt geladenen Cloud-Daten gefunden.');
+  return lines;
+}
+async function showCloudSyncDetails() {
+  let lines;
+  try {lines=getCloudSyncDiagnostics();}catch(error){lines=['Details konnten nicht vollständig ermittelt werden: '+(error.message||'unbekannter Fehler')];}
+  const message=document.getElementById('modalMessage');
+  const previous=message.style.whiteSpace;message.style.whiteSpace='pre-wrap';
+  try {await showAlert('Synchronisierungsdetails\n\n'+lines.join('\n\n'));}
+  finally {message.style.whiteSpace=previous;}
+}
+function getCollectionIntegrityMessage() {
+  const issue=cloudCollectionIntegrityIssue;
+  return issue ? `Sammlung geöffnet: ${issue.actual} Alben geladen, Cloud-Zähler ${issue.expected}. Sammlungssynchronisierung zum Schutz deiner Daten angehalten. Lokale Änderungen bleiben gespeichert.` : '';
+}
 function updateCloudSyncBanner(message, state = 'pending', retry = false) {
+  if (cloudCollectionIntegrityIssue?.uid === currentUid) { message=getCollectionIntegrityMessage(); state='error'; retry=false; }
   const banner = document.getElementById('cloudSyncBanner');
   if (!banner) return;
   clearTimeout(cloudBannerHideTimer);
   banner.replaceChildren();
   banner.dataset.state = state;
   banner.append(document.createTextNode(message));
+  if (pendingCloudSave || cloudCollectionIntegrityIssue?.uid === currentUid) {
+    const details=document.createElement('button');details.type='button';details.textContent='Details anzeigen';
+    details.addEventListener('click',showCloudSyncDetails);banner.append(details);
+  }
   if (retry) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -8789,6 +8849,7 @@ async function loadCloudData(uid, prefetchedSnap) {
   let rawRootData = docSnap.exists ? data : null;
   const loaded = await loadCloudCollectionDetailed(uid, data);
   if (loaded.rootData) { data = loaded.rootData; rawRootData = data; }
+  cloudCollectionIntegrityIssue = loaded.integrityIssue || null;
   const cloudItems = loaded.items
     .map(item => { item.color = normalizeColor(item.color); return item; });
   const cloudImageIds = loaded.version === 2 && Array.isArray(data.collectionImageIds) ? data.collectionImageIds : [];
@@ -8947,9 +9008,14 @@ async function loadCloudData(uid, prefetchedSnap) {
     updateCloudSyncIndicator();
     scheduleCloudSave(2000);
   }
+  if (cloudCollectionIntegrityIssue) updateCloudSyncBanner(getCollectionIntegrityMessage(), 'error', false);
 }
 
 async function performCloudDataSaveNow(allowRemoteView = false) {
+  if (cloudCollectionIntegrityIssue?.uid === currentUid) {
+    updateCloudSyncBanner(getCollectionIntegrityMessage(), 'error', false);
+    return false;
+  }
   if (!currentUid || (!viewingOwnCollection && !allowRemoteView)) return false;
   const revisionAtStart = cloudChangeRevision;
   try {
@@ -9106,6 +9172,7 @@ window.addEventListener('online', () => {
 });
 
 document.getElementById('cloudSyncIndicator').addEventListener('click', async () => {
+  if (cloudCollectionIntegrityIssue?.uid === currentUid) { await showCloudSyncDetails(); return; }
   if (!currentUid || !viewingOwnCollection) {
     showCloudSyncStatus('Wechsle zu deiner eigenen Sammlung, um den Firebase-Status zu prüfen.');
     return;
@@ -9121,6 +9188,7 @@ document.getElementById('cloudSyncIndicator').addEventListener('click', async ()
 });
 
 document.getElementById('cloudSyncStrip').addEventListener('click', async () => {
+  if (cloudCollectionIntegrityIssue?.uid === currentUid) { await showCloudSyncDetails(); return; }
   if (!currentUid || !viewingOwnCollection) {
     showCloudSyncStatus('Wechsle zu deiner eigenen Sammlung, um den Firebase-Status zu prüfen.');
     return;
