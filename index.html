@@ -1884,6 +1884,26 @@
   .album-mini-meta { min-width:0; }
   .album-mini-track-title { display:block; overflow:hidden; color:var(--text-primary); font-size:14px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
   .album-mini-artist { display:block; overflow:hidden; margin-top:2px; color:var(--text-secondary); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+  .mini-volume-menu { position:relative; flex:0 0 32px; }
+  .mini-volume-menu > button { width:32px; height:32px; min-width:32px; }
+  .mini-volume-popover { position:absolute; top:calc(100% + 8px); right:0; z-index:20; width:170px; max-width:calc(100vw - 40px); padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); box-shadow:0 8px 24px #0008; }
+  .mini-volume-popover[hidden] { display:none; }
+  .mini-volume-popover .player-volume { margin:0; }
+  .player-transport-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:10px 16px; width:100%; min-width:0; margin-top:10px; }
+  .player-transport-row > .album-mini-controls,
+  .player-transport-row > .fullscreen-player-controls { flex:0 0 auto; margin-top:0; }
+  .player-transport-row > .player-volume { flex:0 1 150px; width:150px; max-width:220px; margin:0; }
+  .album-listening-dock.is-collapsed .player-transport-row { display:contents; }
+  .player-volume { display:block; width:100%; max-width:220px; margin:0; }
+  .player-volume input { display:block; appearance:none; -webkit-appearance:none; width:100%; min-width:0; height:26px; padding:0; margin:0; border:0; outline-offset:3px; background:transparent; cursor:pointer; }
+  .player-volume input::-webkit-slider-runnable-track { height:4px; border-radius:4px; background:linear-gradient(to right,var(--accent) 0 var(--volume-level,80%),var(--surface-3) var(--volume-level,80%) 100%); }
+  .player-volume input::-moz-range-track { height:4px; border-radius:4px; background:var(--surface-3); }
+  .player-volume input::-moz-range-progress { height:4px; border-radius:4px; background:var(--accent); }
+  .player-volume input::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; width:12px; height:12px; margin-top:-4px; border:0; border-radius:50%; background:var(--text-primary); box-shadow:0 1px 4px #0006; }
+  .player-volume input::-moz-range-thumb { width:12px; height:12px; border:0; border-radius:50%; background:var(--text-primary); box-shadow:0 1px 4px #0006; }
+  .player-volume input:disabled { opacity:.35; cursor:not-allowed; }
+  .mini-volume-menu:has(button[aria-expanded="true"]) > button { color:var(--accent); border-color:var(--accent-border); }
+  .album-listening-dock.is-collapsed .player-volume { display:none; }
   .album-mini-controls { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:12px; }
   .album-mini-control {
     display:inline-flex; align-items:center; justify-content:center;
@@ -3171,6 +3191,11 @@
     box-shadow:0 8px 32px rgba(0,0,0,.65);
   }
   .album-queue-panel[hidden] { display:none; }
+  .album-queue-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:9px; }
+  .album-queue-header .album-queue-heading { margin:0; }
+  .album-queue-shuffle { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; min-height:34px; font-size:12px; }
+  .album-queue-shuffle svg { width:17px; height:17px; }
+  .album-queue-shuffle:disabled { opacity:.4; cursor:not-allowed; }
   .album-queue-heading { margin:0 0 9px; color:var(--text-primary); font-size:13px; font-weight:650; }
   .album-queue-list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
   .album-queue-item { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px; padding:7px; border:1px solid var(--border); border-radius:8px; background:var(--surface-1); }
@@ -7048,7 +7073,7 @@
   </div>
   <div id="albumListeningDockContent"></div>
   <section id="albumQueuePanel" class="album-queue-panel" aria-label="Album-Warteschlange" hidden>
-    <h2 class="album-queue-heading">Warteschlange</h2>
+    <div class="album-queue-header"><h2 class="album-queue-heading">Warteschlange</h2><button type="button" class="album-queue-shuffle" data-shuffle-album-queue title="Wartende Alben zufällig mischen" aria-label="Album-Warteschlange mischen" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 4-4m4-4c1-2 2-4 4-4h3m-4-4 4 4-4 4"/></svg><span>Shuffle</span></button></div>
     <ol id="albumQueueList" class="album-queue-list"></ol>
   </section>
 </aside>
@@ -7150,7 +7175,7 @@
     <ol id="fullscreenPlayerTracksList" class="fullscreen-player-tracks-list"></ol>
   </section>
   <section id="fullscreenPlayerQueuePanel" class="fullscreen-player-queue-panel" aria-label="Warteschlange" hidden>
-    <h2 class="album-queue-heading">Warteschlange</h2>
+    <div class="album-queue-header"><h2 class="album-queue-heading">Warteschlange</h2><button type="button" class="album-queue-shuffle" data-shuffle-album-queue title="Wartende Alben zufällig mischen" aria-label="Album-Warteschlange mischen" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 4-4m4-4c1-2 2-4 4-4h3m-4-4 4 4-4 4"/></svg><span>Shuffle</span></button></div>
     <ol id="fullscreenPlayerQueueList" class="album-queue-list"></ol>
   </section>
   <div class="fullscreen-player-info">
@@ -8230,10 +8255,23 @@ function cloudChunkId(index) {
 }
 
 async function loadCloudCollectionDetailed(uid, userData) {
+  try { return await loadCloudCollectionAttempt(uid, userData); }
+  catch (error) {
+    if (error?.code !== 'collection/count-mismatch') throw error;
+    // Root und Blöcke können aus unterschiedlichen Cache-/Speicherständen stammen.
+    // Bei abweichender Anzahl beide erneut vom Server lesen, niemals Teilstände übernehmen.
+    const root = await trackFirebaseRequest(db.collection('users').doc(uid).get({source:'server'}));
+    if (!root.exists) throw error;
+    const freshData = root.data();
+    const loaded = await loadCloudCollectionAttempt(uid, freshData, {source:'server'});
+    return {...loaded, rootData:freshData};
+  }
+}
+async function loadCloudCollectionAttempt(uid, userData, readOptions) {
   if (userData.collectionStorageVersion === 2) {
     const chunkIds = Array.isArray(userData.collectionChunkIds) ? userData.collectionChunkIds : [];
     const chunksRef = getCloudChunksRef(uid);
-    const snapshots = await trackFirebaseRequest(Promise.all(chunkIds.map(id => chunksRef.doc(id).get())));
+    const snapshots = await trackFirebaseRequest(Promise.all(chunkIds.map(id => chunksRef.doc(id).get(readOptions))));
     const items = [];
     const chunkSnapshot = new Map();
     snapshots.forEach((snapshot, index) => {
@@ -8248,7 +8286,9 @@ async function loadCloudCollectionDetailed(uid, userData) {
       parsed.forEach(item => { item.color = normalizeColor(item.color); items.push(item); });
     });
     if (typeof userData.collectionItemCount === 'number' && userData.collectionItemCount !== items.length) {
-      throw new Error(`Sammlung unvollständig geladen (${items.length} von ${userData.collectionItemCount} Alben).`);
+      const error = new Error(`Sammlungsdaten widersprüchlich (${items.length} geladene, ${userData.collectionItemCount} erwartete Alben). Bitte später erneut versuchen.`);
+      error.code = 'collection/count-mismatch';
+      throw error;
     }
     return { items, chunkSnapshot, version: 2 };
   }
@@ -8746,8 +8786,9 @@ async function loadCloudData(uid, prefetchedSnap) {
   }
   cloudSyncUnavailableReason = localPending?.lastError || null;
   suppressNextCloudSave = true;
-  const rawRootData = docSnap.exists ? data : null;
+  let rawRootData = docSnap.exists ? data : null;
   const loaded = await loadCloudCollectionDetailed(uid, data);
+  if (loaded.rootData) { data = loaded.rootData; rawRootData = data; }
   const cloudItems = loaded.items
     .map(item => { item.color = normalizeColor(item.color); return item; });
   const cloudImageIds = loaded.version === 2 && Array.isArray(data.collectionImageIds) ? data.collectionImageIds : [];
@@ -15907,7 +15948,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     const listeners=new Map();
     const emit=(name,data={}) => { if (!destroyed) for(const fn of listeners.get(name)||[]) fn({data}); };
     const report=(text,fatal=false) => { if(!destroyed) onStatus(text,fatal); };
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:.8,enableMediaSession:true,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     const pushState=next => {
@@ -15952,6 +15993,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     };
     const activate=()=>{try{Promise.resolve(sdk.activateElement()).catch(()=>{});}catch{}};
     const controller={isWebPlaybackSdk:true,
+      setVolume(value){return sdk.setVolume(value);},
       addListener(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);},
       loadUri(uri){commandVersion++;selectionVersion++;pendingUri=uri;pendingPosition=0;desiredUri=uri.startsWith('spotify:track:')?uri:'';desiredUntil=Date.now()+8000;},
       seek(seconds){if(pendingUri)pendingPosition=Math.max(0,Number(seconds)||0)*1000;else run(()=>sdk.seek(Math.max(0,Number(seconds)||0)*1000));},
@@ -16017,6 +16059,67 @@ let spotifyMiniController = null;
 let spotifyMiniTracklistRequest = null;
 let youtubeMiniController = null;
 let youtubeMiniProgressTimer = null;
+let playerVolume = (() => { try { const saved=localStorage.getItem('playerVolumeV1'); const value=saved===null?80:Number(saved); return Number.isFinite(value)?Math.max(0,Math.min(100,value)):80; } catch { return 80; } })();
+function getPlayerVolumeTarget() {
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  if (ios) return {hint:'Lautstärke über die Gerätetasten ändern.'};
+  const provider = document.querySelector('.album-mini-player')?.dataset.provider;
+  if (provider === 'youtube' && youtubeMiniController?.setVolume) return {set:value=>youtubeMiniController.setVolume(value)};
+  if (provider === 'spotify' && spotifyMiniController?.isWebPlaybackSdk) return {set:value=>spotifyMiniController.setVolume(value/100)};
+  return {hint:provider === 'spotify' ? 'Spotify-Embed: Lautstärke über das Gerät ändern.' : 'Player wird geladen …'};
+}
+function syncPlayerVolumeControls() {
+  const target=getPlayerVolumeTarget();
+  document.querySelectorAll('.player-volume').forEach(row=>{
+    const input=row.querySelector('input');
+    input.disabled=!target.set;
+    input.value=String(playerVolume);
+    input.setAttribute('aria-valuetext',`${playerVolume} Prozent`);
+    input.style.setProperty('--volume-level',`${playerVolume}%`);
+    row.title=target.hint||'Lautstärke';
+
+  });
+}
+async function applyPlayerVolume() {
+  const target=getPlayerVolumeTarget();
+  if (!target.set) {syncPlayerVolumeControls();return;}
+  try {await target.set(playerVolume);}
+  catch(error) {
+    console.error('Lautstärke konnte nicht geändert werden:',error);
+    document.querySelectorAll('.player-volume').forEach(row=>row.title='Lautstärke bitte über das Gerät ändern.');
+  }
+}
+function createPlayerVolumeControl() {
+  const row=document.createElement('label');row.className='player-volume';
+  const input=document.createElement('input');input.type='range';input.min='0';input.max='100';input.step='1';input.value=String(playerVolume);input.disabled=true;input.setAttribute('aria-label','Lautstärke');
+  input.addEventListener('input',()=>{playerVolume=Number(input.value);syncPlayerVolumeControls();});
+  input.addEventListener('change',()=>{try{localStorage.setItem('playerVolumeV1',String(playerVolume));}catch{} void applyPlayerVolume();});
+  input.style.setProperty('--volume-level',`${playerVolume}%`);
+  row.append(input);return row;
+}
+function createMiniVolumeButton() {
+  const wrap=document.createElement('div');wrap.className='mini-volume-menu';
+  const button=document.createElement('button');button.type='button';button.className='album-mini-control';
+  button.title='Lautstärke';button.setAttribute('aria-label','Lautstärke');button.setAttribute('aria-expanded','false');
+  button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></svg>';
+  const panel=document.createElement('div');panel.className='mini-volume-popover';panel.hidden=true;
+  panel.append(createPlayerVolumeControl());
+  function close(){panel.hidden=true;button.setAttribute('aria-expanded','false');}
+  button.addEventListener('click',()=>{panel.hidden=!panel.hidden;button.setAttribute('aria-expanded',String(!panel.hidden));syncPlayerVolumeControls();});
+  wrap.addEventListener('keydown',event=>{if(event.key==='Escape'&&!panel.hidden){event.stopPropagation();close();button.focus();}});
+  wrap.addEventListener('focusout',event=>{if(!wrap.contains(event.relatedTarget))close();});
+  wrap.append(button,panel);return wrap;
+}
+function wrapPlayerTransport(controls) {
+  const row=document.createElement('div');
+  row.className='player-transport-row';
+  controls.replaceWith(row);
+  row.append(controls,createPlayerVolumeControl());
+  return row;
+}
+const fullscreenTransport=document.querySelector('.fullscreen-player-controls');
+if (fullscreenTransport) wrapPlayerTransport(fullscreenTransport);
+
 const listeningAlbumQueue = [];
 let currentListeningAlbum = null;
 let restoredListeningSessionKey = '';
@@ -16377,6 +16480,7 @@ function scheduleFullscreenPlayerSync() {
 let fullscreenPlayerSyncFrame = null;
 
 function syncFullscreenPlayer() {
+  syncPlayerVolumeControls();
   if (!isFullscreenPlayerOpen() || document.hidden) return;
   const presentation = [innerWidth,innerHeight,fullscreenRoomStyle.layout,fullscreenRoomStyle.zoom,fullscreenRoomStyle.windows,fullscreenRoomStyle.weather,fullscreenRoomStyle.timeOfDay,fullscreenRoomStyle.windowScene,getFullscreenPlayerView(),document.getElementById('fullscreenPlayerPosterForm').hidden].join('|');
   if (presentation !== fullscreenPresentationSignature) {
@@ -18055,6 +18159,15 @@ function renderListeningAlbumQueue() {
   });
 }
 
+function shuffleQueuedAlbums() {
+  if (listeningAlbumQueue.length < 2) return;
+  for (let index=listeningAlbumQueue.length-1; index>0; index--) {
+    const other=Math.floor(Math.random()*(index+1));
+    [listeningAlbumQueue[index],listeningAlbumQueue[other]]=[listeningAlbumQueue[other],listeningAlbumQueue[index]];
+  }
+  updateAlbumQueueControls();
+}
+document.querySelectorAll('[data-shuffle-album-queue]').forEach(button=>button.addEventListener('click',shuffleQueuedAlbums));
 function moveQueuedAlbum(index, direction) {
   const targetIndex = index + direction;
   if (targetIndex < 0 || targetIndex >= listeningAlbumQueue.length) return;
@@ -18064,6 +18177,7 @@ function moveQueuedAlbum(index, direction) {
 }
 
 function updateAlbumQueueControls() {
+  document.querySelectorAll('[data-shuffle-album-queue]').forEach(button=>button.disabled=listeningAlbumQueue.length<2);
   const dock = document.getElementById('albumListeningDock');
   if (!dock) return;
   document.querySelectorAll('.album-mini-queue-next').forEach(button => {
@@ -18163,9 +18277,10 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   const dock = document.getElementById('albumListeningDock');
   const player = document.createElement('div');
   player.className = 'album-mini-player youtube-mini-player';
+  player.dataset.provider = 'youtube';
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), createFullscreenPlayerToggle(), createAlbumPlayerSettingsToggle(), createAlbumDockToggle());
+  topbar.append(createAlbumQueueToggle(), createFullscreenPlayerToggle(), createAlbumPlayerSettingsToggle(), createMiniVolumeButton(), createAlbumDockToggle());
   const main = document.createElement('div');
   main.className = 'album-mini-main';
   const cover = document.createElement('img');
@@ -18198,6 +18313,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   const expandedClose = createExpandedDockCloseButton();
   controls.append(collapsedTitle, toggle, expandedClose, createAlbumDockToggle(), createCollapsedDockCloseButton());
   meta.append(currentTrack, artist, controls);
+
   main.append(cover, meta);
   const progress = document.createElement('div');
   progress.className = 'album-mini-progress';
@@ -18283,6 +18399,8 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
             return;
           }
           youtubeMiniController = event.target;
+          syncPlayerVolumeControls();
+          void applyPlayerVolume();
           ready = true;
           toggle.disabled = false;
           seek.disabled = false;
@@ -18439,7 +18557,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   favorite.disabled = true;
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), openInSpotify, createFullscreenPlayerToggle(), createAlbumPlayerSettingsToggle(), createAlbumDockToggle());
+  topbar.append(createAlbumQueueToggle(), openInSpotify, createFullscreenPlayerToggle(), createAlbumPlayerSettingsToggle(), createMiniVolumeButton(), createAlbumDockToggle());
   const trackList = document.createElement('ol');
   trackList.className = 'album-mini-tracklist';
   const progress = document.createElement('div');
@@ -18474,6 +18592,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     createCollapsedDockCloseButton()
   );
   meta.append(currentTrack, artist, controls);
+
   main.append(cover, meta);
   progress.append(seek);
   player.append(expandHandle, topbar, trackList, main, host, message, progress);
@@ -18916,6 +19035,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         return;
       }
       spotifyMiniController = controller;
+      syncPlayerVolumeControls();
       activateListeningControllerFrame(host);
       if(controller.isWebPlaybackSdk)controller.addListener('command_failed',event=>{
         pendingAutoAdvancedTrackUri='';pendingPlaybackPaused=null;
@@ -18926,6 +19046,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       });
       controller.addListener('ready', () => {
         controllerReady = true;
+        syncPlayerVolumeControls();
+        void applyPlayerVolume();
         player.dataset.controllerReady = 'true';
         if (albumId && currentIndex < 0) currentIndex = 0;
         updateCurrentTrack();
