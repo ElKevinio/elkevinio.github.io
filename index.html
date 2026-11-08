@@ -2315,6 +2315,8 @@
     --shelf-bottom:11%;
     --shelf-hf:0.56;
     --surface-tilt:48deg;
+    --tonearm-start:20deg;
+    --tonearm-sweep:28deg;
     --scene-perspective:1400px;
   }
   .fullscreen-player-overlay.is-angled-view .fullscreen-player-left,
@@ -2458,8 +2460,8 @@
   }
   .fullscreen-player-tonearm-pivot {
     position:absolute;
-    top:5.5%;
-    right:6%;
+    top:4.5%;
+    right:5.5%;
     width:11%;
     aspect-ratio:1;
     border-radius:50%;
@@ -2468,10 +2470,10 @@
   }
   .fullscreen-player-tonearm-rod {
     position:absolute;
-    top:calc(5.5% + 5.5%);
-    right:calc(6% + 5.5% - 2px);
+    top:10%;
+    right:calc(5.5% + 5.5% - 2px);
     width:4px;
-    height:56%;
+    height:60%;
     border-radius:2px;
     background:linear-gradient(90deg, #4b4b54, #1b1b1f);
     box-shadow:0 1px 3px rgba(0,0,0,.5);
@@ -2492,7 +2494,7 @@
     transform:translateX(-50%) rotate(6deg);
   }
   .fullscreen-player-overlay.is-playing .fullscreen-player-tonearm-rod {
-    transform:rotate(calc(16deg + var(--track-progress, 0) * 30deg));
+    transform:rotate(calc(var(--tonearm-start, 6deg) + var(--track-progress, 0) * var(--tonearm-sweep, 26deg)));
     transition:transform 1s linear;
   }
   .fullscreen-player-cover {
@@ -2777,8 +2779,8 @@
   .fullscreen-player-overlay.is-angled-view .fullscreen-player-platter::before { content:''; position:absolute; inset:1.75%; border-radius:50%; background:#08080a; transform:translateZ(-1px); box-shadow:0 2px 0 #030304; }
   .fullscreen-player-overlay.is-angled-view .fullscreen-player-platter::after { content:''; position:absolute; left:50%; top:50%; width:3%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle at 30% 25%,#fff,#85858d 40%,#232327 75%); transform:translate(-50%,-50%) translateZ(7px); box-shadow:1px 2px 2px #000b; pointer-events:none; }
   .fullscreen-player-overlay.is-angled-view .fullscreen-player-vinyl { translate:0 0 2px; border-color:#ffffff38; box-shadow:0 1px 0 #323238,0 2px 0 #050506,0 4px 4px #000b,inset 0 0 0 1px #ffffff12; }
-  .fullscreen-player-overlay.is-angled-view .fullscreen-player-tonearm-pivot { translate:0 0 10px; width:9%; right:7%; top:8%; }
-  .fullscreen-player-overlay.is-angled-view .fullscreen-player-tonearm-rod { translate:0 0 12px; right:calc(7% + 4.5% - 2px); top:12.5%; width:calc(3px * var(--equipment-scale, 1)); height:57%; background:linear-gradient(90deg,#b9b9c3,#52525b 40%,#17171d); }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-tonearm-pivot { translate:0 0 10px; width:9%; right:8.5%; top:18%; }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-tonearm-rod { translate:0 0 12px; right:calc(8.5% + 4.5% - 2px); top:23.6%; width:calc(3px * var(--equipment-scale, 1)); height:57%; background:linear-gradient(90deg,#b9b9c3,#52525b 40%,#17171d); }
     .fullscreen-player-overlay.is-split-layout { padding:12px; gap:0; }
     .fullscreen-player-overlay.is-split-layout .fullscreen-player-stage { position:absolute; top:12px; bottom:12px; left:12px; right:auto; width:54%; max-width:none; height:auto; flex-direction:row; gap:16px; }
     .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-stage { --shelf-bottom:10%; }
@@ -2866,7 +2868,7 @@
   .fullscreen-player-tracks-list .album-mini-track { min-height:42px; text-align:left; }
   .fullscreen-player-tracks-list .album-mini-track:disabled { opacity:.5; cursor:default; }
   .fullscreen-track-readonly { padding:9px 7px; font-size:13px; border-bottom:1px solid var(--border); }
-  .fullscreen-player-overlay:not(.is-changing-album) .fullscreen-player-tonearm-rod { transform:rotate(calc(16deg + var(--album-progress, 0) * 30deg)); }
+  .fullscreen-player-overlay:not(.is-changing-album) .fullscreen-player-tonearm-rod { transform:rotate(calc(var(--tonearm-start, 6deg) + var(--album-progress, 0) * var(--tonearm-sweep, 26deg))); }
   .fullscreen-player-album-progress { color:var(--text-secondary); font-size:11px; font-variant-numeric:tabular-nums; }
   #fullscreenPlayerAlbumProgress[hidden] { display:none; }
   .room-window { display:none; position:absolute; top:10%; bottom:31%; width:max(8px,30%,calc((100% - var(--room-shelf-w, var(--shelf-w))) / 2 - 30px)); overflow:hidden; border:7px solid #252735; border-radius:3px; background:#080c20; box-shadow:0 7px 0 #080a10,0 12px 22px #000a,inset 0 0 18px #000a,0 0 22px #50c5ea16; }
@@ -15840,6 +15842,8 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     let destroyed=false,deviceId='',pendingUri=options.uri,pendingPosition=0,state=null,poll=null,polling=false,activated=false;
     const lifetime = new AbortController();
     let operation=Promise.resolve(),readyTimeout=null;
+    let commandVersion=0,stateRevision=0,desiredUri='',desiredPaused=null,desiredUntil=0;
+    let selectionVersion=0,lastAcceptedSelection=-1,lastAcceptedUri='';
     const listeners=new Map();
     const emit=(name,data={}) => { if (!destroyed) for(const fn of listeners.get(name)||[]) fn({data}); };
     const report=(text,fatal=false) => { if(!destroyed) onStatus(text,fatal); };
@@ -15848,6 +15852,10 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     });
     const pushState=next => {
       if(destroyed||!next)return;
+      const uri=next.track_window?.current_track?.uri || '';
+      if(Date.now()<desiredUntil && ((desiredUri && uri!==desiredUri) || (desiredPaused!==null && next.paused!==desiredPaused)))return;
+      if(desiredPaused!==null && next.paused===desiredPaused && (!desiredUri || uri===desiredUri)) { desiredUri='';desiredPaused=null; }
+      stateRevision++;
       const previous=state;state=next;
       if(!next.paused)report('');
       if(!next.paused && (!previous||previous.paused))emit('playback_started',{track_window:next.track_window});
@@ -15857,7 +15865,11 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     sdk.addListener('player_state_changed',pushState);
     sdk.addListener('ready',({device_id})=>{
       if(destroyed)return;sdkReady();deviceId=device_id;emit('ready');
-      poll=setInterval(async()=>{ if(destroyed||polling||document.hidden||state?.paused)return;polling=true;try{pushState(await sdk.getCurrentState());}catch{}finally{polling=false;} },1000);
+      poll=setInterval(async()=>{
+        if(destroyed||polling||document.hidden||(state?.paused && desiredPaused!==false))return;
+        polling=true;const revision=stateRevision,version=commandVersion;
+        try{const next=await sdk.getCurrentState();if(revision===stateRevision && version===commandVersion)pushState(next);}catch{}finally{polling=false;}
+      },1000);
     });
     function sdkReady(){clearTimeout(readyTimeout);if(poll)clearInterval(poll);}
     sdk.addListener('not_ready',()=>{sdkReady();deviceId='';report('Spotify-Gerät nicht erreichbar. Bitte Player erneut öffnen oder das Embed verwenden.',true);});
@@ -15868,30 +15880,46 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       ['account_error','Spotify Web Playback benötigt Spotify Premium. Du kannst das Embed verwenden.'],
       ['playback_error','Spotify konnte diesen Titel nicht abspielen. Bitte erneut versuchen oder das Embed verwenden.']
     ])sdk.addListener(name,()=>{sdkReady();if(name!=='playback_error')sdk.disconnect();report(text,name!=='playback_error');});
-    const run=fn=>{operation=operation.then(async()=>{if(!destroyed)await fn();}).catch(error=>report(error.message||'Spotify-Wiedergabe fehlgeschlagen.'));};
+    const run=(fn,version=commandVersion)=>{
+      operation=operation.then(async()=>{if(!destroyed)await fn();}).catch(async error=>{
+        if(destroyed||version!==commandVersion)return;
+        desiredUri='';desiredPaused=null;desiredUntil=0;
+        emit('command_failed',{isPaused:state?.paused !== false,track_window:state?.track_window});
+        try{pushState(await sdk.getCurrentState());}catch{}
+        report(error.message||'Spotify-Wiedergabe fehlgeschlagen.');
+      });
+      return operation;
+    };
     const activate=()=>{try{Promise.resolve(sdk.activateElement()).catch(()=>{});}catch{}};
     const controller={isWebPlaybackSdk:true,
       addListener(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);},
-      loadUri(uri){pendingUri=uri;pendingPosition=0;},
+      loadUri(uri){commandVersion++;selectionVersion++;pendingUri=uri;pendingPosition=0;desiredUri=uri.startsWith('spotify:track:')?uri:'';desiredUntil=Date.now()+8000;},
       seek(seconds){if(pendingUri)pendingPosition=Math.max(0,Number(seconds)||0)*1000;else run(()=>sdk.seek(Math.max(0,Number(seconds)||0)*1000));},
       play(){
         // activateElement must run in the original tap event, before awaiting a token or network request.
-        if(!activated && navigator.userActivation && !navigator.userActivation.isActive){report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');return;}
-        activated=true;activate();run(async()=>{
+        if(!activated && navigator.userActivation && !navigator.userActivation.isActive){report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');return false;}
+        activated=true;activate();
+        const uri=pendingUri,position=pendingPosition,version=++commandVersion,selection=selectionVersion;
+        desiredUri=uri.startsWith('spotify:track:')?uri:'';desiredPaused=false;desiredUntil=Date.now()+8000;
+        return run(async()=>{
+          if(version!==commandVersion)return;
           if(!deviceId)throw new Error('Spotify-Gerät ist noch nicht bereit. Bitte erneut versuchen.');
-          if(!pendingUri){await sdk.resume();return;}
-          const uri=pendingUri,position=pendingPosition,accessToken=await getSpotifyAccessToken();
-          if(destroyed)return;if(!accessToken)throw new Error('Bitte Spotify erneut verbinden.');
+          if(!uri || (lastAcceptedSelection===selection && lastAcceptedUri===uri)){await sdk.resume();return;}
+          const accessToken=await getSpotifyAccessToken();
+          if(destroyed||version!==commandVersion)return;if(!accessToken)throw new Error('Bitte Spotify erneut verbinden.');
           const body=uri.startsWith('spotify:track:')
             ? (options.uri.startsWith('spotify:album:') ? {context_uri:options.uri,offset:{uri},position_ms:position} : {uris:[uri],position_ms:position})
             : {context_uri:uri,position_ms:position};
           const response=await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceId)}`,{method:'PUT',signal:lifetime.signal,headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
           if(destroyed)return;
           if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(response.status===403?'Für die Wiedergabe sind Spotify Premium und neue Wiedergabeberechtigungen erforderlich. Bitte Spotify erneut verbinden.':data.error?.message||`Spotify-Wiedergabe: HTTP ${response.status}`);}
-          if(pendingUri===uri){pendingUri='';pendingPosition=0;}report('');
-        });
+          lastAcceptedSelection=selection;lastAcceptedUri=uri;
+          if(pendingUri===uri && selection===selectionVersion){pendingUri='';pendingPosition=0;}
+          if(version!==commandVersion)return;
+          report('');
+        },version);
       },
-      resume(){this.play();},pause(){run(()=>sdk.pause());},
+      resume(){return this.play();},pause(){const version=++commandVersion;desiredPaused=true;desiredUntil=Date.now()+8000;return run(()=>version===commandVersion?sdk.pause():undefined,version);},
       destroy(){destroyed=true;lifetime.abort();clearTimeout(readyTimeout);clearInterval(poll);listeners.clear();sdk.disconnect();}
     };
     callback(controller);
@@ -18088,6 +18116,16 @@ function activateListeningControllerFrame(host) {
   observer.observe(host, {childList:true,subtree:true});
 }
 
+function acceptsSpotifyTrackState(state, pendingUri, tracks, requestedAt, now = Date.now()) {
+  if (!pendingUri || now-requestedAt >= 8000) return true;
+  const uri = state.playingURI || state.track_window?.current_track?.uri || state.currentTrack?.uri;
+  if (uri) return uri === pendingUri;
+  const index = state.playbackContextPosition;
+  if (index !== null && index !== undefined && index !== '' && Number.isInteger(Number(index)) && tracks[Number(index)]?.uri) return tracks[Number(index)].uri === pendingUri;
+  // Embeds sometimes omit track identity; allow their position after the initial load has settled.
+  return now-requestedAt >= 450;
+}
+
 function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlayback = false) {
   spotifyMiniController?.destroy();
   spotifyMiniController = null;
@@ -18307,6 +18345,22 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   let playbackIsPaused = true;
   let lastTrackEndTriggered = false;
   let pendingAutoAdvancedTrackUri = '';
+  let pendingTrackRequestedAt = 0;
+  let pendingTrackConfirmedAt = 0;
+  let pendingPlaybackPaused = null;
+  let pendingPlaybackAt = 0;
+  let lastPlaybackRetryAt = 0;
+  const retryPendingEmbedPlayback = () => {
+    if (spotifyMiniController?.isWebPlaybackSdk || pendingPlaybackPaused === null || Date.now()-lastPlaybackRetryAt < 450) return;
+    lastPlaybackRetryAt = Date.now();
+    try { if (pendingPlaybackPaused) spotifyMiniController?.pause(); else spotifyMiniController?.resume(); } catch {}
+  };
+  const showPlaybackState = paused => {
+    playbackIsPaused = paused;
+    toggle.innerHTML = paused ? LISTENING_ICON_SVG.play : LISTENING_ICON_SVG.pause;
+    toggle.setAttribute('aria-label', paused ? 'Wiedergabe starten' : 'Wiedergabe pausieren');
+    syncFullscreenPlayer();
+  };
   let pendingRestoredTrackUri = '';
   let restoringPausedTrack = false;
   if (restorePlayback && /^spotify:track:[A-Za-z0-9]+$/.test(listeningPlaybackState.trackUri)) {
@@ -18326,6 +18380,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     });
   };
   const updateCurrentTrack = (state = {}) => {
+    if (pendingAutoAdvancedTrackUri && Date.now()-pendingTrackRequestedAt>=8000) pendingAutoAdvancedTrackUri='';
+    if (!acceptsSpotifyTrackState(state, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) state = {};
     const reportedUri = state.playingURI
       || state.track_window?.current_track?.uri
       || state.currentTrack?.uri
@@ -18347,7 +18403,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       currentIndex = pendingIndex;
       playingUri = pendingAutoAdvancedTrackUri;
     } else if (pendingIndex >= 0) {
-      pendingAutoAdvancedTrackUri = '';
+      if (!pendingTrackConfirmedAt) pendingTrackConfirmedAt = Date.now();
+      if (Date.now()-pendingTrackConfirmedAt >= 1200) pendingAutoAdvancedTrackUri = '';
       currentIndex = pendingIndex;
       playingUri = tracks[currentIndex].uri;
     } else if (reportedIndex >= 0 && reportedIndex < tracks.length) {
@@ -18365,9 +18422,9 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     }
     if (currentIndex >= 0 && tracks[currentIndex]) {
       const activeUri = tracks[currentIndex].uri;
-      const reportedTitle = state.track_window?.current_track?.name
+      const reportedTitle = (!pendingAutoAdvancedTrackUri || reportedUri === pendingAutoAdvancedTrackUri || reportedIndex === currentIndex) && (state.track_window?.current_track?.name
         || state.currentTrack?.name
-        || state.name;
+        || state.name);
       currentTrack.textContent = getListeningDisplayText(
         reportedTitle || tracks[currentIndex].title,
         `Track ${currentIndex + 1}`
@@ -18416,7 +18473,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         try {
           currentIndex = index;
           playingUri = track.uri;
-          pendingAutoAdvancedTrackUri = '';
+          pendingAutoAdvancedTrackUri = track.uri;
+          pendingTrackRequestedAt = Date.now(); pendingTrackConfirmedAt = 0;
           pendingRestoredTrackUri = '';
           restoringPausedTrack = false;
           listeningPlaybackState = { trackUri: track.uri, positionSeconds: 0 };
@@ -18424,6 +18482,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           updateCurrentTrack();
           spotifyMiniController.loadUri(track.uri);
           spotifyMiniController.play();
+          pendingPlaybackPaused = false; pendingPlaybackAt = Date.now(); showPlaybackState(false);
         } catch (error) {
           console.error('Spotify-Titel konnte nicht gestartet werden:', error);
           message.hidden = false;
@@ -18451,6 +18510,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   toggle.addEventListener('click', () => {
     if (!spotifyMiniController || !controllerReady) return;
     try {
+      const desiredPaused = !playbackIsPaused;
+      let accepted;
       if (playbackIsPaused && pendingRestoredTrackUri) {
         spotifyMiniController.loadUri(pendingRestoredTrackUri);
         if (listeningPlaybackState.positionSeconds > 0) {
@@ -18458,9 +18519,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         }
         pendingRestoredTrackUri = '';
         restoringPausedTrack = false;
-        spotifyMiniController.play();
-      } else if (playbackIsPaused) spotifyMiniController.resume();
-      else spotifyMiniController.pause();
+        accepted = spotifyMiniController.play();
+      } else if (playbackIsPaused) accepted = spotifyMiniController.resume();
+      else accepted = spotifyMiniController.pause();
+      if (accepted !== false) { pendingPlaybackPaused = desiredPaused; pendingPlaybackAt = Date.now(); showPlaybackState(desiredPaused); }
     } catch (error) {
       console.error('Spotify-Wiedergabe konnte nicht umgeschaltet werden:', error);
       message.hidden = false;
@@ -18476,7 +18538,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     try {
       currentIndex = nextIndex;
       playingUri = track.uri;
-      pendingAutoAdvancedTrackUri = '';
+      pendingAutoAdvancedTrackUri = track.uri;
+      pendingTrackRequestedAt = Date.now(); pendingTrackConfirmedAt = 0;
       pendingRestoredTrackUri = '';
       restoringPausedTrack = false;
       listeningPlaybackState = { trackUri: track.uri, positionSeconds: 0 };
@@ -18484,6 +18547,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       updateCurrentTrack();
       spotifyMiniController.loadUri(track.uri);
       spotifyMiniController.play();
+      pendingPlaybackPaused = false; pendingPlaybackAt = Date.now(); showPlaybackState(false);
     } catch (error) {
       console.error('Spotify-Titel konnte nicht gewechselt werden:', error);
       message.hidden = false;
@@ -18628,6 +18692,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       }
       spotifyMiniController = controller;
       activateListeningControllerFrame(host);
+      if(controller.isWebPlaybackSdk)controller.addListener('command_failed',event=>{
+        pendingAutoAdvancedTrackUri='';pendingPlaybackPaused=null;
+        showPlaybackState(event.data.isPaused !== false);updateCurrentTrack(event.data);
+      });
       if(controller.isWebPlaybackSdk)controller.addListener('playback_ended',()=>{
         if(currentIndex===tracks.length-1 && listeningAlbumQueue.length)playNextQueuedAlbum();
       });
@@ -18646,6 +18714,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         }
       });
       controller.addListener('playback_started', event => {
+        if (pendingPlaybackPaused === true && Date.now()-pendingPlaybackAt < 8000) { retryPendingEmbedPlayback(); return; }
+        if (!acceptsSpotifyTrackState(event.data || {}, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) return;
         if (albumId && currentIndex < 0 && !event.data?.playbackContextPosition) currentIndex = 0;
         playbackIsPaused = false;
         lastTrackEndTriggered = false;
@@ -18656,6 +18726,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       });
       controller.addListener('playback_update', event => {
         const state = event.data || {};
+        if (!acceptsSpotifyTrackState(state, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) return;
+        if (pendingPlaybackPaused !== null) {
+          if (state.isPaused !== pendingPlaybackPaused && Date.now()-pendingPlaybackAt < 8000) { retryPendingEmbedPlayback(); return; }
+          pendingPlaybackPaused = null;
+        }
         playbackIsPaused = state.isPaused !== false;
         updateCurrentTrack(state);
         if (!restoringPausedTrack || !playbackIsPaused) {
@@ -18683,6 +18758,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
             currentIndex += 1;
             playingUri = nextTrack.uri || playingUri;
             pendingAutoAdvancedTrackUri = nextTrack.uri || '';
+            pendingTrackRequestedAt = Date.now(); pendingTrackConfirmedAt = 0;
             listeningPlaybackState = { trackUri: playingUri, positionSeconds: 0 };
             updateCurrentTrack();
             persistListeningSession();
