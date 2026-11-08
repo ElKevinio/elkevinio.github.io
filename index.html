@@ -2716,6 +2716,7 @@
   .fullscreen-player-overlay.is-angled-view .fullscreen-player-room-poster { aspect-ratio:2.6; border:5px solid #29292d; padding:4px; background:#101014; box-shadow:0 3px 0 #08080a, 0 10px 14px #000b, 0 22px 36px #0006, inset 0 0 0 1px #ffffff30; }
   .fullscreen-player-overlay.is-angled-view .fullscreen-player-eq { width:var(--poster-width, var(--shelf-w)); height:clamp(32px, 7vh, 56px); border:5px solid #29292d; border-radius:5px; padding:6px 10px; transform:translateX(-50%); background:linear-gradient(#17171c,#08080b); box-shadow:0 3px 0 #08080a, 0 10px 14px #000b, 0 22px 36px #0006, inset 0 0 0 1px #ffffff20; }
   .fullscreen-player-room-wall { background:radial-gradient(ellipse at 0% 45%,color-mix(in srgb,var(--room-light-left) 28%,transparent),transparent 65%),radial-gradient(ellipse at 100% 45%,color-mix(in srgb,var(--room-light-right) 28%,transparent),transparent 65%),var(--room-wall-pattern),linear-gradient(var(--room-wall),color-mix(in srgb,var(--room-wall) 65%,black)); }
+  .fullscreen-player-room-wall { background-repeat:no-repeat,no-repeat,repeat,no-repeat; background-size:auto,auto,360px 240px,auto; }
   .fullscreen-player-room-floor { background:radial-gradient(ellipse at 20% 60%,color-mix(in srgb,var(--room-light-left) 16%,transparent),transparent 65%),radial-gradient(ellipse at 80% 60%,color-mix(in srgb,var(--room-light-right) 16%,transparent),transparent 65%),var(--room-floor-pattern),var(--room-floor); }
   .fullscreen-player-shelf-left { background:linear-gradient(color-mix(in srgb,var(--room-shelf) 90%,white),var(--room-shelf)); border-color:color-mix(in srgb,var(--room-shelf) 70%,white); }
   .fullscreen-player-shelf-left::before { background:linear-gradient(color-mix(in srgb,var(--room-shelf) 85%,white),var(--room-shelf)); }
@@ -2822,6 +2823,11 @@
     .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-room-rug { left:50%; }
     .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-room-poster,
     .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-eq { display:none; }
+    @media (min-width:701px) and (min-height:600px) {
+      .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-room-poster { display:block; top:3%; }
+      .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-eq { display:flex; top:calc(3% + var(--poster-height,95px) + 12px); }
+    }
+
     .fullscreen-player-overlay.is-split-layout.is-angled-view:not(.has-speaker-space) .room-speaker,
     .fullscreen-player-overlay.is-split-layout.is-angled-view:not(.has-speaker-space) .room-subwoofer { display:none; }
     .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-shelf-picker { left:8px; bottom:0; max-width:calc(100% - 16px); }
@@ -6349,6 +6355,23 @@
   }
   .vinyl-editor-box.is-picture-disc .vinyl-editor-disc { width:min(100%, 34vh, 200px); }
 }
+
+.desktop-mode-shortcuts { display:flex; align-items:center; gap:6px; }
+.desktop-mode-shortcuts .settings-shortcut-label { display:none; }
+.desktop-mode-shortcuts .icon-btn { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; padding:0; }
+.desktop-mode-shortcuts #openDocsHeaderBtn { display:inline-flex; }
+.settings-top-shortcuts[hidden] { display:none; }
+.storage-record .listen { display:inline-flex; align-items:center; justify-content:center; line-height:1; }
+.storage-record .listen svg { display:block; width:12px; height:12px; flex:none; }
+.storage-display-card .album-listen-card-btn { display:inline-flex; align-items:center; justify-content:center; }
+.storage-shelf:not(.is-collapsed) .storage-compartment { min-height:84px; }
+@media (pointer:coarse), (max-width:720px) {
+  .storage-shelf:not(.is-collapsed) .storage-compartments { grid-template-columns:repeat(var(--shelf-columns,2),minmax(96px,1fr)); grid-template-rows:repeat(var(--shelf-rows,2),minmax(110px,1fr)); }
+  .storage-shelf:not(.is-collapsed) .storage-compartment { min-height:110px; min-width:96px; }
+  .storage-shelf:not(.is-collapsed) .storage-records { min-height:72px; }
+  .storage-shelf:not(.is-collapsed) { min-width:calc(var(--shelf-columns,2) * 104px + 24px); }
+}
+
 #cloudSyncBanner {
   position: fixed;
   z-index: 2147483647;
@@ -10827,6 +10850,18 @@ if (settingsBtn && settingsPanel) {
 
 const headerActions = document.querySelector('header .header-actions');
 const mobileShortcuts = document.getElementById('settingsMobileShortcutsItems');
+const desktopModeShortcuts=document.createElement('div');desktopModeShortcuts.className='desktop-mode-shortcuts';
+headerActions?.insertBefore(desktopModeShortcuts,headerActions.querySelector('.settings-wrap'));
+const modeShortcutIds=['viewStorageBtn','washModeHeaderBtn','spotifyPlaylistImportBtn','openDocsHeaderBtn'];
+function updateDesktopModeShortcuts() {
+  const desktop=window.matchMedia('(min-width:1200px) and (min-height:650px) and (hover:hover) and (pointer:fine)').matches;
+  const destination=desktop?desktopModeShortcuts:document.getElementById('settingsTopShortcuts');
+  for(const id of modeShortcutIds){const button=document.getElementById(id);if(button&&button.parentElement!==destination)destination.append(button);}
+  document.getElementById('settingsTopShortcuts').hidden=desktop;
+}
+window.addEventListener('resize',updateDesktopModeShortcuts);
+updateDesktopModeShortcuts();
+
 const responsiveHeaderActionIds = [
   'copyWishlistBtn',
   'storageRandomFilterWrap',
@@ -16976,7 +17011,7 @@ window.addEventListener('pagehide', () => stopFullscreenAudioAnalysis());
 updateFullscreenAudioUi();
 
 const FULLSCREEN_ROOM_STORAGE_KEY = 'fullscreenPlayerRoomStyleV1';
-const fullscreenRoomDefaults = { floor:'#362619', floorType:'wood', wall:'#15151b', wallPattern:'concrete', windows:'off', timeOfDay:'evening', windowScene:'cyberpunk', weather:'rain', shelf:'#19191f', turntable:'#202027', equalizer:'#a855f7', lightLeft:'#ff2d95', lightRight:'#00d4ff', rug:'#20203b', rugStyle:'woven', rugShape:'rectangle', rugSize:'medium', speakers:'low', speakerColor:'#202025', wallpaper:'', wallpaperFit:'cover', wallpaperX:50, wallpaperY:50, layout:'auto', zoom:'off', responsiveness:40 };
+const fullscreenRoomDefaults = { floor:'#362619', floorType:'wood', wall:'#15151b', grout:'#625b53', wallPattern:'concrete', windows:'off', timeOfDay:'evening', windowScene:'cyberpunk', weather:'rain', shelf:'#19191f', turntable:'#202027', equalizer:'#a855f7', lightLeft:'#ff2d95', lightRight:'#00d4ff', rug:'#20203b', rugStyle:'woven', rugShape:'rectangle', rugSize:'medium', speakers:'low', speakerColor:'#202025', wallpaper:'', wallpaperFit:'cover', wallpaperX:50, wallpaperY:50, layout:'auto', zoom:'off', responsiveness:40 };
 let fullscreenRoomStyle = { ...fullscreenRoomDefaults };
 try {
   const saved = JSON.parse(localStorage.getItem(FULLSCREEN_ROOM_STORAGE_KEY) || '{}');
@@ -16990,7 +17025,7 @@ if (fullscreenRoomStyle.wallPattern === 'windows') {
   fullscreenRoomStyle.windows = 'on';
 }
 // Kleine statische SVG-Kacheln: Struktur ohne zusätzliche Animationen oder Filter.
-function makeNaturalWallTexture(kind) {
+function makeNaturalWallTexture(kind, wallColor = null, groutColor = null) {
   let seed=37;
   const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
   const width=360,height=240,shapes=[];
@@ -17024,6 +17059,14 @@ function makeNaturalWallTexture(kind) {
       for(let grain=0;grain<5;grain++){const gy=y+5+grain*6;shapes.push(`<path d="M-10 ${gy}Q70 ${gy-5+random()*10} 175 ${gy}T370 ${gy+random()*3}" stroke="${grain%2?'#fff':'#000'}" stroke-opacity=".09" fill="none"/>`);}
       if(row%2===0)shapes.push(`<ellipse cx="${60+row*45}" cy="${y+20}" rx="12" ry="4" fill="none" stroke="#000" stroke-opacity=".16"/>`);
     }
+  }
+  if (wallColor && groutColor && ['brick','stone'].includes(kind)) {
+    const surfaces=[];
+    for (const shape of shapes) {
+      if (shape.includes('fill-opacity=')) surfaces.push(shape.replace(/fill="#[a-z]+"/,`fill="${wallColor}"`).replace(/fill-opacity="[^"]+"/,'fill-opacity="1"').replace(/stroke="#000"/g,`stroke="${groutColor}"`));
+      surfaces.push(shape.replace(/stroke="#000" stroke-opacity="\.32"/g,`stroke="${groutColor}" stroke-opacity="1"`));
+    }
+    shapes.splice(0,shapes.length,`<rect width="360" height="240" fill="${groutColor}"/>`,...surfaces);
   }
   const vertical=kind==='woodVertical';
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${vertical?height:width}" height="${vertical?width:height}" viewBox="0 0 ${vertical?height:width} ${vertical?width:height}"><g${vertical?' transform="translate(240 0) rotate(90)"':''}>${shapes.join('')}</g></svg>`;
@@ -17300,12 +17343,19 @@ function applyFullscreenRoomStyle() {
   applyFullscreenAudioResponsiveness();
   applyFullscreenPlayerPresentation();
   const overlay = document.getElementById('fullscreenPlayerOverlay');
-  Object.entries({floor:'floor',wall:'wall',shelf:'shelf',turntable:'turntable',equalizer:'equalizer',lightLeft:'light-left',lightRight:'light-right',rug:'rug',speakerColor:'speaker'}).forEach(([key,variable]) => {
+  Object.entries({floor:'floor',wall:'wall',grout:'grout',shelf:'shelf',turntable:'turntable',equalizer:'equalizer',lightLeft:'light-left',lightRight:'light-right',rug:'rug',speakerColor:'speaker'}).forEach(([key,variable]) => {
     const value = /^#[0-9a-f]{6}$/i.test(fullscreenRoomStyle[key]) ? fullscreenRoomStyle[key] : fullscreenRoomDefaults[key];
     overlay.style.setProperty(`--room-${variable}`, value);
   });
   overlay.style.setProperty('--room-floor-pattern', fullscreenRoomPatterns[fullscreenRoomStyle.floorType] || fullscreenRoomPatterns.wood);
-  overlay.style.setProperty('--room-wall-pattern', fullscreenRoomPatterns[fullscreenRoomStyle.wallPattern] || fullscreenRoomPatterns.concrete);
+  const wallPattern = fullscreenRoomStyle.wallPattern;
+  const grout = /^#[0-9a-f]{6}$/i.test(fullscreenRoomStyle.grout) ? fullscreenRoomStyle.grout : fullscreenRoomDefaults.grout;
+  const wall = /^#[0-9a-f]{6}$/i.test(fullscreenRoomStyle.wall) ? fullscreenRoomStyle.wall : fullscreenRoomDefaults.wall;
+  const wallTexture = wallPattern === 'rusticBrick' || wallPattern === 'naturalStone'
+    ? makeNaturalWallTexture(wallPattern === 'naturalStone' ? 'stone' : 'brick',wall,grout)
+    : wallPattern === 'bricks' ? `repeating-linear-gradient(0deg,transparent 0 30px,${grout} 30px 33px),repeating-linear-gradient(90deg,transparent 0 80px,${grout} 80px 83px)`
+    : fullscreenRoomPatterns[wallPattern] || fullscreenRoomPatterns.concrete;
+  overlay.style.setProperty('--room-wall-pattern',wallTexture);
   overlay.dataset.wallPattern = fullscreenRoomStyle.wallPattern;
   overlay.dataset.windows = fullscreenRoomStyle.windows;
   overlay.dataset.weather = fullscreenRoomStyle.weather;
@@ -17325,7 +17375,7 @@ const fullscreenRoomFields = document.getElementById('fullscreenPlayerRoomFields
   ['layout','Anordnung',{auto:'Automatisch',stacked:'Oben / unten',split:'Links / rechts'}],
   ['zoom','Kamera',{off:'Komplettansicht',on:'Player und Cover'}],
   ['floorType','Bodenart',{wood:'Holzdielen',tiles:'Fliesen',concrete:'Beton',plain:'Glatt'}],
-  ['floor','Bodenfarbe'], ['wall','Wandfarbe'],
+  ['floor','Bodenfarbe'], ['wall','Wandfarbe'], ['grout','Fugenfarbe · Ziegel / Naturstein'],
   ['wallPattern','Wandtextur / Muster',{concrete:'Beton',plain:'Glatt',bricks:'Backstein · regelmäßig',rusticBrick:'Ziegel · rustikal',naturalStone:'Naturstein',woodHorizontal:'Holzdielen · horizontal',woodVertical:'Holzdielen · vertikal',stripes:'Streifen',grid:'Raster'}],
   ['windows','Fenster anzeigen',{off:'Aus',on:'An'}],
   ['timeOfDay','Tageszeit',{morning:'Morgen',noon:'Mittag',evening:'Abend',night:'Nacht',realtime:'Echtzeit'}],
@@ -21932,7 +21982,7 @@ function createStoredVinylTile(item, displayMode = false) {
   tile.title = `${item.title || ''} · ${item.artist || ''}`;
   tile.innerHTML = displayMode
     ? `<div class="media"><img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"></div><div class="media-info"><p class="title">${escapeHtml(getDisplayName(item.title || ''))}</p><p class="artist">${escapeHtml(getDisplayName(item.artist || ''))}</p><button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album anhören"><span aria-hidden="true">▶︎</span><span>Anhören</span></button></div>`
-    : `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(getArtistDisplayName(item))}</span></div><button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶︎</button>`;
+    : `<img src="${escapeHtml(item.coverUrl || '')}" alt="" loading="lazy" draggable="false"><div class="storage-record-copy"><strong>${escapeHtml(item.title || '')}</strong><span>${escapeHtml(getArtistDisplayName(item))}</span></div><button type="button" class="listen" title="Album anhören" aria-label="Album anhören"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7Z"/></svg></button>`;
   bindStorageItemPointerDrag(tile, item);
   tile.querySelector('.listen, .album-listen-card-btn')?.addEventListener('click', event => {
     event.stopPropagation();
