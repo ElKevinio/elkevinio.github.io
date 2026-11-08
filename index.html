@@ -2147,6 +2147,10 @@
   }
   .fullscreen-player-overlay.is-angled-view .fullscreen-player-room-poster { display:block; }
   .fullscreen-player-room-poster img { position:absolute; inset:7px; width:calc(100% - 14px); height:calc(100% - 14px); object-fit:cover; z-index:1; }
+  #fullscreenWallpaperPreview { position:relative; aspect-ratio:2.6; overflow:hidden; background:#101014; border:1px solid var(--border); border-radius:5px; touch-action:none; cursor:grab; margin:8px 0; }
+  #fullscreenWallpaperPreview img { width:100%; height:100%; object-fit:cover; display:block; pointer-events:none; user-select:none; }
+  #fullscreenWallpaperPosition[hidden] { display:none; }
+  #fullscreenWallpaperPosition input { width:100%; }
   .fullscreen-player-room-poster.has-image::before,
   .fullscreen-player-room-poster.has-image::after { display:none; }
   .fullscreen-player-room-poster:focus-visible { outline:2px solid var(--accent); }
@@ -2206,6 +2210,9 @@
   button.fullscreen-player-shelf-cube:hover,
   button.fullscreen-player-shelf-cube:focus-visible,
   button.fullscreen-player-shelf-cube.is-selected { outline:2px solid #ff2d95; outline-offset:-2px; }
+  #fullscreenPlayerPlayCompartment[hidden],#fullscreenPlayerCompartmentPlayStatus[hidden] { display:none; }
+  .fullscreen-player-compartment-play { width:100%; padding:10px; border:1px solid var(--accent); border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; font-weight:600; }
+  .fullscreen-player-compartment-play:disabled { opacity:.5; cursor:default; }
   .fullscreen-player-compartment-reset[hidden] { display:none; }
   .fullscreen-player-compartment-reset { width:100%; color:var(--text-primary); background:var(--surface-1); border:1px solid var(--border); border-radius:6px; padding:8px; cursor:pointer; text-align:left; }
   .fullscreen-player-shelf-left {
@@ -4626,6 +4633,13 @@
     opacity: 0;
     cursor: pointer;
   }
+
+  .settings-top-shortcuts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid var(--border); }
+  .settings-top-shortcuts .icon-btn { width:100%; height:auto; min-height:48px; padding:9px; justify-content:flex-start; gap:8px; border:1px solid var(--border); border-radius:7px; background:var(--surface-1); }
+  .settings-top-shortcuts .settings-shortcut-label { display:block; font-size:12px; line-height:1.3; white-space:normal; text-align:left; }
+  .settings-top-shortcuts svg,.settings-shortcut-help { flex:0 0 16px; width:16px; }
+  #settingsPanel #openDocsHeaderBtn { display:flex; font-weight:normal; }
+  #settingsPanel #startWashModeBtn,#settingsPanel #openDocsBtn { display:none !important; }
   .settings-panel-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5888,7 +5902,8 @@
     body.docs-open .filter-tabs .filter-label { display: none; }
     body.docs-open .filter-tabs button { padding: 8px; }
   }
-  #washModeHeaderBtn, #shopModeHeaderBtn { display: none; }
+  #shopModeHeaderBtn { display: none; }
+  body.viewing-remote-collection #washModeHeaderBtn { display: none; }
   body:not(.viewing-remote-collection) #shopModeHeaderBtn { display: inline-flex; }
   body:not(.viewing-remote-collection) #startShopModeBtn { display: none !important; }
   @media (min-width: 1000px) {
@@ -6433,32 +6448,38 @@
           </label>
         </div>
       </div>
-      <button id="viewStorageBtn" class="icon-btn" title="Lageransicht öffnen" aria-label="Lageransicht öffnen" style="display:none;">
-        <svg class="storage-icon-storage" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h18v16H3zM3 10h18M9 4v16M15 4v16" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-        <svg class="storage-icon-grid" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" hidden><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
-      </button>
+      
       <button id="shopModeHeaderBtn" class="icon-btn" type="button" title="Plattenladen-Modus" aria-label="Plattenladen-Modus">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9h16M9 20v-6h6v6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>
       </button>
-      <button id="washModeHeaderBtn" class="icon-btn" type="button" title="Waschmodus" aria-label="Waschmodus">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M12 3v3M8 4.5l1 2M16 4.5l-1 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      </button>
-      <button id="spotifyPlaylistImportBtn" class="icon-btn" type="button" title="Alben aus Spotify-Playlisten hinzufügen" aria-label="Alben aus Spotify-Playlisten hinzufügen" style="color:#1ed760;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.7"/><path d="M6.8 9.4c3.5-1 7.4-.6 10.6 1.2M7.4 12.7c3-.8 6.3-.5 9 1M8 15.8c2.4-.6 4.8-.3 6.9.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-      </button>
+      
+      
       <button id="toggleUserMenuBtn" class="icon-btn" title="Andere Nutzer" aria-label="Andere Nutzer">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
       <button id="showOwnCollectionBtn" class="icon-btn" title="Eigene Sammlung anzeigen" aria-label="Eigene Sammlung anzeigen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-      <button id="openDocsHeaderBtn" class="icon-btn" type="button" title="Hilfe &amp; Doku" aria-label="Hilfe und Doku">?</button>
+      
       <div class="settings-wrap">
         <button id="settingsBtn" class="icon-btn" title="Einstellungen" aria-label="Einstellungen">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <button id="cloudSyncStrip" type="button" data-state="synced" title="Mit Firebase synchronisiert. Klicken, um den Status zu prüfen." aria-label="Mit Firebase synchronisiert. Klicken, um den Status zu prüfen." hidden></button>
         <div class="settings-panel" id="settingsPanel">
+          <div class="settings-top-shortcuts" id="settingsTopShortcuts">
+<button id="viewStorageBtn" class="icon-btn" title="Lageransicht öffnen" aria-label="Lageransicht öffnen" style="display:none;">
+        <svg class="storage-icon-storage" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4h18v16H3zM3 10h18M9 4v16M15 4v16" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <svg class="storage-icon-grid" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" hidden><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span class="settings-shortcut-label">Lageransicht</span></button>
+<button id="washModeHeaderBtn" class="icon-btn" type="button" title="Waschmodus" aria-label="Waschmodus">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M12 3v3M8 4.5l1 2M16 4.5l-1 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="settings-shortcut-label">Waschmodus</span></button>
+<button id="spotifyPlaylistImportBtn" class="icon-btn" type="button" title="Alben aus Spotify-Playlisten hinzufügen" aria-label="Alben aus Spotify-Playlisten hinzufügen" style="color:#1ed760;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.7"/><path d="M6.8 9.4c3.5-1 7.4-.6 10.6 1.2M7.4 12.7c3-.8 6.3-.5 9 1M8 15.8c2.4-.6 4.8-.3 6.9.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <span class="settings-shortcut-label">Spotify-Playlist importieren</span></button>
+<button id="openDocsHeaderBtn" class="icon-btn" type="button" title="Hilfe &amp; Doku" aria-label="Hilfe und Doku"><span class="settings-shortcut-help" aria-hidden="true">?</span><span class="settings-shortcut-label">Hilfe & Doku</span></button>
+          </div>
           <div class="user-pill settings-user-pill">
             <span><strong id="currentUsernameLabel">–</strong></span>
             <button type="button" id="logoutBtn" class="account-action-icon" title="Abmelden" aria-label="Abmelden">
@@ -7054,6 +7075,8 @@
       </div>
     </div>
     <button type="button" id="fullscreenPlayerCompartmentReset" class="fullscreen-player-compartment-reset" hidden></button>
+    <button type="button" id="fullscreenPlayerPlayCompartment" class="fullscreen-player-compartment-play" hidden>▶ Alle Alben abspielen</button>
+    <p id="fullscreenPlayerCompartmentPlayStatus" class="settings-panel-hint" role="status" hidden></p>
     <ol id="fullscreenPlayerMenuList" class="fullscreen-player-menu-list"></ol>
   </aside>
   <form id="fullscreenPlayerPosterForm" class="fullscreen-player-poster-form" aria-label="Raum gestalten" hidden>
@@ -7070,6 +7093,14 @@
     <label for="fullscreenPlayerPosterUrl">Wandbild · Bild-URL</label>
     <input id="fullscreenPlayerPosterUrl" type="url" placeholder="https://…/bild.jpg" aria-label="Bild-URL">
     <small>Direkter Link zu einem Bild. Leer lassen für das Standardbild.</small>
+    <label for="fullscreenWallpaperFit">Wandbild · Darstellung</label>
+    <select id="fullscreenWallpaperFit"><option value="fill">Strecken · Rahmen ausfüllen</option><option value="contain">Format beibehalten · schwarze Balken</option><option value="frame">Format beibehalten · Rahmen anpassen</option><option value="cover">Abschneiden · mittig</option><option value="custom">Verschieben und abschneiden</option></select>
+    <div id="fullscreenWallpaperPosition" hidden>
+      <div id="fullscreenWallpaperPreview" aria-label="Bildausschnitt durch Ziehen verschieben"><img alt="Vorschau des Wandbilds" draggable="false"></div>
+      <small>Bild mit Maus oder Finger verschieben oder die Regler verwenden.</small>
+      <label for="fullscreenWallpaperX">Horizontal</label><input id="fullscreenWallpaperX" type="range" min="0" max="100" value="50">
+      <label for="fullscreenWallpaperY">Vertikal</label><input id="fullscreenWallpaperY" type="range" min="0" max="100" value="50">
+    </div>
     <p id="fullscreenRoomCloudStatus" class="settings-panel-hint" role="status">Raumeinstellungen werden geladen …</p>
     <button type="button" id="fullscreenRoomSave">Jetzt synchronisieren</button>
     <small>Lautsprecher erscheinen ab 760 px Breite und 500 px Höhe. Auf dem Handy bleiben sie ausgeblendet.</small>
@@ -10566,6 +10597,9 @@ document.getElementById('spotifyConnectBtn')?.addEventListener('click', () => {
 });
 updateSpotifyConnectionStatus();
 
+document.getElementById('settingsTopShortcuts').addEventListener('click', event => {
+  if (event.target.closest('button')) document.getElementById('settingsPanel').classList.remove('open');
+});
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 if (settingsBtn && settingsPanel) {
@@ -10611,7 +10645,6 @@ const responsiveHeaderActionIds = [
   'storageRandomFilterWrap',
   'storageRandomPickBtn',
   'showOwnCollectionBtn',
-  'viewStorageBtn',
   'toggleUserMenuBtn',
   'showAlbumMiniPlayerBtn'
 ];
@@ -16022,8 +16055,7 @@ async function restoreListeningSession() {
   const savedQueue = Array.isArray(saved.queue) ? saved.queue : [];
   savedQueue.forEach(item => {
     const url = getSupportedListeningUrl(item?.spotifyAlbumUrl || item?.listeningUrl);
-    const albumPath = getSpotifyAlbumId(url);
-    if (albumPath && getSpotifyEmbedUrl(url)) listeningAlbumQueue.push({ ...item, listeningUrl: url });
+    if (getQueueableAlbumUrl(item)) listeningAlbumQueue.push({ ...item, listeningUrl: getQueueableAlbumUrl(item) });
   });
   const savedCurrentUrl = getSupportedListeningUrl(saved.currentAlbum?.listeningUrl);
   const hasCurrentAlbum = savedCurrentUrl && (getSpotifyEmbedUrl(savedCurrentUrl) || getYouTubeEmbedUrl(savedCurrentUrl));
@@ -16292,9 +16324,38 @@ function getListeningAlbumTimeline(player, positionSeconds, currentDurationSecon
   return {isAlbum:durations.length > 1,isEstimate:player.dataset.trackDurationSource !== 'spotify',elapsed,total,index,count:durations.length,progress:Math.max(0,Math.min(elapsed / total,1))};
 }
 
+const playerHtmlCache = new WeakMap();
+function setPlayerHtml(element, html) {
+  if (playerHtmlCache.get(element) === html) return;
+  element.innerHTML = html;
+  playerHtmlCache.set(element, html);
+}
+function setPlayerText(element, text) {
+  if (element.textContent !== text) element.textContent = text;
+}
+function setPlayerAttribute(element, name, value) {
+  if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+}
+let fullscreenPresentationSignature = '';
+let fullscreenShelfSyncSignature = '';
+let fullscreenShelfSyncCollection = null;
+var fullscreenShelfDataRevision;
+function scheduleFullscreenPlayerSync() {
+  if (fullscreenPlayerSyncFrame || !isFullscreenPlayerOpen()) return;
+  fullscreenPlayerSyncFrame = requestAnimationFrame(() => {
+    fullscreenPlayerSyncFrame = null;
+    syncFullscreenPlayer();
+  });
+}
+let fullscreenPlayerSyncFrame = null;
+
 function syncFullscreenPlayer() {
-  if (!isFullscreenPlayerOpen()) return;
-  applyFullscreenPlayerPresentation();
+  if (!isFullscreenPlayerOpen() || document.hidden) return;
+  const presentation = [innerWidth,innerHeight,fullscreenRoomStyle.layout,fullscreenRoomStyle.zoom,fullscreenRoomStyle.windows,fullscreenRoomStyle.weather,fullscreenRoomStyle.timeOfDay,fullscreenRoomStyle.windowScene,getFullscreenPlayerView(),document.getElementById('fullscreenPlayerPosterForm').hidden].join('|');
+  if (presentation !== fullscreenPresentationSignature) {
+    fullscreenPresentationSignature = presentation;
+    applyFullscreenPlayerPresentation();
+  }
   const overlay = document.getElementById('fullscreenPlayerOverlay');
   if (fullscreenPlayerRenderedAlbum !== currentListeningAlbum) {
     if (fullscreenPlayerRenderedAlbum && currentListeningAlbum) {
@@ -16313,13 +16374,13 @@ function syncFullscreenPlayer() {
   const artist = dockContent?.querySelector('.album-mini-artist')?.textContent?.trim()
     || currentListeningAlbum?.artist
     || (hasSession ? '' : 'Wähle ein Album aus deiner Sammlung');
-  document.getElementById('fullscreenPlayerTrack').textContent = track;
-  document.getElementById('fullscreenPlayerArtist').textContent = artist;
+  setPlayerText(document.getElementById('fullscreenPlayerTrack'), track);
+  setPlayerText(document.getElementById('fullscreenPlayerArtist'), artist);
   const sourceToggle = getListeningPrimaryToggle();
   const isPlaying = sourceToggle?.getAttribute('aria-label') === 'Wiedergabe pausieren';
   overlay.classList.toggle('is-playing', isPlaying);
   const toggle = document.getElementById('fullscreenPlayerToggle');
-  toggle.innerHTML = isPlaying ? LISTENING_ICON_SVG.pause : LISTENING_ICON_SVG.play;
+  setPlayerHtml(toggle, isPlaying ? LISTENING_ICON_SVG.pause : LISTENING_ICON_SVG.play);
   toggle.title = isPlaying ? 'Wiedergabe pausieren' : 'Wiedergabe starten';
   toggle.setAttribute('aria-label', toggle.title);
   toggle.disabled = !sourceToggle || sourceToggle.disabled;
@@ -16327,8 +16388,8 @@ function syncFullscreenPlayer() {
   const nextSource = dockContent?.querySelector('.album-mini-control[aria-label="Nächster Titel"]');
   const prev = document.getElementById('fullscreenPlayerPrev');
   const next = document.getElementById('fullscreenPlayerNext');
-  prev.innerHTML = LISTENING_ICON_SVG.previous;
-  next.innerHTML = LISTENING_ICON_SVG.next;
+  setPlayerHtml(prev, LISTENING_ICON_SVG.previous);
+  setPlayerHtml(next, LISTENING_ICON_SVG.next);
   prev.disabled = !prevSource || prevSource.disabled;
   next.disabled = !nextSource || nextSource.disabled;
   const seek = dockContent?.querySelector('.album-mini-seek');
@@ -16340,14 +16401,14 @@ function syncFullscreenPlayer() {
   fullSeek.max = String(duration);
   fullSeek.step = String(scale);
   if (!fullscreenSeekDragging) fullSeek.value = String(Number(seek?.value) || 0);
-  document.getElementById('fullscreenPlayerPosition').textContent = formatListeningTime(Number(fullSeek.value) / scale);
-  document.getElementById('fullscreenPlayerDuration').textContent = formatListeningTime(duration / scale);
+  setPlayerText(document.getElementById('fullscreenPlayerPosition'), formatListeningTime(Number(fullSeek.value) / scale));
+  setPlayerText(document.getElementById('fullscreenPlayerDuration'), formatListeningTime(duration / scale));
   fullSeek.setAttribute('aria-valuetext', `${formatListeningTime(Number(fullSeek.value) / scale)} von ${formatListeningTime(duration / scale)}`);
   const sourceFavorite = dockContent?.querySelector('[data-listening-favorite="spotify"]');
   const favorite = document.getElementById('fullscreenPlayerFavorite');
   favorite.hidden = !sourceFavorite;
   favorite.disabled = !sourceFavorite || sourceFavorite.disabled || !isSpotifyIntegrationAvailable();
-  favorite.innerHTML = sourceFavorite?.innerHTML || LISTENING_ICON_SVG.favorite;
+  setPlayerHtml(favorite, sourceFavorite?.innerHTML || LISTENING_ICON_SVG.favorite);
   favorite.title = sourceFavorite?.title || 'Zu deinen Spotify-Lieblingssongs hinzufügen';
   if (sourceFavorite && !isSpotifyIntegrationAvailable()) favorite.title = 'Spotify-Lieblingssongs sind nur auf vinyl.elkevinio.de verfügbar';
   favorite.setAttribute('aria-label', favorite.title);
@@ -16357,7 +16418,7 @@ function syncFullscreenPlayer() {
   const loadingMessage = miniPlayer?.dataset.provider === 'spotify' && miniPlayer.dataset.controllerReady === 'false' ? 'Spotify-Player wird geladen …' : '';
   const actionMessage = sourceFavorite?.dataset.favoriteMessage || playbackMessage || loadingMessage;
   actionStatus.hidden = !actionMessage;
-  actionStatus.textContent = actionMessage;
+  setPlayerText(actionStatus, actionMessage);
   const spotifyActions = document.getElementById('fullscreenSpotifyActions');
   const sourceActions = dockContent?.querySelector('[data-sdk-actions]');
   spotifyActions.hidden = !sourceActions || sourceActions.hidden;
@@ -16368,13 +16429,21 @@ function syncFullscreenPlayer() {
   const position = Number(seek?.value) || 0;
   const progress = duration > 0 ? Math.min((fullscreenSeekDragging ? Number(fullSeek.value) : position) / duration, 1) : 0;
   document.getElementById('fullscreenPlayerProgressBar').style.width = `${progress * 100}%`;
-  overlay.style.setProperty('--track-progress', progress.toFixed(3));
+  const tonearm = document.querySelector('.fullscreen-player-tonearm-rod');
+  if (tonearm.style.getPropertyValue('--track-progress') !== progress.toFixed(3)) tonearm.style.setProperty('--track-progress', progress.toFixed(3));
   const timeline = getListeningAlbumTimeline(miniPlayer, (fullscreenSeekDragging ? Number(fullSeek.value) : position) / scale, duration / scale);
-  overlay.style.setProperty('--album-progress', timeline.progress.toFixed(5));
+  if (tonearm.style.getPropertyValue('--album-progress') !== timeline.progress.toFixed(5)) tonearm.style.setProperty('--album-progress', timeline.progress.toFixed(5));
   const albumProgress = document.getElementById('fullscreenPlayerAlbumProgress');
   albumProgress.hidden = !timeline.isAlbum;
-  albumProgress.textContent = timeline.isAlbum ? `Album${timeline.isEstimate ? " (gespeicherte Titelliste)" : ""} ${formatListeningTime(timeline.elapsed)} / ${formatListeningTime(timeline.total)} · Titel ${timeline.index + 1} von ${timeline.count}` : '';
-  renderFullscreenPlayerShelf();
+  const albumProgressText = timeline.isAlbum ? `Album${timeline.isEstimate ? " (gespeicherte Titelliste)" : ""} ${formatListeningTime(timeline.elapsed)} / ${formatListeningTime(timeline.total)} · Titel ${timeline.index + 1} von ${timeline.count}` : '';
+  setPlayerText(albumProgress, albumProgressText);
+  const stage = document.querySelector('.fullscreen-player-stage');
+  const shelfSync = [fullscreenShelfDataRevision || 0,stage.clientWidth,stage.clientHeight,window.innerWidth,window.innerHeight,getFullscreenPlayerLayout(),fullscreenRoomStyle.speakers,localStorage.getItem(FULLSCREEN_SHELF_STORAGE_KEY),JSON.stringify(fullscreenPlayerCompartment),JSON.stringify(shelfLocations),ownCollection.length].join('|');
+  if (fullscreenShelfSyncCollection !== ownCollection || fullscreenShelfSyncSignature !== shelfSync) {
+    fullscreenShelfSyncCollection = ownCollection;
+    fullscreenShelfSyncSignature = shelfSync;
+    renderFullscreenPlayerShelf();
+  }
 }
 
 function openFullscreenPlayer() {
@@ -16392,7 +16461,7 @@ function openFullscreenPlayer() {
   const dockContent = document.getElementById('albumListeningDockContent');
   fullscreenPlayerObserver?.disconnect();
   if (dockContent) {
-    fullscreenPlayerObserver = new MutationObserver(syncFullscreenPlayer);
+    fullscreenPlayerObserver = new MutationObserver(scheduleFullscreenPlayerSync);
     fullscreenPlayerObserver.observe(dockContent, {
       childList: true,
       subtree: true,
@@ -16401,13 +16470,17 @@ function openFullscreenPlayer() {
     });
   }
   if (fullscreenPlayerSyncTimer) window.clearInterval(fullscreenPlayerSyncTimer);
-  fullscreenPlayerSyncTimer = window.setInterval(syncFullscreenPlayer, 500);
+  fullscreenPlayerSyncTimer = window.setInterval(scheduleFullscreenPlayerSync, 500);
 }
 
 function closeFullscreenPlayer() {
   const overlay = document.getElementById('fullscreenPlayerOverlay');
   if (!overlay || overlay.hidden) return;
   overlay.hidden = true;
+  if (fullscreenPlayerSyncFrame) cancelAnimationFrame(fullscreenPlayerSyncFrame);
+  fullscreenPlayerSyncFrame = null;
+  fullscreenPresentationSignature = '';
+  fullscreenShelfSyncSignature = '';
   stopRoomWindowWeather();
   stopRoomWindowTime();
   fullscreenSeekDragging = false;
@@ -16653,7 +16726,7 @@ window.addEventListener('pagehide', () => stopFullscreenAudioAnalysis());
 updateFullscreenAudioUi();
 
 const FULLSCREEN_ROOM_STORAGE_KEY = 'fullscreenPlayerRoomStyleV1';
-const fullscreenRoomDefaults = { floor:'#362619', floorType:'wood', wall:'#15151b', wallPattern:'concrete', windows:'off', timeOfDay:'evening', windowScene:'cyberpunk', weather:'rain', shelf:'#19191f', turntable:'#202027', equalizer:'#a855f7', lightLeft:'#ff2d95', lightRight:'#00d4ff', rug:'#20203b', rugStyle:'woven', rugShape:'rectangle', rugSize:'medium', speakers:'low', speakerColor:'#202025', wallpaper:'', layout:'auto', zoom:'off', responsiveness:40 };
+const fullscreenRoomDefaults = { floor:'#362619', floorType:'wood', wall:'#15151b', wallPattern:'concrete', windows:'off', timeOfDay:'evening', windowScene:'cyberpunk', weather:'rain', shelf:'#19191f', turntable:'#202027', equalizer:'#a855f7', lightLeft:'#ff2d95', lightRight:'#00d4ff', rug:'#20203b', rugStyle:'woven', rugShape:'rectangle', rugSize:'medium', speakers:'low', speakerColor:'#202025', wallpaper:'', wallpaperFit:'cover', wallpaperX:50, wallpaperY:50, layout:'auto', zoom:'off', responsiveness:40 };
 let fullscreenRoomStyle = { ...fullscreenRoomDefaults };
 try {
   const saved = JSON.parse(localStorage.getItem(FULLSCREEN_ROOM_STORAGE_KEY) || '{}');
@@ -17017,10 +17090,10 @@ function updateFullscreenRoomStatus(message) {
 }
 function normalizeFullscreenRoomStyle(raw) {
   const result = { ...fullscreenRoomDefaults };
-  const choices = {timeOfDay:['morning','noon','evening','night','realtime'],layout:['auto','stacked','split'],zoom:['off','on'],floorType:['wood','tiles','concrete','plain'],windows:['off','on'],wallPattern:['concrete','plain','bricks','stripes','grid'],weather:['clear','rain','snow'],windowScene:['cyberpunk','alien','farm','coast'],rugStyle:['woven','plain','geometric','stripes','off'],rugShape:['rectangle','round','rounded'],rugSize:['small','medium','large'],speakers:['off','low','mid','high']};
+  const choices = {wallpaperFit:['contain','cover','custom','fill','frame'],timeOfDay:['morning','noon','evening','night','realtime'],layout:['auto','stacked','split'],zoom:['off','on'],floorType:['wood','tiles','concrete','plain'],windows:['off','on'],wallPattern:['concrete','plain','bricks','stripes','grid'],weather:['clear','rain','snow'],windowScene:['cyberpunk','alien','farm','coast'],rugStyle:['woven','plain','geometric','stripes','off'],rugShape:['rectangle','round','rounded'],rugSize:['small','medium','large'],speakers:['off','low','mid','high']};
   Object.keys(result).forEach(key => {
     const value = raw?.[key];
-    if (key === 'responsiveness') {
+    if (['responsiveness','wallpaperX','wallpaperY'].includes(key)) {
       if (typeof value === 'number' && Number.isFinite(value)) result[key] = Math.max(0, Math.min(100, Math.round(value)));
     } else if (key === 'wallpaper') {
       try { if (value && ['http:','https:'].includes(new URL(value).protocol)) result[key] = value; } catch {}
@@ -17134,15 +17207,85 @@ document.getElementById('fullscreenRoomSave').addEventListener('click', () => {
 
 const FULLSCREEN_POSTER_STORAGE_KEY = 'fullscreenPlayerPosterUrl';
 
+function sizeFullscreenWallpaperFrame() {
+  const poster = document.querySelector('.fullscreen-player-room-poster');
+  const stage = document.querySelector('.fullscreen-player-stage');
+  if (!poster || !stage) return;
+  const maximumWidth = Number(poster.dataset.maximumWidth) || 300;
+  const image = poster.querySelector('img');
+  let width = maximumWidth, height = maximumWidth / 2.6;
+  if (fullscreenRoomStyle.wallpaperFit === 'frame' && image?.naturalWidth && image.naturalHeight) {
+    const ratio = image.naturalWidth / image.naturalHeight;
+    const maxHeight = maximumWidth * 9 / 16;
+    const inset = 24;
+    const scale = Math.min(Math.max(1,maximumWidth-inset)/image.naturalWidth, Math.max(1,maxHeight-inset)/image.naturalHeight);
+    width = image.naturalWidth*scale+inset;
+    height = image.naturalHeight*scale+inset;
+  }
+  poster.style.width = `${width}px`;
+  poster.style.aspectRatio = `${width} / ${height}`;
+  stage.style.setProperty('--poster-width', `${width}px`);
+  stage.style.setProperty('--poster-height', `${height}px`);
+}
+function applyFullscreenWallpaperLayout() {
+  const mode = fullscreenRoomStyle.wallpaperFit;
+  const position = mode === 'custom' ? `${fullscreenRoomStyle.wallpaperX}% ${fullscreenRoomStyle.wallpaperY}%` : '50% 50%';
+  const image = document.querySelector('.fullscreen-player-room-poster img');
+  if (image) { image.style.objectFit = ['contain','frame'].includes(mode) ? 'contain' : mode === 'fill' ? 'fill' : 'cover'; image.style.objectPosition = position; }
+  document.getElementById('fullscreenWallpaperFit').value = mode;
+  document.getElementById('fullscreenWallpaperPosition').hidden = mode !== 'custom';
+  for (const axis of ['X','Y']) document.getElementById(`fullscreenWallpaper${axis}`).value = fullscreenRoomStyle[`wallpaper${axis}`];
+  const preview = document.querySelector('#fullscreenWallpaperPreview img');
+  const url = fullscreenRoomStyle.wallpaper || '';
+  if (preview.getAttribute('src') !== url) { if (url) preview.src = url; else preview.removeAttribute('src'); }
+  preview.style.objectPosition = position;
+  sizeFullscreenWallpaperFrame();
+}
+document.getElementById('fullscreenWallpaperFit').addEventListener('change', event => {
+  fullscreenRoomStyle.wallpaperFit = event.target.value;
+  applyFullscreenWallpaperLayout(); persistFullscreenRoomStyle();
+});
+for (const axis of ['X','Y']) document.getElementById(`fullscreenWallpaper${axis}`).addEventListener('input', event => {
+  fullscreenRoomStyle[`wallpaper${axis}`] = Number(event.target.value);
+  applyFullscreenWallpaperLayout(); persistFullscreenRoomStyle();
+});
+let wallpaperDrag = null;
+const wallpaperPreview = document.getElementById('fullscreenWallpaperPreview');
+wallpaperPreview.addEventListener('pointerdown', event => {
+  const image = wallpaperPreview.querySelector('img');
+  if (!image.naturalWidth) return;
+  const box = wallpaperPreview.getBoundingClientRect();
+  const scale = Math.max(box.width / image.naturalWidth, box.height / image.naturalHeight);
+  wallpaperDrag = {id:event.pointerId,x:event.clientX,y:event.clientY,startX:fullscreenRoomStyle.wallpaperX,startY:fullscreenRoomStyle.wallpaperY,overflowX:Math.max(0,image.naturalWidth*scale-box.width),overflowY:Math.max(0,image.naturalHeight*scale-box.height)};
+  wallpaperPreview.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+wallpaperPreview.addEventListener('pointermove', event => {
+  if (!wallpaperDrag || wallpaperDrag.id !== event.pointerId) return;
+  for (const axis of ['X','Y']) {
+    const overflow = wallpaperDrag[`overflow${axis}`];
+    if (overflow > .5) fullscreenRoomStyle[`wallpaper${axis}`] = Math.max(0,Math.min(100,wallpaperDrag[`start${axis}`] - (event[`client${axis}`]-wallpaperDrag[axis.toLowerCase()])/overflow*100));
+  }
+  applyFullscreenWallpaperLayout();
+});
+function finishWallpaperDrag(event) {
+  if (!wallpaperDrag || wallpaperDrag.id !== event.pointerId) return;
+  wallpaperDrag = null; persistFullscreenRoomStyle();
+}
+wallpaperPreview.addEventListener('pointerup', finishWallpaperDrag);
+wallpaperPreview.addEventListener('pointercancel', finishWallpaperDrag);
+wallpaperPreview.addEventListener('lostpointercapture', finishWallpaperDrag);
+
 function setFullscreenPlayerPoster(url) {
   const poster = document.querySelector('.fullscreen-player-room-poster');
   if (!poster) return;
   poster.querySelector('img')?.remove();
   poster.classList.remove('has-image');
+  applyFullscreenWallpaperLayout();
   if (!url) return;
   const image = document.createElement('img');
   image.alt = 'Eigenes Wandbild';
-  image.addEventListener('load', () => poster.classList.add('has-image'), { once: true });
+  image.addEventListener('load', () => { poster.classList.add('has-image'); sizeFullscreenWallpaperFrame(); }, { once: true });
   image.addEventListener('error', () => {
     image.remove();
     poster.classList.remove('has-image');
@@ -17150,6 +17293,7 @@ function setFullscreenPlayerPoster(url) {
   }, { once: true });
   image.src = url;
   poster.append(image);
+  applyFullscreenWallpaperLayout();
 }
 
 function setFullscreenRoomSettingsOpen(isOpen) {
@@ -17353,9 +17497,8 @@ function renderFullscreenPlayerShelf() {
   const poster = document.querySelector('.fullscreen-player-room-poster');
   if (poster) {
     const posterWidth = Math.round(shelfWidth);
-    poster.style.width = `${posterWidth}px`;
-    stage.style.setProperty('--poster-width', `${posterWidth}px`);
-    stage.style.setProperty('--poster-height', `${posterWidth / 2.6}px`);
+    poster.dataset.maximumWidth = String(posterWidth);
+    sizeFullscreenWallpaperFrame();
   }
   shelfElement.style.aspectRatio = `1 / ${heightFactor.toFixed(5)}`;
   shelfElement.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
@@ -17452,6 +17595,53 @@ function playAlbumFromFullscreenMenu(item) {
   openAlbumListening(item);
 }
 
+function getQueueableAlbumUrl(item) {
+  for (const raw of [item?.spotifyAlbumUrl,item?.listeningUrl]) {
+    const url = getSupportedListeningUrl(raw);
+    if (url && ((getSpotifyEmbedUrl(url) && getSpotifyAlbumId(url)) || getYouTubeEmbedUrl(url))) return url;
+  }
+  return '';
+}
+function getFullscreenCompartmentPlaybackItems() {
+  const compartment = fullscreenPlayerCompartment;
+  const shelf = shelfLocations.find(entry => entry.id === compartment?.shelfId);
+  if (!shelf || !isValidShelfCompartment(shelf, compartment.number)) return [];
+  return getFullscreenShelfCompartmentItems(shelf, compartment.number);
+}
+async function playFullscreenCompartment() {
+  const button=document.getElementById('fullscreenPlayerPlayCompartment');
+  if(button.dataset.busy==='true')return;
+  const compartmentKey=JSON.stringify(fullscreenPlayerCompartment);
+  const all=getFullscreenCompartmentPlaybackItems();
+  if(!all.length)return;
+  button.dataset.busy='true';button.disabled=true;
+  const status=document.getElementById('fullscreenPlayerCompartmentPlayStatus');
+  status.hidden=false;
+  const playable=[];
+  let searchAvailable=false,searchError='';
+  try {
+    if(all.some(item=>!getQueueableAlbumUrl(item)) && isSpotifyIntegrationAvailable())searchAvailable=!!(await getSpotifyAccessToken());
+    for(let index=0;index<all.length;index++) {
+      const item=all[index];let url=getQueueableAlbumUrl(item);
+      if(!url && searchAvailable) {
+        status.textContent=`Spotify-Alben werden gesucht … ${index+1} von ${all.length}`;
+        try {const id=await findMatchingSpotifyAlbum(item);if(id)url=`https://open.spotify.com/album/${id}`;}
+        catch(error){searchError='Die Spotify-Suche konnte nicht fortgesetzt werden.';searchAvailable=false;}
+      }
+      if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
+      if(url)playable.push({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:'',listeningUrl:url});
+    }
+    const skipped=all.length-playable.length;
+    if(!playable.length) {status.textContent=searchError||'Keine Hörlinks gefunden. Bitte Spotify verbinden oder Album-Hörlinks speichern.';return;}
+    listeningAlbumQueue.splice(0,listeningAlbumQueue.length,...playable.slice(1));
+    updateAlbumQueueControls();
+    status.textContent=`${playable.length} ${playable.length===1?'Album wird':'Alben werden'} abgespielt.${skipped?` ${skipped} ohne passenden Hörlink übersprungen.`:''}${searchError?' '+searchError:''}`;
+    await openAlbumListening(playable[0]);
+  } catch(error) {status.textContent=error.message||'Die Fach-Wiedergabe konnte nicht gestartet werden.';}
+  finally {delete button.dataset.busy;button.disabled=false;}
+}
+document.getElementById('fullscreenPlayerPlayCompartment').addEventListener('click',playFullscreenCompartment);
+
 function renderFullscreenPlayerMenu() {
   const list = document.getElementById('fullscreenPlayerMenuList');
   if (!list) return;
@@ -17467,6 +17657,15 @@ function renderFullscreenPlayerMenu() {
   document.querySelector('#fullscreenPlayerMenu .fullscreen-player-menu-filter').hidden = isCompartment;
   reset.hidden = !isCompartment;
   reset.textContent = '← Gesamte Sammlung';
+  const playAll=document.getElementById('fullscreenPlayerPlayCompartment');
+  playAll.hidden=!isCompartment;
+  const compartmentItems=isCompartment?getFullscreenCompartmentPlaybackItems():[];
+  playAll.disabled=playAll.dataset.busy==='true'||!compartmentItems.length||(!isSpotifyIntegrationAvailable()&&!compartmentItems.some(item=>getQueueableAlbumUrl(item)));
+  playAll.title=playAll.disabled?'Für die Wiedergabe sind Hörlinks oder die Spotify-Verbindung auf vinyl.elkevinio.de erforderlich.':'Alle Alben dieses Fachs in Fachreihenfolge starten';
+  const playStatus=document.getElementById('fullscreenPlayerCompartmentPlayStatus');
+  playStatus.hidden=true;
+  if(isCompartment && compartmentItems.length && playAll.disabled) {playStatus.textContent='Für die Wiedergabe Hörlinks speichern oder Spotify auf vinyl.elkevinio.de verbinden.';playStatus.hidden=false;}
+
   const toggle = document.getElementById('fullscreenPlayerMenuToggle');
   if (isFullscreenPlayerMenuOpen()) {
     toggle.title = isCompartment ? 'Gesamte Sammlung öffnen' : 'Sammlung ausblenden';
@@ -17505,15 +17704,15 @@ function renderFullscreenPlayerMenu() {
     const actions = document.createElement('div');
     actions.className = 'fullscreen-player-menu-item-actions';
     const url = getSupportedListeningUrl(item.spotifyAlbumUrl || item.listeningUrl);
-    const queueable = !!(url && getSpotifyEmbedUrl(url) && getSpotifyAlbumId(url));
+    const queueable = !!getQueueableAlbumUrl(item);
     const queue = document.createElement('button');
     queue.type = 'button';
     queue.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 4v4M16 6h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-    queue.title = queueable ? 'In die Warteschlange' : 'Nur mit Spotify-Albumlink möglich';
+    queue.title = queueable ? 'In die Warteschlange' : 'Spotify-Albumlink oder YouTube-Hörlink erforderlich';
     queue.setAttribute('aria-label', queue.title);
     queue.disabled = !queueable;
     queue.addEventListener('click', () => {
-      if (queueAlbumForListening(item, url)) {
+      if (queueAlbumForListening(item, getQueueableAlbumUrl(item))) {
         queue.classList.add('is-added');
         window.setTimeout(() => queue.classList.remove('is-added'), 1200);
       }
@@ -17852,9 +18051,8 @@ function updateAlbumQueueControls() {
 
 function queueAlbumForListening(item, listeningUrl) {
   const safeUrl = getSupportedListeningUrl(listeningUrl);
-  if (!safeUrl || !getSpotifyEmbedUrl(safeUrl)
-    || !getSpotifyAlbumId(safeUrl)) {
-    console.error('Album konnte nicht eingereiht werden: Kein gültiger Spotify-Albumlink vorhanden.');
+  if (!getQueueableAlbumUrl({listeningUrl:safeUrl})) {
+    console.error('Album konnte nicht eingereiht werden: Kein gültiger Spotify-Albumlink oder YouTube-Hörlink vorhanden.');
     return false;
   }
   listeningAlbumQueue.push({ ...item, listeningUrl: safeUrl });
@@ -18357,8 +18555,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   };
   const showPlaybackState = paused => {
     playbackIsPaused = paused;
-    toggle.innerHTML = paused ? LISTENING_ICON_SVG.play : LISTENING_ICON_SVG.pause;
-    toggle.setAttribute('aria-label', paused ? 'Wiedergabe starten' : 'Wiedergabe pausieren');
+    setPlayerHtml(toggle, paused ? LISTENING_ICON_SVG.play : LISTENING_ICON_SVG.pause);
+    setPlayerAttribute(toggle, 'aria-label', paused ? 'Wiedergabe starten' : 'Wiedergabe pausieren');
     syncFullscreenPlayer();
   };
   let pendingRestoredTrackUri = '';
@@ -18425,10 +18623,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       const reportedTitle = (!pendingAutoAdvancedTrackUri || reportedUri === pendingAutoAdvancedTrackUri || reportedIndex === currentIndex) && (state.track_window?.current_track?.name
         || state.currentTrack?.name
         || state.name);
-      currentTrack.textContent = getListeningDisplayText(
+      setPlayerText(currentTrack, getListeningDisplayText(
         reportedTitle || tracks[currentIndex].title,
         `Track ${currentIndex + 1}`
-      );
+      ));
       if (activeUri !== favoriteTrackUri) {
         favoriteTrackUri = activeUri;
         delete favorite.dataset.favoriteMessage;
@@ -18743,8 +18941,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         toggle.disabled = false;
         playbackDuration = (Number(state.duration) || 0) / 1000;
         const position = (Number(state.position) || 0) / 1000;
-        toggle.innerHTML = state.isPaused ? LISTENING_ICON_SVG.play : LISTENING_ICON_SVG.pause;
-        toggle.setAttribute('aria-label', state.isPaused ? 'Wiedergabe starten' : 'Wiedergabe pausieren');
+        setPlayerHtml(toggle, state.isPaused ? LISTENING_ICON_SVG.play : LISTENING_ICON_SVG.pause);
+        setPlayerAttribute(toggle, 'aria-label', state.isPaused ? 'Wiedergabe starten' : 'Wiedergabe pausieren');
         seek.max = String(playbackDuration);
         if (!seek.matches(':active')) {
           seek.value = String(Math.min(position, playbackDuration));
@@ -21358,6 +21556,8 @@ function setView(view, persist = true) {
     viewStorageBtn.style.display = viewingOwnCollection ? 'inline-flex' : 'none';
     viewStorageBtn.classList.toggle('toggle-active', view === 'storage');
     viewStorageBtn.title = view === 'storage' ? 'Zur Sammlung wechseln' : 'Lageransicht öffnen';
+    const storageLabel = viewStorageBtn.querySelector('.settings-shortcut-label');
+    if(storageLabel)storageLabel.textContent = view === 'storage' ? 'Zur Sammlung' : 'Lageransicht';
     viewStorageBtn.querySelector('.storage-icon-storage').hidden = view === 'storage';
     viewStorageBtn.querySelector('.storage-icon-grid').hidden = view !== 'storage';
     viewStorageBtn.setAttribute('aria-label', viewStorageBtn.title);
@@ -22835,6 +23035,7 @@ function getArtistDominantGenres(items) {
 }
 
 function renderCollection() {
+  fullscreenShelfDataRevision = (fullscreenShelfDataRevision || 0) + 1;
   const grid = document.getElementById('collectionGrid');
   const tableWrap = document.getElementById('collectionTableWrap');
   const storageBoard = document.getElementById('storageBoard');
