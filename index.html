@@ -6413,6 +6413,12 @@
 .fullscreen-player-room-wall::before { content:''; position:absolute; inset:0; background:var(--room-grout); mask-image:var(--room-grout-mask,none); -webkit-mask-image:var(--room-grout-mask,none); mask-size:360px 240px; -webkit-mask-size:360px 240px; mask-position:center top; -webkit-mask-position:center top; pointer-events:none; }
 .fullscreen-player-overlay:not([data-wall-pattern="rusticBrick"]):not([data-wall-pattern="naturalStone"]) .fullscreen-player-room-wall::before { display:none; }
 
+
+.vinyl-discogs-suggestion { padding:10px; margin-bottom:12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-1); }
+.vinyl-discogs-suggestion button { width:100%; }
+#vinylDiscogsSuggestionStatus { margin:8px 0 0; font-size:12px; line-height:1.45; overflow-wrap:anywhere; max-height:160px; overflow-y:auto; }
+#vinylDiscogsSuggestionStatus:empty { display:none; }
+
 #cloudSyncBanner {
   position: fixed;
   z-index: 2147483647;
@@ -6785,6 +6791,146 @@
 .room-queue-crate:hover,.room-queue-crate:focus-visible {
   outline:1px solid #e5e7ed; outline-offset:5px;
 }
+
+
+/* Keep moving trains and scenery; distribute animated detail over fewer nodes. */
+.room-window-scene .room-detail-static { animation:none !important; }
+[data-animation-quality="medium"] .room-window-scene .city-office-light { animation-timing-function:steps(1,end); }
+[data-animation-quality="medium"] .room-window-scene .city-building-led,
+[data-animation-quality="medium"] .room-window-scene .city-neon,
+[data-animation-quality="medium"] .room-window-scene .city-anime-hologram { animation-timing-function:steps(24,end); }
+[data-animation-quality="medium"] .room-window-scene .landscape-clouds { animation-timing-function:steps(180,end); }
+[data-animation-quality="medium"] .room-window-scene .alien-glow { filter:none; animation-timing-function:steps(24,end); }
+.room-window-scene .city-through-train,
+.room-window-scene .city-sky-traffic { will-change:transform; }
+
+/* Low preserves live glass/weather and playback feedback, with static scenery. */
+[data-animation-quality="low"] .room-window-scene * { animation-play-state:paused !important; }
+
+.room-window-weather { contain:layout paint; }
+.room-queue-crate { filter:none; }
+.room-crate-record { transform:skewY(-10deg) rotate(-3deg); }
+
+
+/* Sleeves are parallel to the crate front, receding along its left/back axis. */
+.room-crate-record {
+  width:63%; height:76%; transform:skewY(-10deg); transform-origin:50% 100%;
+  border:1px solid #b0b2b577; box-shadow:0 -1px 0 #181b22;
+}
+.room-crate-count { border:0; border-radius:0; font-size:9px; background:#1a1d23; color:#b7bac3; bottom:12%; }
+
+
+.room-crate-records { clip-path:polygon(0 0,100% 0,100% 77%,27.5% 92%,4% 75%); }
+
+/* Turn sleeve fronts ninety degrees: narrow faces, depth along the long side. */
+.room-queue-crate { width:calc(var(--shelf-w) * .52); height:calc(var(--shelf-w) * .4333); }
+.room-crate-record { width:23%; height:71%; transform:skewY(31deg); transform-origin:0 0; }
+
+
+.room-queue-crate { left:calc(50% + var(--room-equipment-edge) + 24px + var(--crate-extra-gap,0px)); }
+.room-decor { display:none; position:absolute; z-index:1; overflow:visible; pointer-events:none; }
+.is-angled-view[data-room-decor="on"] .has-lounge-space .room-lounge { display:block; }
+.is-angled-view[data-room-decor="on"] .has-bedroom-space .room-bedroom { display:block; }
+.room-lounge { right:calc(50% + var(--room-equipment-edge) + 32px); bottom:8%; width:calc(var(--shelf-w) * 1.2); height:calc(var(--shelf-w) * .9); --sofa-back:#343e46; --sofa-cushion:#4a5862; --sofa-arm:#3c4852; }
+[data-sofa-style="leather"] .room-lounge { --sofa-back:#281e19; --sofa-cushion:#4a3428; --sofa-arm:#38271e; }
+[data-sofa-style="velvet"] .room-lounge { --sofa-back:#23372f; --sofa-cushion:#3d5b4b; --sofa-arm:#2e4439; }
+[data-sofa-style="leather"] .sofa-cushion { stroke:#b7a38b33; }
+.room-table { display:none; }
+[data-table-style="tiles"] .table-tiles,[data-table-style="classic"] .table-classic,[data-table-style="future"] .table-future { display:block; }
+[data-table-style="classic"] .room-ashtray { transform:translateY(-29px); }
+.room-bedroom { left:calc(50% + var(--room-equipment-edge) + 48px + var(--crate-extra-gap,0px) + var(--shelf-w) * .52); bottom:8%; width:calc(var(--shelf-w) * 1.35); height:calc(var(--shelf-w) * .942); --bed-frame:#604333; --bed-sheet:#8b969a; --bed-cover:#394b5a; --chair-frame:#6b4b32; --chair-back:#795a41; --chair-seat:#8e6a4b; }
+[data-bed-style="future"] .room-bedroom { --bed-frame:#2d3947; --bed-sheet:#a4bdc7; --bed-cover:#375c6c; }
+[data-bed-style="upholstered"] .room-bedroom { --bed-frame:#5d5557; --bed-sheet:#b0a4a0; --bed-cover:#77666d; }
+.bed-future-strip { display:none; }
+[data-bed-style="future"] .bed-future-strip { display:block; }
+[data-chair-style="plastic"] .room-bedroom { --chair-frame:#9caaa9; --chair-back:#b6c3c2; --chair-seat:#a9bbba; }
+[data-chair-style="hotel"] .room-bedroom { --chair-frame:#3c3431; --chair-back:#635c69; --chair-seat:#7c7181; }
+[data-chair-style="wood"] .chair-arm { display:none; }
+
+
+/* Full HD keeps all zones; outer furniture may extend beyond the room edges. */
+.room-lounge { width:calc(var(--shelf-w) * 1.65); height:calc(var(--shelf-w) * 1.2375); right:calc(50% + var(--room-equipment-edge) + 12px); bottom:5%; }
+.room-bedroom { width:calc(var(--shelf-w) * 1.65); height:calc(var(--shelf-w) * 1.151); bottom:5%; left:calc(50% + var(--room-equipment-edge) + 30px + var(--crate-extra-gap,0px) + var(--shelf-w) * .52); }
+@media (min-width:1500px) and (max-width:2300px) {
+  .room-queue-crate { left:calc(50% + var(--room-equipment-edge) + 12px); }
+  .room-bedroom { left:calc(50% + var(--room-equipment-edge) + var(--shelf-w) * .42); }
+}
+
+
+/* Lo-fi asset palette: shared silhouettes, independent material variants. */
+.room-lounge { --sofa-back:#303b49; --sofa-cushion:#536071; --sofa-arm:#3d4958; }
+.room-bedroom { --bed-frame:#79533e; --bed-sheet:#9899a3; --bed-cover:#435065; --chair-frame:#674833; --chair-back:#8b6249; --chair-seat:#976e53; }
+[data-table-style="classic"] .room-table-accessories { transform:translateY(-29px); }
+[data-table-style="classic"] .room-ashtray { transform:none; }
+
+
+/* Keep every decorative asset inside the gray room frame. */
+.fullscreen-player-overlay.is-angled-view .fullscreen-player-camera { overflow:hidden; isolation:isolate; }
+.room-lounge { width:var(--lounge-fit-width,calc(var(--shelf-w) * 1.65)); height:auto; aspect-ratio:4 / 3; }
+.room-bedroom { width:var(--bedroom-fit-width,calc(var(--shelf-w) * 1.65)); height:auto; aspect-ratio:43 / 30; }
+.sofa-extra,.bed-extra,.chair-variant,.table-neon-accessory,.table-drinks { display:none; }
+[data-sofa-style="leather"] .sofa-leather-detail,[data-sofa-style="future"] .sofa-neon-detail,[data-sofa-style="bench"] .sofa-bench { display:block; }
+[data-sofa-style="bench"] [data-furniture-asset="sofa-lofi-v1"] { display:none; }
+[data-sofa-style="future"] .room-lounge { --sofa-back:#2d2335; --sofa-arm:#3f2e49; --sofa-cushion:#4a3556; }
+[data-table-style="worn"] .table-worn { display:block; }
+[data-table-style="worn"] .room-table-plant,[data-table-style="future"] .room-table-plant { display:none; }
+[data-table-style="future"] .table-neon-accessory,[data-table-style="future"] .table-drinks,[data-table-style="worn"] .table-drinks { display:block; }
+[data-table-style="classic"] .room-table-accessories { transform:none; }
+[data-bed-style="upholstered"] .bed-upholstery,[data-bed-style="future"] .bed-neon-detail,[data-bed-style="mattress"] .bed-floor-mattress { display:block; }
+[data-bed-style="mattress"] [data-furniture-asset="bed-lofi-v1"] { display:none; }
+[data-bed-style="future"] .room-bedroom { --bed-frame:#33253e; --bed-sheet:#8a748e; --bed-cover:#392a46; }
+[data-chair-style="wood"] .chair-wood,[data-chair-style="plastic"] .chair-plastic,[data-chair-style="hotel"] .chair-hotel,[data-chair-style="gaming"] .chair-gaming { display:block; }
+
+
+/* Original transparent furniture PNGs, individually cropped from the supplied sheet. */
+.room-furniture-png { display:none; position:absolute; height:auto; max-width:none; object-fit:contain; pointer-events:none; user-select:none; }
+.furniture-sofa { width:56%; left:0; bottom:10%; }
+.furniture-table { width:39%; right:1%; bottom:2%; }
+.furniture-bed { width:67%; right:0; bottom:10%; }
+.furniture-chair { width:33%; left:0; bottom:2%; }
+[data-sofa-style="fabric"] .furniture-sofa-fabric,
+[data-sofa-style="velvet"] .furniture-sofa-fabric,
+[data-sofa-style="bench"] .furniture-sofa-bench,
+[data-sofa-style="future"] .furniture-sofa-future,
+[data-sofa-style="leather"] .furniture-sofa-leather,
+[data-table-style="tiles"] .furniture-table-tiles,
+[data-table-style="classic"] .furniture-table-classic,
+[data-table-style="future"] .furniture-table-future,
+[data-table-style="worn"] .furniture-table-worn,
+[data-bed-style="traditional"] .furniture-bed-traditional,
+[data-bed-style="mattress"] .furniture-bed-mattress,
+[data-bed-style="future"] .furniture-bed-future,
+[data-bed-style="upholstered"] .furniture-bed-upholstered,
+[data-chair-style="wood"] .furniture-chair-wood,
+[data-chair-style="plastic"] .furniture-chair-plastic,
+[data-chair-style="gaming"] .furniture-chair-gaming,
+[data-chair-style="hotel"] .furniture-chair-hotel { display:block; }
+
+
+/* Furniture keeps a physical scale on desktop; the camera clips the room edges. */
+.furniture-sofa { width:68%; left:-12%; bottom:10%; }
+.furniture-table { width:43%; right:0; bottom:2%; }
+.furniture-bed { width:78%; right:-11%; bottom:10%; }
+.furniture-chair { width:36%; left:0; bottom:2%; }
+
+
+.furniture-sofa { width:63%; left:-7%; }
+/* Visibility preserves measurement, preventing hide/show oscillation. */
+.chair-overlaps-queue .furniture-chair { visibility:hidden; }
+
+
+/* Symmetric side columns keep transport controls centered with or without volume. */
+.player-transport-row {
+  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center; gap:0 12px;
+}
+.player-transport-row > .fullscreen-player-controls,
+.player-transport-row > .album-mini-controls { grid-column:2; grid-row:1; margin:0; }
+.player-transport-row > .player-volume {
+  grid-column:3; grid-row:1; justify-self:start;
+  width:100%; max-width:150px; min-width:0; margin:0;
+}
+.player-volume[hidden],.mini-volume-menu[hidden] { display:none !important; }
 
 </style>
 </head>
@@ -7591,32 +7737,44 @@
     <div class="room-subwoofer room-subwoofer-left" aria-hidden="true"><i class="speaker-driver"></i><span></span></div>
     <div class="room-subwoofer room-subwoofer-right" aria-hidden="true"><i class="speaker-driver"></i><span></span></div>
     <button type="button" id="roomQueueCrate" class="room-queue-crate" aria-label="Album-Warteschlange öffnen" title="Warteschlange · Rechtsklick für Shuffle">
-      <svg class="room-crate-back" viewBox="0 0 240 200" aria-hidden="true"><path d="M10 54 175 26 232 57 66 88Z" fill="#08090b" stroke="#37383b" stroke-width="5"/><path d="M10 54 175 26V124L10 154Z" fill="#121316"/>
-        <path d="M175 26 232 57V154L175 124Z" fill="#202226" stroke="#37393d" stroke-width="2"/>
-        <path d="M10 151 175 124 232 154 66 184Z" fill="#17191c" stroke="#34363a" stroke-width="2"/>
-        <path d="M10 54 66 88V184L10 151Z" fill="#181a1d"/>
+      <svg class="room-crate-back" viewBox="0 0 240 200" aria-hidden="true">
+        <path d="M10 54 175 26 232 57 66 88Z" fill="#0b0d11" stroke="#393c44" stroke-width="3"/>
+        <path d="M10 54 175 26V124L10 154Z" fill="#15171c"/>
+        <path d="M175 26 232 57V154L175 124Z" fill="#24272d"/>
+        <path d="M10 151 175 124 232 154 66 184Z" fill="#16191f"/>
       </svg>
       <span class="room-crate-records" aria-hidden="true"></span>
       <svg class="room-crate-shell" viewBox="0 0 240 200" aria-hidden="true">
-        <defs>
-          <linearGradient id="queueCrateWood" x2="0.15" y2="1"><stop stop-color="#3e3f41"/><stop offset=".18" stop-color="#2a2b2e"/><stop offset="1" stop-color="#151619"/></linearGradient>
-          <linearGradient id="queueCrateSide" x2="1" y2=".2"><stop stop-color="#151619"/><stop offset=".7" stop-color="#292a2d"/><stop offset="1" stop-color="#101114"/></linearGradient>
-          <pattern id="queueCrateGrain" width="62" height="14" patternUnits="userSpaceOnUse"><path d="M0 3q16-3 32 0t32 0M-10 10q24-4 43-1t40-1" fill="none" stroke="#c0b9aa" stroke-opacity=".08" stroke-width=".7"/></pattern>
-        </defs>
-        <g fill="url(#queueCrateSide)" stroke="#101114" stroke-width="1">
-          <path d="M9 54 66 87V109L9 76ZM9 91 66 124V145L9 113ZM9 129 66 162V184L9 151Z"/>
-          <path d="M9 54 18 59V156L9 151ZM58 82 68 87V186L58 180Z"/>
+        <path d="M10 54 66 88V111L10 77ZM10 92 66 126V148L10 114ZM10 130 66 163V185L10 152Z" fill="#2a2d34" stroke="#101217" stroke-width="1"/><path d="M10 54 16 58V155L10 152ZM60 84 66 88V185L60 181Z" fill="#252830"/>
+        <path d="M66 88 232 57V154L66 185Z" fill="#1b1e24" stroke="#343740" stroke-width="1"/>
+        <path d="M66 88 73 87V183L66 185ZM225 59 232 57V154L225 156Z" fill="#252830"/>
+        <path d="M10 54 66 88 232 57" fill="none" stroke="#50545e" stroke-width="2"/>
+        <g fill="#13161c" stroke="#515763" stroke-width="1">
+          <path d="M18 157v8m51 20v6m151-34v8" stroke-width="3"/>
+          <ellipse cx="18" cy="168" rx="4" ry="6"/><ellipse cx="69" cy="194" rx="4" ry="5"/><ellipse cx="220" cy="168" rx="4" ry="6"/>
         </g>
-        <g fill="url(#queueCrateWood)" stroke="#0b0c0e" stroke-width="1">
-          <path d="M65 87 233 57V80L65 110ZM65 124 233 94V117L65 147ZM65 161 233 131V154L65 184Z"/>
-          <path d="M65 87 74 85V182L65 184ZM224 59 233 57V154L224 156Z"/>
-        </g>
-        <path d="M65 87 233 57V80L65 110ZM65 124 233 94V117L65 147ZM65 161 233 131V154L65 184Z" fill="url(#queueCrateGrain)"/>
-        <path d="M10 54 66 87 233 57M66 125 232 95M66 162 232 132" fill="none" stroke="#6c6c68" stroke-opacity=".45" stroke-width="1.5"/>
-        <g fill="#0c0d0f" stroke="#5d5e61" stroke-width=".8"><circle cx="70" cy="98" r="1.7"/><circle cx="228" cy="70" r="1.7"/><circle cx="70" cy="135" r="1.7"/><circle cx="228" cy="107" r="1.7"/><circle cx="70" cy="172" r="1.7"/><circle cx="228" cy="144" r="1.7"/></g>
-        <g fill="#101115" stroke="#42464c"><path d="M20 158v9m50 18v9m148-35v10" stroke-width="4"/><ellipse cx="20" cy="170" rx="5" ry="7"/><ellipse cx="70" cy="194" rx="5" ry="6"/><ellipse cx="218" cy="172" rx="5" ry="7"/></g>
       </svg><span class="room-crate-count"></span>
     </button>
+    <div class="room-decor room-lounge" aria-hidden="true">
+      <img class="room-furniture-png furniture-sofa furniture-sofa-fabric" src="assets/furniture/sofa-fabric.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-sofa furniture-sofa-bench" src="assets/furniture/sofa-bench.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-sofa furniture-sofa-future" src="assets/furniture/sofa-future.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-sofa furniture-sofa-leather" src="assets/furniture/sofa-leather.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-table furniture-table-tiles" src="assets/furniture/table-tiles.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-table furniture-table-classic" src="assets/furniture/table-classic.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-table furniture-table-future" src="assets/furniture/table-future.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-table furniture-table-worn" src="assets/furniture/table-worn.png" alt="" draggable="false" decoding="async">
+    </div>
+    <div class="room-decor room-bedroom" aria-hidden="true">
+      <img class="room-furniture-png furniture-bed furniture-bed-traditional" src="assets/furniture/bed-traditional.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-bed furniture-bed-mattress" src="assets/furniture/bed-mattress.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-bed furniture-bed-future" src="assets/furniture/bed-future.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-bed furniture-bed-upholstered" src="assets/furniture/bed-upholstered.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-chair furniture-chair-wood" src="assets/furniture/chair-wood.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-chair furniture-chair-plastic" src="assets/furniture/chair-plastic.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-chair furniture-chair-gaming" src="assets/furniture/chair-gaming.png" alt="" draggable="false" decoding="async">
+      <img class="room-furniture-png furniture-chair furniture-chair-hotel" src="assets/furniture/chair-hotel.png" alt="" draggable="false" decoding="async">
+    </div>
     <div class="fullscreen-player-shelf fullscreen-player-shelf-left" aria-label="Regalfächer"></div>
     <div class="fullscreen-player-left">
       <div class="fullscreen-player-turntable" aria-hidden="true">
@@ -7960,6 +8118,10 @@
         </div>
       </section>
       <section class="vinyl-editor-controls">
+        <div class="vinyl-discogs-suggestion">
+          <button type="button" id="suggestVinylFromDiscogsBtn">Design aus Discogs vorschlagen</button>
+          <p id="vinylDiscogsSuggestionStatus" class="settings-panel-hint" role="status" aria-live="polite"></p>
+        </div>
         <div class="vinyl-editor-toolbar">
           <div class="vinyl-count-control">
             <label for="vinylCountInput">Anzahl Vinyls</label>
@@ -13753,8 +13915,112 @@ function scheduleVinylEditorPreview() {
   });
 }
 
+
+const DISCOGS_VINYL_COLORS=[
+  ['light blue','#8ecdf0'],['dark blue','#193c85'],['royal blue','#3155d9'],['navy blue','#192b52'],
+  ['light green','#a7d58b'],['dark green','#205e3b'],['hot pink','#f43d99'],['baby pink','#f5b5cf'],
+  ['blood red','#a41526'],['deep red','#a41526'],['crimson','#a71930'],['burgundy','#76283d'],
+  ['black','#111111'],['schwarz','#111111'],['white','#f0eee8'],['weiß','#f0eee8'],['weiss','#f0eee8'],
+  ['yellow','#f5d328'],['gelb','#f5d328'],['blue','#287bc5'],['blau','#287bc5'],['red','#d92c36'],['rot','#d92c36'],
+  ['green','#399557'],['grün','#399557'],['gruen','#399557'],['purple','#8c4fbe'],['violet','#8c4fbe'],['lila','#8c4fbe'],
+  ['pink','#ee82b2'],['orange','#ee892b'],['gold','#c6a34b'],['silver','#b9bec6'],['silber','#b9bec6'],
+  ['grey','#92959c'],['gray','#92959c'],['grau','#92959c'],['brown','#815036'],['braun','#815036'],
+  ['turquoise','#35b9b3'],['türkis','#35b9b3'],['teal','#278d91'],['cyan','#42c6e4'],['magenta','#cb3d96'],
+  ['cream','#e9dfbb'],['ivory','#eee7cd'],['beige','#cbbc9b'],['peach','#efb193'],['coral','#ed7468'],['lavender','#b49bd6'],['mint','#98d7bb'],['olive','#82904a'],['amber','#d59a34']
+];
+function parseDiscogsVinylAppearance(description) {
+  // Variant nicknames and pressing/packaging labels must not become extra colors.
+  const text=String(description||'').normalize('NFKC').toLowerCase().replace(/\[[^\]]*\]|"[^"]*"/g,' ').replace(/\([^)]*\)/g,' ');
+  const matches=[];
+  for(const [name,color] of DISCOGS_VINYL_COLORS){
+    const regex=new RegExp(`(^|[^\\p{L}])(${name})(?=$|[^\\p{L}])`,'gu');
+    for(const match of text.matchAll(regex))matches.push({name,color,index:match.index+match[1].length,end:match.index+match[0].length});
+  }
+  matches.sort((a,b)=>a.index-b.index || b.name.length-a.name.length);
+  const colors=[];let consumed=-1;
+  for(const match of matches){if(match.index<consumed)continue;consumed=match.end;if(!colors.some(value=>value.color===match.color))colors.push(match);}
+  const clear=/\b(clear|transparent|translucent|crystal clear)\b|durchsichtig|transparent/.test(text);
+  const effect=/splatter|gesprenkelt|sprenkel/.test(text)?'splatter':/liquid[ -]?filled|liquid vinyl|flüssig/.test(text)?'liquid':/smoke|smoky|rauch/.test(text)?'smoke':/marbl|marmor|blend|swirl|galaxy/.test(text)?'marble':/\b(split|half|hälfte)\b/.test(text)?'split':null;
+  const on=text.match(/(?:splatter|smoke|marbl\w*)\s+(?:on|auf)\s+(.+)/);
+  let base=colors[0] || null;
+  if(on){const after=colors.find(value=>value.index>=text.indexOf(on[1]));if(after)base=after;}
+  if(clear && (!colors.length || /^(?:.*?\b(?:clear|transparent|translucent))\s+(?:with|mit|and|&)\b/.test(text)))base={name:'Transparent',color:'#eeeeee'};
+  return {base,colors,effect,clear,text,recognized:!!(colors.length||clear||effect),source:String(description||'')};
+}
+function buildDiscogsVinylSuggestion(release, previousDesign) {
+  const formats=(release.discogsFormats||[]).filter(format=>/^vinyl$/i.test(format.name||''));
+  const notes=String(release.discogsNotes||'').split(/\r?\n/).filter(line=>/vinyl|pressed|pressing|splatter|marbl|liquid|smoke/i.test(line) && !/sleeve|jacket|cover|poster|sticker|label|artwork/i.test(line)).slice(0,4).join(' ');
+  const design=JSON.parse(JSON.stringify(previousDesign));
+  const records=[],summaries=[],warnings=[];let found=false;
+  for(const format of formats){
+    const description=[...(format.descriptions||[]),format.text||''].join(' ');
+    let appearance=parseDiscogsVinylAppearance(description);
+    if(!appearance.recognized && notes)appearance=parseDiscogsVinylAppearance(notes);
+    if(/picture[ -]?disc/i.test(description)){warnings.push('Picture Disc benötigt ein Bild und wird nicht automatisch nachgebaut.');continue;}
+    const quantity=Math.max(1,Math.min(8,parseInt(format.qty,10)||1));
+    for(let copy=0;copy<quantity && records.length<8;copy++){
+      const index=records.length;
+      const record=JSON.parse(JSON.stringify(previousDesign.records[index]||previousDesign.records[0]));
+      if(appearance.recognized){
+        found=true;
+        record.layers=[];
+        if(appearance.base)record.baseColor=appearance.base.color;
+        if(appearance.clear)record.transparency=/translucent/.test(appearance.text)?45:85;
+        else if(appearance.base)record.transparency=0;
+        const effectColors=appearance.colors.filter(value=>value.color!==appearance.base?.color);
+        const layer=(type,color,extra={})=>({id:`discogs-${index}-${record.layers.length}`,type,color,count:22,length:95,lengthMin:10,lengthMax:95,lengthMode:'random',sizeMode:'random',size:4,startAngle:0,endAngle:360,seed:hashVinylSeed(`${appearance.source}:${index}:${record.layers.length}`),...extra});
+        if(appearance.effect==='splatter'){
+          if(effectColors.length)for(const color of effectColors){record.layers.push(layer('Streifen Random',color.color,{count:26}));record.layers.push(layer('Punkte Random',color.color,{count:38}));}
+          else warnings.push('Splatter erkannt, aber keine zweite eindeutige Effektfarbe angegeben.');
+        }else if(appearance.effect==='marble' || appearance.effect==='smoke'){
+          const shades=effectColors.length?effectColors:[{color:appearance.effect==='smoke'?'#d2d5dc':record.baseColor}];
+          if(appearance.effect==='marble'&&!effectColors.length)warnings.push('Marmor/Blend erkannt; Effektfarbe nicht eindeutig.');
+          for(const shade of shades)record.layers.push(layer('Marble Random',shade.color,{count:appearance.effect==='smoke'?7:14,length:90}));
+        }else if(appearance.effect==='liquid'){
+          record.layers.push(layer('Liquid',effectColors[0]?.color||appearance.base?.color||record.baseColor,{amount:50,count:1}));
+          if(!appearance.colors.length)warnings.push('Liquid Filled erkannt; keine Farbe angegeben, bisherige Grundfarbe beibehalten.');
+        }else if(effectColors.length){
+          const palette=[appearance.base,...effectColors];
+          effectColors.forEach((color,i)=>record.layers.push(layer('VollFarbe',color.color,{startAngle:360*(i+1)/palette.length,endAngle:360*(i+2)/palette.length,lengthMode:'fixed'})));
+          if(appearance.effect!=='split')warnings.push('Mehrfarbig ohne eindeutigen Effekt: als Farbsegmente angenähert.');
+        }
+        summaries.push(`Vinyl ${index+1}: ${appearance.base?.name||'bisherige Grundfarbe'}${appearance.effect?' · '+({splatter:'Splatter',smoke:'Smoke',marble:'Marmor / Blend',liquid:'Liquid',split:'Split'}[appearance.effect]):''}${effectColors.length?' · '+effectColors.map(value=>value.name).join(', '):''}${appearance.clear?' · transparent':''}. Quelle: ${appearance.source}`);
+      }
+      records.push(record);
+    }
+  }
+  if(found){design.discStyle='vinyl';design.records=records;}
+  return {design,found,summaries,warnings:[...new Set(warnings)]};
+}
+async function suggestVinylDesignFromDiscogs() {
+  if(!currentDraft || !vinylEditorDesign)return;
+  const button=document.getElementById('suggestVinylFromDiscogsBtn'),status=document.getElementById('vinylDiscogsSuggestionStatus');
+  const draft=currentDraft,previous=vinylEditorDesign,request=++vinylDiscogsSuggestionRequest;
+  const previousSignature=JSON.stringify(previous);
+  const input=parseDiscogsInput(draft.discogsResourceUrl || draft.discogsUrl || '');
+  if(!input || input.type!=='release'){status.textContent='Bitte zuerst einen konkreten Discogs-Release verknüpfen. Ein Master-Link legt die Farbvariante nicht eindeutig fest.';return;}
+  button.disabled=true;status.textContent='Lese Formatbeschreibung vom Discogs-Release …';
+  try{
+    const release=await fetchDiscogsReleaseById(input.id);
+    if(request!==vinylDiscogsSuggestionRequest || currentDraft!==draft || vinylEditorDesign!==previous || !document.getElementById('vinylEditorOverlay').classList.contains('open'))return;
+    if(JSON.stringify(previous)!==previousSignature){status.textContent='Du hast das Design während des Ladens verändert. Es wurde nichts überschrieben; starte die Erkennung bei Bedarf erneut.';return;}
+    if(!release)throw new Error(fetchDiscogsReleaseById.lastError || 'Discogs konnte nicht geladen werden.');
+    if(isCdItem(draft)){status.textContent='Diese Erkennung ist für Vinyl-Formate gedacht.';return;}
+    const result=buildDiscogsVinylSuggestion(release,previous);
+    if(!result.found){status.textContent='Keine eindeutigen Vinylfarben oder unterstützten Effekte gefunden. Dein Design wurde nicht geändert.'+(result.warnings.length?' '+result.warnings.join(' '):'');return;}
+    vinylEditorDesign=result.design;activeVinylIndex=0;renderVinylEditor();
+    status.textContent='Vorschlag geladen – noch nicht gespeichert. '+result.summaries.join(' ')+' '+result.warnings.join(' ');
+  }catch(error){if(request===vinylDiscogsSuggestionRequest)status.textContent=error.message||'Discogs-Auswertung fehlgeschlagen.';}
+  finally{if(request===vinylDiscogsSuggestionRequest)button.disabled=false;}
+}
+document.getElementById('suggestVinylFromDiscogsBtn').addEventListener('click',suggestVinylDesignFromDiscogs);
+
+let vinylDiscogsSuggestionRequest=0;
 function openVinylEditor() {
   if (!currentDraft) return;
+  vinylDiscogsSuggestionRequest++;
+  document.getElementById('suggestVinylFromDiscogsBtn').disabled=false;
+  document.getElementById('vinylDiscogsSuggestionStatus').textContent='';
   vinylEditorOriginalPictureDataUrl = '';
   pictureColorMarker = null;
   pictureColorMarkerMode = false;
@@ -15516,6 +15782,7 @@ function normalizeDiscogsReleaseDetail(detail) {
     discogsCountry: detail.country || '',
     discogsLabels: labels,
     discogsFormats: formats,
+    discogsNotes: typeof detail.notes === 'string' ? detail.notes : '',
     tracklist
   };
 }
@@ -16720,12 +16987,17 @@ function getPlayerVolumeTarget() {
 let playerVolumeControlsSignature='';
 function syncPlayerVolumeControls() {
   const target=getPlayerVolumeTarget();
-  const signature=`${playerVolume}:${!!target.set}:${target.hint||''}`;
+  const source=document.querySelector('#albumListeningDockContent .album-mini-player') || document.querySelector('.album-mini-player');
+  const visible=!!(target.set && source?.dataset.provider==='spotify' && source.dataset.controllerReady==='true' && spotifyMiniController?.isWebPlaybackSdk);
+  const signature=`${playerVolume}:${visible}:${!!target.set}:${target.hint||''}`;
   const rows=document.querySelectorAll('.player-volume');
   if(playerVolumeControlsSignature===signature && [...rows].every(row=>row.dataset.volumeSignature===signature))return;
   playerVolumeControlsSignature=signature;
   rows.forEach(row=>{
     row.dataset.volumeSignature=signature;
+    row.hidden=!visible;
+    const menu=row.closest('.mini-volume-menu');
+    if(menu){menu.hidden=!visible;if(!visible){menu.querySelector('.mini-volume-popover').hidden=true;menu.querySelector('button').setAttribute('aria-expanded','false');}}
     const input=row.querySelector('input');
     input.disabled=!target.set;
     input.value=String(playerVolume);
@@ -16745,7 +17017,7 @@ async function applyPlayerVolume() {
   }
 }
 function createPlayerVolumeControl() {
-  const row=document.createElement('label');row.className='player-volume';
+  const row=document.createElement('label');row.className='player-volume';row.hidden=true;
   const input=document.createElement('input');input.type='range';input.min='0';input.max='100';input.step='1';input.value=String(playerVolume);input.disabled=true;input.setAttribute('aria-label','Lautstärke');
   input.addEventListener('input',()=>{playerVolume=Number(input.value);syncPlayerVolumeControls();});
   input.addEventListener('change',()=>{try{localStorage.setItem('playerVolumeV1',String(playerVolume));}catch{} void applyPlayerVolume();});
@@ -16753,7 +17025,7 @@ function createPlayerVolumeControl() {
   row.append(input);return row;
 }
 function createMiniVolumeButton() {
-  const wrap=document.createElement('div');wrap.className='mini-volume-menu';
+  const wrap=document.createElement('div');wrap.className='mini-volume-menu';wrap.hidden=true;
   const button=document.createElement('button');button.type='button';button.className='album-mini-control';
   button.title='Lautstärke';button.setAttribute('aria-label','Lautstärke');button.setAttribute('aria-expanded','false');
   button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></svg>';
@@ -17428,9 +17700,13 @@ function getFullscreenAudioBandLevels(data, sampleRate, fftSize, count) {
 }
 function animateFullscreenAudio(session, now) {
   if (fullscreenAudioSession !== session || !session.connected) return;
+  if(document.hidden || !isFullscreenPlayerOpen() || (session.lastPaint && now-session.lastPaint<({low:50,medium:32,high:16}[fullscreenRoomStyle.animationQuality]||32))) {
+    session.frame=requestAnimationFrame(time=>animateFullscreenAudio(session,time)); return;
+  }
+  session.lastPaint=now;
   session.analyser.getByteFrequencyData(session.data);
   const levels = getFullscreenAudioBandLevels(session.data, session.context.sampleRate, session.analyser.fftSize, session.bars.length);
-  session.bars.forEach((bar, index) => bar.style.setProperty('--eq-level', levels[index].toFixed(3)));
+  session.bars.forEach((bar,index)=>{const level=levels[index].toFixed(2);if(bar.style.getPropertyValue('--eq-level')!==level)bar.style.setProperty('--eq-level',level);});
   if (levels.some(level => level > 0.06)) session.lastSignal = now;
   const silent = now - session.lastSignal > 5000;
   if (silent !== session.silent) {
@@ -17513,7 +17789,7 @@ window.addEventListener('pagehide', () => stopFullscreenAudioAnalysis());
 updateFullscreenAudioUi();
 
 const FULLSCREEN_ROOM_STORAGE_KEY = 'fullscreenPlayerRoomStyleV1';
-const fullscreenRoomDefaults = { floor:'#362619', floorType:'wood', wall:'#15151b', grout:'#625b53', wallPattern:'concrete', windows:'off', timeOfDay:'evening', windowScene:'cyberpunk', weather:'rain', shelf:'#19191f', turntable:'#202027', equalizer:'#a855f7', equalizerMode:'solid', lightLeft:'#ff2d95', lightRight:'#00d4ff', lightLeftBrightness:100, lightRightBrightness:100, ceilingLight:'off', ceilingColor:'#ffe7ba', ceilingBrightness:65, rug:'#20203b', rugStyle:'woven', rugShape:'rectangle', rugSize:'medium', speakers:'low', speakerColor:'#202025', speakerAccent:'#bda05b', wallpaper:'', wallpaperFit:'cover', wallpaperX:50, wallpaperY:50, layout:'auto', zoom:'off', responsiveness:40 };
+const fullscreenRoomDefaults = { roomDecor:'on',sofaStyle:'fabric',tableStyle:'tiles',chairStyle:'wood',bedStyle:'traditional', animationQuality:'medium', floor:'#362619', floorType:'wood', wall:'#15151b', grout:'#625b53', wallPattern:'concrete', windows:'off', timeOfDay:'evening', windowScene:'cyberpunk', weather:'rain', shelf:'#19191f', turntable:'#202027', equalizer:'#a855f7', equalizerMode:'solid', lightLeft:'#ff2d95', lightRight:'#00d4ff', lightLeftBrightness:100, lightRightBrightness:100, ceilingLight:'off', ceilingColor:'#ffe7ba', ceilingBrightness:65, rug:'#20203b', rugStyle:'woven', rugShape:'rectangle', rugSize:'medium', speakers:'low', speakerColor:'#202025', speakerAccent:'#bda05b', wallpaper:'', wallpaperFit:'cover', wallpaperX:50, wallpaperY:50, layout:'auto', zoom:'off', responsiveness:40 };
 let fullscreenRoomStyle = { ...fullscreenRoomDefaults };
 try {
   const saved = JSON.parse(localStorage.getItem(FULLSCREEN_ROOM_STORAGE_KEY) || '{}');
@@ -17653,6 +17929,19 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) stopRoomWindowTime(); else updateRoomWindowTime();
 });
 
+// Repeated animated elements are indexed once, never during a playback frame.
+const roomDecorativeAnimationNodes=[];
+document.querySelectorAll('.room-window-scene').forEach(scene=>{
+  for(const selector of ['.city-office-light','.city-building-led','.city-neon','.farm-corn-wind','.alien-plant-wind','.alien-glow']) {
+    scene.querySelectorAll(selector).forEach((element,index)=>roomDecorativeAnimationNodes.push({element,index}));
+  }
+});
+function applyRoomAnimationQuality() {
+  const quality=fullscreenRoomStyle.animationQuality;
+  document.getElementById('fullscreenPlayerOverlay').dataset.animationQuality=quality;
+  roomDecorativeAnimationNodes.forEach(({element,index})=>element.classList.toggle('room-detail-static',quality==='medium' && index%4!==0));
+}
+
 let roomWeatherTimer = null;
 let roomWeatherKey = '';
 function stopRoomWindowWeather() {
@@ -17701,14 +17990,16 @@ function updateRoomWindowWeather() {
   const weather = fullscreenRoomStyle.weather;
   if (document.hidden || overlay.hidden || fullscreenRoomStyle.windows !== 'on' || weather === 'clear') { stopRoomWindowWeather(); return; }
   const small = window.innerWidth < 700;
-  const key = `${weather}:${small}`;
+  const quality=fullscreenRoomStyle.animationQuality;
+  const key = `${weather}:${small}:${quality}`;
   if (key === roomWeatherKey && roomWeatherTimer) return;
   stopRoomWindowWeather();
   roomWeatherKey = key;
   document.querySelectorAll('.room-window').forEach(windowElement => {
     const layer = windowElement.querySelector('.room-window-weather');
     layer.replaceChildren();
-    const count = small ? 18 : weather === 'rain' ? 32 : 28;
+    const baseCount=small ? 18 : weather === 'rain' ? 32 : 28;
+    const count=Math.round(baseCount * (quality==='low'?.5:quality==='medium'?.75:1));
     for (let index = 0; index < count; index += 1) {
       const particle = document.createElement('i');
       particle.className = 'room-weather-particle';
@@ -17902,6 +18193,10 @@ function scheduleRoomStyleUpdate(key) {
 }
 function applyFullscreenRoomStyle(changedKeys = null) {
   const changed=(...keys)=>!changedKeys || keys.some(key=>changedKeys.has(key));
+  const decorOverlay=document.getElementById('fullscreenPlayerOverlay');
+  for(const key of ['roomDecor','sofaStyle','tableStyle','chairStyle','bedStyle'])decorOverlay.dataset[key]=fullscreenRoomStyle[key];
+  if(changed('roomDecor','chairStyle','layout','zoom'))scheduleRoomChairOverlap();
+  if(changed('animationQuality'))applyRoomAnimationQuality();
   if(changed('responsiveness'))applyFullscreenAudioResponsiveness();
   if(changed('layout','zoom','speakers'))applyFullscreenPlayerPresentation();
   const lightsOverlay=document.getElementById('fullscreenPlayerOverlay');
@@ -17933,7 +18228,7 @@ function applyFullscreenRoomStyle(changedKeys = null) {
   if(changed('timeOfDay','windowScene','weather','windows'))updateRoomWindowTime();
   if(changed('windows'))document.querySelector('[data-room-style="timeOfDay"]')?.closest('label').toggleAttribute('hidden', fullscreenRoomStyle.windows !== 'on');
   if(changed('windows'))document.querySelector('[data-room-style="windowScene"]')?.closest('label').toggleAttribute('hidden', fullscreenRoomStyle.windows !== 'on');
-  if(changed('weather','windows','windowScene'))updateRoomWindowWeather();
+  if(changed('weather','windows','windowScene','animationQuality'))updateRoomWindowWeather();
   if(changed('windows'))document.querySelector('[data-room-style="weather"]')?.closest('label').toggleAttribute('hidden', fullscreenRoomStyle.windows !== 'on');
   if (overlay.dataset.rugStyle !== String(fullscreenRoomStyle.rugStyle)) overlay.dataset.rugStyle = fullscreenRoomStyle.rugStyle;
   if (overlay.dataset.rugSize !== String(fullscreenRoomStyle.rugSize)) overlay.dataset.rugSize = fullscreenRoomStyle.rugSize;
@@ -17944,7 +18239,7 @@ function applyFullscreenRoomStyle(changedKeys = null) {
 const fullscreenRoomFields = document.getElementById('fullscreenPlayerRoomFields');
 const roomFieldGroups = new Map();
 const roomLightControls = new Map();
-const roomFieldGroupNames={layout:'Ansicht',zoom:'Ansicht',floorType:'Boden',floor:'Boden',wall:'Wand',grout:'Wand',wallPattern:'Wand',windows:'Fenster',timeOfDay:'Fenster',windowScene:'Fenster',weather:'Fenster',shelf:'Einrichtung',turntable:'Einrichtung',equalizer:'Einrichtung',equalizerMode:'Einrichtung',lightLeft:'Beleuchtung',lightLeftBrightness:'Beleuchtung',lightRight:'Beleuchtung',lightRightBrightness:'Beleuchtung',ceilingLight:'Beleuchtung',ceilingColor:'Beleuchtung',ceilingBrightness:'Beleuchtung',rug:'Teppich',rugStyle:'Teppich',rugShape:'Teppich',rugSize:'Teppich',speakers:'Lautsprecher',speakerColor:'Lautsprecher',speakerAccent:'Lautsprecher'};
+const roomFieldGroupNames={roomDecor:'Deko & Möbel',sofaStyle:'Deko & Möbel',tableStyle:'Deko & Möbel',chairStyle:'Deko & Möbel',bedStyle:'Deko & Möbel',animationQuality:'Ansicht',layout:'Ansicht',zoom:'Ansicht',floorType:'Boden',floor:'Boden',wall:'Wand',grout:'Wand',wallPattern:'Wand',windows:'Fenster',timeOfDay:'Fenster',windowScene:'Fenster',weather:'Fenster',shelf:'Einrichtung',turntable:'Einrichtung',equalizer:'Einrichtung',equalizerMode:'Einrichtung',lightLeft:'Beleuchtung',lightLeftBrightness:'Beleuchtung',lightRight:'Beleuchtung',lightRightBrightness:'Beleuchtung',ceilingLight:'Beleuchtung',ceilingColor:'Beleuchtung',ceilingBrightness:'Beleuchtung',rug:'Teppich',rugStyle:'Teppich',rugShape:'Teppich',rugSize:'Teppich',speakers:'Lautsprecher',speakerColor:'Lautsprecher',speakerAccent:'Lautsprecher'};
 function appendRoomSetting(key,label,input) {
   const name=roomFieldGroupNames[key] || 'Weitere Einstellungen';
   if(!roomFieldGroups.has(name)){
@@ -17967,6 +18262,12 @@ function appendRoomSetting(key,label,input) {
 }
 
 [
+  ['roomDecor','Zusätzliche Möbel',{on:'Desktop · sichtbar',off:'Aus'}],
+  ['sofaStyle','Sofa',{fabric:'Stoff · Lo-Fi',leather:'Leder · Vintage',velvet:'Stoff · Lo-Fi (bisher Samt)',bench:'Holzbank mit Kissen',future:'Neon · Futuristisch'}],
+  ['tableStyle','Tisch',{tiles:'Fliesentisch',future:'Neon · Schwebetisch',classic:'Klassischer Holztisch',worn:'Dunkler Vintage-Tisch'}],
+  ['chairStyle','Stuhl am Bett',{plastic:'Kunststoffstuhl',wood:'Holzstuhl',hotel:'Gepolsterter Hotelstuhl',gaming:'Neon · Gamingstuhl'}],
+  ['bedStyle','Bett',{traditional:'Traditionell · Holz',future:'Neon · Futuristisch',upholstered:'Polsterbett',mattress:'Matratze auf dem Boden'}],
+  ['animationQuality','Animationsqualität',{low:'Low · Wetter & Scheiben',medium:'Medium · Züge & Hauptanimationen',high:'High · Alle Animationen'}],
   ['layout','Anordnung',{auto:'Automatisch',stacked:'Oben / unten',split:'Links / rechts'}],
   ['zoom','Kamera',{off:'Komplettansicht',on:'Player und Cover'}],
   ['floorType','Bodenart',{wood:'Holzdielen',tiles:'Fliesen',concrete:'Beton',plain:'Glatt'}],
@@ -18035,7 +18336,7 @@ function updateFullscreenRoomStatus(message) {
 }
 function normalizeFullscreenRoomStyle(raw) {
   const result = { ...fullscreenRoomDefaults };
-  const choices = {equalizerMode:['solid','rainbow','traffic'],ceilingLight:['off','pendant','orb','spots','chandelier','led'],wallpaperFit:['contain','cover','custom','fill','frame'],timeOfDay:['morning','noon','evening','night','realtime'],layout:['auto','stacked','split'],zoom:['off','on'],floorType:['wood','tiles','concrete','plain'],windows:['off','on'],wallPattern:['concrete','plain','bricks','rusticBrick','naturalStone','woodHorizontal','woodVertical','stripes','grid'],weather:['clear','rain','snow'],windowScene:['cyberpunk','alien','farm','coast'],rugStyle:['woven','plain','geometric','stripes','herringbone','checker','kilim','border','rings','off'],rugShape:['rectangle','round','rounded'],rugSize:['small','medium','large'],speakers:['off','low','mid','high']};
+  const choices = {roomDecor:['off','on'],sofaStyle:['fabric','leather','velvet','bench','future'],tableStyle:['tiles','future','classic','worn'],chairStyle:['plastic','wood','hotel','gaming'],bedStyle:['traditional','future','upholstered','mattress'],animationQuality:['low','medium','high'],equalizerMode:['solid','rainbow','traffic'],ceilingLight:['off','pendant','orb','spots','chandelier','led'],wallpaperFit:['contain','cover','custom','fill','frame'],timeOfDay:['morning','noon','evening','night','realtime'],layout:['auto','stacked','split'],zoom:['off','on'],floorType:['wood','tiles','concrete','plain'],windows:['off','on'],wallPattern:['concrete','plain','bricks','rusticBrick','naturalStone','woodHorizontal','woodVertical','stripes','grid'],weather:['clear','rain','snow'],windowScene:['cyberpunk','alien','farm','coast'],rugStyle:['woven','plain','geometric','stripes','herringbone','checker','kilim','border','rings','off'],rugShape:['rectangle','round','rounded'],rugSize:['small','medium','large'],speakers:['off','low','mid','high']};
   Object.keys(result).forEach(key => {
     const value = raw?.[key];
     if (['responsiveness','wallpaperX','wallpaperY','lightLeftBrightness','lightRightBrightness','ceilingBrightness'].includes(key)) {
@@ -18985,23 +19286,62 @@ function renderListeningAlbumQueue() {
 }
 
 
+var roomChairOverlapFrame;
+function scheduleRoomChairOverlap() {
+  if(roomChairOverlapFrame)return;
+  roomChairOverlapFrame=requestAnimationFrame(()=>{
+    roomChairOverlapFrame=0;
+    const stage=document.querySelector('.fullscreen-player-stage');
+    const crate=document.getElementById('roomQueueCrate');
+    if(!stage||!crate)return;
+    const chair=[...stage.querySelectorAll('.furniture-chair')].find(el=>getComputedStyle(el).display!=='none');
+    const a=chair?.getBoundingClientRect(),b=crate.getBoundingClientRect();
+    const overlaps=!!(a&&a.width&&a.height&&b.width&&b.height&&a.left<b.right+4&&a.right>b.left-4&&a.top<b.bottom+4&&a.bottom>b.top-4);
+    stage.classList.toggle('chair-overlaps-queue',overlaps);
+  });
+}
+
 function updateRoomQueueCrateSpace() {
   const stage=document.querySelector('.fullscreen-player-stage');
   if(!stage) return;
   const style=getComputedStyle(stage);
   const px=name=>parseFloat(style.getPropertyValue(name))||0;
   const shelf=px('--shelf-w');
-  const needed=shelf*.5+px('--room-speaker-gap')+px('--room-speaker-width')+px('--room-sub-gap')+px('--room-sub-width')+24+shelf*.74+24;
-  stage.classList.toggle('has-queue-crate-space',innerHeight>=360 && stage.clientWidth/stage.clientHeight>=1.2 && stage.clientWidth/2>=needed);
+  const edge=shelf*.5+px('--room-speaker-gap')+px('--room-speaker-width')+px('--room-sub-gap')+px('--room-sub-width');
+  const half=stage.clientWidth/2;
+  const landscape=innerHeight>=360 && stage.clientWidth/stage.clientHeight>=1.2;
+  const desktop=innerWidth>=701 && (matchMedia('(hover: hover) and (pointer: fine)').matches || innerWidth>=1100);
+  const needed=edge+24+shelf*.52+24;
+  const spare=Math.max(0,half-needed);
+  const fullRoom=landscape && stage.clientWidth>=1500 && stage.clientHeight>=600;
+  const bedFits=fullRoom || (landscape && spare>=shelf*1.35+48);
+  const extra=fullRoom && stage.clientWidth<2300 ? 0 : Math.round(Math.min(160,Math.max(0,spare-(bedFits?shelf*1.35+48:0))*.45));
+  if(stage.style.getPropertyValue('--crate-extra-gap')!==`${extra}px`)stage.style.setProperty('--crate-extra-gap',`${extra}px`);
+  stage.style.setProperty('--room-equipment-edge',`${Math.round(edge)}px`);
+  const compact=fullRoom && stage.clientWidth<2300;
+  const leftWidth=shelf*2.1;
+  const bedroomStart=edge+(compact?shelf*.42:30+extra+shelf*.52);
+  const rightWidth=shelf*2.2;
+  stage.style.setProperty('--lounge-fit-width',`${Math.floor(leftWidth)}px`);
+  stage.style.setProperty('--bedroom-fit-width',`${Math.floor(rightWidth)}px`);
+  stage.classList.toggle('has-queue-crate-space',desktop || (landscape && half>=needed));
+  stage.classList.toggle('has-lounge-space',desktop || fullRoom || (landscape && half>=edge+shelf*1.2+56));
+  stage.classList.toggle('has-bedroom-space',desktop || bedFits);
+  scheduleRoomChairOverlap();
 }
+
+let roomQueueCrateSignature = '';
 function renderRoomQueueCrate() {
   const crate=document.getElementById('roomQueueCrate');
   if(!crate) return;
+  const signature=JSON.stringify([listeningAlbumQueue.length,listeningAlbumQueue.slice(0,20).map(item=>[item.id,item.coverUrl])]);
+  if(signature===roomQueueCrateSignature)return;
+  roomQueueCrateSignature=signature;
   const records=crate.querySelector('.room-crate-records');
   records.replaceChildren();
   listeningAlbumQueue.slice(0,20).forEach((item,index)=>{
     const record=document.createElement('span');record.className='room-crate-record';
-    record.style.left=`${28+index*.55}%`;record.style.top=`${12-index*.42}%`;record.style.zIndex=String(20-index);
+    record.style.left=`${5+index*3.1}%`;record.style.top=`${5-index*.55}%`;record.style.zIndex=String(20-index);
     if(item.coverUrl){const cover=document.createElement('img');cover.src=item.coverUrl;cover.alt='';cover.loading='lazy';cover.addEventListener('error',()=>cover.remove(),{once:true});record.append(cover);}
     records.append(record);
   });
@@ -19024,6 +19364,7 @@ document.getElementById('roomCrateOpenQueue').addEventListener('click',()=>setFu
 document.addEventListener('click',event=>{if(!roomQueueCrate.contains(event.target))roomQueueCrateMenu.hidden=true;});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!roomQueueCrateMenu.hidden){event.stopImmediatePropagation();roomQueueCrateMenu.hidden=true;roomQueueCrate.focus();}},true);
 new ResizeObserver(updateRoomQueueCrateSpace).observe(document.querySelector('.fullscreen-player-stage'));
+document.querySelectorAll('.furniture-chair').forEach(img=>img.addEventListener('load',scheduleRoomChairOverlap));
 renderRoomQueueCrate();
 
 function shuffleQueuedAlbums() {
@@ -19586,10 +19927,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     embedPlaybackRetryTimer=setInterval(()=>{
       if(!host.isConnected || pendingPlaybackPaused===null || Date.now()-pendingPlaybackAt>=8000){clearInterval(embedPlaybackRetryTimer);embedPlaybackRetryTimer=null;return;}
       retryPendingEmbedPlayback();
-    },450);
+    },1500);
   };
   const retryPendingEmbedPlayback = () => {
-    if (spotifyMiniController?.isWebPlaybackSdk || pendingPlaybackPaused === null || Date.now()-lastPlaybackRetryAt < 450) return;
+    if (spotifyMiniController?.isWebPlaybackSdk || pendingPlaybackPaused === null || Date.now()-lastPlaybackRetryAt < 1500) return;
     lastPlaybackRetryAt = Date.now();
     try { if (pendingPlaybackPaused) spotifyMiniController?.pause(); else spotifyMiniController?.resume(); } catch {}
   };
@@ -19934,7 +20275,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           updateControls();
           persistListeningPlaybackProgress(true);
         } else {
-          if (!startFirstAlbumTrack()) controller.play();
+          if (!startFirstAlbumTrack()) { initialAlbumTrackSelected = true; controller.play(); }
         }
         syncFullscreenPlayer();
       });
