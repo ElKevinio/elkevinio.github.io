@@ -16969,7 +16969,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       if(!next.paused)report('');
       if(!next.paused && (!previous||previous.paused))emit('playback_started',{track_window:next.track_window});
       emit('playback_update',{isPaused:next.paused,position:next.position,duration:next.duration,track_window:next.track_window,playingURI:next.track_window?.current_track?.uri});
-      if(next.paused && next.position===0 && previous && !previous.paused && previous.duration-previous.position<2500 && previous.track_window?.next_tracks?.length===0)emit('playback_ended');
+      if(next.paused && next.position===0 && previous && !previous.paused && previous.duration>0 && previous.duration-previous.position<3500)emit('playback_ended');
     };
     sdk.addListener('player_state_changed',pushState);
     sdk.addListener('ready',({device_id})=>{
@@ -19115,10 +19115,13 @@ function renderFullscreenPlayerMenu() {
     const queue = document.createElement('button');
     queue.type = 'button';
     queue.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 4v4M16 6h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-    queue.title = queueable ? 'In die Warteschlange' : 'Spotify-Albumlink oder YouTube-Hörlink erforderlich';
+    queue.title = queueable ? 'In die Warteschlange' : 'Spotify-Link auswählen und in die Warteschlange';
     queue.setAttribute('aria-label', queue.title);
-    queue.disabled = !queueable;
     queue.addEventListener('click', () => {
+      if (!getQueueableAlbumUrl(item)) {
+        openAlbumListening(item, null, { queueSelection:true, providers:['spotify'] });
+        return;
+      }
       if (queueAlbumForListening(item, getQueueableAlbumUrl(item))) {
         queue.classList.add('is-added');
         window.setTimeout(() => queue.classList.remove('is-added'), 1200);
@@ -19912,8 +19915,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   nextQueued.type = 'button';
   nextQueued.className = 'album-mini-control album-mini-queue-next';
   nextQueued.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5v14l11-7L5 5Zm12 0v14h2V5h-2Z" fill="currentColor"/></svg>';
-  nextQueued.setAttribute('aria-label', 'Nächstes Album aus der Warteschlange abspielen');
-  nextQueued.title = 'Nächstes Album abspielen';
+  nextQueued.setAttribute('aria-label', 'Zum nächsten Album springen');
+  nextQueued.title = 'Aktuelles Album überspringen und nächstes Album abspielen';
   nextQueued.hidden = listeningAlbumQueue.length === 0;
   nextQueued.disabled = listeningAlbumQueue.length === 0;
   nextQueued.addEventListener('click', playNextQueuedAlbum);
@@ -20054,6 +20057,14 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   let controllerReady = false;
   let playbackIsPaused = true;
   let lastTrackEndTriggered = false;
+  let lastAlbumTrackNearEndAt = 0;
+  const advanceAlbumQueueAtEnd = () => {
+    if (lastTrackEndTriggered || !listeningAlbumQueue.length) return false;
+    lastTrackEndTriggered = true;
+    lastAlbumTrackNearEndAt = 0;
+    playNextQueuedAlbum();
+    return true;
+  };
   let initialAlbumTrackSelected = restorePlayback;
   const startFirstAlbumTrack = () => {
     if (initialAlbumTrackSelected || !normalizeSpotifyAlbumLink(originalUrl) || !controllerReady || !tracks[0]?.uri || !host.isConnected) return false;
@@ -20290,6 +20301,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       restoringPausedTrack = false;
       listeningPlaybackState = { trackUri: track.uri, positionSeconds: 0 };
       lastTrackEndTriggered = false;
+      lastAlbumTrackNearEndAt = 0;
       updateCurrentTrack();
       spotifyMiniController.loadUri(track.uri);
       spotifyMiniController.play();
@@ -20431,7 +20443,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         showPlaybackState(event.data.isPaused !== false);updateCurrentTrack(event.data);
       });
       if(controller.isWebPlaybackSdk)controller.addListener('playback_ended',()=>{
-        if(currentIndex===tracks.length-1 && listeningAlbumQueue.length)playNextQueuedAlbum();
+        if(currentIndex===tracks.length-1 && lastAlbumTrackNearEndAt && Date.now()-lastAlbumTrackNearEndAt<12000) advanceAlbumQueueAtEnd();
       });
       controller.addListener('ready', () => {
         controllerReady = true;
@@ -20457,6 +20469,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         if (albumId && currentIndex < 0 && !event.data?.playbackContextPosition) currentIndex = 0;
         showPlaybackState(false);
         lastTrackEndTriggered = false;
+        lastAlbumTrackNearEndAt = 0;
         restoringPausedTrack = false;
         updateCurrentTrack(event.data || {});
         listeningPlaybackState = { trackUri: playingUri, positionSeconds: 0 };
@@ -20465,6 +20478,21 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       controller.addListener('playback_update', event => {
         if (!host.isConnected || spotifyMiniController !== controller) return;
         const state = event.data || {};
+        // Spotify Web Playback can start another context track instead of emitting a
+        // reliable 'ended' event. Detect the transition after the final album track.
+        if (controller.isWebPlaybackSdk && currentIndex === tracks.length - 1 && tracks.length && !lastTrackEndTriggered) {
+          const lastUri = tracks[tracks.length - 1]?.uri;
+          const reportedUri = state.playingURI || state.track_window?.current_track?.uri || '';
+          const positionMs = Number(state.position) || 0;
+          const durationMs = Number(state.duration) || 0;
+          if (reportedUri === lastUri && state.isPaused === false && durationMs > 0 && durationMs-positionMs <= 4000) {
+            lastAlbumTrackNearEndAt = Date.now();
+          }
+          const recentlyNearEnd = lastAlbumTrackNearEndAt && Date.now()-lastAlbumTrackNearEndAt < 12000;
+          const movedToAnotherTrack = reportedUri && reportedUri !== lastUri;
+          const finishedAndReset = state.isPaused === true && positionMs < 1500;
+          if (recentlyNearEnd && (movedToAnotherTrack || finishedAndReset) && advanceAlbumQueueAtEnd()) return;
+        }
         if (!acceptsSpotifyTrackState(state, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) return;
         if (pendingPlaybackPaused !== null) {
           if (state.isPaused !== pendingPlaybackPaused && Date.now()-pendingPlaybackAt < 8000) { retryPendingEmbedPlayback(); return; }
@@ -21566,6 +21594,14 @@ function appendListeningProviderResults(content, provider, label, results, item)
     play.textContent = '▶︎';
     button.append(title, subtitle, type, play);
     button.addEventListener('click', () => {
+      if (content.dataset.queueSelection === 'true' && provider === 'spotify') {
+        if (!getSpotifyAlbumId(result.url)) return;
+        saveSpotifyAlbumLink(item, result.url);
+        if (queueAlbumForListening({ ...item, title: result.title || item.title, artist: result.subtitle?.split(' · ')[0] || item.artist }, result.url)) {
+          closeAlbumListening(true);
+        }
+        return;
+      }
       if (provider === 'apple') {
         window.open(result.url, '_blank', 'noopener,noreferrer');
         return;
@@ -21900,15 +21936,21 @@ async function openAlbumListening(item, inlineTarget = null, options = {}) {
   }
   const startsEmbeddedPlayback = storedUrl
     && (getSpotifyEmbedUrl(storedUrl) || getYouTubeEmbedUrl(storedUrl));
-  if (!restorePlayback) listeningPlaybackState = { trackUri: '', positionSeconds: 0 };
-  closeAlbumListening(!startsEmbeddedPlayback);
+  if (!restorePlayback && !options.queueSelection) listeningPlaybackState = { trackUri: '', positionSeconds: 0 };
+  closeAlbumListening(options.queueSelection ? true : !startsEmbeddedPlayback);
   const content = inlineTarget || document.getElementById('albumListeningContent');
   albumListeningInlineTarget = inlineTarget;
+  content.dataset.queueSelection = options.queueSelection ? 'true' : 'false';
   if (!inlineTarget) {
-    document.getElementById('albumListeningTitle').textContent = `${item.title || 'Album'} anhören`;
+    document.getElementById('albumListeningTitle').textContent = options.queueSelection ? `${item.title || 'Album'} · Spotify-Link für Warteschlange auswählen` : `${item.title || 'Album'} anhören`;
     overlay.classList.add('open');
   }
-  if (storedUrl && mountListeningEmbed(content, storedUrl, item.title || 'Album', item, restorePlayback)) return;
+  if (options.queueSelection && storedUrl && getQueueableAlbumUrl({ listeningUrl:storedUrl })) {
+    queueAlbumForListening(item, storedUrl);
+    closeAlbumListening(true);
+    return;
+  }
+  if (!options.queueSelection && storedUrl && mountListeningEmbed(content, storedUrl, item.title || 'Album', item, restorePlayback)) return;
 
   if (!inlineTarget) {
     const searchForm = document.createElement('form');
@@ -21932,7 +21974,7 @@ async function openAlbumListening(item, inlineTarget = null, options = {}) {
         searchInput.focus();
         return;
       }
-      openAlbumListening(item, null, { searchQuery, chooseAgain:true, providers:options.providers });
+      openAlbumListening(item, null, { searchQuery, chooseAgain:true, providers:options.providers, queueSelection:options.queueSelection });
     });
   }
   const searchItem = options.searchQuery ? { ...item, searchQuery: options.searchQuery } : item;
@@ -21946,7 +21988,7 @@ async function openAlbumListening(item, inlineTarget = null, options = {}) {
     .map(([provider, input]) => [provider, input?.checked !== false]));
   const order = [...(listeningProviderList?.querySelectorAll('[data-provider]') || [])]
     .map(row => row.dataset.provider);
-  const enabledProviders = options.providers || order.filter(provider => providers[provider]);
+  const enabledProviders = options.queueSelection ? ['spotify'] : (options.providers || order.filter(provider => providers[provider]));
   if (!enabledProviders.length) {
     status.textContent = 'Aktiviere mindestens einen Suchdienst in den Einstellungen.';
     albumListeningRequest = null;
