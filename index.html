@@ -6970,6 +6970,43 @@
 }
 .player-volume[hidden],.mini-volume-menu[hidden] { display:none !important; }
 
+
+/* Mobile scene controls stay above the room but beneath all pop-up menus. */
+.fullscreen-player-overlay.has-mobile-scene-controls > #fullscreenPlayerViewToggle {
+  bottom:max(84px, calc(env(safe-area-inset-bottom) + 74px));
+  z-index:3;
+}
+.fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-stage > #fullscreenPlayerZoomToggle { z-index:3; }
+.fullscreen-player-menu,.fullscreen-player-queue-panel,.fullscreen-player-tracks-panel,
+.fullscreen-player-poster-form,.fullscreen-player-music-settings { z-index:20; }
+.fullscreen-player-top-actions { z-index:30; }
+.fullscreen-player-music-settings {
+  position:absolute; top:calc(max(14px, env(safe-area-inset-top)) + 48px); right:0;
+  bottom:0; width:min(390px, 94vw); padding:16px; overflow-y:auto;
+  border-left:1px solid var(--border-strong); background:var(--surface-2);
+  box-shadow:-12px 0 40px #0009;
+}
+.fullscreen-player-music-settings[hidden],.fullscreen-skip-album[hidden] { display:none !important; }
+.fullscreen-player-music-settings header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+.fullscreen-player-music-settings header button { width:36px; min-width:36px; height:36px; padding:0; font-size:23px; }
+.fullscreen-player-music-settings #playerSettingsDetails { display:block; width:100%; }
+.fullscreen-player-music-settings #playerSettingsDetails > summary { display:none; }
+.fullscreen-player-music-settings #listeningSettingsBlock { display:block; }
+@media (max-width:700px) {
+ .fullscreen-player-overlay.has-mobile-scene-controls > #fullscreenPlayerViewToggle { bottom:max(104px, calc(env(safe-area-inset-bottom) + 94px)); }
+ .fullscreen-player-controls { gap:clamp(5px, 2vw, 14px); }
+ .fullscreen-player-controls .album-mini-control { flex-basis:42px; width:42px; min-width:42px; }
+}
+
+/* Compact header: prioritise larger touch targets after moving copy to Settings. */
+@media (max-width:700px) {
+  header .header-actions { gap:5px; }
+  header .header-actions > .icon-btn,
+  header .header-actions > .settings-wrap > .icon-btn { width:39px; height:39px; min-width:39px; }
+  #showAlbumMiniPlayerBtn svg { width:23px; height:23px; display:block; }
+}
+/* The queue toggle must never share the settings/fullscreen button's icon state. */
+.album-mini-topbar .album-queue-toggle svg { display:block; }
 </style>
 </head>
 <body>
@@ -7026,14 +7063,8 @@
       <input type="text" id="collectionTitleEditInput" aria-label="Neuer Sammlungsname" maxlength="80" hidden>
     </div>
     <div class="header-actions">
-      <button id="copyWishlistBtn" class="icon-btn" title="Wunschliste in Zwischenablage kopieren" aria-label="Wunschliste kopieren">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
-          <path d="M5 15H4C3.44772 15 3 14.5523 3 14V4C3 3.44772 3.44772 3 4 3H14C14.5523 3 15 3.44772 15 4V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-      </button>
       <button type="button" id="pageFullscreenBtn" class="icon-btn" data-page-fullscreen title="Seite im Vollbild anzeigen" aria-label="Seite im Vollbild anzeigen" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
-      <button id="showAlbumMiniPlayerBtn" class="icon-btn" type="button" title="Musikplayer im Vollbild öffnen" aria-label="Musikplayer im Vollbild öffnen">♫︎</button>
+      <button id="showAlbumMiniPlayerBtn" class="icon-btn" type="button" title="Musikplayer im Vollbild öffnen" aria-label="Musikplayer im Vollbild öffnen"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
       <button id="storageRandomPickBtn" class="icon-btn" type="button" title="Zufälliges einsortiertes Vinyl auswählen" aria-label="Zufälliges einsortiertes Vinyl auswählen" style="display:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>
       </button>
@@ -7113,6 +7144,12 @@
           </div>
           <div id="collectionSettingsContent">
           <div class="settings-primary-actions">
+      <button id="copyWishlistBtn" class="icon-btn tooltip-btn" data-tooltip="Wunschliste kopieren" title="Wunschliste in Zwischenablage kopieren" aria-label="Wunschliste kopieren">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M5 15H4C3.44772 15 3 14.5523 3 14V4C3 3.44772 3.44772 3 4 3H14C14.5523 3 15 3.44772 15 4V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
             <button type="button" id="exportBtn" class="icon-btn tooltip-btn" title="Exportieren" aria-label="Exportieren" data-tooltip="Exportieren">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v10m-4-4 4 4 4-4M6 19h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -7695,6 +7732,7 @@
 <div id="fullscreenPlayerOverlay" class="fullscreen-player-overlay" role="dialog" aria-modal="true" aria-label="Musikplayer im Vollbild" hidden>
   <div class="fullscreen-player-top-actions">
     <button type="button" class="icon-btn" data-page-fullscreen title="Seite im Vollbild anzeigen" aria-label="Seite im Vollbild anzeigen" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+    <button type="button" id="fullscreenPlayerMusicSettings" class="icon-btn" aria-label="Musikplayer-Einstellungen" title="Musikplayer-Einstellungen" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--surface-2)"/><circle cx="16" cy="12" r="2" fill="var(--surface-2)"/><circle cx="10" cy="17" r="2" fill="var(--surface-2)"/></svg></button>
     <button type="button" id="fullscreenPlayerRoomSettings" class="icon-btn" aria-label="Raum gestalten" title="Raum gestalten" aria-expanded="false">⚙</button>
     <button type="button" id="fullscreenPlayerTracksToggle" class="icon-btn" title="Album-Titelliste einblenden" aria-label="Album-Titelliste einblenden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
     <button type="button" id="fullscreenPlayerQueueToggle" class="icon-btn" title="Warteschlange einblenden" aria-label="Warteschlange einblenden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m18 15 3 3-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -7704,6 +7742,7 @@
     <button type="button" id="fullscreenPlayerMenuToggle" class="icon-btn" title="Sammlung einblenden" aria-label="Sammlung einblenden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 5V2h14v16h-3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><rect x="3" y="6" width="14" height="16" rx="1" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="14" r="4" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="14" r="1" fill="currentColor"/></svg></button>
     <button type="button" id="closeFullscreenPlayerBtn" class="icon-btn fullscreen-player-close" title="Vollbild schließen" aria-label="Vollbild schließen"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div>
+  <aside id="fullscreenPlayerMusicSettingsPanel" class="fullscreen-player-music-settings" aria-label="Musikplayer-Einstellungen" hidden><header><strong>Musikplayer-Einstellungen</strong><button type="button" id="fullscreenPlayerMusicSettingsClose" aria-label="Musikplayer-Einstellungen schließen">×</button></header><div id="fullscreenPlayerMusicSettingsContent"></div></aside>
   <aside id="fullscreenPlayerMenu" class="fullscreen-player-menu" aria-label="Sammlung durchsuchen" hidden>
     <div class="fullscreen-player-menu-header">
       <div class="fullscreen-player-menu-heading"><strong id="fullscreenPlayerMenuTitle">Sammlung</strong><button type="button" id="fullscreenPlayerMenuClose" aria-label="Albumauswahl schließen">×</button></div>
@@ -7876,6 +7915,7 @@
       <button type="button" id="fullscreenPlayerPrev" class="album-mini-control" title="Vorheriger Titel" aria-label="Vorheriger Titel"></button>
       <button type="button" id="fullscreenPlayerToggle" class="album-mini-control primary" title="Wiedergabe starten" aria-label="Wiedergabe starten"></button>
       <button type="button" id="fullscreenPlayerNext" class="album-mini-control" title="Nächster Titel" aria-label="Nächster Titel"></button>
+      <button type="button" id="fullscreenPlayerSkipAlbum" class="album-mini-control fullscreen-skip-album" title="Zum nächsten Album springen" aria-label="Zum nächsten Album springen" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 5v14l10-7L4 5Zm12 0v14h3V5h-3Z"/></svg></button>
       <button type="button" id="fullscreenPlayerFavorite" class="album-mini-control" aria-label="Zu deinen Spotify-Lieblingssongs hinzufügen" title="Zu deinen Spotify-Lieblingssongs hinzufügen" hidden></button>
     </div>
     <div id="fullscreenSpotifyActions" hidden><button type="button" data-full-sdk-action="connect">Spotify erneut verbinden</button><button type="button" data-full-sdk-action="embed">Embed verwenden</button></div>
@@ -10449,6 +10489,7 @@ async function handleAuthStateChange(user) {
     for (const [phase, task] of [
       ['Raumeinstellungen', () => loadFullscreenRoomStyle(user.uid)],
       ['Wiedergabe-Einstellungen', () => loadListeningCredentials(user.uid)],
+      ['Warteschlange synchronisieren', () => startListeningCloudSync(user.uid)],
       ['Wiedergabesitzung', () => restoreListeningSession()],
       ['Spotify-Rückmeldung', () => completeSpotifyAuthCallback()],
       ['Spotify-Verbindung', () => restoreSpotifyConnection()]
@@ -10463,6 +10504,7 @@ async function handleAuthStateChange(user) {
     if (userMenuPanel) userMenuPanel.classList.remove('open');
     document.body.classList.remove('user-menu-open');
   } else {
+    stopListeningCloudSync();
     currentUid = null;
     resetFullscreenRoomSession();
     currentUsername = null;
@@ -11563,7 +11605,6 @@ syncPageFullscreenButtons();
 
 const responsiveHeaderActionIds = [
   'pageFullscreenBtn',
-  'copyWishlistBtn',
   'storageRandomFilterWrap',
   'storageRandomPickBtn',
   'showOwnCollectionBtn',
@@ -16951,6 +16992,9 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     let destroyed=false,deviceId='',pendingUri=options.uri,pendingPosition=0,state=null,poll=null,polling=false,activated=false;
     const lifetime = new AbortController();
     let operation=Promise.resolve(),readyTimeout=null;
+    let deviceWaiters=[];
+    const settleDeviceWaiters=(id,error)=>{const waiting=deviceWaiters.splice(0);for(const waiter of waiting){clearTimeout(waiter.timer);if(error)waiter.reject(error);else waiter.resolve(id);}};
+    const waitForDevice=(timeout=12000)=>{if(destroyed)return Promise.reject(new Error('Spotify-Player wurde geschlossen.'));if(deviceId)return Promise.resolve(deviceId);return new Promise((resolve,reject)=>{const waiter={resolve,reject,timer:null};waiter.timer=setTimeout(()=>{deviceWaiters=deviceWaiters.filter(item=>item!==waiter);reject(new Error('Spotify-Gerät ist nicht bereit. Bitte Player erneut verbinden.'));},timeout);deviceWaiters.push(waiter);});};
     let commandVersion=0,stateRevision=0,desiredUri='',desiredPaused=null,desiredUntil=0;
     let selectionVersion=0,lastAcceptedSelection=-1,lastAcceptedUri='';
     const listeners=new Map();
@@ -16973,7 +17017,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     };
     sdk.addListener('player_state_changed',pushState);
     sdk.addListener('ready',({device_id})=>{
-      if(destroyed)return;sdkReady();clearTimeout(reconnectTimer);reconnectAttempts=0;deviceId=device_id;emit('ready');
+      if(destroyed)return;sdkReady();clearTimeout(reconnectTimer);reconnectAttempts=0;deviceId=device_id;settleDeviceWaiters(device_id);emit('ready');
       poll=setInterval(async()=>{
         if(destroyed||polling||document.hidden||(state?.paused && desiredPaused!==false))return;
         polling=true;const revision=stateRevision,version=commandVersion;
@@ -16998,7 +17042,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       ['authentication_error','Spotify bitte erneut verbinden und Web Playback erlauben.'],
       ['account_error','Spotify Web Playback benötigt Spotify Premium. Du kannst das Embed verwenden.'],
       ['playback_error','Spotify konnte diesen Titel nicht abspielen. Bitte erneut versuchen oder das Embed verwenden.']
-    ])sdk.addListener(name,()=>{if(name!=='playback_error')sdkReady();if(name==='initialization_error'||name==='account_error')sdk.disconnect();report(text,name!=='playback_error');});
+    ])sdk.addListener(name,()=>{if(name!=='playback_error')sdkReady();if(name==='initialization_error'||name==='account_error'){deviceId='';settleDeviceWaiters('',new Error(text));sdk.disconnect();}report(text,name!=='playback_error');});
     const run=(fn,version=commandVersion)=>{
       operation=operation.then(async()=>{if(!destroyed && version===commandVersion)await fn();}).catch(async error=>{
         if(destroyed||version!==commandVersion)return;
@@ -17014,7 +17058,25 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       setVolume(value){return sdk.setVolume(value);},
       addListener(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);},
       loadUri(uri){commandVersion++;selectionVersion++;pendingUri=uri;pendingPosition=0;desiredUri=uri.startsWith('spotify:track:')?uri:'';desiredUntil=Date.now()+8000;},
-      seek(seconds){if(pendingUri)pendingPosition=Math.max(0,Number(seconds)||0)*1000;else run(()=>sdk.seek(Math.max(0,Number(seconds)||0)*1000));},
+      seek(seconds){
+        const position=Math.max(0,Math.round((Number(seconds)||0)*1000));
+        if(pendingUri){pendingPosition=position;return Promise.resolve();}
+        // Seek-Befehle nicht durch Play/Pause-Versionswechsel verwerfen.
+        return run(async()=>{
+          const id=await waitForDevice();
+          const token=await getSpotifyAccessToken();
+          if(!token)throw new Error('Spotify bitte erneut verbinden.');
+          const response=await fetch(`https://api.spotify.com/v1/me/player/seek?position_ms=${position}&device_id=${encodeURIComponent(id)}`,{method:'PUT',signal:lifetime.signal,headers:{Authorization:`Bearer ${token}`}});
+          if(!response.ok){
+            if(response.status===404)throw new Error('Spotify-Gerät nicht gefunden. Bitte Player erneut verbinden.');
+            // SDK als Alternative verwenden, falls Spotify Connect den Seek ablehnt.
+            try{await sdk.seek(position);return;}catch{}
+            throw new Error(`Spotify konnte nicht vorspulen (HTTP ${response.status}).`);
+          }
+          if(state)state={...state,position};
+          emit('playback_update',{isPaused:state?.paused??false,position,duration:state?.duration||0,track_window:state?.track_window,playingURI:state?.track_window?.current_track?.uri});
+        });
+      },
       play(){
         // activateElement must run in the original tap event, before awaiting a token or network request.
         if(!activated && navigator.userActivation && !navigator.userActivation.isActive){report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');return false;}
@@ -17023,16 +17085,30 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
         desiredUri=uri.startsWith('spotify:track:')?uri:'';desiredPaused=false;desiredUntil=Date.now()+8000;
         return run(async()=>{
           if(version!==commandVersion)return;
-          if(!deviceId)throw new Error('Spotify-Gerät ist noch nicht bereit. Bitte erneut versuchen.');
+          await waitForDevice();
+          if(destroyed||version!==commandVersion)return;
           if(!uri || (lastAcceptedSelection===selection && lastAcceptedUri===uri)){await sdk.resume();return;}
           const accessToken=await getSpotifyAccessToken();
           if(destroyed||version!==commandVersion)return;if(!accessToken)throw new Error('Bitte Spotify erneut verbinden.');
           const body=uri.startsWith('spotify:track:')
             ? (/^spotify:(album|playlist):/.test(options.uri) ? {context_uri:options.uri,offset:{uri},position_ms:position} : {uris:[uri],position_ms:position})
             : {context_uri:uri,position_ms:position};
-          const response=await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(deviceId)}`,{method:'PUT',signal:lifetime.signal,headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
-          if(destroyed)return;
-          if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(response.status===403?'Für die Wiedergabe sind Spotify Premium und neue Wiedergabeberechtigungen erforderlich. Bitte Spotify erneut verbinden.':data.error?.message||`Spotify-Wiedergabe: HTTP ${response.status}`);}
+          const sendPlay=async id=>fetch(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(id)}`,{method:'PUT',signal:lifetime.signal,headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+          let targetId=await waitForDevice();
+          if(destroyed||version!==commandVersion)return;
+          let response=await sendPlay(targetId);
+          if(destroyed||version!==commandVersion)return;
+          // Spotify can briefly return 404 while a freshly registered SDK device is becoming available.
+          // Never retry against a stale device ID; wait for a fresh ready event if it changed.
+          if(response.status===404){
+            deviceId=deviceId===targetId?'':deviceId;
+            report('Spotify-Gerät wird wiederhergestellt …');
+            if(!deviceId){try{await sdk.connect();}catch{}}
+            try{targetId=await waitForDevice(10000);}catch{throw new Error('Spotify-Gerät nicht gefunden. Bitte Spotify-Player erneut verbinden.');}
+            if(destroyed||version!==commandVersion)return;
+            response=await sendPlay(targetId);
+          }
+          if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(response.status===404?'Spotify-Gerät nicht gefunden. Bitte Spotify-Player erneut verbinden.':response.status===403?'Für die Wiedergabe sind Spotify Premium und neue Wiedergabeberechtigungen erforderlich. Bitte Spotify erneut verbinden.':data.error?.message||`Spotify-Wiedergabe: HTTP ${response.status}`);}
           lastAcceptedSelection=selection;lastAcceptedUri=uri;
           if(pendingUri===uri && selection===selectionVersion){pendingUri='';pendingPosition=0;}
           if(version!==commandVersion)return;
@@ -17040,10 +17116,10 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
         },version);
       },
       resume(){return this.play();},pause(){const version=++commandVersion;desiredPaused=true;desiredUntil=Date.now()+8000;return run(()=>version===commandVersion?sdk.pause():undefined,version);},
-      destroy(){destroyed=true;lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();sdk.disconnect();}
+      destroy(){destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();sdk.disconnect();}
     };
     callback(controller);
-    if(!destroyed){readyTimeout=setTimeout(()=>{sdk.disconnect();report('Spotify-Gerät konnte nicht verbunden werden. Bitte erneut versuchen oder das Embed verwenden.',true);},20000);sdk.connect().then(ok=>{if(!ok&&!destroyed){sdkReady();report('Spotify-Gerät konnte nicht verbunden werden.',true);}}).catch(()=>{sdkReady();report('Spotify-Gerät konnte nicht verbunden werden.',true);});}
+    if(!destroyed){readyTimeout=setTimeout(()=>{deviceId='';settleDeviceWaiters('',new Error('Spotify-Gerät konnte nicht verbunden werden.'));sdk.disconnect();report('Spotify-Gerät konnte nicht verbunden werden. Bitte erneut versuchen oder das Embed verwenden.',true);},20000);sdk.connect().then(ok=>{if(!ok&&!destroyed){sdkReady();report('Spotify-Gerät konnte nicht verbunden werden.',true);}}).catch(()=>{sdkReady();report('Spotify-Gerät konnte nicht verbunden werden.',true);});}
   }};
 }
 
@@ -17156,10 +17232,137 @@ const LISTENING_SESSION_KEY_PREFIX = 'albumListeningSessionV1:';
 let listeningPlaybackState = { trackUri: '', positionSeconds: 0 };
 let lastListeningPlaybackPersistAt = 0;
 
+// Browserübergreifende Wiedergabesitzung: Firebase ist die gemeinsame Quelle,
+// localStorage bleibt ein schneller Offline-Cache.
+const listeningSyncClientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+  ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+let listeningSyncUnsubscribe = null;
+let listeningSyncTimer = null;
+let listeningSyncRevision = 0;
+let listeningSyncApplyingRemote = false;
+let listeningSyncLastSerialized = '';
+let listeningSyncWriteChain = Promise.resolve();
+// Mehrere Alben in einem Fach werden als eine Warteschlangenänderung gespeichert.
+let listeningQueueBulkDepth = 0;
+let listeningQueueBulkDirty = false;
+function beginListeningQueueBulk() { listeningQueueBulkDepth++; }
+function endListeningQueueBulk() {
+  if (listeningQueueBulkDepth === 0) return;
+  listeningQueueBulkDepth--;
+  if (listeningQueueBulkDepth === 0 && listeningQueueBulkDirty) {
+    listeningQueueBulkDirty = false;
+    updateAlbumQueueControls();
+  }
+}
+function listeningSessionRef(uid = currentUid) {
+  return uid ? db.collection('users').doc(uid).collection('privateSettings').doc('listeningSession') : null;
+}
+function buildListeningSession() {
+  const dock = document.getElementById('albumListeningDock');
+  return {
+    currentAlbum: currentListeningAlbum,
+    queue: listeningAlbumQueue,
+    playback: listeningPlaybackState,
+    minimized: dock?.classList.contains('is-collapsed') || false,
+    hidden: dock?.classList.contains('is-hidden') || false,
+    queueOpen: !document.getElementById('albumQueuePanel')?.hidden
+  };
+}
+function queueListeningCloudSave(session) {
+  if (!currentUid || listeningSyncApplyingRemote || listeningQueueBulkDepth) return;
+  // Positionsänderungen sind sehr häufig. Die Cloud erhält nur Änderungen
+  // an Album/Warteschlange, nicht jede Playback-Sekunde oder UI-Bewegung.
+  const shared = JSON.stringify({currentAlbum:session.currentAlbum,queue:session.queue});
+  if (shared === listeningSyncLastSerialized) return;
+  listeningSyncLastSerialized = shared;
+  const uid = currentUid;
+  const revision = Math.max(Date.now(), listeningSyncRevision + 1);
+  listeningSyncRevision = revision;
+  clearTimeout(listeningSyncTimer);
+  listeningSyncTimer = setTimeout(() => {
+    listeningSyncWriteChain = listeningSyncWriteChain.catch(() => {}).then(async () => {
+      if (currentUid !== uid) return;
+      const ref = listeningSessionRef(uid);
+      if (!ref) return;
+      // Transaktion schützt vor verspäteten Schreibvorgängen anderer Geräte.
+      await db.runTransaction(async transaction => {
+        const snap = await transaction.get(ref);
+        const remoteRevision = Number(snap.data()?.revision) || 0;
+        if (remoteRevision > revision) return;
+        transaction.set(ref, {
+          version: 1, currentAlbum: session.currentAlbum || null,
+          queue: session.queue, revision, clientId: listeningSyncClientId,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+    }).catch(error => console.error('Warteschlange konnte nicht mit Firebase synchronisiert werden:', error));
+  }, 450);
+}
+function applyCloudListeningSession(data, initial = false) {
+  if (!data || !Array.isArray(data.queue)) return;
+  const revision = Number(data.revision) || 0;
+  if (!initial && (data.clientId === listeningSyncClientId || revision < listeningSyncRevision)) return;
+  listeningSyncRevision = Math.max(listeningSyncRevision, revision);
+  listeningSyncApplyingRemote = true;
+  try {
+    const items = data.queue.filter(item => item && getQueueableAlbumUrl(item))
+      .map(item => ({...item, listeningUrl: getQueueableAlbumUrl(item)}));
+    listeningAlbumQueue.splice(0, listeningAlbumQueue.length, ...items);
+    listeningSyncLastSerialized = JSON.stringify({currentAlbum:data.currentAlbum || null,queue:data.queue});
+    // Auf anderen Geräten nicht ungefragt die laufende Wiedergabe stoppen.
+    // Beim ersten Laden wird das zuletzt aktive Album wiederhergestellt.
+    if (initial && data.currentAlbum && getQueueableAlbumUrl(data.currentAlbum)) {
+      currentListeningAlbum = {...data.currentAlbum, listeningUrl:getQueueableAlbumUrl(data.currentAlbum)};
+    }
+    updateAlbumQueueControls();
+    const dock = document.getElementById('albumListeningDock');
+    if (dock && (currentListeningAlbum || listeningAlbumQueue.length)) dock.hidden = false;
+    try {localStorage.setItem(getListeningSessionStorageKey(), JSON.stringify(buildListeningSession()));} catch {}
+  } finally { listeningSyncApplyingRemote = false; }
+}
+async function startListeningCloudSync(uid) {
+  if (listeningSyncUnsubscribe) {listeningSyncUnsubscribe();listeningSyncUnsubscribe=null;}
+  clearTimeout(listeningSyncTimer);
+  listeningSyncLastSerialized = '';
+  listeningSyncRevision = 0;
+  const ref = listeningSessionRef(uid);
+  if (!ref) return;
+  try {
+    const snapshot = await ref.get();
+    if (currentUid !== uid) return;
+    if (snapshot.exists) applyCloudListeningSession(snapshot.data(), true);
+    else {
+      // Einmalige Migration der bisher nur lokal gespeicherten Warteschlange.
+      let local = null;
+      try {local = JSON.parse(localStorage.getItem(getListeningSessionStorageKey()) || 'null');} catch {}
+      if (local && (local.currentAlbum || local.queue?.length)) {
+        const items = Array.isArray(local.queue) ? local.queue : [];
+        applyCloudListeningSession({currentAlbum:local.currentAlbum || null,queue:items,revision:0},true);
+        listeningSyncLastSerialized = '';
+        queueListeningCloudSave(buildListeningSession());
+      }
+    }
+  } catch (error) { console.error('Firebase-Warteschlange konnte nicht geladen werden:',error); }
+  if (currentUid !== uid) return;
+  listeningSyncUnsubscribe = ref.onSnapshot(snapshot => {
+    if (currentUid !== uid || !snapshot.exists || snapshot.metadata.hasPendingWrites) return;
+    applyCloudListeningSession(snapshot.data());
+  }, error => console.error('Firebase-Live-Synchronisierung der Warteschlange fehlgeschlagen:',error));
+}
+function stopListeningCloudSync() {
+  clearTimeout(listeningSyncTimer);
+  if (listeningSyncUnsubscribe) listeningSyncUnsubscribe();
+  listeningSyncUnsubscribe=null;
+  listeningSyncLastSerialized='';
+  listeningSyncRevision=0;
+}
+
+
 function persistListeningPlaybackProgress(force = false) {
-  const now = Date.now();
-  if (!force && now - lastListeningPlaybackPersistAt < 5000) return;
-  lastListeningPlaybackPersistAt = now;
+  // Die laufende Position bleibt im Arbeitsspeicher. Nur Pause, manuelles
+  // Springen und das Verlassen der Seite sichern den Fortschritt lokal.
+  if (!force) return;
+  lastListeningPlaybackPersistAt = Date.now();
   persistListeningSession();
 }
 
@@ -17169,28 +17372,12 @@ function getListeningSessionStorageKey() {
 
 function persistListeningSession() {
   const key = getListeningSessionStorageKey();
-  if (!currentListeningAlbum && listeningAlbumQueue.length === 0) {
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      console.error('Leere Wiedergabesitzung konnte nicht entfernt werden:', error);
-    }
-    return;
-  }
-  const dock = document.getElementById('albumListeningDock');
-  const session = {
-    currentAlbum: currentListeningAlbum,
-    queue: listeningAlbumQueue,
-    playback: listeningPlaybackState,
-    minimized: dock?.classList.contains('is-collapsed') || false,
-    hidden: dock?.classList.contains('is-hidden') || false,
-    queueOpen: !document.getElementById('albumQueuePanel')?.hidden
-  };
+  const session = buildListeningSession();
   try {
-    localStorage.setItem(key, JSON.stringify(session));
-  } catch (error) {
-    console.error('Wiedergabesitzung konnte nicht gespeichert werden:', error);
-  }
+    if (!session.currentAlbum && !session.queue.length) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(session));
+  } catch (error) { console.error('Wiedergabesitzung konnte nicht lokal gespeichert werden:',error); }
+  queueListeningCloudSave(session);
 }
 
 window.addEventListener('pagehide', () => persistListeningSession());
@@ -17212,6 +17399,7 @@ async function restoreListeningSession() {
   }
   if (!saved || typeof saved !== 'object') return;
   const savedQueue = Array.isArray(saved.queue) ? saved.queue : [];
+  listeningAlbumQueue.length = 0;
   savedQueue.forEach(item => {
     const url = getSupportedListeningUrl(item?.spotifyAlbumUrl || item?.listeningUrl);
     if (getQueueableAlbumUrl(item)) listeningAlbumQueue.push({ ...item, listeningUrl: getQueueableAlbumUrl(item) });
@@ -17345,7 +17533,7 @@ function setAlbumQueuePanelOpen(isOpen) {
   const panel = document.getElementById('albumQueuePanel');
   if (!panel) return;
   panel.hidden = !isOpen;
-  document.querySelectorAll('#albumQueueHeaderToggle, .album-queue-toggle').forEach(button => {
+  document.querySelectorAll('#albumQueueHeaderToggle, .album-queue-toggle:not(.album-mini-fullscreen-toggle)').forEach(button => {
     button.setAttribute('aria-expanded', String(isOpen));
     button.title = isOpen ? 'Album-Warteschlange schließen' : 'Album-Warteschlange öffnen';
     button.setAttribute('aria-label', button.title);
@@ -17364,26 +17552,6 @@ function createAlbumQueueToggle() {
   button.setAttribute('aria-expanded', String(!document.getElementById('albumQueuePanel').hidden));
   button.addEventListener('click', () => {
     setAlbumQueuePanelOpen(document.getElementById('albumQueuePanel').hidden);
-  });
-  return button;
-}
-
-function createAlbumPlayerSettingsToggle() {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'album-queue-toggle';
-  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" stroke="currentColor" stroke-width="1.7"/><path d="m19.4 15 .1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 1 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3h-.2a1.8 1.8 0 1 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 1 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 1 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  button.title = 'Musikplayer-Einstellungen öffnen';
-  button.setAttribute('aria-label', button.title);
-  button.addEventListener('click', () => {
-    const settingsPanel = document.getElementById('settingsPanel');
-    const settingsButton = document.getElementById('settingsBtn');
-    if (settingsPanel && !settingsPanel.classList.contains('open')) settingsButton?.click();
-    const playerSettings = document.getElementById('playerSettingsDetails');
-    if (playerSettings) {
-      playerSettings.open = true;
-      playerSettings.scrollIntoView({ block: 'nearest' });
-    }
   });
   return button;
 }
@@ -17636,6 +17804,7 @@ function openFullscreenPlayer() {
 function closeFullscreenPlayer() {
   const overlay = document.getElementById('fullscreenPlayerOverlay');
   if (!overlay || overlay.hidden) return;
+  toggleFullscreenMusicSettings(false);
   overlay.hidden = true;
   if (fullscreenPlayerSyncFrame) cancelAnimationFrame(fullscreenPlayerSyncFrame);
   fullscreenPlayerSyncFrame = null;
@@ -17732,6 +17901,34 @@ document.getElementById('fullscreenPlayerPrev').addEventListener('click', () => 
 document.getElementById('fullscreenPlayerNext').addEventListener('click', () => {
   document.querySelector('#albumListeningDockContent .album-mini-control[aria-label="Nächster Titel"]')?.click();
 });
+const fullscreenSkipAlbumButton = document.getElementById('fullscreenPlayerSkipAlbum');
+fullscreenSkipAlbumButton.addEventListener('click', () => { if (listeningAlbumQueue.length) playNextQueuedAlbum(); });
+function syncFullscreenSkipAlbumButton() {
+  const available = listeningAlbumQueue.length > 0;
+  fullscreenSkipAlbumButton.hidden = !available;
+  fullscreenSkipAlbumButton.disabled = !available;
+}
+const fullscreenMusicSettingsPanel = document.getElementById('fullscreenPlayerMusicSettingsPanel');
+const fullscreenMusicSettingsContent = document.getElementById('fullscreenPlayerMusicSettingsContent');
+const fullscreenMusicSettingsButton = document.getElementById('fullscreenPlayerMusicSettings');
+const originalPlayerSettings = document.getElementById('playerSettingsDetails');
+const originalPlayerSettingsParent = originalPlayerSettings?.parentElement;
+const originalPlayerSettingsNext = originalPlayerSettings?.nextSibling;
+function toggleFullscreenMusicSettings(open) {
+  if (!originalPlayerSettings || !originalPlayerSettingsParent) return;
+  fullscreenMusicSettingsPanel.hidden = !open;
+  fullscreenMusicSettingsButton.setAttribute('aria-expanded', String(open));
+  if (open) {
+    fullscreenMusicSettingsContent.append(originalPlayerSettings);
+    originalPlayerSettings.open = true;
+    document.getElementById('fullscreenPlayerPosterForm').hidden = true;
+  } else if (originalPlayerSettings.parentElement === fullscreenMusicSettingsContent) {
+    originalPlayerSettingsParent.insertBefore(originalPlayerSettings, originalPlayerSettingsNext);
+  }
+}
+fullscreenMusicSettingsButton.addEventListener('click', () => toggleFullscreenMusicSettings(fullscreenMusicSettingsPanel.hidden));
+document.getElementById('fullscreenPlayerMusicSettingsClose').addEventListener('click', () => toggleFullscreenMusicSettings(false));
+
 
 (function buildFullscreenPlayerEq() {
   const eq = document.getElementById('fullscreenPlayerEq');
@@ -18163,7 +18360,7 @@ function getFullscreenPlayerLayout() {
 }
 function sortFullscreenPlayerActions() {
   const toolbar=document.querySelector('.fullscreen-player-top-actions');
-  const order=['#fullscreenPlayerZoomToggle','#fullscreenPlayerViewToggle','#fullscreenPlayerLayoutToggle','#fullscreenPlayerTracksToggle','#fullscreenPlayerQueueToggle','#fullscreenPlayerMenuToggle','[data-page-fullscreen]','#fullscreenPlayerRoomSettings','#closeFullscreenPlayerBtn'];
+  const order=['#fullscreenPlayerMusicSettings','#fullscreenPlayerZoomToggle','#fullscreenPlayerViewToggle','#fullscreenPlayerLayoutToggle','#fullscreenPlayerTracksToggle','#fullscreenPlayerQueueToggle','#fullscreenPlayerMenuToggle','[data-page-fullscreen]','#fullscreenPlayerRoomSettings','#closeFullscreenPlayerBtn'];
   const buttons=order.map(selector=>toolbar.querySelector(selector)).filter(Boolean);
   if(buttons.every((button,index)=>toolbar.children[index]===button))return;
   toolbar.append(...buttons);
@@ -18171,6 +18368,7 @@ function sortFullscreenPlayerActions() {
 function applyFullscreenPlayerPresentation() {
   const overlay = document.getElementById('fullscreenPlayerOverlay');
   if (!overlay) return;
+  syncFullscreenSkipAlbumButton();
   updateRoomWindowWeather();
   const mobileMode = getFullscreenPlayerMobileMode();
   const zoomEnabled = fullscreenRoomStyle.zoom === 'on';
@@ -18994,6 +19192,7 @@ async function playFullscreenCompartment() {
   status.hidden=false;
   const playable=[];
   let searchAvailable=false,searchError='';
+  beginListeningQueueBulk();
   try {
     if(all.some(item=>!getQueueableAlbumUrl(item)) && isSpotifyIntegrationAvailable())searchAvailable=!!(await getSpotifyAccessToken());
     for(let index=0;index<all.length;index++) {
@@ -19041,7 +19240,10 @@ async function queueFullscreenCompartment() {
     }
     status.textContent=added?`${added} ${added===1?'Album wurde':'Alben wurden'} zur Warteschlange hinzugefügt.${added<all.length?` ${all.length-added} ohne Hörlink übersprungen.`:''}`:'Keine Hörlinks gefunden. Bitte Spotify verbinden oder Album-Hörlinks speichern.';
   } catch(error) {status.textContent=error.message||'Das Fach konnte nicht eingereiht werden.';}
-  finally {delete button.dataset.busy;button.disabled=false;}
+  finally {
+    endListeningQueueBulk(); // Genau ein UI-Update und maximal ein Firebase-Speichervorgang pro Fach.
+    delete button.dataset.busy;button.disabled=false;
+  }
 }
 document.getElementById('fullscreenPlayerQueueCompartment').addEventListener('click',queueFullscreenCompartment);
 
@@ -19538,6 +19740,7 @@ function moveQueuedAlbum(index, direction) {
 }
 
 function updateAlbumQueueControls() {
+  syncFullscreenSkipAlbumButton();
   renderRoomQueueCrate();
   document.querySelectorAll('[data-shuffle-album-queue]').forEach(button=>button.disabled=listeningAlbumQueue.length<2);
   const dock = document.getElementById('albumListeningDock');
@@ -19571,7 +19774,8 @@ function queueAlbumForListening(item, listeningUrl) {
     dock.hidden = false;
     document.getElementById('albumListeningDockTitle').textContent = 'Album-Warteschlange';
   }
-  updateAlbumQueueControls();
+  if (listeningQueueBulkDepth) listeningQueueBulkDirty = true;
+  else updateAlbumQueueControls();
   return true;
 }
 
@@ -19649,7 +19853,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   player.dataset.provider = 'youtube';
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), createFullscreenPlayerToggle(), createAlbumPlayerSettingsToggle(), createMiniVolumeButton(), createAlbumDockToggle());
+  topbar.append(createAlbumQueueToggle(), createFullscreenPlayerToggle(), createMiniVolumeButton(), createAlbumDockToggle());
   const main = document.createElement('div');
   main.className = 'album-mini-main';
   const cover = document.createElement('img');
@@ -19724,7 +19928,6 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
     duration = Number(youtubeMiniController.getDuration()) || duration;
     const currentTime = Number(youtubeMiniController.getCurrentTime()) || 0;
     listeningPlaybackState = { trackUri: `youtube:${videoId}`, positionSeconds: currentTime };
-    persistListeningPlaybackProgress();
     seek.max = String(duration);
     if (!seek.matches(':active')) {
       seek.value = String(Math.min(currentTime, duration));
@@ -19745,7 +19948,12 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
     progress.style.setProperty('--progress', `${percentage}%`);
   });
   seek.addEventListener('change', () => {
-    if (ready && youtubeMiniController) youtubeMiniController.seekTo(Number(seek.value), true);
+    if (ready && youtubeMiniController) {
+      const seconds = Math.max(0, Number(seek.value) || 0);
+      youtubeMiniController.seekTo(seconds, true);
+      listeningPlaybackState = {trackUri:`youtube:${videoId}`, positionSeconds:seconds};
+      persistListeningPlaybackProgress(true);
+    }
   });
 
   loadYouTubeIframeApi().then(YT => {
@@ -19789,7 +19997,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
             trackUri: `youtube:${videoId}`,
             positionSeconds: Number(youtubeMiniController?.getCurrentTime()) || 0
           };
-          persistListeningPlaybackProgress(event.data !== YT.PlayerState.PLAYING);
+          if (event.data === YT.PlayerState.PAUSED) persistListeningPlaybackProgress(true);
           toggle.innerHTML = isPlaying ? LISTENING_ICON_SVG.pause : LISTENING_ICON_SVG.play;
           toggle.setAttribute('aria-label', isPlaying ? 'Wiedergabe pausieren' : 'Wiedergabe starten');
           updateProgress();
@@ -19926,7 +20134,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   favorite.disabled = true;
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), openInSpotify, createFullscreenPlayerToggle(), createAlbumPlayerSettingsToggle(), createMiniVolumeButton(), createAlbumDockToggle());
+  topbar.append(createAlbumQueueToggle(), openInSpotify, createFullscreenPlayerToggle(), createMiniVolumeButton(), createAlbumDockToggle());
   const trackList = document.createElement('ol');
   trackList.className = 'album-mini-tracklist';
   const progress = document.createElement('div');
@@ -20363,7 +20571,13 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   seek.addEventListener('change', () => {
     if (!spotifyMiniController || !controllerReady) return;
     try {
-      spotifyMiniController.seek(Number(seek.value));
+      const seconds=Math.max(0,Number(seek.value)||0);
+      listeningPlaybackState={trackUri:playingUri||listeningPlaybackState.trackUri,positionSeconds:seconds};
+      persistListeningPlaybackProgress(true);
+      Promise.resolve(spotifyMiniController.seek(seconds)).catch(error=>{
+        console.error('Spotify-Vorspulen fehlgeschlagen:',error);
+        message.hidden=false;message.textContent=error.message||'Vorspulen fehlgeschlagen. Bitte erneut versuchen.';
+      });
     } catch (error) {
       console.error('Spotify-Wiedergabeposition konnte nicht geändert werden:', error);
       message.hidden = false;
@@ -20456,7 +20670,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         if (restorePlayback) {
           playbackIsPaused = true;
           updateControls();
-          persistListeningPlaybackProgress(true);
+          // Wiederherstellen ändert den gespeicherten Fortschritt nicht.
         } else {
           if (!startFirstAlbumTrack()) { initialAlbumTrackSelected = true; controller.play(); }
         }
@@ -20473,7 +20687,6 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         restoringPausedTrack = false;
         updateCurrentTrack(event.data || {});
         listeningPlaybackState = { trackUri: playingUri, positionSeconds: 0 };
-        persistListeningSession();
       });
       controller.addListener('playback_update', event => {
         if (!host.isConnected || spotifyMiniController !== controller) return;
@@ -20498,6 +20711,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           if (state.isPaused !== pendingPlaybackPaused && Date.now()-pendingPlaybackAt < 8000) { retryPendingEmbedPlayback(); return; }
           pendingPlaybackPaused = null;
         }
+        const wasPaused = playbackIsPaused;
         playbackIsPaused = state.isPaused !== false;
         updateCurrentTrack(state);
         if (!restoringPausedTrack || !playbackIsPaused) {
@@ -20505,7 +20719,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
             trackUri: playingUri || listeningPlaybackState.trackUri,
             positionSeconds: Math.max(0, Number(state.position) || 0) / 1000
           };
-          persistListeningPlaybackProgress(state.isPaused);
+          if (playbackIsPaused && !wasPaused) persistListeningPlaybackProgress(true);
         }
         toggle.disabled = false;
         playbackDuration = (Number(state.duration) || 0) / 1000;
