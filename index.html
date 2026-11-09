@@ -1932,6 +1932,9 @@
     background:radial-gradient(ellipse at 50% 28%, #23232c 0%, #0e0e11 72%);
   }
   .fullscreen-player-overlay[hidden] { display:none; }
+  .fullscreen-player-overlay { box-sizing:border-box; width:100%; max-width:100%; height:100dvh; overflow:hidden; overscroll-behavior:contain; }
+  .fullscreen-player-stage { box-sizing:border-box; min-width:0; max-width:100%; }
+  body.fullscreen-player-open { overflow:hidden; }
   body.fullscreen-player-open .album-listening-dock:not([hidden]) { display:block; position:fixed; left:0; top:0; right:auto; bottom:auto; width:200px; height:200px; max-height:none; padding:0; border:0; overflow:hidden; opacity:.001; transform:none; transition:none; pointer-events:none; z-index:0; }
   body.fullscreen-player-open #albumListeningDockContent { display:block; position:relative; width:200px; min-height:200px; }
   body.fullscreen-player-open .album-mini-controller-host { display:block; clip-path:none; }
@@ -6973,7 +6976,7 @@
 
 /* Mobile scene controls stay above the room but beneath all pop-up menus. */
 .fullscreen-player-overlay.has-mobile-scene-controls > #fullscreenPlayerViewToggle {
-  bottom:max(84px, calc(env(safe-area-inset-bottom) + 74px));
+  bottom:max(20px, calc(env(safe-area-inset-bottom) + 16px));
   z-index:3;
 }
 .fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-stage > #fullscreenPlayerZoomToggle { z-index:3; }
@@ -6993,7 +6996,7 @@
 .fullscreen-player-music-settings #playerSettingsDetails > summary { display:none; }
 .fullscreen-player-music-settings #listeningSettingsBlock { display:block; }
 @media (max-width:700px) {
- .fullscreen-player-overlay.has-mobile-scene-controls > #fullscreenPlayerViewToggle { bottom:max(104px, calc(env(safe-area-inset-bottom) + 94px)); }
+ .fullscreen-player-overlay.has-mobile-scene-controls > #fullscreenPlayerViewToggle { bottom:max(24px, calc(env(safe-area-inset-bottom) + 20px)); }
  .fullscreen-player-controls { gap:clamp(5px, 2vw, 14px); }
  .fullscreen-player-controls .album-mini-control { flex-basis:42px; width:42px; min-width:42px; }
 }
@@ -12626,7 +12629,7 @@ function openShopMode() {
 }
 
 function resetShopMode() {
-  closeAlbumListening(false);
+  // Der Plattenladen darf die laufende Musiksitzung nicht beenden.
   document.getElementById('shopSearchInput').value = '';
   shopLastQuery = '';
   document.getElementById('shopDetail').hidden = true;
@@ -20358,6 +20361,34 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   let playbackDuration = 0;
   let playingUri = '';
   let favoriteTrackUri = '';
+  let favoriteCheckSequence = 0;
+  let favoriteIsSaved = false;
+  const renderFavorite = () => {
+    favorite.innerHTML = favoriteIsSaved
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 5.1-8.8 10-8.8 10s-8.8-4.9-8.8-10a4.7 4.7 0 0 1 8.8-2.2 4.7 4.7 0 0 1 8.8 2.2Z" fill="currentColor"/></svg>'
+      : LISTENING_ICON_SVG.favorite;
+    favorite.setAttribute('aria-label', favoriteIsSaved ? 'Aus deinen Spotify-Lieblingssongs entfernen' : 'Zu deinen Spotify-Lieblingssongs hinzufügen');
+    favorite.title = favorite.getAttribute('aria-label');
+    syncFullscreenPlayer();
+  };
+  const checkFavorite = async trackUri => {
+    const sequence = ++favoriteCheckSequence;
+    favoriteIsSaved = false;
+    renderFavorite();
+    if (!/^spotify:track:[A-Za-z0-9]+$/.test(trackUri) || !isSpotifyIntegrationAvailable()) return;
+    try {
+      const token = await getSpotifyAccessToken();
+      if (!token || sequence !== favoriteCheckSequence || !host.isConnected) return;
+      const response = await fetch(`https://api.spotify.com/v1/me/library/contains?uris=${encodeURIComponent(trackUri)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error(`Spotify Like-Status: HTTP ${response.status}`);
+      const data = await response.json();
+      if (sequence !== favoriteCheckSequence || favorite.dataset.trackUri !== trackUri || !host.isConnected) return;
+      favoriteIsSaved = Array.isArray(data) ? data[0] === true : !!data?.[trackUri];
+      renderFavorite();
+    } catch (error) { console.warn('Spotify-Lieblingsstatus konnte nicht geladen werden:', error); }
+  };
   let controllerReady = false;
   let playbackIsPaused = true;
   let lastTrackEndTriggered = false;
@@ -20484,9 +20515,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       if (activeUri !== favoriteTrackUri) {
         favoriteTrackUri = activeUri;
         delete favorite.dataset.favoriteMessage;
-        favorite.innerHTML = LISTENING_ICON_SVG.favorite;
-        favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzufügen');
-        favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzufügen';
+        checkFavorite(activeUri);
       }
     }
     if (currentIndex < 0 && reportedName && !pendingAutoAdvancedTrackUri) setPlayerText(currentTrack,reportedName);
@@ -20625,14 +20654,15 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     if (!trackId) return;
     favorite.disabled = true;
     favorite.dataset.saving = 'true';
-    favorite.dataset.favoriteMessage = 'Wird zu deinen Spotify-Lieblingssongs hinzugefügt …';
+    const shouldRemove = favoriteIsSaved;
+    favorite.dataset.favoriteMessage = shouldRemove ? 'Wird aus deinen Spotify-Lieblingssongs entfernt …' : 'Wird zu deinen Spotify-Lieblingssongs hinzugefügt …';
     try {
       const token = await getSpotifyAccessToken();
       if (!token) {
         throw new Error('Bitte verbinde Spotify zuerst in den Einstellungen.');
       }
       const response = await fetch(`https://api.spotify.com/v1/me/library?uris=${encodeURIComponent(trackUri)}`, {
-        method: 'PUT',
+        method: shouldRemove ? 'DELETE' : 'PUT',
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) {
@@ -20643,12 +20673,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         throw new Error(data.error?.message || `Spotify antwortete mit HTTP ${response.status}`);
       }
       if (favorite.dataset.trackUri !== trackUri) return;
-      favorite.dataset.favoriteMessage = 'Zu deinen Spotify-Lieblingssongs hinzugefügt.';
-      favorite.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 5.1-8.8 10-8.8 10s-8.8-4.9-8.8-10a4.7 4.7 0 0 1 8.8-2.2 4.7 4.7 0 0 1 8.8 2.2Z" fill="currentColor"/></svg>';
-      favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzugefügt');
-      favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzugefügt';
+      favoriteIsSaved = !shouldRemove;
+      favorite.dataset.favoriteMessage = favoriteIsSaved ? 'Zu deinen Spotify-Lieblingssongs hinzugefügt.' : 'Aus deinen Spotify-Lieblingssongs entfernt.';
+      renderFavorite();
       message.hidden = false;
-      message.textContent = 'Zu deinen Spotify-Lieblingssongs hinzugefügt.';
+      message.textContent = favorite.dataset.favoriteMessage;
     } catch (error) {
       console.error('Spotify-Lieblingssong konnte nicht gespeichert werden:', error);
       message.hidden = false;
@@ -21744,7 +21773,7 @@ async function connectSpotify() {
     client_id: clientId,
     response_type: 'code',
     redirect_uri: redirectUri,
-    scope: 'user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-private streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state',
+    scope: 'user-library-read user-library-modify playlist-read-private playlist-read-collaborative playlist-modify-private streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state',
     code_challenge_method: 'S256',
     code_challenge: challenge,
     state
