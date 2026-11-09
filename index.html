@@ -7040,6 +7040,28 @@
   .fullscreen-player-controls { max-width:100%; }
   .fullscreen-player-controls > .album-mini-control { min-width:0; }
 }
+
+/* Mobile landscape: keep the wall art and equalizer visible above the deck,
+   and allow the detail camera to move substantially closer. */
+@media (orientation:landscape) and (max-height:600px) and (max-width:1100px) {
+  .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-room-poster {
+    display:block;
+    top:2%;
+    width:min(var(--poster-width, var(--shelf-w)), 42%);
+    max-height:24%;
+    aspect-ratio:2.6;
+    box-sizing:border-box;
+  }
+  .fullscreen-player-overlay.is-split-layout.is-angled-view .fullscreen-player-eq {
+    display:flex;
+    top:calc(2% + min(24%, var(--poster-height, 70px)) + 5px);
+    height:clamp(22px, 7vh, 36px);
+    min-height:0;
+    padding:3px 6px;
+    box-sizing:border-box;
+  }
+  .fullscreen-player-overlay.is-split-layout { --camera-zoom:2.85; }
+}
 </style>
 </head>
 <body>
