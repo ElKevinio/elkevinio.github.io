@@ -7065,6 +7065,11 @@
   }
   .fullscreen-player-overlay.is-split-layout { --camera-zoom:2.85; }
 }
+/* Collection search: stable mobile viewport and no iOS input-focus zoom. */
+@media (max-width:700px), (pointer:coarse) {
+  #fullscreenPlayerMenuSearch { font-size:16px; min-width:0; max-width:100%; }
+  .fullscreen-player-menu { box-sizing:border-box; max-width:100%; overflow:hidden; }
+}
 </style>
 </head>
 <body>
@@ -18446,7 +18451,10 @@ document.addEventListener('visibilitychange', () => {
   else if (isFullscreenPlayerOpen()) updateRoomWindowWeather();
 });
 
+let fullscreenSearchKeyboardMode = '';
 function getFullscreenPlayerMobileMode() {
+  // The virtual keyboard changes the visual viewport and must not flip the room layout.
+  if (fullscreenSearchKeyboardMode && document.activeElement?.id === 'fullscreenPlayerMenuSearch') return fullscreenSearchKeyboardMode;
   if (Math.min(window.innerWidth, window.innerHeight) >= 600) return '';
   return window.innerHeight >= window.innerWidth ? 'portrait' : 'landscape';
 }
@@ -19245,7 +19253,8 @@ function setFullscreenPlayerMenuOpen(isOpen) {
   toggle.setAttribute('aria-label', toggle.title);
   if (isOpen) {
     renderFullscreenPlayerMenu();
-    document.getElementById('fullscreenPlayerMenuSearch')?.focus();
+    // Do not summon the mobile keyboard merely by opening the collection.
+    if (!getFullscreenPlayerMobileMode()) document.getElementById('fullscreenPlayerMenuSearch')?.focus({preventScroll:true});
   }
 }
 
@@ -19657,7 +19666,15 @@ document.getElementById('fullscreenPlayerCompartmentReset').addEventListener('cl
   renderFullscreenPlayerShelf();
   renderFullscreenPlayerMenu();
 });
-document.getElementById('fullscreenPlayerMenuSearch').addEventListener('input', renderFullscreenPlayerMenu);
+const fullscreenCollectionSearch = document.getElementById('fullscreenPlayerMenuSearch');
+fullscreenCollectionSearch.addEventListener('focus', () => {
+  fullscreenSearchKeyboardMode = getFullscreenPlayerMobileMode();
+});
+fullscreenCollectionSearch.addEventListener('blur', () => {
+  // Keep the layout fixed through the keyboard's closing animation.
+  window.setTimeout(() => { fullscreenSearchKeyboardMode = ''; }, 400);
+});
+fullscreenCollectionSearch.addEventListener('input', renderFullscreenPlayerMenu);
 document.querySelectorAll('#fullscreenPlayerMenu [data-menu-filter]').forEach(button => {
   button.addEventListener('click', () => {
     fullscreenPlayerMenuFilter = button.dataset.menuFilter === 'owned' ? 'owned' : 'all';
