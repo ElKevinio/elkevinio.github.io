@@ -17055,7 +17055,32 @@ const trustedMediaSession = (() => {
       });
     }
   }
-  return { run(fn) { trusted = true; try { return fn(); } finally { trusted = false; } } };
+  // Das SDK spielt in einem Iframe ("Spotify Embedded Player"); iOS zeigt dann dessen Medienanzeige.
+  // Ein stilles Audio-Element der Seite selbst macht unsere Medienanzeige zur aktiven.
+  let anchor = null;
+  const buildAnchor = () => {
+    const rate = 8000, n = rate, buf = new Uint8Array(44 + n), dv = new DataView(buf.buffer);
+    const w = (o, t) => { for (let i = 0; i < t.length; i++) buf[o + i] = t.charCodeAt(i); };
+    w(0, 'RIFF'); dv.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt ');
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, rate, true); dv.setUint32(28, rate, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+    w(36, 'data'); dv.setUint32(40, n, true); buf.fill(128, 44);
+    let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    const el = new Audio('data:audio/wav;base64,' + btoa(bin));
+    el.loop = true; el.preload = 'auto'; el.setAttribute('playsinline', '');
+    return el;
+  };
+  return {
+    run(fn) { trusted = true; try { return fn(); } finally { trusted = false; } },
+    anchorPlay(refresh) {
+      try {
+        anchor = anchor || buildAnchor();
+        if (refresh && !anchor.paused) { anchor.pause(); anchor.currentTime = 0; }
+        const result = anchor.play(); if (result && result.catch) result.catch(() => {});
+      } catch {}
+    },
+    anchorPause() { try { if (anchor) anchor.pause(); } catch {} }
+  };
 })();
 let spotifyIframeApiPromise = null;
 
@@ -17195,6 +17220,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       stateRevision++;
       const previous=state;state=next;
       syncSpotifyMediaSession(next);
+      if (next.paused) trustedMediaSession.anchorPause(); else trustedMediaSession.anchorPlay(!previous || previous.paused);
       if(!next.paused) {
         clearTimeout(persistentSpotifyIdleTimer);
         persistentSpotifyIdleTimer = null;
@@ -17285,7 +17311,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       play(){
         // activateElement must run in the original tap event, before awaiting a token or network request.
         if(!activated && navigator.userActivation && !navigator.userActivation.isActive){report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');return false;}
-        activated=true;activate();
+        activated=true;activate();trustedMediaSession.anchorPlay();
         const uri=pendingUri,position=pendingPosition,version=++commandVersion,selection=selectionVersion;
         desiredUri=uri.startsWith('spotify:track:')?uri:'';desiredPaused=false;desiredUntil=Date.now()+8000;
         return run(async()=>{
@@ -17323,7 +17349,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       resume(){return this.play();},pause(){const version=++commandVersion;desiredPaused=true;desiredUntil=Date.now()+8000;return run(()=>version===commandVersion?sdk.pause():undefined,version);},
       // Closing an album view must not disconnect the Spotify Connect device.
       destroy(){listeners.clear();activeStatus=null;},
-      hardDestroy(){restoreSpotifyPositionState();destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
+      hardDestroy(){trustedMediaSession.anchorPause();restoreSpotifyPositionState();destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
     };
     persistentSpotifySdkController=controller;
     callback(controller);
@@ -21134,6 +21160,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           session.__vinylEmbedSig = signature;
         }
         session.playbackState = state.isPaused ? 'paused' : 'playing';
+        if (state.isPaused) trustedMediaSession.anchorPause(); else trustedMediaSession.anchorPlay();
         const duration = (Number(state.duration) || 0) / 1000;
         const position = (Number(state.position) || 0) / 1000;
         if (duration > 0 && typeof session.setPositionState === 'function') {
@@ -21142,6 +21169,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       } catch (error) { console.warn('Embed-Medieninformationen:', error); }
     });
   };
+  if (navigator.mediaSession?.setActionHandler) {
+    try { navigator.mediaSession.setActionHandler('previoustrack', () => previous.click()); } catch {}
+    try { navigator.mediaSession.setActionHandler('nexttrack', () => next.click()); } catch {}
+  }
   let controllerGeneration=0;
   const initializeController = useSdk => {
   const generation=++controllerGeneration;
