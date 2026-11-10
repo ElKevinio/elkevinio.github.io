@@ -11656,15 +11656,30 @@ async function togglePageFullscreen(event) {
   event?.stopPropagation();
   if(pageFullscreenTransition)return;
   pageFullscreenTransition=true;
+  let timeout;
+  const wasActive=!!(document.fullscreenElement || document.webkitFullscreenElement || document.webkitIsFullScreen);
+  let failure='';
   try {
-    if(document.fullscreenElement || document.webkitFullscreenElement || document.webkitIsFullScreen){
-      await (document.exitFullscreen?document.exitFullscreen():document.webkitExitFullscreen());
-    }else{
-      const root=document.documentElement;
-      await (root.requestFullscreen?root.requestFullscreen():root.webkitRequestFullscreen());
-    }
-  }catch(error){await showAlert('Der Browser konnte den Vollbildmodus nicht umschalten. Du kannst stattdessen den Vollbildmodus im Browsermenü verwenden.');}
-  finally {pageFullscreenTransition=false;syncPageFullscreenButtons();}
+    // Invoke immediately inside the user gesture; never wait for other UI work first.
+    const root=document.documentElement;
+    const operation=wasActive
+      ? (document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen())
+      : (root.requestFullscreen ? root.requestFullscreen({navigationUI:'hide'}) : root.webkitRequestFullscreen());
+    await Promise.race([Promise.resolve(operation),new Promise((_,reject)=>{
+      timeout=setTimeout(()=>reject(new Error('Keine Antwort vom Browser')),3500);
+    })]);
+    const active=!!(document.fullscreenElement || document.webkitFullscreenElement || document.webkitIsFullScreen);
+    if(active===wasActive)throw new Error('Der Browser hat den Vollbildwechsel nicht bestätigt');
+  }catch(error){
+    console.warn('Vollbildwechsel fehlgeschlagen:',error);
+    failure='Edge bzw. der Browser hat den Vollbildwechsel nicht bestätigt. Auf dem Mac kannst du über Darstellung → Vollbildmodus aktivieren wechseln (Control + Command + F). Falls das Fenster bereits im macOS-Vollbild ist, verlasse diesen Modus zuerst und versuche den Seiten-Button erneut.';
+  }finally {
+    clearTimeout(timeout);
+    pageFullscreenTransition=false;
+    syncPageFullscreenButtons();
+  }
+  // Release the transition lock before opening a dialog so another attempt stays possible.
+  if(failure)void showAlert(failure);
 }
 document.querySelectorAll('[data-page-fullscreen]').forEach(button=>button.addEventListener('click',togglePageFullscreen));
 document.addEventListener('fullscreenchange',syncPageFullscreenButtons);
@@ -17738,7 +17753,10 @@ function runFullscreenPlayerAlbumChange() {
 function getListeningTrackDurationSeconds(track) {
   if (!track || typeof track === 'string') return 0;
   if (Number.isFinite(Number(track.duration_ms)) && Number(track.duration_ms) > 0) return Number(track.duration_ms) / 1000;
-  if (typeof track.duration === 'number' && Number.isFinite(track.duration) && track.duration > 0) return track.duration;
+  // Older imports sometimes stored Spotify milliseconds in the untyped duration field.
+  // A single track longer than 24 hours is treated as that legacy representation.
+  const numeric = Number(track.duration);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric >= 86400 ? numeric / 1000 : numeric;
   const text = String(track.duration || '').trim();
   if (!/^\d+:\d{2}(?::\d{2})?$/.test(text)) return 0;
   const parts = text.split(':').map(Number);
