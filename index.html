@@ -17108,9 +17108,48 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     let activeStatus=onStatus;
     const emit=(name,data={}) => { if (!destroyed) for(const fn of listeners.get(name)||[]) fn({data}); };
     const report=(text,fatal=false) => { if(!destroyed) activeStatus?.(text,fatal); };
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
+    // The SDK's automatic Media Session can expose millisecond track lengths as
+    // seconds to iOS (e.g. a 3:14 song appears to last ~54 hours).
+    // Publish a normalized, seconds-based Media Session ourselves instead.
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
+    let mediaTrackUri = '';
+    const syncSpotifyMediaSession = next => {
+      const session = navigator.mediaSession;
+      if (!session || !next) return;
+      const track = next.track_window?.current_track;
+      const uri = track?.uri || '';
+      const durationMs = Number(track?.duration_ms) > 0 ? Number(track.duration_ms) : Number(next.duration);
+      const duration = Number.isFinite(durationMs) && durationMs > 0 ? durationMs / 1000 : 0;
+      const rawPosition = Number(next.position);
+      const position = Number.isFinite(rawPosition) && rawPosition >= 0 ? rawPosition / 1000 : 0;
+      if (uri && uri !== mediaTrackUri) {
+        mediaTrackUri = uri;
+        try {
+          session.metadata = new MediaMetadata({
+            title: track.name || 'Unbekannter Titel',
+            artist: (track.artists || []).map(artist => artist.name).filter(Boolean).join(', '),
+            album: track.album?.name || '',
+            artwork: (track.album?.images || []).filter(image => image.url).map(image => ({src:image.url, sizes:`${image.width || 300}x${image.height || 300}`}))
+          });
+        } catch (error) { console.warn('Spotify-Medieninformationen:', error); }
+      }
+      try { session.playbackState = next.paused ? 'paused' : 'playing'; } catch {}
+      if (duration > 0 && typeof session.setPositionState === 'function') {
+        try { session.setPositionState({duration, position:Math.min(position,duration), playbackRate:1}); }
+        catch (error) { console.warn('Spotify-Medienposition:', error); }
+      }
+    };
+    if (navigator.mediaSession?.setActionHandler) {
+      for (const [action, handler] of [
+        ['play', () => controller.play()],
+        ['pause', () => controller.pause()],
+        ['seekto', details => controller.seek(details.seekTime || 0)],
+        ['seekbackward', details => controller.seek(Math.max(0,(Number(state?.position)||0)/1000-(details.seekOffset||10)))],
+        ['seekforward', details => controller.seek((Number(state?.position)||0)/1000+(details.seekOffset||10))]
+      ]) { try { navigator.mediaSession.setActionHandler(action, handler); } catch {} }
+    }
     const pushState=next => {
       if(destroyed||!next)return;
       const uri=next.track_window?.current_track?.uri || '';
@@ -17118,6 +17157,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       if(desiredPaused!==null && next.paused===desiredPaused && (!desiredUri || uri===desiredUri)) { desiredUri='';desiredPaused=null; }
       stateRevision++;
       const previous=state;state=next;
+      syncSpotifyMediaSession(next);
       if(!next.paused) {
         clearTimeout(persistentSpotifyIdleTimer);
         persistentSpotifyIdleTimer = null;
@@ -17130,7 +17170,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
         }, 30 * 60 * 1000);
       }
       if(!next.paused && (!previous||previous.paused))emit('playback_started',{track_window:next.track_window});
-      emit('playback_update',{isPaused:next.paused,position:next.position,duration:next.duration,track_window:next.track_window,playingURI:next.track_window?.current_track?.uri});
+      emit('playback_update',{isPaused:next.paused,position:next.position,duration:Number(next.track_window?.current_track?.duration_ms) || next.duration,track_window:next.track_window,playingURI:next.track_window?.current_track?.uri});
       if(next.paused && next.position===0 && previous && !previous.paused && previous.duration>0 && previous.duration-previous.position<3500)emit('playback_ended');
     };
     sdk.addListener('player_state_changed',pushState);
@@ -17202,7 +17242,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
             throw new Error(`Spotify konnte nicht vorspulen (HTTP ${response.status}).`);
           }
           if(state)state={...state,position};
-          emit('playback_update',{isPaused:state?.paused??false,position,duration:state?.duration||0,track_window:state?.track_window,playingURI:state?.track_window?.current_track?.uri});
+          emit('playback_update',{isPaused:state?.paused??false,position,duration:Number(state?.track_window?.current_track?.duration_ms) || state?.duration || 0,track_window:state?.track_window,playingURI:state?.track_window?.current_track?.uri});
         });
       },
       play(){
@@ -17246,7 +17286,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       resume(){return this.play();},pause(){const version=++commandVersion;desiredPaused=true;desiredUntil=Date.now()+8000;return run(()=>version===commandVersion?sdk.pause():undefined,version);},
       // Closing an album view must not disconnect the Spotify Connect device.
       destroy(){listeners.clear();activeStatus=null;},
-      hardDestroy(){destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();sdk.disconnect();}
+      hardDestroy(){destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
     };
     persistentSpotifySdkController=controller;
     callback(controller);
