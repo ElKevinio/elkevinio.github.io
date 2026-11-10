@@ -7009,7 +7009,7 @@
   header .header-actions { gap:5px; }
   header .header-actions > .icon-btn,
   header .header-actions > .settings-wrap > .icon-btn { width:39px; height:39px; min-width:39px; }
-  #showAlbumMiniPlayerBtn svg { width:23px; height:23px; display:block; }
+  #showAlbumMiniPlayerBtn svg { width:19px; height:19px; display:block; }
 }
 /* The queue toggle must never share the settings/fullscreen button's icon state. */
 .album-mini-topbar .album-queue-toggle svg { display:block; }
@@ -7073,6 +7073,12 @@
   #fullscreenPlayerMenuSearch { font-size:16px; min-width:0; max-width:100%; }
   .fullscreen-player-menu { box-sizing:border-box; max-width:100%; overflow:hidden; }
 }
+#showAlbumMiniPlayerBtn svg { width:19px !important; height:19px !important; }
+.fullscreen-player-missing-links { margin:10px 0; font-size:13px; }
+.fullscreen-player-missing-links[hidden] { display:none; }
+.fullscreen-player-missing-links ul { list-style:none; padding:0; margin:8px 0 0; display:grid; gap:6px; }
+.fullscreen-player-missing-links button { width:100%; text-align:left; border:1px solid var(--border, #7775); border-radius:8px; padding:8px 10px; background:var(--surface-2, transparent); color:inherit; cursor:pointer; }
+.fullscreen-player-missing-links button:hover { filter:brightness(1.1); }
 </style>
 </head>
 <body>
@@ -7822,6 +7828,7 @@
     <button type="button" id="fullscreenPlayerCompartmentReset" class="fullscreen-player-compartment-reset" hidden></button>
     <div class="fullscreen-compartment-actions"><button type="button" id="fullscreenPlayerPlayCompartment" class="fullscreen-player-compartment-play" title="Alle Alben dieses Fachs abspielen" aria-label="Alle Alben dieses Fachs abspielen" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button><button type="button" id="fullscreenPlayerQueueCompartment" class="fullscreen-player-compartment-queue" hidden>Warteschlange hinzufügen</button></div>
     <p id="fullscreenPlayerCompartmentPlayStatus" class="settings-panel-hint" role="status" hidden></p>
+    <div id="fullscreenPlayerMissingLinks" class="fullscreen-player-missing-links" hidden></div>
     <ol id="fullscreenPlayerMenuList" class="fullscreen-player-menu-list"></ol>
   </aside>
   <form id="fullscreenPlayerPosterForm" class="fullscreen-player-poster-form" aria-label="Raum gestalten" hidden>
@@ -19346,6 +19353,39 @@ function setFullscreenPlayerMenuOpen(isOpen) {
   }
 }
 
+function uniqueFullscreenAlbums(items) {
+  const seen = new Map();
+  const normalized = value => String(value || '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+  for (const item of items) {
+    const key = `${normalized(item.artist)}\u0000${normalized(item.title)}`;
+    if (!seen.has(key)) seen.set(key, item);
+    else if (!getQueueableAlbumUrl(seen.get(key)) && getQueueableAlbumUrl(item)) seen.set(key, item);
+  }
+  return [...seen.values()];
+}
+function showFullscreenMissingLinks(items) {
+  const panel = document.getElementById('fullscreenPlayerMissingLinks');
+  if (!panel) return;
+  panel.replaceChildren();
+  panel.hidden = !items.length;
+  if (!items.length) return;
+  const heading = document.createElement('strong');
+  heading.textContent = `${items.length} ${items.length === 1 ? 'Album ohne Hörlink' : 'Alben ohne Hörlink'} – manuell prüfen:`;
+  panel.append(heading);
+  const list = document.createElement('ul');
+  for (const item of items) {
+    const li = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = `${item.artist || 'Unbekannter Interpret'} – ${item.title || 'Unbenanntes Album'} · Link suchen`;
+    button.title = 'Album öffnen und Hörlink manuell auswählen';
+    button.addEventListener('click', () => openAlbumListening(item));
+    li.append(button);
+    list.append(li);
+  }
+  panel.append(list);
+}
+
 function getFullscreenPlayerMenuItems() {
   const query = (document.getElementById('fullscreenPlayerMenuSearch')?.value || '').trim().toLowerCase();
   let source = ownCollection;
@@ -19354,10 +19394,10 @@ function getFullscreenPlayerMenuItems() {
     source = shelf && isValidShelfCompartment(shelf, fullscreenPlayerCompartment.number)
       ? getFullscreenShelfCompartmentItems(shelf, fullscreenPlayerCompartment.number) : [];
   }
-  return source.filter(item => {
+  return uniqueFullscreenAlbums(source.filter(item => {
     if (!fullscreenPlayerCompartment && fullscreenPlayerMenuFilter === 'owned' && !item.owned) return false;
     return !query || `${item.title || ''} ${item.artist || ''}`.toLowerCase().includes(query);
-  });
+  }));
 }
 
 function playAlbumFromFullscreenMenu(item) {
@@ -19375,18 +19415,20 @@ function getFullscreenCompartmentPlaybackItems() {
   const compartment = fullscreenPlayerCompartment;
   const shelf = shelfLocations.find(entry => entry.id === compartment?.shelfId);
   if (!shelf || !isValidShelfCompartment(shelf, compartment.number)) return [];
-  return getFullscreenShelfCompartmentItems(shelf, compartment.number);
+  return uniqueFullscreenAlbums(getFullscreenShelfCompartmentItems(shelf, compartment.number));
 }
 async function playFullscreenCompartment() {
   const button=document.getElementById('fullscreenPlayerPlayCompartment');
   if(button.dataset.busy==='true')return;
   const compartmentKey=JSON.stringify(fullscreenPlayerCompartment);
   const all=getFullscreenCompartmentPlaybackItems();
+  showFullscreenMissingLinks([]);
   if(!all.length)return;
   button.dataset.busy='true';button.disabled=true;
   const status=document.getElementById('fullscreenPlayerCompartmentPlayStatus');
   status.hidden=false;
   const playable=[];
+  const missing=[];
   let searchAvailable=false,searchError='';
   beginListeningQueueBulk();
   try {
@@ -19400,8 +19442,10 @@ async function playFullscreenCompartment() {
       }
       if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
       if(url)playable.push({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:'',listeningUrl:url});
+      else missing.push(item);
     }
-    const skipped=all.length-playable.length;
+    const skipped=missing.length;
+    showFullscreenMissingLinks(missing);
     if(!playable.length) {status.textContent=searchError||'Keine Hörlinks gefunden. Bitte Spotify verbinden oder Album-Hörlinks speichern.';return;}
     listeningAlbumQueue.splice(0,listeningAlbumQueue.length,...playable.slice(1));
     updateAlbumQueueControls();
@@ -19460,6 +19504,7 @@ function renderFullscreenPlayerMenu() {
   reset.hidden = !isCompartment;
   reset.textContent = '← Gesamte Sammlung';
   const playAll=document.getElementById('fullscreenPlayerPlayCompartment');
+  if (!isCompartment) showFullscreenMissingLinks([]);
   playAll.hidden=!isCompartment;
   const queueAll=document.getElementById('fullscreenPlayerQueueCompartment');
   queueAll.hidden=!isCompartment;
