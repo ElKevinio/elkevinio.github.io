@@ -17234,7 +17234,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       }
       if(!next.paused && (!previous||previous.paused))emit('playback_started',{track_window:next.track_window});
       emit('playback_update',{isPaused:next.paused,position:next.position,duration:Number(next.track_window?.current_track?.duration_ms) || next.duration,track_window:next.track_window,playingURI:next.track_window?.current_track?.uri});
-      if(next.paused && next.position===0 && previous && !previous.paused && previous.duration>0 && previous.duration-previous.position<3500)emit('playback_ended');
+      if(next.paused && next.position===0 && previous && !previous.paused && previous.duration>0 && previous.duration-previous.position<15000)emit('playback_ended');
     };
     sdk.addListener('player_state_changed',pushState);
     sdk.addListener('ready',({device_id})=>{
@@ -17323,7 +17323,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
           if(destroyed||version!==commandVersion)return;if(!accessToken)throw new Error('Bitte Spotify erneut verbinden.');
           const body=uri.startsWith('spotify:track:')
             ? (/^spotify:(album|playlist):/.test(options.uri) ? {context_uri:options.uri,offset:{uri},position_ms:position} : {uris:[uri],position_ms:position})
-            : {context_uri:uri,position_ms:position};
+            : {context_uri:uri,offset:{position:0},position_ms:position};
           const sendPlay=async id=>fetch(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(id)}`,{method:'PUT',signal:lifetime.signal,headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
           let targetId=await waitForDevice();
           if(destroyed||version!==commandVersion)return;
@@ -20516,6 +20516,14 @@ function acceptsSpotifyTrackState(state, pendingUri, tracks, requestedAt, now = 
   return now-requestedAt >= 450;
 }
 
+function spotifyLeftAlbumAfterLastTrack(state, tracks, currentIndex, pendingUri) {
+  if (pendingUri || !tracks.length || currentIndex !== tracks.length - 1) return false;
+  const uri = state.playingURI || state.track_window?.current_track?.uri || state.currentTrack?.uri || '';
+  // Autoplay recommendations can arrive without a final position update, especially
+  // in background tabs. Album membership is more reliable than a near-end timer.
+  return !!uri && !!tracks[currentIndex]?.uri && !tracks.some(track => track.uri === uri);
+}
+
 function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlayback = false) {
   spotifyMiniController?.destroy();
   spotifyMiniController = null;
@@ -21289,7 +21297,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         showPlaybackState(event.data.isPaused !== false);updateCurrentTrack(event.data);
       });
       if(controller.isWebPlaybackSdk)controller.addListener('playback_ended',()=>{
-        if(currentIndex===tracks.length-1 && lastAlbumTrackNearEndAt && Date.now()-lastAlbumTrackNearEndAt<12000) advanceAlbumQueueAtEnd();
+        if(!host.isConnected || spotifyMiniController !== controller)return;
+        if(currentIndex===tracks.length-1 && lastAlbumTrackNearEndAt && Date.now()-lastAlbumTrackNearEndAt<60000) advanceAlbumQueueAtEnd();
       });
       controller.addListener('ready', () => {
         controllerReady = true;
@@ -21304,12 +21313,14 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           updateControls();
           // Wiederherstellen ändert den gespeicherten Fortschritt nicht.
         } else {
-          if (!startFirstAlbumTrack()) { initialAlbumTrackSelected = true; controller.play(); }
+          // The track list may arrive after ready. Keep the first-track selection pending.
+          if (!startFirstAlbumTrack()) controller.play();
         }
         syncFullscreenPlayer();
       });
       controller.addListener('playback_started', event => {
         if (!host.isConnected || spotifyMiniController !== controller) return;
+        if (controller.isWebPlaybackSdk && spotifyLeftAlbumAfterLastTrack(event.data || {}, tracks, currentIndex, pendingAutoAdvancedTrackUri) && advanceAlbumQueueAtEnd()) return;
         if (pendingPlaybackPaused === true && Date.now()-pendingPlaybackAt < 8000) { retryPendingEmbedPlayback(); return; }
         if (!acceptsSpotifyTrackState(event.data || {}, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) return;
         if (albumId && currentIndex < 0 && !event.data?.playbackContextPosition) currentIndex = 0;
@@ -21323,6 +21334,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       controller.addListener('playback_update', event => {
         if (!host.isConnected || spotifyMiniController !== controller) return;
         const state = event.data || {};
+        if (controller.isWebPlaybackSdk && spotifyLeftAlbumAfterLastTrack(state, tracks, currentIndex, pendingAutoAdvancedTrackUri) && advanceAlbumQueueAtEnd()) return;
         // Spotify Web Playback can start another context track instead of emitting a
         // reliable 'ended' event. Detect the transition after the final album track.
         if (controller.isWebPlaybackSdk && currentIndex === tracks.length - 1 && tracks.length && !lastTrackEndTriggered) {
@@ -21330,10 +21342,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           const reportedUri = state.playingURI || state.track_window?.current_track?.uri || '';
           const positionMs = Number(state.position) || 0;
           const durationMs = Number(state.duration) || 0;
-          if (reportedUri === lastUri && state.isPaused === false && durationMs > 0 && durationMs-positionMs <= 4000) {
+          if (reportedUri === lastUri && state.isPaused === false && durationMs > 0 && durationMs-positionMs <= 15000) {
             lastAlbumTrackNearEndAt = Date.now();
           }
-          const recentlyNearEnd = lastAlbumTrackNearEndAt && Date.now()-lastAlbumTrackNearEndAt < 12000;
+          const recentlyNearEnd = lastAlbumTrackNearEndAt && Date.now()-lastAlbumTrackNearEndAt < 60000;
           const movedToAnotherTrack = reportedUri && reportedUri !== lastUri;
           const finishedAndReset = state.isPaused === true && positionMs < 1500;
           if (recentlyNearEnd && (movedToAnotherTrack || finishedAndReset) && advanceAlbumQueueAtEnd()) return;
