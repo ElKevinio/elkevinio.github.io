@@ -17111,7 +17111,31 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     // The SDK's automatic Media Session can expose millisecond track lengths as
     // seconds to iOS (e.g. a 3:14 song appears to last ~54 hours).
     // Publish a normalized, seconds-based Media Session ourselves instead.
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
+    // Keep Spotify's native iOS lock-screen metadata (cover, title, artist).
+    // Normalize only the erroneous millisecond-based Media Session position data.
+    const nativeMediaSession = navigator.mediaSession;
+    const originalSetPositionState = nativeMediaSession?.setPositionState;
+    if (typeof originalSetPositionState === 'function') {
+      try {
+        nativeMediaSession.setPositionState = function(details) {
+          if (!details || typeof details !== 'object') return originalSetPositionState.call(this, details);
+          let duration = Number(details.duration);
+          let position = Number(details.position);
+          // Spotify's SDK may pass milliseconds where the Media Session API expects seconds.
+          // 24+ hour tracks from Spotify's music player are invalid; normalize them.
+          if (Number.isFinite(duration) && duration > 86400) {
+            duration /= 1000;
+            if (Number.isFinite(position)) position /= 1000;
+          }
+          const fixed = {...details};
+          if (Number.isFinite(duration) && duration > 0) fixed.duration = duration;
+          if (Number.isFinite(position) && position >= 0 && Number.isFinite(duration) && duration > 0)
+            fixed.position = Math.min(position, duration);
+          return originalSetPositionState.call(this, fixed);
+        };
+      } catch (error) { console.warn('Spotify-Medienzeit-Korrektur:', error); }
+    }
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
@@ -17126,8 +17150,9 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       const position = Number.isFinite(rawPosition) && rawPosition >= 0 ? rawPosition / 1000 : 0;
       if (uri && uri !== mediaTrackUri) {
         mediaTrackUri = uri;
+        // Native SDK supplies the artwork and metadata; fill only when absent.
         try {
-          session.metadata = new MediaMetadata({
+          if (!session.metadata && typeof MediaMetadata === 'function') session.metadata = new MediaMetadata({
             title: track.name || 'Unbekannter Titel',
             artist: (track.artists || []).map(artist => artist.name).filter(Boolean).join(', '),
             album: track.album?.name || '',
@@ -17286,7 +17311,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       resume(){return this.play();},pause(){const version=++commandVersion;desiredPaused=true;desiredUntil=Date.now()+8000;return run(()=>version===commandVersion?sdk.pause():undefined,version);},
       // Closing an album view must not disconnect the Spotify Connect device.
       destroy(){listeners.clear();activeStatus=null;},
-      hardDestroy(){destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
+      hardDestroy(){if(nativeMediaSession && typeof originalSetPositionState === 'function'){try{nativeMediaSession.setPositionState=originalSetPositionState;}catch{}}destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
     };
     persistentSpotifySdkController=controller;
     callback(controller);
@@ -17466,7 +17491,18 @@ function queueListeningCloudSave(session) {
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       });
-    }).catch(error => console.error('Warteschlange konnte nicht mit Firebase synchronisiert werden:', error));
+    }).catch(error => {
+      console.error('Warteschlange konnte nicht mit Firebase synchronisiert werden:', error);
+      if (currentUid === uid) {
+        // Bei einem fehlgeschlagenen Schreiben darf der identische Zustand
+        // nicht dauerhaft als bereits synchronisiert gelten.
+        listeningSyncLastSerialized = '';
+        setTimeout(() => {
+          if (currentUid === uid && !listeningSyncApplyingRemote)
+            queueListeningCloudSave(buildListeningSession());
+        }, 2500);
+      }
+    });
   }, 450);
 }
 function applyCloudListeningSession(data, initial = false) {
@@ -19457,6 +19493,26 @@ function getFullscreenCompartmentPlaybackItems() {
   if (!shelf || !isValidShelfCompartment(shelf, compartment.number)) return [];
   return uniqueFullscreenAlbums(getFullscreenShelfCompartmentItems(shelf, compartment.number));
 }
+// Neue Treffer erst nach dem Suchdurchlauf gemeinsam in der Sammlung sichern.
+function saveDiscoveredSpotifyAlbumLinks(found) {
+  if (!found.length || !currentUid) return 0;
+  const byKey = item => `${String(item.artist || '').normalize('NFKC').trim().toLowerCase()}\u0000${String(item.title || '').normalize('NFKC').trim().toLowerCase()}`;
+  const links = new Map(found.map(({item, url}) => [byKey(item), normalizeSpotifyAlbumLink(url)]));
+  let changed = 0;
+  for (const item of ownCollection) {
+    const url = links.get(byKey(item));
+    if (url && !normalizeSpotifyAlbumLink(item.spotifyAlbumUrl) && !getQueueableAlbumUrl(item)) {
+      item.spotifyAlbumUrl = url;
+      changed++;
+    }
+  }
+  if (changed) {
+    // Ein lokaler Snapshot und ein debounceter Cloud-Save; vorhandene
+    // Collection-V2-Logik schreibt nur veränderte Chunks.
+    saveOwnCollectionData(true);
+  }
+  return changed;
+}
 async function playFullscreenCompartment() {
   const button=document.getElementById('fullscreenPlayerPlayCompartment');
   if(button.dataset.busy==='true')return;
@@ -19469,6 +19525,7 @@ async function playFullscreenCompartment() {
   status.hidden=false;
   const playable=[];
   const missing=[];
+  const discovered=[];
   let searchAvailable=false,searchError='';
   beginListeningQueueBulk();
   try {
@@ -19477,22 +19534,27 @@ async function playFullscreenCompartment() {
       const item=all[index];let url=getQueueableAlbumUrl(item);
       if(!url && searchAvailable) {
         status.textContent=`Spotify-Alben werden gesucht … ${index+1} von ${all.length}`;
-        try {const id=await findMatchingSpotifyAlbum(item);if(id)url=`https://open.spotify.com/album/${id}`;}
+        try {const id=await findMatchingSpotifyAlbum(item);if(id) { url=`https://open.spotify.com/album/${id}`; discovered.push({item,url}); }}
         catch(error){searchError='Die Spotify-Suche konnte nicht fortgesetzt werden.';searchAvailable=false;}
       }
       if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
       if(url)playable.push({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:'',listeningUrl:url});
       else missing.push(item);
     }
+    saveDiscoveredSpotifyAlbumLinks(discovered);
     const skipped=missing.length;
     showFullscreenMissingLinks(missing);
     if(!playable.length) {status.textContent=searchError||'Keine Hörlinks gefunden. Bitte Spotify verbinden oder Album-Hörlinks speichern.';return;}
     listeningAlbumQueue.splice(0,listeningAlbumQueue.length,...playable.slice(1));
-    updateAlbumQueueControls();
+    listeningQueueBulkDirty = true;
+    endListeningQueueBulk();
     status.textContent=`${playable.length} ${playable.length===1?'Album wird':'Alben werden'} abgespielt.${skipped?` ${skipped} ohne passenden Hörlink übersprungen.`:''}${searchError?' '+searchError:''}`;
     await openAlbumListening(playable[0]);
   } catch(error) {status.textContent=error.message||'Die Fach-Wiedergabe konnte nicht gestartet werden.';}
-  finally {delete button.dataset.busy;button.disabled=false;}
+  finally {
+    endListeningQueueBulk();
+    delete button.dataset.busy;button.disabled=false;
+  }
 }
 document.getElementById('fullscreenPlayerPlayCompartment').addEventListener('click',playFullscreenCompartment);
 async function queueFullscreenCompartment() {
@@ -19505,6 +19567,8 @@ async function queueFullscreenCompartment() {
   const status=document.getElementById('fullscreenPlayerCompartmentPlayStatus');
   status.hidden=false;
   let added=0,searchAvailable=false;
+  const discovered=[];
+  beginListeningQueueBulk();
   try {
     if(all.some(item=>!getQueueableAlbumUrl(item)) && isSpotifyIntegrationAvailable())searchAvailable=!!(await getSpotifyAccessToken());
     for(let index=0;index<all.length;index++) {
@@ -19512,12 +19576,13 @@ async function queueFullscreenCompartment() {
       const item=all[index];let url=getQueueableAlbumUrl(item);
       if(!url && searchAvailable) {
         status.textContent=`Spotify-Alben werden gesucht … ${index+1} von ${all.length}`;
-        try {const id=await findMatchingSpotifyAlbum(item);if(id)url=`https://open.spotify.com/album/${id}`;}
+        try {const id=await findMatchingSpotifyAlbum(item);if(id) { url=`https://open.spotify.com/album/${id}`; discovered.push({item,url}); }}
         catch {searchAvailable=false;}
       }
       if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
       if(url && queueAlbumForListening({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:''},url))added++;
     }
+    saveDiscoveredSpotifyAlbumLinks(discovered);
     status.textContent=added?`${added} ${added===1?'Album wurde':'Alben wurden'} zur Warteschlange hinzugefügt.${added<all.length?` ${all.length-added} ohne Hörlink übersprungen.`:''}`:'Keine Hörlinks gefunden. Bitte Spotify verbinden oder Album-Hörlinks speichern.';
   } catch(error) {status.textContent=error.message||'Das Fach konnte nicht eingereiht werden.';}
   finally {
