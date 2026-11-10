@@ -17108,61 +17108,48 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     let activeStatus=onStatus;
     const emit=(name,data={}) => { if (!destroyed) for(const fn of listeners.get(name)||[]) fn({data}); };
     const report=(text,fatal=false) => { if(!destroyed) activeStatus?.(text,fatal); };
-    // The SDK's automatic Media Session can expose millisecond track lengths as
-    // seconds to iOS (e.g. a 3:14 song appears to last ~54 hours).
-    // Publish a normalized, seconds-based Media Session ourselves instead.
-    // Keep Spotify's native iOS lock-screen metadata (cover, title, artist).
-    // Normalize only the erroneous millisecond-based Media Session position data.
+    // iOS Media Session expects seconds, but Spotify's SDK can publish
+    // millisecond durations. Disable SDK Media Session and own all metadata/time.
     const nativeMediaSession = navigator.mediaSession;
-    const originalSetPositionState = nativeMediaSession?.setPositionState;
-    if (typeof originalSetPositionState === 'function') {
-      try {
-        nativeMediaSession.setPositionState = function(details) {
-          if (!details || typeof details !== 'object') return originalSetPositionState.call(this, details);
-          let duration = Number(details.duration);
-          let position = Number(details.position);
-          // Spotify's SDK may pass milliseconds where the Media Session API expects seconds.
-          // 24+ hour tracks from Spotify's music player are invalid; normalize them.
-          if (Number.isFinite(duration) && duration > 86400) {
-            duration /= 1000;
-            if (Number.isFinite(position)) position /= 1000;
-          }
-          const fixed = {...details};
-          if (Number.isFinite(duration) && duration > 0) fixed.duration = duration;
-          if (Number.isFinite(position) && position >= 0 && Number.isFinite(duration) && duration > 0)
-            fixed.position = Math.min(position, duration);
-          return originalSetPositionState.call(this, fixed);
-        };
-      } catch (error) { console.warn('Spotify-Medienzeit-Korrektur:', error); }
-    }
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
+    let mediaTrackSignature = '';
     const syncSpotifyMediaSession = next => {
       const session = navigator.mediaSession;
       if (!session || !next) return;
       const track = next.track_window?.current_track;
-      const uri = track?.uri || '';
-      const durationMs = Number(track?.duration_ms) > 0 ? Number(track.duration_ms) : Number(next.duration);
-      const duration = Number.isFinite(durationMs) && durationMs > 0 ? durationMs / 1000 : 0;
-      const rawPosition = Number(next.position);
-      const position = Number.isFinite(rawPosition) && rawPosition >= 0 ? rawPosition / 1000 : 0;
-      if (uri && uri !== mediaTrackUri) {
-        mediaTrackUri = uri;
-        // Native SDK supplies the artwork and metadata; fill only when absent.
+      if (!track) return;
+      const uri = String(track.uri || '');
+      const title = String(track.name || 'Unbekannter Titel');
+      const artist = (track.artists || []).map(a => a?.name).filter(Boolean).join(', ');
+      const album = String(track.album?.name || '');
+      const artwork = (track.album?.images || []).filter(image => image?.url).map(image => ({
+        src: image.url,
+        ...(Number(image.width) > 0 && Number(image.height) > 0
+          ? {sizes: `${image.width}x${image.height}`} : {}),
+        type: 'image/jpeg'
+      }));
+      // Always set metadata ourselves. Checking !session.metadata is insufficient:
+      // the previous song's metadata may still be present after a track change.
+      const signature = JSON.stringify([uri, title, artist, album, artwork.map(a => a.src)]);
+      if (signature !== mediaTrackSignature || !session.metadata) {
         try {
-          if (!session.metadata && typeof MediaMetadata === 'function') session.metadata = new MediaMetadata({
-            title: track.name || 'Unbekannter Titel',
-            artist: (track.artists || []).map(artist => artist.name).filter(Boolean).join(', '),
-            album: track.album?.name || '',
-            artwork: (track.album?.images || []).filter(image => image.url).map(image => ({src:image.url, sizes:`${image.width || 300}x${image.height || 300}`}))
-          });
+          if (typeof MediaMetadata === 'function') {
+            session.metadata = new MediaMetadata({title, artist, album, artwork});
+            mediaTrackUri = uri;
+            mediaTrackSignature = signature;
+          }
         } catch (error) { console.warn('Spotify-Medieninformationen:', error); }
       }
       try { session.playbackState = next.paused ? 'paused' : 'playing'; } catch {}
+      const durationMs = Number(track.duration_ms) > 0 ? Number(track.duration_ms) : Number(next.duration);
+      const duration = Number.isFinite(durationMs) && durationMs > 0 ? durationMs / 1000 : 0;
+      const positionMs = Number(next.position);
+      const position = Number.isFinite(positionMs) && positionMs >= 0 ? positionMs / 1000 : 0;
       if (duration > 0 && typeof session.setPositionState === 'function') {
-        try { session.setPositionState({duration, position:Math.min(position,duration), playbackRate:1}); }
+        try { session.setPositionState({duration, position: Math.min(position, duration), playbackRate: 1}); }
         catch (error) { console.warn('Spotify-Medienposition:', error); }
       }
     };
@@ -17311,7 +17298,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       resume(){return this.play();},pause(){const version=++commandVersion;desiredPaused=true;desiredUntil=Date.now()+8000;return run(()=>version===commandVersion?sdk.pause():undefined,version);},
       // Closing an album view must not disconnect the Spotify Connect device.
       destroy(){listeners.clear();activeStatus=null;},
-      hardDestroy(){if(nativeMediaSession && typeof originalSetPositionState === 'function'){try{nativeMediaSession.setPositionState=originalSetPositionState;}catch{}}destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
+      hardDestroy(){destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
     };
     persistentSpotifySdkController=controller;
     callback(controller);
