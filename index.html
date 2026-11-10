@@ -7009,7 +7009,7 @@
   header .header-actions { gap:5px; }
   header .header-actions > .icon-btn,
   header .header-actions > .settings-wrap > .icon-btn { width:39px; height:39px; min-width:39px; }
-  #showAlbumMiniPlayerBtn svg { width:19px; height:19px; display:block; }
+  #showAlbumMiniPlayerBtn svg { width:23px; height:23px; display:block; }
 }
 /* The queue toggle must never share the settings/fullscreen button's icon state. */
 .album-mini-topbar .album-queue-toggle svg { display:block; }
@@ -7073,12 +7073,6 @@
   #fullscreenPlayerMenuSearch { font-size:16px; min-width:0; max-width:100%; }
   .fullscreen-player-menu { box-sizing:border-box; max-width:100%; overflow:hidden; }
 }
-#showAlbumMiniPlayerBtn svg { width:19px !important; height:19px !important; }
-.fullscreen-player-missing-links { margin:10px 0; font-size:13px; }
-.fullscreen-player-missing-links[hidden] { display:none; }
-.fullscreen-player-missing-links ul { list-style:none; padding:0; margin:8px 0 0; display:grid; gap:6px; }
-.fullscreen-player-missing-links button { width:100%; text-align:left; border:1px solid var(--border, #7775); border-radius:8px; padding:8px 10px; background:var(--surface-2, transparent); color:inherit; cursor:pointer; }
-.fullscreen-player-missing-links button:hover { filter:brightness(1.1); }
 </style>
 </head>
 <body>
@@ -7828,7 +7822,6 @@
     <button type="button" id="fullscreenPlayerCompartmentReset" class="fullscreen-player-compartment-reset" hidden></button>
     <div class="fullscreen-compartment-actions"><button type="button" id="fullscreenPlayerPlayCompartment" class="fullscreen-player-compartment-play" title="Alle Alben dieses Fachs abspielen" aria-label="Alle Alben dieses Fachs abspielen" hidden><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button><button type="button" id="fullscreenPlayerQueueCompartment" class="fullscreen-player-compartment-queue" hidden>Warteschlange hinzufügen</button></div>
     <p id="fullscreenPlayerCompartmentPlayStatus" class="settings-panel-hint" role="status" hidden></p>
-    <div id="fullscreenPlayerMissingLinks" class="fullscreen-player-missing-links" hidden></div>
     <ol id="fullscreenPlayerMenuList" class="fullscreen-player-menu-list"></ol>
   </aside>
   <form id="fullscreenPlayerPosterForm" class="fullscreen-player-poster-form" aria-label="Raum gestalten" hidden>
@@ -17108,60 +17101,36 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     let activeStatus=onStatus;
     const emit=(name,data={}) => { if (!destroyed) for(const fn of listeners.get(name)||[]) fn({data}); };
     const report=(text,fatal=false) => { if(!destroyed) activeStatus?.(text,fatal); };
-    // iOS Media Session expects seconds, but Spotify's SDK can publish
-    // millisecond durations. Disable SDK Media Session and own all metadata/time.
-    const nativeMediaSession = navigator.mediaSession;
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
-    let mediaTrackUri = '';
-    let mediaTrackSignature = '';
-    const syncSpotifyMediaSession = next => {
-      const session = navigator.mediaSession;
-      if (!session || !next) return;
-      const track = next.track_window?.current_track;
+    // Supply iOS with Spotify's real track metadata and timeline. The SDK may
+    // override Media Session on some Safari versions, so this is best effort.
+    let lastMediaTrack='';
+    const syncIphoneMediaSession = next => {
+      if (!('mediaSession' in navigator) || !next) return;
+      const track=next.track_window?.current_track;
       if (!track) return;
-      const uri = String(track.uri || '');
-      const title = String(track.name || 'Unbekannter Titel');
-      const artist = (track.artists || []).map(a => a?.name).filter(Boolean).join(', ');
-      const album = String(track.album?.name || '');
-      const artwork = (track.album?.images || []).filter(image => image?.url).map(image => ({
-        src: image.url,
-        ...(Number(image.width) > 0 && Number(image.height) > 0
-          ? {sizes: `${image.width}x${image.height}`} : {}),
-        type: 'image/jpeg'
-      }));
-      // Always set metadata ourselves. Checking !session.metadata is insufficient:
-      // the previous song's metadata may still be present after a track change.
-      const signature = JSON.stringify([uri, title, artist, album, artwork.map(a => a.src)]);
-      if (signature !== mediaTrackSignature || !session.metadata) {
-        try {
-          if (typeof MediaMetadata === 'function') {
-            session.metadata = new MediaMetadata({title, artist, album, artwork});
-            mediaTrackUri = uri;
-            mediaTrackSignature = signature;
-          }
-        } catch (error) { console.warn('Spotify-Medieninformationen:', error); }
-      }
-      try { session.playbackState = next.paused ? 'paused' : 'playing'; } catch {}
-      const durationMs = Number(track.duration_ms) > 0 ? Number(track.duration_ms) : Number(next.duration);
-      const duration = Number.isFinite(durationMs) && durationMs > 0 ? durationMs / 1000 : 0;
-      const positionMs = Number(next.position);
-      const position = Number.isFinite(positionMs) && positionMs >= 0 ? positionMs / 1000 : 0;
-      if (duration > 0 && typeof session.setPositionState === 'function') {
-        try { session.setPositionState({duration, position: Math.min(position, duration), playbackRate: 1}); }
-        catch (error) { console.warn('Spotify-Medienposition:', error); }
-      }
+      const durationMs=Number(next.duration ?? track.duration_ms);
+      const positionMs=Number(next.position);
+      const duration=Number.isFinite(durationMs)&&durationMs>0 ? durationMs/1000 : 0;
+      const position=Number.isFinite(positionMs)&&positionMs>=0 ? Math.min(positionMs/1000,duration||positionMs/1000) : 0;
+      try {
+        if (typeof MediaMetadata !== 'undefined' && (lastMediaTrack!==track.uri || !navigator.mediaSession.metadata)) {
+          const images=(track.album?.images||[]).filter(i=>i?.url).map(i=>({src:i.url,sizes:i.width&&i.height?`${i.width}x${i.height}`:'any',type:'image/jpeg'}));
+          navigator.mediaSession.metadata=new MediaMetadata({
+            title:track.name||'', artist:(track.artists||[]).map(a=>a.name).filter(Boolean).join(', '),
+            album:track.album?.name||'', artwork:images
+          });
+          lastMediaTrack=track.uri||'';
+        }
+        navigator.mediaSession.playbackState=next.paused?'paused':'playing';
+        // Do not pass timestamps or milliseconds: iOS expects seconds.
+        if (duration>0 && typeof navigator.mediaSession.setPositionState==='function') {
+          navigator.mediaSession.setPositionState({duration,position,playbackRate:next.paused?0:1});
+        }
+      } catch(error) { console.debug('iOS Media Session update unavailable:',error); }
     };
-    if (navigator.mediaSession?.setActionHandler) {
-      for (const [action, handler] of [
-        ['play', () => controller.play()],
-        ['pause', () => controller.pause()],
-        ['seekto', details => controller.seek(details.seekTime || 0)],
-        ['seekbackward', details => controller.seek(Math.max(0,(Number(state?.position)||0)/1000-(details.seekOffset||10)))],
-        ['seekforward', details => controller.seek((Number(state?.position)||0)/1000+(details.seekOffset||10))]
-      ]) { try { navigator.mediaSession.setActionHandler(action, handler); } catch {} }
-    }
     const pushState=next => {
       if(destroyed||!next)return;
       const uri=next.track_window?.current_track?.uri || '';
@@ -17169,7 +17138,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       if(desiredPaused!==null && next.paused===desiredPaused && (!desiredUri || uri===desiredUri)) { desiredUri='';desiredPaused=null; }
       stateRevision++;
       const previous=state;state=next;
-      syncSpotifyMediaSession(next);
+      syncIphoneMediaSession(next);
       if(!next.paused) {
         clearTimeout(persistentSpotifyIdleTimer);
         persistentSpotifyIdleTimer = null;
@@ -17182,10 +17151,10 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
         }, 30 * 60 * 1000);
       }
       if(!next.paused && (!previous||previous.paused))emit('playback_started',{track_window:next.track_window});
-      emit('playback_update',{isPaused:next.paused,position:next.position,duration:Number(next.track_window?.current_track?.duration_ms) || next.duration,track_window:next.track_window,playingURI:next.track_window?.current_track?.uri});
+      emit('playback_update',{isPaused:next.paused,position:next.position,duration:next.duration,track_window:next.track_window,playingURI:next.track_window?.current_track?.uri});
       if(next.paused && next.position===0 && previous && !previous.paused && previous.duration>0 && previous.duration-previous.position<3500)emit('playback_ended');
     };
-    sdk.addListener('player_state_changed',pushState);
+    sdk.addListener('player_state_changed',next=>{pushState(next);if(next)queueMicrotask(()=>{if(!destroyed && state===next)syncIphoneMediaSession(next);});});
     sdk.addListener('ready',({device_id})=>{
       if(destroyed)return;sdkReady();clearTimeout(reconnectTimer);reconnectAttempts=0;deviceId=device_id;settleDeviceWaiters(device_id);emit('ready');
       poll=setInterval(async()=>{
@@ -17254,7 +17223,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
             throw new Error(`Spotify konnte nicht vorspulen (HTTP ${response.status}).`);
           }
           if(state)state={...state,position};
-          emit('playback_update',{isPaused:state?.paused??false,position,duration:Number(state?.track_window?.current_track?.duration_ms) || state?.duration || 0,track_window:state?.track_window,playingURI:state?.track_window?.current_track?.uri});
+          emit('playback_update',{isPaused:state?.paused??false,position,duration:state?.duration||0,track_window:state?.track_window,playingURI:state?.track_window?.current_track?.uri});
         });
       },
       play(){
@@ -17298,7 +17267,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       resume(){return this.play();},pause(){const version=++commandVersion;desiredPaused=true;desiredUntil=Date.now()+8000;return run(()=>version===commandVersion?sdk.pause():undefined,version);},
       // Closing an album view must not disconnect the Spotify Connect device.
       destroy(){listeners.clear();activeStatus=null;},
-      hardDestroy(){destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
+      hardDestroy(){destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();sdk.disconnect();}
     };
     persistentSpotifySdkController=controller;
     callback(controller);
@@ -17478,18 +17447,7 @@ function queueListeningCloudSave(session) {
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       });
-    }).catch(error => {
-      console.error('Warteschlange konnte nicht mit Firebase synchronisiert werden:', error);
-      if (currentUid === uid) {
-        // Bei einem fehlgeschlagenen Schreiben darf der identische Zustand
-        // nicht dauerhaft als bereits synchronisiert gelten.
-        listeningSyncLastSerialized = '';
-        setTimeout(() => {
-          if (currentUid === uid && !listeningSyncApplyingRemote)
-            queueListeningCloudSave(buildListeningSession());
-        }, 2500);
-      }
-    });
+    }).catch(error => console.error('Warteschlange konnte nicht mit Firebase synchronisiert werden:', error));
   }, 450);
 }
 function applyCloudListeningSession(data, initial = false) {
@@ -19416,39 +19374,6 @@ function setFullscreenPlayerMenuOpen(isOpen) {
   }
 }
 
-function uniqueFullscreenAlbums(items) {
-  const seen = new Map();
-  const normalized = value => String(value || '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
-  for (const item of items) {
-    const key = `${normalized(item.artist)}\u0000${normalized(item.title)}`;
-    if (!seen.has(key)) seen.set(key, item);
-    else if (!getQueueableAlbumUrl(seen.get(key)) && getQueueableAlbumUrl(item)) seen.set(key, item);
-  }
-  return [...seen.values()];
-}
-function showFullscreenMissingLinks(items) {
-  const panel = document.getElementById('fullscreenPlayerMissingLinks');
-  if (!panel) return;
-  panel.replaceChildren();
-  panel.hidden = !items.length;
-  if (!items.length) return;
-  const heading = document.createElement('strong');
-  heading.textContent = `${items.length} ${items.length === 1 ? 'Album ohne Hörlink' : 'Alben ohne Hörlink'} – manuell prüfen:`;
-  panel.append(heading);
-  const list = document.createElement('ul');
-  for (const item of items) {
-    const li = document.createElement('li');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = `${item.artist || 'Unbekannter Interpret'} – ${item.title || 'Unbenanntes Album'} · Link suchen`;
-    button.title = 'Album öffnen und Hörlink manuell auswählen';
-    button.addEventListener('click', () => openAlbumListening(item));
-    li.append(button);
-    list.append(li);
-  }
-  panel.append(list);
-}
-
 function getFullscreenPlayerMenuItems() {
   const query = (document.getElementById('fullscreenPlayerMenuSearch')?.value || '').trim().toLowerCase();
   let source = ownCollection;
@@ -19457,10 +19382,10 @@ function getFullscreenPlayerMenuItems() {
     source = shelf && isValidShelfCompartment(shelf, fullscreenPlayerCompartment.number)
       ? getFullscreenShelfCompartmentItems(shelf, fullscreenPlayerCompartment.number) : [];
   }
-  return uniqueFullscreenAlbums(source.filter(item => {
+  return source.filter(item => {
     if (!fullscreenPlayerCompartment && fullscreenPlayerMenuFilter === 'owned' && !item.owned) return false;
     return !query || `${item.title || ''} ${item.artist || ''}`.toLowerCase().includes(query);
-  }));
+  });
 }
 
 function playAlbumFromFullscreenMenu(item) {
@@ -19478,41 +19403,18 @@ function getFullscreenCompartmentPlaybackItems() {
   const compartment = fullscreenPlayerCompartment;
   const shelf = shelfLocations.find(entry => entry.id === compartment?.shelfId);
   if (!shelf || !isValidShelfCompartment(shelf, compartment.number)) return [];
-  return uniqueFullscreenAlbums(getFullscreenShelfCompartmentItems(shelf, compartment.number));
-}
-// Neue Treffer erst nach dem Suchdurchlauf gemeinsam in der Sammlung sichern.
-function saveDiscoveredSpotifyAlbumLinks(found) {
-  if (!found.length || !currentUid) return 0;
-  const byKey = item => `${String(item.artist || '').normalize('NFKC').trim().toLowerCase()}\u0000${String(item.title || '').normalize('NFKC').trim().toLowerCase()}`;
-  const links = new Map(found.map(({item, url}) => [byKey(item), normalizeSpotifyAlbumLink(url)]));
-  let changed = 0;
-  for (const item of ownCollection) {
-    const url = links.get(byKey(item));
-    if (url && !normalizeSpotifyAlbumLink(item.spotifyAlbumUrl) && !getQueueableAlbumUrl(item)) {
-      item.spotifyAlbumUrl = url;
-      changed++;
-    }
-  }
-  if (changed) {
-    // Ein lokaler Snapshot und ein debounceter Cloud-Save; vorhandene
-    // Collection-V2-Logik schreibt nur veränderte Chunks.
-    saveOwnCollectionData(true);
-  }
-  return changed;
+  return getFullscreenShelfCompartmentItems(shelf, compartment.number);
 }
 async function playFullscreenCompartment() {
   const button=document.getElementById('fullscreenPlayerPlayCompartment');
   if(button.dataset.busy==='true')return;
   const compartmentKey=JSON.stringify(fullscreenPlayerCompartment);
   const all=getFullscreenCompartmentPlaybackItems();
-  showFullscreenMissingLinks([]);
   if(!all.length)return;
   button.dataset.busy='true';button.disabled=true;
   const status=document.getElementById('fullscreenPlayerCompartmentPlayStatus');
   status.hidden=false;
   const playable=[];
-  const missing=[];
-  const discovered=[];
   let searchAvailable=false,searchError='';
   beginListeningQueueBulk();
   try {
@@ -19521,27 +19423,20 @@ async function playFullscreenCompartment() {
       const item=all[index];let url=getQueueableAlbumUrl(item);
       if(!url && searchAvailable) {
         status.textContent=`Spotify-Alben werden gesucht … ${index+1} von ${all.length}`;
-        try {const id=await findMatchingSpotifyAlbum(item);if(id) { url=`https://open.spotify.com/album/${id}`; discovered.push({item,url}); }}
+        try {const id=await findMatchingSpotifyAlbum(item);if(id)url=`https://open.spotify.com/album/${id}`;}
         catch(error){searchError='Die Spotify-Suche konnte nicht fortgesetzt werden.';searchAvailable=false;}
       }
       if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
       if(url)playable.push({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:'',listeningUrl:url});
-      else missing.push(item);
     }
-    saveDiscoveredSpotifyAlbumLinks(discovered);
-    const skipped=missing.length;
-    showFullscreenMissingLinks(missing);
+    const skipped=all.length-playable.length;
     if(!playable.length) {status.textContent=searchError||'Keine Hörlinks gefunden. Bitte Spotify verbinden oder Album-Hörlinks speichern.';return;}
     listeningAlbumQueue.splice(0,listeningAlbumQueue.length,...playable.slice(1));
-    listeningQueueBulkDirty = true;
-    endListeningQueueBulk();
+    updateAlbumQueueControls();
     status.textContent=`${playable.length} ${playable.length===1?'Album wird':'Alben werden'} abgespielt.${skipped?` ${skipped} ohne passenden Hörlink übersprungen.`:''}${searchError?' '+searchError:''}`;
     await openAlbumListening(playable[0]);
   } catch(error) {status.textContent=error.message||'Die Fach-Wiedergabe konnte nicht gestartet werden.';}
-  finally {
-    endListeningQueueBulk();
-    delete button.dataset.busy;button.disabled=false;
-  }
+  finally {delete button.dataset.busy;button.disabled=false;}
 }
 document.getElementById('fullscreenPlayerPlayCompartment').addEventListener('click',playFullscreenCompartment);
 async function queueFullscreenCompartment() {
@@ -19554,8 +19449,6 @@ async function queueFullscreenCompartment() {
   const status=document.getElementById('fullscreenPlayerCompartmentPlayStatus');
   status.hidden=false;
   let added=0,searchAvailable=false;
-  const discovered=[];
-  beginListeningQueueBulk();
   try {
     if(all.some(item=>!getQueueableAlbumUrl(item)) && isSpotifyIntegrationAvailable())searchAvailable=!!(await getSpotifyAccessToken());
     for(let index=0;index<all.length;index++) {
@@ -19563,13 +19456,12 @@ async function queueFullscreenCompartment() {
       const item=all[index];let url=getQueueableAlbumUrl(item);
       if(!url && searchAvailable) {
         status.textContent=`Spotify-Alben werden gesucht … ${index+1} von ${all.length}`;
-        try {const id=await findMatchingSpotifyAlbum(item);if(id) { url=`https://open.spotify.com/album/${id}`; discovered.push({item,url}); }}
+        try {const id=await findMatchingSpotifyAlbum(item);if(id)url=`https://open.spotify.com/album/${id}`;}
         catch {searchAvailable=false;}
       }
       if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
       if(url && queueAlbumForListening({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:''},url))added++;
     }
-    saveDiscoveredSpotifyAlbumLinks(discovered);
     status.textContent=added?`${added} ${added===1?'Album wurde':'Alben wurden'} zur Warteschlange hinzugefügt.${added<all.length?` ${all.length-added} ohne Hörlink übersprungen.`:''}`:'Keine Hörlinks gefunden. Bitte Spotify verbinden oder Album-Hörlinks speichern.';
   } catch(error) {status.textContent=error.message||'Das Fach konnte nicht eingereiht werden.';}
   finally {
@@ -19596,7 +19488,6 @@ function renderFullscreenPlayerMenu() {
   reset.hidden = !isCompartment;
   reset.textContent = '← Gesamte Sammlung';
   const playAll=document.getElementById('fullscreenPlayerPlayCompartment');
-  if (!isCompartment) showFullscreenMissingLinks([]);
   playAll.hidden=!isCompartment;
   const queueAll=document.getElementById('fullscreenPlayerQueueCompartment');
   queueAll.hidden=!isCompartment;
