@@ -6460,6 +6460,9 @@
 .spotify-import-destination label { display:flex; flex-direction:column; gap:4px; flex:1 1 130px; min-width:0; font-size:12px; color:var(--text-secondary); }
 .spotify-import-destination select { width:100%; min-width:0; }
 
+.audio-extension-install { color:var(--accent); font-size:12px; text-decoration:none; padding:4px 0; }
+.audio-extension-install:hover { text-decoration:underline; }
+#fullscreenAudioExtensionStatus { display:block; font-size:11px; line-height:1.4; color:var(--text-secondary); }
 #cloudSyncBanner {
   position: fixed;
   z-index: 2147483647;
@@ -7826,6 +7829,8 @@
     <section class="fullscreen-audio-settings" aria-label="Audio-Equalizer">
       <strong>Audio-Equalizer</strong>
       <button type="button" id="fullscreenAudioConnect">Audio mit Equalizer verbinden</button>
+      <a class="audio-extension-install" href="audio-extension/install.html" target="_blank" rel="noopener">Audio-Erweiterung installieren · ohne Store</a>
+      <small id="fullscreenAudioExtensionStatus" role="status">Erweiterung wird gesucht …</small>
       <p id="fullscreenAudioStatus" class="settings-panel-hint audio-status-error" role="status" aria-live="polite" hidden></p>
       <label class="audio-responsiveness" for="fullscreenAudioResponsiveness">Responsiveness <output id="fullscreenAudioResponsivenessValue">40%</output></label>
       <input type="range" id="fullscreenAudioResponsiveness" min="0" max="100" step="1" value="40" aria-label="Responsiveness">
@@ -18050,6 +18055,69 @@ document.getElementById('fullscreenPlayerMusicSettingsClose').addEventListener('
 
 // Live audio is session-only. Permission and media streams are never persisted.
 let fullscreenAudioSession = null;
+let vinylAudioExtensionPresent=false;
+let vinylAudioExtensionSessionId='';
+let vinylAudioExtensionLastSeen=0;
+let vinylAudioExtensionLastPaint=0;
+function sendVinylAudioExtension(command, extra={}) {
+  window.postMessage({channel:'vinyl-eq-page-v1',command,...extra},location.origin);
+}
+function connectVinylAudioExtension(sessionId) {
+  if(fullscreenAudioSession?.kind==='extension' && fullscreenAudioSession.sessionId===sessionId)return;
+  if(fullscreenAudioSession)stopFullscreenAudioAnalysis();
+  const eq=document.getElementById('fullscreenPlayerEq');
+  const bars=[...eq.querySelectorAll('span')];
+  bars.forEach(bar=>{bar.dataset.decorativeHeight=bar.style.height;bar.style.height='100%';});
+  fullscreenAudioSession={kind:'extension',sessionId,connected:true,bars};
+  eq.classList.add('is-live-audio');
+  sendVinylAudioExtension('RESPONSIVENESS',{value:fullscreenRoomStyle.responsiveness});
+  updateFullscreenAudioUi();
+}
+window.addEventListener('message',event=>{
+  const data=event.data;
+  if(event.source!==window || event.origin!==location.origin || data?.channel!=='vinyl-eq-extension-v1' || data.version!==1)return;
+  if(!['status','bands'].includes(data.type))return;
+  vinylAudioExtensionPresent=true;
+  vinylAudioExtensionLastSeen=Date.now();
+  const status=document.getElementById('fullscreenAudioExtensionStatus');
+  if(data.type==='status'){
+    if(data.active && typeof data.sessionId==='string'){
+      vinylAudioExtensionSessionId=data.sessionId;
+      connectVinylAudioExtension(data.sessionId);
+      status.textContent='Erweiterung verbunden · Live-Audio';
+    }else{
+      if(fullscreenAudioSession?.kind==='extension')stopFullscreenAudioAnalysis();
+      vinylAudioExtensionSessionId='';
+      status.textContent=data.error || 'Erweiterung erkannt · zum Start oben ihr Browser-Symbol anklicken.';
+    }
+    updateFullscreenAudioUi(data.error||'',!!data.error);
+    return;
+  }
+  if(data.sessionId!==vinylAudioExtensionSessionId || fullscreenAudioSession?.kind!=='extension')return;
+  if(!Array.isArray(data.levels)||data.levels.length!==32||!data.levels.every(value=>Number.isFinite(value)&&value>=0&&value<=1))return;
+  if(document.hidden || !isFullscreenPlayerOpen() || performance.now()-vinylAudioExtensionLastPaint<40)return;
+  vinylAudioExtensionLastPaint=performance.now();
+  const bars=fullscreenAudioSession.bars;
+  bars.forEach((bar,index)=>{
+    const from=Math.floor(index*32/bars.length),to=Math.max(from+1,Math.ceil((index+1)*32/bars.length));
+    let sum=0;for(let i=from;i<Math.min(32,to);i++)sum+=data.levels[i];
+    const level=Math.max(.018,sum/(to-from)).toFixed(2);
+    if(bar.style.getPropertyValue('--eq-level')!==level)bar.style.setProperty('--eq-level',level);
+  });
+});
+// Content scripts can arrive after the page script. Handshake again on reload/focus.
+sendVinylAudioExtension('STATUS');
+window.addEventListener('focus',()=>sendVinylAudioExtension('STATUS'));
+setTimeout(()=>{
+  if(!vinylAudioExtensionPresent)document.getElementById('fullscreenAudioExtensionStatus').textContent='Optional für Desktop-Chrome / Edge. Einmal manuell installieren.';
+},1800);
+setInterval(()=>{
+  if(fullscreenAudioSession?.kind==='extension' && Date.now()-vinylAudioExtensionLastSeen>5000){
+    stopFullscreenAudioAnalysis('Verbindung zur Audio-Erweiterung unterbrochen.',true);
+    sendVinylAudioExtension('STATUS');
+  }
+},2500);
+
 
 function fullscreenAudioSupported() {
   return !!(window.isSecureContext && navigator.mediaDevices?.getDisplayMedia
@@ -18059,11 +18127,11 @@ function updateFullscreenAudioUi(message = '', isError = false) {
   const button = document.getElementById('fullscreenAudioConnect');
   const status = document.getElementById('fullscreenAudioStatus');
   const pending = fullscreenAudioSession && !fullscreenAudioSession.connected;
-  button.disabled = !!pending || !fullscreenAudioSupported();
+  button.disabled = !!pending || (!fullscreenAudioSession?.connected && !fullscreenAudioSupported());
   button.textContent = pending ? 'Freigabe wird geöffnet …'
     : fullscreenAudioSession?.connected ? 'Audio-Verbindung trennen' : 'Audio mit Equalizer verbinden';
   button.setAttribute('aria-pressed', String(!!fullscreenAudioSession?.connected));
-  status.hidden = !isError && fullscreenAudioSupported();
+  status.hidden = !isError && (vinylAudioExtensionPresent || fullscreenAudioSupported());
   if (message) status.textContent = message;
   else if (!fullscreenAudioSupported()) status.textContent = 'Tab-Audio-Freigabe ist in diesem Browser nicht verfügbar. Öffne die Seite in einem unterstützten Desktop-Browser.';
   else if (!fullscreenAudioSession) status.textContent = 'Dekorative Animation · kein Audio verbunden.';
@@ -18072,6 +18140,7 @@ function stopFullscreenAudioAnalysis(message = '', isError = false) {
   const session = fullscreenAudioSession;
   fullscreenAudioSession = null;
   if (session) {
+    if(session.kind==='extension')sendVinylAudioExtension('STOP',{sessionId:session.sessionId});
     if (session.frame) cancelAnimationFrame(session.frame);
     session.source?.disconnect();
     session.analyser?.disconnect();
@@ -18538,6 +18607,7 @@ window.addEventListener('resize',()=>{
 function applyFullscreenAudioResponsiveness(session = fullscreenAudioSession) {
   const value = Math.max(0, Math.min(100, Number(fullscreenRoomStyle.responsiveness) || 0));
   const response = value / 100;
+  if(session?.kind==='extension')sendVinylAudioExtension('RESPONSIVENESS',{value});
   const input = document.getElementById('fullscreenAudioResponsiveness');
   input.value = String(value);
   input.setAttribute('aria-valuetext', value === 100 ? 'Direkt' : value === 0 ? 'Stark geglättet' : `${value} Prozent`);

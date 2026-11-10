@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vinyl · Audio-Erweiterung einrichten</title>
+<style>body{margin:0;background:#111114;color:#eee;font:16px/1.65 system-ui,sans-serif}main{max-width:740px;margin:48px auto;padding:24px}h1{font-size:30px;line-height:1.2}a{color:#cba4ff}.download{display:inline-block;background:#a855f7;color:white;text-decoration:none;padding:12px 18px;border-radius:9px}li{margin:12px 0}code{background:#25252c;padding:3px 6px;border-radius:4px;overflow-wrap:anywhere}.note{color:#b9b9c4}section{background:#1e1e24;padding:20px;border-radius:12px;margin:24px 0}h2{font-size:19px;margin-top:0}</style></head>
+<body><main><a href="/">← Zur Vinyl-Sammlung</a><h1>Audio-Erweiterung einrichten</h1>
+<p>Direkt von dieser Webseite, ohne Store. Der Download installiert noch nichts: Chrome und Edge benötigen einmalig eine manuelle Einrichtung auf deinem Desktop.</p>
+<a class="download" href="../downloads/vinyl-equalizer.zip" download>Erweiterung herunterladen · ZIP</a>
+<section><h2>Einmal installieren</h2><ol>
+<li>ZIP herunterladen und entpacken. Den Ordner <strong>vinyl-equalizer</strong> dauerhaft auf deinem Computer behalten.</li>
+<li>In Chrome <code>chrome://extensions</code> öffnen; in Edge <code>edge://extensions</code>. Diese Adresse in die Adressleiste kopieren.</li>
+<li><strong>Entwicklermodus</strong> aktivieren und <strong>Entpackte Erweiterung laden</strong> wählen.</li>
+<li>Den entpackten Ordner <strong>vinyl-equalizer</strong> mit der Datei <code>manifest.json</code> auswählen.</li>
+<li>Die Vinyl-Seite neu laden und die Erweiterung über das Puzzle-Symbol des Browsers anheften.</li>
+</ol></section>
+<section><h2>Equalizer starten</h2><ol>
+<li>Die Vinyl-Seite in Chrome oder Edge öffnen und Musik starten.</li>
+<li>Einmal oben im Browser auf <strong>Vinyl · Audio-Equalizer</strong> klicken. Damit erlaubst du die Analyse dieses Tabs.</li>
+<li>Die Seite erkennt die laufende Verbindung automatisch. Der Equalizer folgt jetzt dem Tab-Audio.</li>
+</ol><p>Ein erneuter Klick auf das Erweiterungssymbol oder „Audio-Verbindung trennen“ auf der Webseite stoppt die Analyse.</p></section>
+<p class="note">Der Ton bleibt hörbar. Die Erweiterung speichert keine Aufnahme und sendet kein Audio an einen Server. Sie gibt nur 32 Frequenzwerte an den Vinyl-Tab weiter. Die normale Bildschirmfreigabe entfällt; der Browser kann trotzdem einen Aufnahmeindikator anzeigen. Nach Browserneustarts, einem Neuladen der Seite oder einer beendeten Freigabe ist ein neuer Klick nötig.</p>
+<p class="note">Für Desktop-Chrome ab Version 116 und entsprechend aktuelle Edge-Versionen. Nicht für Safari, mobile Browser oder den eingebetteten Codex-Browser. Geschützte Medien können vom Browser stumm geliefert werden. Updates: neue ZIP entpacken und die Erweiterung auf der Erweiterungsseite neu laden.</p>
+<p><a href="https://developer.chrome.com/docs/extensions/how-to/web-platform/screen-capture">Technischer Hintergrund zur Tab-Audiofreigabe</a></p>
+</main></body></html>

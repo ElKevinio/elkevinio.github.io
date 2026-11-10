@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Vinyl · Audio-Equalizer",
+  "description": "Analysiert nach einem Klick den Ton des Vinyl-Tabs lokal für dessen Equalizer. Keine Aufnahme oder Übertragung von Audio.",
+  "version": "1.0.0",
+  "minimum_chrome_version": "116",
+  "permissions": ["activeTab", "tabCapture", "offscreen"],
+  "action": {"default_title": "Vinyl-Equalizer starten / stoppen"},
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [{
+    "matches": ["https://vinyl.elkevinio.de/*", "http://localhost/*", "http://127.0.0.1/*"],
+    "js": ["bridge.js"],
+    "run_at": "document_idle",
+    "all_frames": false
+  }]
+}
