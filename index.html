@@ -7073,7 +7073,11 @@
   #fullscreenPlayerMenuSearch { font-size:16px; min-width:0; max-width:100%; }
   .fullscreen-player-menu { box-sizing:border-box; max-width:100%; overflow:hidden; }
 }
-#showAlbumMiniPlayerBtn svg { width:19px !important; height:19px !important; }
+/* Desktop: compact music icon; retain the already-correct mobile size. */
+#showAlbumMiniPlayerBtn svg { width:16px !important; height:16px !important; }
+@media (max-width:700px) {
+  #showAlbumMiniPlayerBtn svg { width:19px !important; height:19px !important; }
+}
 .fullscreen-player-missing-links { margin:10px 0; font-size:13px; }
 .fullscreen-player-missing-links[hidden] { display:none; }
 .fullscreen-player-missing-links ul { list-style:none; padding:0; margin:8px 0 0; display:grid; gap:6px; }
@@ -17108,42 +17112,11 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     let activeStatus=onStatus;
     const emit=(name,data={}) => { if (!destroyed) for(const fn of listeners.get(name)||[]) fn({data}); };
     const report=(text,fatal=false) => { if(!destroyed) activeStatus?.(text,fatal); };
-    // iOS Media Session expects seconds, but Spotify's SDK can publish
-    // millisecond durations. Disable SDK Media Session and own all metadata/time.
-    const nativeMediaSession = navigator.mediaSession;
-    // Spotify SDK versions can pass milliseconds to the Media Session API,
-    // which expects seconds (3:15 then appears as about 54 hours on iOS).
-    // Normalize those writes at the API boundary, while leaving SDK metadata enabled.
-    let restoreSpotifyPositionState = () => {};
-    if (nativeMediaSession && typeof nativeMediaSession.setPositionState === 'function') {
-      const originalSetPositionState = nativeMediaSession.setPositionState;
-      const correctedSetPositionState = function(details) {
-        if (!details || typeof details !== 'object') return originalSetPositionState.call(this, details);
-        const normalized = {...details};
-        const duration = Number(normalized.duration);
-        const position = Number(normalized.position);
-        // Typical music tracks cannot last 10+ hours. A duration over 36000
-        // accompanied by a plausible millisecond track duration is an SDK unit error.
-        if (Number.isFinite(duration) && duration > 36000 && duration < 86400000) {
-          normalized.duration = duration / 1000;
-          if (Number.isFinite(position)) normalized.position = position / 1000;
-        }
-        if (Number.isFinite(normalized.duration) && normalized.duration > 0 && Number.isFinite(normalized.position)) {
-          normalized.position = Math.max(0, Math.min(normalized.position, normalized.duration));
-        }
-        return originalSetPositionState.call(this, normalized);
-      };
-      try {
-        nativeMediaSession.setPositionState = correctedSetPositionState;
-        if (nativeMediaSession.setPositionState === correctedSetPositionState) {
-          restoreSpotifyPositionState = () => {
-            if (nativeMediaSession.setPositionState === correctedSetPositionState)
-              nativeMediaSession.setPositionState = originalSetPositionState;
-          };
-        }
-      } catch (error) { console.warn('Spotify-Zeitkorrektur konnte nicht installiert werden:', error); }
-    }
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
+    // Own the browser Media Session: the Spotify SDK may publish millisecond
+    // durations to iOS as seconds. Our SDK state stays in milliseconds;
+    // only Media Session metadata and position are converted to seconds.
+    const restoreSpotifyPositionState = () => {};
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
