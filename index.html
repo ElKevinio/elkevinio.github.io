@@ -17037,6 +17037,26 @@ function preloadSpotifyPlayer(item) {
   void (shouldUseSpotifyWebPlayback()?loadSpotifyWebPlaybackScript():loadSpotifyIframeApi()).catch(()=>{});
   if(isSpotifyIntegrationAvailable())void loadSpotifyContextTracks(url).catch(()=>{});
 }
+// iOS Now Playing: Das Spotify-SDK schreibt Millisekunden-Werte in setPositionState
+// (iOS liest sie als Sekunden -> "43:20:41") und ueberschreibt Titel/Cover. Fremde Aufrufe
+// werden blockiert; nur Aufrufe innerhalb von trustedMediaSession.run() kommen durch.
+const trustedMediaSession = (() => {
+  let trusted = false;
+  const proto = window.MediaSession && window.MediaSession.prototype;
+  if (proto && typeof proto.setPositionState === 'function' && !proto.__vinylGuard) {
+    proto.__vinylGuard = true;
+    const nativePosition = proto.setPositionState;
+    proto.setPositionState = function (state) { if (!trusted) return; return nativePosition.call(this, state); };
+    const desc = Object.getOwnPropertyDescriptor(proto, 'metadata');
+    if (desc && desc.set && desc.configurable) {
+      Object.defineProperty(proto, 'metadata', {
+        configurable: true, enumerable: desc.enumerable, get: desc.get,
+        set(value) { if (!trusted) return; desc.set.call(this, value); }
+      });
+    }
+  }
+  return { run(fn) { trusted = true; try { return fn(); } finally { trusted = false; } } };
+})();
 let spotifyIframeApiPromise = null;
 
 function loadSpotifyIframeApi() {
@@ -17142,7 +17162,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       if (signature !== mediaTrackSignature || !session.metadata) {
         try {
           if (typeof MediaMetadata === 'function') {
-            session.metadata = new MediaMetadata({title, artist, album, artwork});
+            trustedMediaSession.run(() => { session.metadata = new MediaMetadata({title, artist, album, artwork}); });
             mediaTrackUri = uri;
             mediaTrackSignature = signature;
           }
@@ -17154,7 +17174,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       const positionMs = Number(next.position);
       const position = Number.isFinite(positionMs) && positionMs >= 0 ? positionMs / 1000 : 0;
       if (duration > 0 && typeof session.setPositionState === 'function') {
-        try { session.setPositionState({duration, position: Math.min(position, duration), playbackRate: 1}); }
+        try { trustedMediaSession.run(() => session.setPositionState({duration, position: Math.min(position, duration), playbackRate: 1})); }
         catch (error) { console.warn('Spotify-Medienposition:', error); }
       }
     };
@@ -21097,6 +21117,31 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     message.hidden=false;message.textContent='Spotify-Embed wird geladen …';host.replaceChildren(controllerTarget);
     initializeController(false);
   });
+  // Embed-Engine: Titel, Interpret, Cover und Zeit (ms -> s) selbst an die Medienanzeige melden.
+  const syncEmbedMediaSession = state => {
+    const session = navigator.mediaSession;
+    if (!session || typeof MediaMetadata !== 'function' || !state) return;
+    const entry = tracks[currentIndex];
+    const title = (entry && entry.title) || currentTrack.textContent || (item && item.title) || 'Unbekannter Titel';
+    const artistName = (item && item.artist) || artist.textContent || '';
+    const albumName = (item && item.title) || '';
+    const cover = (item && item.coverUrl) || '';
+    const signature = JSON.stringify([title, artistName, albumName, cover]);
+    trustedMediaSession.run(() => {
+      try {
+        if (signature !== session.__vinylEmbedSig || !session.metadata) {
+          session.metadata = new MediaMetadata({title, artist: artistName, album: albumName, artwork: cover ? [{src: cover}] : []});
+          session.__vinylEmbedSig = signature;
+        }
+        session.playbackState = state.isPaused ? 'paused' : 'playing';
+        const duration = (Number(state.duration) || 0) / 1000;
+        const position = (Number(state.position) || 0) / 1000;
+        if (duration > 0 && typeof session.setPositionState === 'function') {
+          session.setPositionState({duration, position: Math.min(Math.max(position, 0), duration), playbackRate: 1});
+        }
+      } catch (error) { console.warn('Embed-Medieninformationen:', error); }
+    });
+  };
   let controllerGeneration=0;
   const initializeController = useSdk => {
   const generation=++controllerGeneration;
@@ -21177,6 +21222,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         scheduleListeningCloudPauseConfirmation(playbackIsPaused);
         updateCurrentTrack(state);
         updateListeningCloudPlaybackConfirmation(state, playingUri);
+        if (!controller.isWebPlaybackSdk) syncEmbedMediaSession(state);
         if (!restoringPausedTrack || !playbackIsPaused) {
           listeningPlaybackState = {
             trackUri: playingUri || listeningPlaybackState.trackUri,
