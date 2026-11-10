@@ -20975,6 +20975,101 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     uri: typeof track === 'string' ? '' : track.uri || track.spotifyUri || ''
   }));
   renderTracks(fallbackTracks);
+  // Spotify auch im Hintergrund nach Möglichkeit abfragen, ohne Firebase-Schreibvorgänge.
+  // Mobile Browser dürfen Hintergrund-Timer jederzeit drosseln oder vollständig pausieren.
+  let lastSpotifyNowPlayingCheck = 0;
+  let spotifyNowPlayingRequest = 0;
+  let spotifyNowPlayingInFlight = false;
+  const refreshSpotifyNowPlayingDisplay = async (force = false) => {
+    if (!host.isConnected || !isSpotifyIntegrationAvailable() || spotifyNowPlayingInFlight) return;
+    const minimumGap = 30000;
+    if (!force && Date.now() - lastSpotifyNowPlayingCheck < minimumGap) return;
+    lastSpotifyNowPlayingCheck = Date.now();
+    spotifyNowPlayingInFlight = true;
+    const requestId = ++spotifyNowPlayingRequest;
+    try {
+      const token = await getSpotifyAccessToken();
+      if (!token || !host.isConnected) return;
+      const response = await fetch('https://api.spotify.com/v1/me/player', {
+        headers: {Authorization: `Bearer ${token}`}
+      });
+      if (!response.ok || response.status === 204) return;
+      const data = await response.json();
+      if (requestId !== spotifyNowPlayingRequest || !host.isConnected) return;
+      const track = data?.item;
+      if (track?.type !== 'track' || !track.name) return;
+      // Ausschließlich Anzeige aktualisieren: kein Play, keine Firebase-Synchronisierung.
+      setPlayerText(currentTrack, getListeningDisplayText(track.name, 'Spotify-Titel'));
+      setPlayerText(artist, (track.artists || []).map(a => a.name).filter(Boolean).join(', ') || item?.artist || 'Spotify');
+      const spotifyCoverUrl = track.album?.images?.find(image => image?.url)?.url || '';
+      if (spotifyCoverUrl) {
+        if (cover.getAttribute('src') !== spotifyCoverUrl) cover.src = spotifyCoverUrl;
+        cover.hidden = false;
+        cover.alt = `Cover: ${track.album?.name || track.name}`;
+      }
+      // iOS-Sperrbildschirm/Medienanzeige: Metadaten nur für die eigene
+      // aktive Vinyls-Mediensitzung aktualisieren, nicht fremde Spotify-Player übernehmen.
+      const session = navigator.mediaSession;
+      if (session && typeof MediaMetadata === 'function' && session.metadata &&
+          session.playbackState === 'playing' && controllerReady &&
+          spotifyMiniController?.isWebPlaybackSdk) {
+        try {
+          const artwork = (track.album?.images || []).filter(image => image?.url).map(image => ({
+            src: image.url,
+            ...(Number(image.width) > 0 && Number(image.height) > 0
+              ? {sizes: `${image.width}x${image.height}`} : {}),
+            type: 'image/jpeg'
+          }));
+          const nextTitle = String(track.name);
+          const nextArtist = (track.artists || []).map(a => a?.name).filter(Boolean).join(', ');
+          const nextAlbum = String(track.album?.name || '');
+          const old = session.metadata;
+          if (old.title !== nextTitle || old.artist !== nextArtist || old.album !== nextAlbum ||
+              (artwork[0]?.src && old.artwork?.[0]?.src !== artwork[0].src)) {
+            trustedMediaSession.run(() => {
+              session.metadata = new MediaMetadata({title: nextTitle, artist: nextArtist, album: nextAlbum, artwork});
+            });
+          }
+          const duration = Number(track.duration_ms) / 1000;
+          const position = Number(data.progress_ms) / 1000;
+          if (duration > 0 && Number.isFinite(position) && typeof session.setPositionState === 'function') {
+            trustedMediaSession.run(() => session.setPositionState({
+              duration, position: Math.max(0, Math.min(position, duration)), playbackRate: 1
+            }));
+          }
+        } catch (error) { console.debug('iOS-Medienanzeige konnte nicht aktualisiert werden:', error); }
+      }
+      const matchedIndex = tracks.findIndex(t => t.uri === track.uri);
+      trackList.querySelectorAll('.album-mini-track').forEach((button, index) => {
+        button.classList.toggle('is-current', index === matchedIndex);
+      });
+      syncFullscreenPlayer();
+    } catch (error) {
+      console.debug('Spotify-Status derzeit nicht verfügbar:', error);
+    } finally {
+      spotifyNowPlayingInFlight = false;
+    }
+  };
+  // Sichtbar und verborgen etwa alle 30 Sekunden (Best Effort).
+  // Keine neuen Firebase-Aufrufe und kein permanenter Serverprozess.
+  const spotifyDisplayTimer = setInterval(() => {
+    if (!host.isConnected) { clearInterval(spotifyDisplayTimer); return; }
+    void refreshSpotifyNowPlayingDisplay();
+  }, 30000);
+  const onSpotifyPlayerVisible = () => {
+    if (!document.hidden) void refreshSpotifyNowPlayingDisplay(true);
+  };
+  document.addEventListener('visibilitychange', onSpotifyPlayerVisible);
+  window.addEventListener('pageshow', onSpotifyPlayerVisible);
+  void refreshSpotifyNowPlayingDisplay(true);
+  const spotifyDisplayCleanup = new MutationObserver(() => {
+    if (host.isConnected) return;
+    document.removeEventListener('visibilitychange', onSpotifyPlayerVisible);
+    window.removeEventListener('pageshow', onSpotifyPlayerVisible);
+    clearInterval(spotifyDisplayTimer);
+    spotifyDisplayCleanup.disconnect();
+  });
+  spotifyDisplayCleanup.observe(document.body, {childList:true, subtree:true});
   toggle.addEventListener('click', () => {
     if (!spotifyMiniController || !controllerReady) return;
     try {
