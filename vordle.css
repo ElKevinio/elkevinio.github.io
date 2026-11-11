@@ -1,0 +1,54 @@
+.vordle-launch { display:inline-flex; align-items:center; gap:7px; padding:8px 12px; border:1px solid var(--border); border-radius:9px; background:var(--surface-1); color:var(--text-primary); font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+.vordle-launch span:first-child { color:var(--accent); font-size:19px; }
+.vordle-dialog { box-sizing:border-box; width:min(1100px,calc(100vw - 28px)); max-height:92dvh; overflow:auto; margin:auto; padding:28px; border:1px solid var(--border); border-radius:20px; background:var(--surface-1); color:var(--text-primary); box-shadow:0 24px 100px #0007; font-family:inherit; }
+.vordle-dialog::backdrop { background:#090c12bd; backdrop-filter:blur(5px); }
+.vordle-dialog *, .vordle-dialog *::before, .vordle-dialog *::after { box-sizing:border-box; }
+.vordle-dialog button, .vordle-dialog input { font:inherit; }
+.vordle-dialog button { cursor:pointer; }
+.vordle-dialog button:disabled { cursor:wait; opacity:.55; }
+.vordle-dialog button:focus-visible, .vordle-dialog input:focus-visible, .vordle-dialog summary:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+.vordle-hero, .vordle-wordmark { display:flex; align-items:center; gap:12px; }
+.vordle-hero { justify-content:space-between; }
+.vordle-wordmark h2 { margin:0; font-size:clamp(28px,4vw,42px); letter-spacing:-1.5px; font-weight:800; }
+.vordle-record { display:grid; place-items:center; width:48px; height:48px; border:1px solid var(--border); border-radius:50%; background:repeating-radial-gradient(circle,#272d36 0 2px,#141820 3px 5px); color:#e4acb9; font-size:26px; box-shadow:inset 0 0 0 9px #10141a; }
+.vordle-daily-label { padding:5px 8px; border:1px solid var(--border); border-radius:5px; color:var(--text-secondary); font-size:10px; font-weight:700; letter-spacing:1.2px; }
+.vordle-close { width:38px; height:38px; border:1px solid var(--border); border-radius:50%; background:transparent; color:var(--text-secondary); font-size:25px !important; }
+.vordle-subtitle { margin:12px 0 6px; font-size:16px; color:var(--text-secondary); }
+.vordle-day { font-size:12px; color:var(--text-muted); }
+.vordle-attempts { display:flex; flex-wrap:wrap; gap:8px; margin:22px 0 10px; }
+.vordle-attempts span { display:grid; place-items:center; width:34px; height:34px; border:1px solid var(--border); border-radius:7px; font-size:12px; color:var(--text-muted); }
+.vordle-attempts .is-used { background:var(--accent); color:white; border-color:var(--accent); }
+.vordle-attempts .is-solved { background:#247447; border-color:#43a16a; }
+.vordle-status { min-height:22px; margin:10px 0; font-size:13px; color:var(--text-secondary); }
+.vordle-status.is-error { color:#d55369; }
+.vordle-help { margin:10px 0 22px; font-size:12px; color:var(--text-secondary); line-height:1.7; }
+.vordle-help summary { cursor:pointer; width:fit-content; }
+.vordle-form { position:relative; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 12px; margin-bottom:18px; }
+.vordle-form label { grid-column:1/-1; font-size:12px; font-weight:600; }
+.vordle-search-wrap { position:relative; min-width:0; }
+.vordle-search-wrap input { width:100%; min-height:48px; padding:12px 15px; border:1px solid var(--border); border-radius:9px; background:var(--surface-2); color:var(--text-primary); }
+.vordle-submit, .vordle-retry { padding:12px 20px; border:1px solid var(--accent); border-radius:9px; background:var(--accent); color:white; font-weight:600 !important; }
+.vordle-suggestions { position:absolute; z-index:3; top:calc(100% + 5px); left:0; right:0; max-height:280px; overflow:auto; list-style:none; margin:0; padding:5px; border:1px solid var(--border); border-radius:10px; background:var(--surface-1); box-shadow:0 12px 30px #0004; }
+.vordle-suggestions button { display:flex; flex-direction:column; gap:3px; width:100%; padding:10px; border:0; border-radius:6px; background:transparent; text-align:left; color:var(--text-primary); }
+.vordle-suggestions button span { color:var(--text-secondary); font-size:12px; }
+.vordle-suggestions button:hover, .vordle-suggestions [aria-selected=true] button { background:var(--surface-2); }
+.vordle-no-results { padding:12px; font-size:13px; color:var(--text-secondary); }
+.vordle-legend { margin:0 0 10px; font-size:11px; color:var(--text-muted); }
+.vordle-grid-wrap { overflow-x:auto; padding-bottom:5px; }
+.vordle-grid { width:100%; min-width:690px; border-collapse:separate; border-spacing:5px; table-layout:fixed; }
+.vordle-grid th { padding:6px 8px; text-align:left; color:var(--text-muted); font-size:10px; font-weight:600; letter-spacing:.7px; text-transform:uppercase; }
+.vordle-grid th:first-child { width:24%; }.vordle-grid th:nth-child(2) { width:20%; }.vordle-grid th:nth-child(3) { width:10%; }
+.vordle-cell { position:relative; padding:13px 24px 13px 10px; border:1px solid #ffffff12; border-radius:7px; color:#fff; vertical-align:middle; font-size:12px; overflow-wrap:anywhere; }
+.vordle-cell.is-correct { background:#246b48; }.vordle-cell.is-partial { background:#8c6c24; }.vordle-cell.is-wrong { background:#633640; }.vordle-cell.is-unknown { background:#454954; color:#e0e2e8; }
+.vordle-cell-mark { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:800; font-size:16px; opacity:.9; }
+.vordle-reveal { margin:20px 5px; padding:18px; border:1px solid #4b8f68; border-radius:10px; background:#28714918; }.vordle-reveal p { margin:6px 0 0; font-size:14px; }
+.vordle-ranking { margin-top:26px; border-top:1px solid var(--border); padding-top:20px; }
+.vordle-ranking-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }.vordle-ranking h3 { margin:0; font-size:16px; }
+.vordle-ranking-refresh { padding:7px 10px; border:1px solid var(--border); border-radius:6px; background:transparent; color:var(--text-secondary); font-size:11px !important; }
+.vordle-ranking-status { font-size:12px; color:var(--text-secondary); }.vordle-ranking-list { list-style:none; padding:0; margin:8px 0 0; }
+.vordle-ranking-list li { display:flex; align-items:center; gap:14px; padding:11px 10px; border-bottom:1px solid var(--border); font-size:13px; }.vordle-ranking-list li.is-you { background:var(--surface-2); border-radius:7px; }
+.vordle-rank { width:24px; color:var(--text-muted); font-size:11px; }.vordle-player-name { flex:1; }.vordle-score-won { color:#439c69; }.vordle-ranking-empty { color:var(--text-secondary); }
+.vordle-dialog [hidden] { display:none !important; }
+@media(max-width:600px) { .vordle-dialog { width:calc(100vw - 14px); max-height:96dvh; padding:18px 12px; border-radius:14px; }.vordle-daily-label { display:none; }.vordle-form { grid-template-columns:1fr; }.vordle-submit { min-height:46px; }.vordle-grid { min-width:640px; }.vordle-attempts { gap:6px; }.vordle-subtitle { font-size:14px; } }
+
+@media(max-width:600px) { .vordle-launch span:last-child { display:none; }.vordle-launch { padding:6px 9px; } }

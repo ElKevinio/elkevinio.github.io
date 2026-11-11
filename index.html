@@ -734,6 +734,17 @@
     overflow: hidden;
     transition: border-color 0.15s, transform 0.1s;
   }
+  .discogs-track-mapping-dialog { width:min(720px,calc(100vw - 24px)); max-height:85dvh; overflow:auto; padding:20px; border:1px solid var(--border); border-radius:12px; background:var(--surface-1); color:var(--text-primary); }
+  .discogs-track-mapping-dialog::backdrop { background:#0009; }
+  .discogs-track-mapping-list { list-style:none; padding:0; }
+  .discogs-track-mapping-list li { padding:14px 0; border-top:1px solid var(--border); }
+  .discogs-track-mapping-list input { display:block; width:100%; box-sizing:border-box; margin:8px 0; }
+  .discogs-track-mapping-list button, .discogs-track-mapping-actions button { margin:4px 6px 4px 0; }
+  .discogs-track-mapping-results button { display:block; text-align:left; width:100%; }
+  .discogs-track-mapping-actions { display:flex; flex-wrap:wrap; gap:8px; position:sticky; bottom:0; background:var(--surface-1); padding-top:8px; }
+  .search-discogs-info { position:fixed; z-index:10000; width:260px; max-width:calc(100vw - 16px); max-height: min(380px, calc(100vh - 16px)); overflow:hidden; padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--surface-1); color:var(--text-primary); box-shadow:0 8px 28px #0005; pointer-events:none; font-size:12px; line-height:1.5; }
+  .search-discogs-info p { margin:5px 0 0; white-space:pre-line; overflow-wrap:anywhere; }
+  .search-discogs-info .discogs-info-notes { display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
   .search-card:hover { border-color: var(--accent-border); transform: translateY(-1px); }
   .search-card .quick-add-btn {
     position: absolute;
@@ -7193,6 +7204,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
       
+      <button type="button" id="vordleLaunch" class="vordle-launch" aria-label="Tägliches Vordle spielen" title="Tägliches Albumrätsel spielen"><span aria-hidden="true">◉</span><span>Vordle</span></button>
       <div class="settings-wrap">
         <button id="settingsBtn" class="icon-btn" title="Einstellungen" aria-label="Einstellungen">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -7975,7 +7987,7 @@
     </div>
   </div>
   <section id="fullscreenPlayerTracksPanel" class="fullscreen-player-tracks-panel" aria-label="Album-Titelliste" hidden>
-    <header><strong id="fullscreenPlayerTracksTitle">Album-Titelliste</strong><button type="button" id="fullscreenPlayerTracksClose" aria-label="Album-Titelliste schließen">×</button></header>
+    <header><strong id="fullscreenPlayerTracksTitle">Album-Titelliste</strong><button type="button" id="fullscreenPlayerTrackMapping" hidden>Titel zuordnen</button><button type="button" id="fullscreenPlayerTracksClose" aria-label="Album-Titelliste schließen">×</button></header>
     <p id="fullscreenPlayerTracksStatus" class="settings-panel-hint" role="status"></p>
     <ol id="fullscreenPlayerTracksList" class="fullscreen-player-tracks-list"></ol>
   </section>
@@ -8038,6 +8050,7 @@
 <li>Die Barcode-Suche nutzt nur Discogs.</li>
 </ul>
 <h4>Mehrere Alben auf einmal</h4>
+<p>Spotify-Wiedergabe mit Discogs-Titelliste: Die Titel laufen in Discogs-Reihenfolge, einschließlich B-Seiten. Spotify-Zuordnungen werden automatisch gesucht und gespeichert. Fehlende oder falsche Treffer können im Musikplayer unter „Titel zuordnen“ gesucht oder per Spotify-Track-Link ergänzt werden. Solange Titel fehlen, startet die Platte nicht. Ein gespeicherter Spotify-Playlist-Link verwendet weiterhin die Playlist.</p>
 <p>Mehrere Zeilen in die Suche schreiben (Desktop: <code>Shift+Enter</code>, mobil: Enter) öffnet den <b>Mehrfachimport</b>. Pro Zeile ein Album oder ein Discogs-Link; Links erscheinen dort als „Discogs-Release #id“. Pro Zeile wählst du den passenden Treffer.</p>
 <h4>Mobil: Enter</h4>
 <p>Auf dem Handy erzeugt Enter eine neue Zeile. Gesucht wird mit der Lupe.</p>
@@ -8591,6 +8604,8 @@
 </div><!-- /#appRoot -->
 
 <!-- Firebase SDK (kostenlos, "compat"-Version für einfache Einbindung ohne Build-Tool) -->
+<link rel="stylesheet" href="vordle.css">
+<script src="vordle.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -8617,6 +8632,83 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 // Vermeidet geblockte WebChannel-Requests durch Browser-Erweiterungen.
 db.settings({ experimentalForceLongPolling: true });
+// Session-only diagnostics: metadata and sizes, never document values or tokens.
+const firebaseDiagnostics = (() => {
+  const entries = [], batches = new WeakMap();
+  let enabled = true, nextId = 0;
+  const bytes = value => { try { return new TextEncoder().encode(JSON.stringify(value)).length; } catch { return null; } };
+  const shape = data => Object.entries(data || {}).map(([field,value]) => ({field, bytes:bytes(value), type:Array.isArray(value)?'array':typeof value}));
+  const path = ref => ref.path || ref._delegate?._query?.path?.canonicalString?.() || 'query';
+  const run = (meta, invoke) => {
+    if (!enabled) return invoke();
+    const row = {id:++nextId, at:new Date().toISOString(), ...meta, status:'pending'};
+    entries.push(row); if(entries.length>500)entries.shift();
+    const start=performance.now();
+    const caller = new Error().stack?.split('\n').find(line => /index\.html/.test(line) && !/run |prototype|firebaseDiagnostics/.test(line));
+    if(caller)row.caller=caller.trim();
+    const finish = (status, result) => {
+      Object.assign(row,meta);
+      row.status=status;row.ms=Math.round(performance.now()-start);
+      if(status==='error')row.error=result?.code || 'unknown';
+      else if(meta.operation==='get') {row.documents=typeof result?.size==='number'?result.size:1;row.fromCache=result?.metadata?.fromCache===true;row.resultBytes=bytes(result?.docs?result.docs.map(doc=>doc.data()):result?.data?.());}
+    };
+    try {return Promise.resolve(invoke()).then(result=>{finish('ok',result);return result;},error=>{finish('error',error);throw error;});}
+    catch(error){finish('error',error);throw error;}
+  };
+  for(const name of ['DocumentReference','Query']) {
+    const proto=firebase.firestore[name]?.prototype;
+    for(const operation of name==='Query'?['get']:['get','set','update','delete']) {
+      const original=proto?.[operation]; if(!original)continue;
+      proto[operation]=function(...args){return run({operation,path:path(this),source:operation==='get'?(args[0]?.source || 'default'):undefined,fields:operation==='set'||operation==='update'?shape(args[0]):undefined,documents:operation==='get'?undefined:1},()=>original.apply(this,args));};
+    }
+  }
+  const proto=firebase.firestore.WriteBatch?.prototype;
+  for(const operation of ['set','update','delete']) {
+    const original=proto?.[operation];if(!original)continue;
+    proto[operation]=function(ref,...args){const result=original.call(this,ref,...args);const list=batches.get(this)||[];list.push({operation,path:path(ref),fields:operation==='delete'?undefined:shape(args[0])});batches.set(this,list);return result;};
+  }
+  const commit=proto?.commit;
+  if(commit)proto.commit=function(...args){const writes=batches.get(this)||[];return run({operation:'batch.commit',documents:writes.length,writes},()=>commit.apply(this,args));};
+  const transactionProto=firebase.firestore.Transaction?.prototype;
+  const transactionGet=transactionProto?.get;
+  if(transactionGet)transactionProto.get=function(ref){return run({operation:'get',path:path(ref),source:'transaction'},()=>transactionGet.call(this,ref));};
+  const transactionWrites=new WeakMap();
+  for(const operation of ['set','update','delete']) {
+    const original=transactionProto?.[operation];if(!original)continue;
+    transactionProto[operation]=function(ref,...args){const result=original.call(this,ref,...args);const row=transactionWrites.get(this);if(row){row.writes.push({operation,path:path(ref),fields:operation==='delete'?undefined:shape(args[0])});row.documents=row.writes.length;}return result;};
+  }
+  const firestoreProto=firebase.firestore.Firestore?.prototype;
+  const runTransaction=firestoreProto?.runTransaction;
+  if(runTransaction)firestoreProto.runTransaction=function(callback,...args){
+    const row={operation:'transaction',documents:0,writes:[],attempts:0};
+    return run(row,()=>runTransaction.call(this,transaction=>{row.attempts++;row.writes.length=0;row.documents=0;transactionWrites.set(transaction,row);return callback(transaction);},...args));
+  };
+  return {entries, get enabled(){return enabled;}, toggle(){enabled=!enabled;}, clear(){entries.length=0;}, export(){
+    const blob=new Blob([JSON.stringify({version:1,note:'Client-Aufrufe, keine Firebase-Abrechnung. Nur diese Sitzung, maximal 500 Vorgänge. Feldwerte werden nicht protokolliert.',entries},null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob), link=document.createElement('a');link.href=url;link.download='firebase-diagnose.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }};
+})();
+function showFirebaseDiagnostics() {
+  const dialog=document.createElement('dialog');
+  dialog.style.cssText='width:min(850px,90vw);max-height:80vh;border:1px solid var(--border);border-radius:12px;background:var(--surface-1);color:var(--text-primary);padding:18px;';
+  const title=document.createElement('h3');title.textContent='Firebase-Zugriffsprotokoll';dialog.append(title);
+  const hint=document.createElement('p');hint.textContent='Nur lokal in dieser Sitzung · letzte 500 Aufrufe · keine Feldwerte oder Tokens. Dokumentzahlen sind Client-Beobachtungen, keine Abrechnungszahlen.';dialog.append(hint);
+  const controls=document.createElement('div');controls.style.cssText='display:flex;flex-wrap:wrap;gap:8px';dialog.append(controls);
+  const summary=document.createElement('p'), output=document.createElement('pre');output.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;';dialog.append(summary,output);
+  const render=()=>{
+    const rows=firebaseDiagnostics.entries;
+    const reads=rows.filter(row=>row.operation==='get'),writes=rows.filter(row=>row.operation!=='get');
+    summary.textContent=`${reads.length} Leseaufrufe (${reads.reduce((n,r)=>n+(r.documents||0),0)} Dokumente, davon ${reads.filter(r=>r.fromCache).length} Aufrufe aus Cache) · ${writes.length} Schreibaufrufe (${writes.reduce((n,r)=>n+(r.documents||0),0)} Dokumente versucht) · ${rows.filter(r=>r.status==='error').length} Fehler`;
+    output.textContent=JSON.stringify(rows.slice().reverse(),null,2);
+    pause.textContent=firebaseDiagnostics.enabled?'Aufzeichnung pausieren':'Aufzeichnung starten';
+  };
+  let pause;
+  for(const [label,action] of [['Aktualisieren',render],['JSON herunterladen',()=>firebaseDiagnostics.export()],['Leeren',()=>{firebaseDiagnostics.clear();render();}],['Aufzeichnung pausieren',()=>{firebaseDiagnostics.toggle();render();}],['Schließen',()=>dialog.close()]]) {
+    const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=action;controls.append(button);if(label==='Aufzeichnung pausieren')pause=button;
+  }
+  dialog.addEventListener('close',()=>dialog.remove());document.body.append(dialog);render();dialog.showModal();
+}
+
 const STORAGE_KEY = 'vinylCollectionV1';
 const TITLE_STORAGE_KEY = 'vinylCollectionTitleV1';
 const DISCOGS_TOKEN_KEY = 'discogsTokenV1';
@@ -9524,7 +9616,9 @@ function raiseNotificationLayer(element) {
     element.showPopover();
   } else document.body.appendChild(element);
 }
+let cloudStatusRequestedUntil = 0;
 function updateCloudSyncBanner(message, state = 'pending', retry = false) {
+  if (Date.now() > cloudStatusRequestedUntil) return;
   if (cloudCollectionIntegrityIssue?.uid === currentUid) { message=getCollectionIntegrityMessage(); state='error'; retry=false; }
   const banner = document.getElementById('cloudSyncBanner');
   if (!banner) return;
@@ -9532,6 +9626,7 @@ function updateCloudSyncBanner(message, state = 'pending', retry = false) {
   banner.replaceChildren();
   banner.dataset.state = state;
   banner.append(document.createTextNode(message));
+  const logButton=document.createElement('button');logButton.type='button';logButton.textContent='Firebase-Protokoll';logButton.addEventListener('click',showFirebaseDiagnostics);banner.append(logButton);
   if (pendingCloudSave || cloudCollectionIntegrityIssue?.uid === currentUid) {
     const details=document.createElement('button');details.type='button';details.textContent='Details anzeigen';
     details.addEventListener('click',showCloudSyncDetails);banner.append(details);
@@ -10024,7 +10119,8 @@ window.addEventListener('online', () => {
 });
 
 document.getElementById('cloudSyncIndicator').addEventListener('click', async () => {
-  if (cloudCollectionIntegrityIssue?.uid === currentUid) { await showCloudSyncDetails(); return; }
+  cloudStatusRequestedUntil = Date.now()+10000;
+  if (cloudCollectionIntegrityIssue?.uid === currentUid) { showCloudSyncStatus(); return; }
   if (!currentUid || !viewingOwnCollection) {
     showCloudSyncStatus('Wechsle zu deiner eigenen Sammlung, um den Firebase-Status zu prüfen.');
     return;
@@ -10040,7 +10136,8 @@ document.getElementById('cloudSyncIndicator').addEventListener('click', async ()
 });
 
 document.getElementById('cloudSyncStrip').addEventListener('click', async () => {
-  if (cloudCollectionIntegrityIssue?.uid === currentUid) { await showCloudSyncDetails(); return; }
+  cloudStatusRequestedUntil = Date.now()+10000;
+  if (cloudCollectionIntegrityIssue?.uid === currentUid) { showCloudSyncStatus(); return; }
   if (!currentUid || !viewingOwnCollection) {
     showCloudSyncStatus('Wechsle zu deiner eigenen Sammlung, um den Firebase-Status zu prüfen.');
     return;
@@ -10534,8 +10631,11 @@ async function importUserCollection(uid, username) {
   }
 }
 
+const vordle = Vordle.create({db,getUser:()=>({uid:currentUid,username:currentUsername}),timestamp:milliseconds=>firebase.firestore.Timestamp.fromMillis(milliseconds),serverTimestamp:()=>firebase.firestore.FieldValue.serverTimestamp(),track:trackFirebaseRequest});
+
 let authInitializationPhase = 'Anmeldung';
 async function handleAuthStateChange(user) {
+  vordle.reset();
   authInitializationPhase = 'Anmeldung';
   if (user) {
     showAppLoading();
@@ -10563,6 +10663,7 @@ async function handleAuthStateChange(user) {
     setAuthLoading(false);
     authInitializationPhase = 'Sammlung laden';
     await loadCloudData(user.uid, userDocSnap);
+    void vordle.prewarm();
     } finally {
       appLoadingCount = 0;
       hideAppLoading(true);
@@ -13432,7 +13533,7 @@ async function startCollectionEntryFixReview() {
     { confirmLabel: 'Prüfung starten', cancelLabel: 'Abbrechen' }
   );
   if (!confirmed) return;
-  await openDiscogsMatchQueue(needsDiscogs, 'fix');
+  await openDiscogsMatchQueue(needsDiscogs, 'fix', {fresh:true});
 }
 
 document.getElementById('fixCollectionEntriesBtn').addEventListener('click', startCollectionEntryFixReview);
@@ -15287,6 +15388,75 @@ function restoreCollectionFilterAfterAdd() {
   renderCollection();
 }
 
+const searchDiscogsDetails = new WeakMap();
+let hideActiveSearchDiscogsInfo = null;
+window.addEventListener('scroll', () => hideActiveSearchDiscogsInfo?.(), {capture:true, passive:true});
+window.addEventListener('resize', () => hideActiveSearchDiscogsInfo?.());
+function loadSearchDiscogsDetails(entry) {
+  if (entry.source !== 'discogs' || !entry.discogsResourceUrl) return Promise.resolve(null);
+  if (searchDiscogsDetails.has(entry)) return searchDiscogsDetails.get(entry);
+  const request = (async () => {
+    const url = new URL(entry.discogsResourceUrl);
+    if (url.origin !== 'https://api.discogs.com' || !/^\/(releases|masters)\/\d+$/.test(url.pathname)) throw new Error('Ungültiger Discogs-Link.');
+    const token = getDiscogsToken();
+    if (token) url.searchParams.set('token', token);
+    const response = await fetch(url.href);
+    if (!response.ok) throw new Error(`Discogs-Daten konnten nicht geladen werden (HTTP ${response.status}).`);
+    const detail = normalizeDiscogsReleaseDetail(await response.json());
+    if (!detail) throw new Error('Discogs hat keine Albumdaten geliefert.');
+    Object.assign(entry, detail);
+    entry.album = {...entry.album, title:entry.title, artist:entry.artist, year:entry.year, genre:getGenreValues(detail.genre), discogsFormats:detail.discogsFormats};
+    return detail;
+  })();
+  searchDiscogsDetails.set(entry, request);
+  request.catch(() => searchDiscogsDetails.delete(entry));
+  return request;
+}
+
+function attachSearchDiscogsInfo(card, entry) {
+  if (entry.source !== 'discogs') return;
+  let info = null, timer = null;
+  const hide = () => { clearTimeout(timer); info?.remove(); info = null; if (hideActiveSearchDiscogsInfo === hide) hideActiveSearchDiscogsInfo = null; };
+  const position = () => {
+    if (!info || !card.isConnected) return hide();
+    const rect = card.getBoundingClientRect(), width = info.offsetWidth, height = info.offsetHeight;
+    // Prefer beside the hovered result; the overlay never intercepts any controls.
+    const left = rect.right + width + 12 <= innerWidth ? rect.right + 8 : rect.left - width - 8 >= 8 ? rect.left - width - 8 : Math.max(8, Math.min(rect.left, innerWidth-width-8));
+    const top = left < rect.right && left + width > rect.left ? (rect.bottom + height + 8 <= innerHeight ? rect.bottom + 8 : rect.top - height - 8) : rect.top;
+    info.style.left = `${left}px`;
+    info.style.top = `${Math.max(8, Math.min(top, innerHeight-height-8))}px`;
+  };
+  const show = async () => {
+    hideActiveSearchDiscogsInfo?.();
+    hide();
+    hideActiveSearchDiscogsInfo = hide;
+    info = document.createElement('aside'); info.className = 'search-discogs-info';
+    info.setAttribute('role', 'tooltip');
+    info.textContent = 'Discogs-Details werden geladen …'; document.body.append(info); position();
+    const active = info;
+    try {
+      await loadSearchDiscogsDetails(entry);
+      if (info !== active || !card.isConnected) return;
+      const price = value => value != null ? `${Number(value).toFixed(2)} ${entry.discogsCurrency || '€'}` : 'nicht verfügbar';
+      info.replaceChildren();
+      const title = document.createElement('strong'); title.textContent = entry.title; info.append(title);
+      for (const text of [entry.artist, `Ab: ${price(entry.discogsLowestPrice)} · Ø: ${price(entry.discogsAveragePrice)}`, [entry.discogsReleased || entry.year, entry.discogsCountry, entry.tracklist?.length ? `${entry.tracklist.length} Tracks` : ''].filter(Boolean).join(' · '), formatDiscogsFormats(entry.discogsFormats), entry.discogsLabels?.join(' · '), entry.discogsNotes]) {
+        if (!text) continue;
+        const line = document.createElement('p'); line.textContent = text;
+        if (text === entry.discogsNotes) line.className = 'discogs-info-notes';
+        info.append(line);
+      }
+    } catch (error) { if (info === active) info.textContent = error.message; }
+    position();
+  };
+  card.addEventListener('mouseenter', () => { timer = setTimeout(show, 300); });
+  card.addEventListener('mouseleave', hide);
+  card.addEventListener('focusin', show);
+  card.addEventListener('focusout', hide);
+  card.addEventListener('click', hide);
+
+}
+
 function quickAddFromSearch(entry) {
   if (!viewingOwnCollection) {
     showAlert('Du betrachtest gerade eine fremde Sammlung. Wechsel zurück zu deiner eigenen Sammlung, um Einträge hinzuzufügen.');
@@ -15320,6 +15490,10 @@ function quickAddFromSearch(entry) {
     discogsCurrency: entry.discogsCurrency || '€'
   };
 
+  if (entry.source === 'discogs') {
+    applyDiscogsMetadata(newEntry, entry);
+    if (entry.discogsNotes) newEntry.discogsNotes = entry.discogsNotes;
+  }
   collection.push(newEntry);
   saveCollection();
   const hint = document.getElementById('searchHint');
@@ -15378,10 +15552,21 @@ function renderSearchResultsPage() {
       <p class="artist">${escapeHtml(getDisplayName(entry.artist))}</p>
       ${findMatchingCollectionItems(entry).length ? '<span class="existing-match-badge">Bereits in Sammlung</span>' : ''}
     `;
-    card.querySelector('.quick-add-btn').addEventListener('click', e => {
+    card.querySelector('.quick-add-btn').addEventListener('click', async e => {
       e.stopPropagation();
-      quickAddFromSearch(entry);
+      hideActiveSearchDiscogsInfo?.();
+      const button = e.currentTarget;
+      if (button.disabled) return;
+      button.disabled = true;
+      button.textContent = '…';
+      try {
+        await loadSearchDiscogsDetails(entry);
+        quickAddFromSearch(entry);
+      } catch (error) {
+        document.getElementById('searchHint').textContent = `${error.message} Bitte erneut versuchen.`;
+      } finally { button.disabled = false; button.textContent = '+'; }
     });
+    attachSearchDiscogsInfo(card, entry);
     card.addEventListener('click', () => selectAlbum(entry.album, entry.cover, entry.source));
     results.appendChild(card);
   });
@@ -15988,8 +16173,10 @@ function normalizeDiscogsReleaseDetail(detail) {
     position: track.position || String(index + 1),
     type_: track.type_ || 'track',
     title: track.title || '',
-    duration: track.duration || ''
-  })).filter(track => track.title) : [];
+    duration: track.duration || '',
+    artists: Array.isArray(track.artists) ? track.artists.map(artist=>({name:artist.name || ''})) : [],
+    sub_tracks: Array.isArray(track.sub_tracks) ? track.sub_tracks : []
+  })).filter(track => track.title || track.sub_tracks.length) : [];
   const formats = Array.isArray(detail.formats) ? detail.formats.map(format => ({
     name: format.name || '',
     qty: format.qty || '',
@@ -17024,7 +17211,7 @@ async function loadSpotifyContextTracks(rawUrl) {
       for(const entry of data.items||[]){
         const track=type==='playlist'?(entry.item||entry.track):entry;
         if(!track?.uri || track.is_local || track.type==='episode')continue;
-        tracks.push({uri:track.uri,title:getListeningDisplayText(track.name,'Unbenannter Track'),duration_ms:track.duration_ms});
+        tracks.push({uri:track.uri,title:getListeningDisplayText(track.name,'Unbenannter Track'),name:track.name,artists:track.artists,is_playable:track.is_playable,duration_ms:track.duration_ms});
       }
       if(data.next){const url=new URL(data.next);if(url.origin!=='https://api.spotify.com'||url.pathname!==path)throw new Error('Ungültige Spotify-Folgeseite.');next=url.href;}else next='';
     }
@@ -17281,12 +17468,13 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     const activate=()=>{try{Promise.resolve(sdk.activateElement()).catch(()=>{});}catch{}};
     const controller={isWebPlaybackSdk:true,
       setVolume(value){return sdk.setVolume(value);},
+      setTrackSequence(uris){options.trackSequence=Array.isArray(uris)?uris.slice():[];},
       rebind(uri, statusCallback){
         activeStatus=statusCallback;
         listeners.clear();
         commandVersion++;selectionVersion++;
         pendingUri=uri;pendingPosition=0;
-        options.uri=uri;
+        options.uri=uri;options.trackSequence=[];
         lastAcceptedSelection=-1;lastAcceptedUri='';
         desiredUri='';desiredPaused=null;desiredUntil=0;
         if(deviceId)queueMicrotask(()=>{if(!destroyed && deviceId)emit('ready');});
@@ -17326,8 +17514,16 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
           const accessToken=await getSpotifyAccessToken();
           if(destroyed||version!==commandVersion)return;if(!accessToken)throw new Error('Bitte Spotify erneut verbinden.');
           const body=uri.startsWith('spotify:track:')
-            ? (/^spotify:(album|playlist):/.test(options.uri) ? {context_uri:options.uri,offset:{uri},position_ms:position} : {uris:[uri],position_ms:position})
+            ? (options.trackSequence?.length ? {uris:options.trackSequence,offset:{position:Math.max(0,options.trackSequence.indexOf(uri))},position_ms:position} : /^spotify:(album|playlist):/.test(options.uri) ? {context_uri:options.uri,offset:{uri},position_ms:position} : {uris:[uri],position_ms:position})
             : {context_uri:uri,offset:{position:0},position_ms:position};
+          if(options.trackSequence?.length) {
+            const orderedDevice=await waitForDevice();
+            for(const command of ['shuffle?state=false','repeat?state=off']) {
+              if(destroyed || version!==commandVersion)return;
+              const response=await fetch(`https://api.spotify.com/v1/me/player/${command}&device_id=${encodeURIComponent(orderedDevice)}`,{method:'PUT',signal:lifetime.signal,headers:{Authorization:`Bearer ${accessToken}`}});
+              if(!response.ok)throw new Error('Spotify-Reihenfolge konnte nicht eingestellt werden. Bitte erneut versuchen.');
+            }
+          }
           const sendPlay=async id=>fetch(`https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(id)}`,{method:'PUT',signal:lifetime.signal,headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
           let targetId=await waitForDevice();
           if(destroyed||version!==commandVersion)return;
@@ -19601,6 +19797,10 @@ function playAlbumFromFullscreenMenu(item) {
 }
 
 function getQueueableAlbumUrl(item) {
+  const playlist=[item?.spotifyAlbumUrl,item?.listeningUrl].find(url=>isSpotifyPlaylistUrl(url));
+  if(playlist)return normalizeSpotifyAlbumLink(playlist);
+  const mapped=getMappedDiscogsUrl(item);
+  if(mapped)return mapped;
   for (const raw of [item?.spotifyAlbumUrl,item?.listeningUrl]) {
     const url = getSupportedListeningUrl(raw);
     if (url && ((getSpotifyEmbedUrl(url) && normalizeSpotifyAlbumLink(url)) || getYouTubeEmbedUrl(url))) return url;
@@ -19659,7 +19859,7 @@ async function playFullscreenCompartment() {
         catch(error){searchError='Die Spotify-Suche konnte nicht fortgesetzt werden.';searchAvailable=false;}
       }
       if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
-      if(url)playable.push({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:'',listeningUrl:url});
+      if(url || getDiscogsPlaybackTracks(item).length)playable.push({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:'',listeningUrl:url});
       else missing.push(item);
     }
     saveDiscoveredSpotifyAlbumLinks(discovered);
@@ -19701,7 +19901,7 @@ async function queueFullscreenCompartment() {
         catch {searchAvailable=false;}
       }
       if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
-      if(url && queueAlbumForListening({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:''},url))added++;
+      if((url || getDiscogsPlaybackTracks(item).length) && queueAlbumForListening({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:''},url))added++;
     }
     saveDiscoveredSpotifyAlbumLinks(discovered);
     status.textContent=added?`${added} ${added===1?'Album wurde':'Alben wurden'} zur Warteschlange hinzugefügt.${added<all.length?` ${all.length-added} ohne Hörlink übersprungen.`:''}`:'Keine Hörlinks gefunden. Bitte Spotify verbinden oder Album-Hörlinks speichern.';
@@ -19797,14 +19997,14 @@ function renderFullscreenPlayerMenu() {
     const actions = document.createElement('div');
     actions.className = 'fullscreen-player-menu-item-actions';
     const url = getSupportedListeningUrl(item.spotifyAlbumUrl || item.listeningUrl);
-    const queueable = !!getQueueableAlbumUrl(item);
+    const queueable = !!getQueueableAlbumUrl(item) || !!getDiscogsPlaybackTracks(item).length;
     const queue = document.createElement('button');
     queue.type = 'button';
     queue.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 4v4M16 6h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     queue.title = queueable ? 'In die Warteschlange' : 'Spotify-Link auswählen und in die Warteschlange';
     queue.setAttribute('aria-label', queue.title);
     queue.addEventListener('click', () => {
-      if (!getQueueableAlbumUrl(item)) {
+      if (!getQueueableAlbumUrl(item) && !getDiscogsPlaybackTracks(item).length) {
         openAlbumListening(item, null, { queueSelection:true, providers:['spotify'] });
         return;
       }
@@ -19935,6 +20135,11 @@ function renderFullscreenPlayerTracks() {
   const panel = document.getElementById('fullscreenPlayerTracksPanel');
   if (panel.hidden) return;
   const source = document.querySelector('#albumListeningDockContent .album-mini-tracklist');
+  const mappingSource=document.querySelector('#albumListeningDockContent [data-discogs-track-mapping]');
+  const mappingToggle=document.getElementById('fullscreenPlayerTrackMapping');
+  mappingToggle.hidden=!mappingSource;
+  mappingToggle.disabled=!!mappingSource?.disabled;
+  mappingToggle.onclick=()=>mappingSource?.click();
   const player = document.querySelector('#albumListeningDockContent .album-mini-player');
   if (source !== fullscreenPlayerTracksSource) {
     fullscreenPlayerTracksSource = source;
@@ -20256,7 +20461,7 @@ document.querySelectorAll('[data-clear-album-queue]').forEach(button=>button.add
 
 function queueAlbumForListening(item, listeningUrl) {
   const safeUrl = getSupportedListeningUrl(listeningUrl);
-  if (!getQueueableAlbumUrl({listeningUrl:safeUrl})) {
+  if (!getQueueableAlbumUrl({...item,listeningUrl:safeUrl}) && !getDiscogsPlaybackTracks(item).length) {
     console.error('Album konnte nicht eingereiht werden: Kein gültiger Spotify-Albumlink oder YouTube-Hörlink vorhanden.');
     return false;
   }
@@ -20538,6 +20743,157 @@ function acceptsSpotifyTrackState(state, pendingUri, tracks, requestedAt, now = 
   return now-requestedAt >= 450;
 }
 
+function getDiscogsPlaybackTracks(item) {
+  const flatten = (tracks, parent = '') => (tracks || []).flatMap((raw, index) => {
+    const track = typeof raw === 'string' ? {title:raw} : raw;
+    if (!track) return [];
+    const position = String(track.position || `${parent}${index + 1}`);
+    if (track.sub_tracks?.length) return flatten(track.sub_tracks, `${position}.`);
+    if (track.type_ === 'heading' || !String(track.title || '').trim()) return [];
+    return [{...track, position, key:JSON.stringify([position, track.title])}];
+  });
+  return item?.discogsResourceUrl ? flatten(item.tracklist) : [];
+}
+function isSpotifyPlaylistUrl(url) {
+  return /\/playlist\//.test(normalizeSpotifyAlbumLink(url));
+}
+function usesDiscogsPlaybackOrder(item, url) {
+  return !!getDiscogsPlaybackTracks(item).length && !isSpotifyPlaylistUrl(url);
+}
+function spotifyTrackUri(value) {
+  const uri=String(value || '').trim().match(/^spotify:track:([A-Za-z0-9]+)$/);
+  if(uri)return `spotify:track:${uri[1]}`;
+  try {const url=new URL(value);if(url.protocol==='https:' && url.hostname==='open.spotify.com') {const id=url.pathname.match(/^\/(?:intl-[a-z]{2}\/)?track\/([A-Za-z0-9]+)\/?$/)?.[1];if(id)return `spotify:track:${id}`;}}catch{}
+  return '';
+}
+function getMappedDiscogsTracks(item, mappings = item?.spotifyTrackMappings || {}) {
+  return getDiscogsPlaybackTracks(item).map(track => {
+    const match=mappings[track.key];
+    return {...track, uri:spotifyTrackUri(match?.uri), spotifyTitle:match?.title || '', spotifyArtist:match?.artist || '', duration_ms:Number(match?.duration_ms) || 0};
+  });
+}
+function getMappedDiscogsUrl(item) {
+  const tracks=getMappedDiscogsTracks(item);
+  return tracks.length && tracks.every(track=>track.uri) ? `https://open.spotify.com/track/${tracks[0].uri.split(':')[2]}` : '';
+}
+function saveDiscogsSpotifyMappings(item, mappings) {
+  const serialized=JSON.stringify(mappings);
+  const stored=ownCollection.find(entry=>String(entry.id)===String(item.id));
+  const changed=stored && JSON.stringify(stored.spotifyTrackMappings || {})!==serialized;
+  item.spotifyTrackMappings=JSON.parse(serialized);
+  if(stored && viewingOwnCollection && changed) {
+    stored.spotifyTrackMappings=JSON.parse(serialized);
+    saveCollection();
+  }
+  if(currentListeningAlbum && String(currentListeningAlbum.id)===String(item.id))currentListeningAlbum.spotifyTrackMappings=JSON.parse(serialized);
+  for(const queued of listeningAlbumQueue)if(String(queued.id)===String(item.id))queued.spotifyTrackMappings=JSON.parse(serialized);
+}
+async function requestSpotifyTrackMapping(path, signal) {
+  const token=await getSpotifyAccessToken();
+  if(!token)throw new Error('Bitte Spotify verbinden oder die Titel später zuordnen.');
+  const response=await fetch(`https://api.spotify.com/v1/${path}`,{headers:{Authorization:`Bearer ${token}`},signal});
+  if(!response.ok)throw new Error(response.status===429?'Spotify-Suchlimit erreicht. Bitte später erneut versuchen.':`Spotify-Titelsuche: HTTP ${response.status}`);
+  return response.json();
+}
+function mappedSpotifyTrack(track) {
+  return {uri:spotifyTrackUri(track.uri), title:track.name || track.title || '', artist:(track.artists || []).map(artist=>artist.name).filter(Boolean).join(', ') || track.artist || '', duration_ms:Number(track.duration_ms) || 0};
+}
+async function searchSpotifyTrackMapping(query, signal) {
+  const uri=spotifyTrackUri(query);
+  if(uri) return [await requestSpotifyTrackMapping(`tracks/${uri.split(':')[2]}?market=DE`,signal)];
+  const params=new URLSearchParams({q:query,type:'track',limit:'10',market:'DE'});
+  const result=await requestSpotifyTrackMapping(`search?${params}`,signal);
+  return result.tracks?.items || [];
+}
+function chooseDiscogsSpotifyMatch(track, artist, candidates) {
+  const normalize=value=>String(value || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+  const normalizeArtist=value=>normalize(String(value || '').replace(/\s*\(\d+\)/g,''));
+  const wantedArtist=normalizeArtist(artist);
+  if(!wantedArtist || /^(various|various artists)$/i.test(wantedArtist))return null;
+  const matches=candidates.filter(candidate=> {
+    if(candidate.is_playable===false || !spotifyTrackUri(candidate.uri))return false;
+    const mapped=mappedSpotifyTrack(candidate);
+    if(normalize(mapped.title)!==normalize(track.title))return false;
+    const artists=(candidate.artists || []).map(value=>normalizeArtist(value.name));
+    if(!artists.includes(wantedArtist) && normalizeArtist(mapped.artist)!==wantedArtist)return false;
+    const seconds=getListeningTrackDurationSeconds(track);
+    return !seconds || !mapped.duration_ms || Math.abs(seconds-mapped.duration_ms/1000)<=12;
+  });
+  // Multiple recordings with different durations need a manual choice.
+  const versions=new Set(matches.map(candidate=>Math.round((Number(candidate.duration_ms)||0)/2000)));
+  return matches.length && versions.size===1 ? mappedSpotifyTrack(matches[0]) : null;
+}
+async function resolveDiscogsSpotifyMappings(item, originalUrl, signal, onProgress = () => {}) {
+  const source=getDiscogsPlaybackTracks(item);
+  const mappings={...(item.spotifyTrackMappings || {})};
+  let albumTracks=[];
+  if(source.some(track=>!spotifyTrackUri(mappings[track.key]?.uri)) && normalizeSpotifyAlbumLink(originalUrl) && !isSpotifyPlaylistUrl(originalUrl)) {
+    try {albumTracks=await loadSpotifyContextTracks(originalUrl);}catch{}
+  }
+  let error='';
+  for(let index=0;index<source.length;index++) {
+    if(signal?.aborted)throw new DOMException('Abgebrochen','AbortError');
+    const track=source[index];
+    if(spotifyTrackUri(mappings[track.key]?.uri))continue;
+    onProgress(index+1,source.length);
+    const artist=(track.artists || []).map(value=>value.name).filter(Boolean).join(', ') || track.artist || item.artistLatin || item.artist;
+    let match=chooseDiscogsSpotifyMatch(track,artist,albumTracks);
+    if(!match) {
+      try {match=chooseDiscogsSpotifyMatch(track,artist,await searchSpotifyTrackMapping(`${artist} ${track.title}`,signal));}
+      catch(issue){if(issue.name==='AbortError')throw issue;error=issue.message;break;}
+    }
+    if(match)mappings[track.key]=match;
+  }
+  if(signal?.aborted)throw new DOMException('Abgebrochen','AbortError');
+  saveDiscogsSpotifyMappings(item,mappings);
+  return {tracks:getMappedDiscogsTracks(item,mappings),error};
+}
+function editDiscogsSpotifyMappings(item, {signal, onSave = () => {}} = {}) {
+  const dialog=document.createElement('dialog');dialog.className='discogs-track-mapping-dialog';
+  const heading=document.createElement('h3');heading.textContent=`Spotify-Titel zuordnen · ${item.title || 'Album'}`;
+  const hint=document.createElement('p');hint.textContent='Reihenfolge und Seiten stammen von Discogs. Prüfe die vorgeschlagenen Versionen. Fehlende Titel suchen oder einen Spotify-Track-Link einfügen. Erst mit vollständiger Zuordnung wird die Platte abgespielt.';
+  const list=document.createElement('ol');list.className='discogs-track-mapping-list';
+  const mappings=JSON.parse(JSON.stringify(item.spotifyTrackMappings || {}));
+  const controller=new AbortController();
+  const actions=document.createElement('div');actions.className='discogs-track-mapping-actions';
+  const save=document.createElement('button');save.type='button';save.textContent='Zuordnungen speichern';
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Abbrechen';
+  const status=document.createElement('p');status.setAttribute('role','status');
+  const refresh=()=>{const tracks=getMappedDiscogsTracks(item,mappings);status.textContent=`${tracks.filter(track=>track.uri).length} von ${tracks.length} Titeln zugeordnet`;};
+  for(const track of getDiscogsPlaybackTracks(item)) {
+    const row=document.createElement('li');const title=document.createElement('strong');title.textContent=`${track.position} · ${track.title}`;
+    const selected=document.createElement('p');
+    const describe=()=>{const match=mappings[track.key];selected.textContent=match?.uri?`✓ ${match.title || track.title} · ${match.artist || ''}`:'Noch kein Spotify-Titel zugeordnet';};
+    const input=document.createElement('input');input.type='search';input.value=`${track.artist || item.artistLatin || item.artist || ''} ${track.title}`.trim();input.setAttribute('aria-label',`Spotify-Titel oder Link für ${track.position} ${track.title}`);
+    const search=document.createElement('button');search.type='button';search.textContent='Suchen / Link übernehmen';
+    const clear=document.createElement('button');clear.type='button';clear.textContent='Zuordnung entfernen';
+    const results=document.createElement('div');results.className='discogs-track-mapping-results';
+    let searchVersion=0;
+    const find=async()=>{const version=++searchVersion;search.disabled=true;results.textContent='Suche läuft …';try {
+      const candidates=await searchSpotifyTrackMapping(input.value.trim(),controller.signal);
+      if(version!==searchVersion || !dialog.isConnected)return;
+      results.replaceChildren();
+      for(const candidate of candidates) {
+        if(candidate.is_playable===false || !spotifyTrackUri(candidate.uri))continue;
+        const match=mappedSpotifyTrack(candidate),button=document.createElement('button');button.type='button';
+        button.textContent=`${match.title} · ${match.artist} · ${candidate.album?.name || ''} · ${formatListeningTime(match.duration_ms/1000)}`;
+        button.onclick=()=>{mappings[track.key]=match;describe();refresh();results.replaceChildren();};results.append(button);
+      }
+      if(!results.children.length)results.textContent='Kein passender Titel gefunden. Suchtext ändern oder Track-Link einfügen.';
+    }catch(error){if(error.name!=='AbortError')results.textContent=error.message;}finally{if(version===searchVersion)search.disabled=false;}};
+    search.onclick=find;input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();find();}};
+    clear.onclick=()=>{delete mappings[track.key];describe();refresh();};
+    describe();row.append(title,selected,input,search,clear,results);list.append(row);
+  }
+  save.onclick=()=>{saveDiscogsSpotifyMappings(item,mappings);dialog.close();onSave(getMappedDiscogsTracks(item));};
+  cancel.onclick=()=>dialog.close();
+  const abort=()=>{if(dialog.open)dialog.close();};
+  dialog.addEventListener('close',()=>{controller.abort();signal?.removeEventListener('abort',abort);dialog.remove();});
+  signal?.addEventListener('abort',abort,{once:true});
+  actions.append(save,cancel);dialog.append(heading,hint,status,list,actions);document.body.append(dialog);refresh();dialog.showModal();
+  return dialog;
+}
+
 function spotifyLeftAlbumAfterLastTrack(state, tracks, currentIndex, pendingUri) {
   if (pendingUri || !tracks.length || currentIndex !== tracks.length - 1) return false;
   const uri = state.playingURI || state.track_window?.current_track?.uri || state.currentTrack?.uri || '';
@@ -20550,6 +20906,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   spotifyMiniController?.destroy();
   spotifyMiniController = null;
   spotifyMiniTracklistRequest?.abort();
+  const discogsOrder = usesDiscogsPlaybackOrder(item, originalUrl);
+  let discogsSequenceReady = !discogsOrder;
   const dock = document.getElementById('albumListeningDock');
   const expandHandle = document.createElement('button');
   expandHandle.type = 'button';
@@ -20801,9 +21159,19 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     playNextQueuedAlbum();
     return true;
   };
+  const finishAlbumPlayback = () => {
+    if(advanceAlbumQueueAtEnd())return true;
+    if(!discogsOrder || lastTrackEndTriggered)return false;
+    lastTrackEndTriggered=true;
+    spotifyMiniController?.pause();
+    pendingRestoredTrackUri=tracks[0]?.uri || '';
+    listeningPlaybackState={trackUri:pendingRestoredTrackUri,positionSeconds:0};
+    showPlaybackState(true);
+    return true;
+  };
   let initialAlbumTrackSelected = restorePlayback;
   const startFirstAlbumTrack = () => {
-    if (initialAlbumTrackSelected || !normalizeSpotifyAlbumLink(originalUrl) || !controllerReady || !tracks[0]?.uri || !host.isConnected) return false;
+    if (initialAlbumTrackSelected || (!discogsOrder && !normalizeSpotifyAlbumLink(originalUrl)) || !discogsSequenceReady || !controllerReady || !tracks[0]?.uri || !host.isConnected) return false;
     initialAlbumTrackSelected = true;
     currentIndex = 0; playingUri = tracks[0].uri;
     pendingAutoAdvancedTrackUri = playingUri;
@@ -20811,6 +21179,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     listeningPlaybackState = {trackUri:playingUri,positionSeconds:0};
     lastTrackEndTriggered = false;
     updateCurrentTrack();
+    if(discogsOrder)spotifyMiniController.setTrackSequence?.(tracks.map(track=>track.uri));
     spotifyMiniController.loadUri(playingUri);
     spotifyMiniController.play();
     pendingPlaybackPaused = false; pendingPlaybackAt = Date.now();
@@ -20852,14 +21221,14 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     restoringPausedTrack = true;
   }
   const updateControls = () => {
-    toggle.disabled = !controllerReady;
-    previous.disabled = !controllerReady || tracks.length < 2 || !tracks.some(track => track.uri);
+    toggle.disabled = !controllerReady || !discogsSequenceReady;
+    previous.disabled = !controllerReady || !discogsSequenceReady || tracks.length < 2 || !tracks.some(track => track.uri);
     next.disabled = previous.disabled;
     player.dataset.currentTrackIndex = String(currentIndex);
     favorite.dataset.trackUri = tracks[currentIndex]?.uri || playingUri;
     favorite.disabled = !isSpotifyIntegrationAvailable() || favorite.dataset.saving === 'true' || !controllerReady || !/^spotify:track:/.test(favorite.dataset.trackUri);
     trackList.querySelectorAll('.album-mini-track').forEach((button, index) => {
-      button.disabled = !controllerReady || !tracks[index]?.uri;
+      button.disabled = !controllerReady || !discogsSequenceReady || !tracks[index]?.uri;
     });
   };
   const updateCurrentTrack = (state = {}) => {
@@ -20950,10 +21319,10 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       button.type = 'button';
       button.className = 'album-mini-track';
       button.dataset.trackUri = track.uri || '';
-      button.disabled = !controllerReady || !track.uri;
+      button.disabled = !controllerReady || !discogsSequenceReady || !track.uri;
       const number = document.createElement('span');
       number.className = 'album-mini-track-number';
-      number.textContent = String(index + 1).padStart(2, '0');
+      number.textContent = discogsOrder ? track.position || String(index+1) : String(index + 1).padStart(2, '0');
       const name = document.createElement('span');
       name.className = 'album-mini-track-name';
       name.textContent = track.title || `Track ${index + 1}`;
@@ -20964,7 +21333,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         : /^\d+:\d{2}$/.test(track.duration || '') ? track.duration : '';
       button.append(number, name, length);
       button.addEventListener('click', () => {
-        if (!track.uri || !spotifyMiniController || !controllerReady) return;
+        if (!track.uri || !spotifyMiniController || !controllerReady || !discogsSequenceReady) return;
         try {
           initialAlbumTrackSelected = true;
           currentIndex = index;
@@ -20995,10 +21364,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     message.hidden = !player.dataset.sdkNotice;
     if(player.dataset.sdkNotice)message.textContent=player.dataset.sdkNotice;
     updateCurrentTrack();
-    if (timingSource === 'spotify' && pendingPlaybackPaused !== true) startFirstAlbumTrack();
+    if ((timingSource === 'spotify' || timingSource === 'discogs') && pendingPlaybackPaused !== true) startFirstAlbumTrack();
     syncFullscreenPlayer();
   };
-  const fallbackTracks = (Array.isArray(item?.tracklist) ? item.tracklist : []).map(track => ({
+  const fallbackTracks = (discogsOrder ? getMappedDiscogsTracks(item) : Array.isArray(item?.tracklist) ? item.tracklist : []).map(track => ({
+    position: typeof track === 'string' ? '' : track.position || '',
     title: typeof track === 'string' ? getListeningDisplayText(track, 'Unbenannter Track') : getListeningDisplayText(track.title, 'Unbenannter Track'),
     duration: typeof track === 'string' ? '' : track.duration || '',
     duration_ms: typeof track === 'string' ? 0 : Number(track.duration_ms) || 0,
@@ -21101,7 +21471,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   });
   spotifyDisplayCleanup.observe(document.body, {childList:true, subtree:true});
   toggle.addEventListener('click', () => {
-    if (!spotifyMiniController || !controllerReady) return;
+    if (!spotifyMiniController || !controllerReady || !discogsSequenceReady) return;
     try {
       initialAlbumTrackSelected = true;
       const desiredPaused = !playbackIsPaused;
@@ -21199,7 +21569,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     progress.style.setProperty('--progress', `${percentage}%`);
   });
   seek.addEventListener('change', () => {
-    if (!spotifyMiniController || !controllerReady) return;
+    if (!spotifyMiniController || !controllerReady || !discogsSequenceReady) return;
     try {
       const seconds=Math.max(0,Number(seek.value)||0);
       listeningPlaybackState={trackUri:playingUri||listeningPlaybackState.trackUri,positionSeconds:seconds};
@@ -21218,7 +21588,49 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const albumId = getSpotifyAlbumId(originalUrl);
   const spotifyContent = spotifyPath.match(/^\/(album|track|playlist)\/([A-Za-z0-9]+)\/?$/);
   const spotifyUri = spotifyContent ? `spotify:${spotifyContent[1]}:${spotifyContent[2]}` : '';
-  if (albumId || spotifyContent?.[1] === 'playlist') {
+  if (discogsOrder) {
+    const request=new AbortController();spotifyMiniTracklistRequest=request;
+    const mappingButton=document.createElement('button');mappingButton.type='button';mappingButton.className='album-mini-control';mappingButton.textContent='Titel zuordnen';
+    mappingButton.dataset.discogsTrackMapping='true';
+    mappingButton.title='Spotify-Zuordnungen der Discogs-Titelliste prüfen und ändern';
+    topbar.append(mappingButton);
+    mappingButton.disabled=true;
+    const applyMappings=entries=>{
+      if(request.signal.aborted || !host.isConnected)return;
+      discogsSequenceReady=entries.length>0 && entries.every(track=>track.uri);
+      spotifyMiniController?.setTrackSequence?.(discogsSequenceReady?entries.map(track=>track.uri):[]);
+      renderTracks(entries,'discogs');
+      if(!discogsSequenceReady) {
+        message.hidden=false;message.textContent='Spotify-Zuordnung unvollständig. Bitte fehlende Titel über „Titel zuordnen“ ergänzen.';
+        player.dataset.trackMessage=message.textContent;
+      }
+      updateControls();syncFullscreenPlayer();
+    };
+    mappingButton.onclick=()=>{
+      spotifyMiniController?.pause();
+      editDiscogsSpotifyMappings(item,{signal:request.signal,onSave:entries=>{
+        initialAlbumTrackSelected=restorePlayback;
+        pendingAutoAdvancedTrackUri='';pendingPlaybackPaused=null;currentIndex=-1;
+        applyMappings(entries);
+      }});
+    };
+    message.hidden=false;message.textContent='Discogs-Titel werden Spotify zugeordnet …';
+    resolveDiscogsSpotifyMappings(item,originalUrl,request.signal,(index,total)=>{
+      if(host.isConnected){message.hidden=false;message.textContent=`Spotify-Titel werden zugeordnet … ${index} von ${total}`;}
+    }).then(result=>{
+      if(request.signal.aborted || !host.isConnected)return;
+      mappingButton.disabled=false;
+      applyMappings(result.tracks);
+      if(!discogsSequenceReady) {
+        if(result.error){message.hidden=false;message.textContent=result.error+' Bitte „Titel zuordnen“ verwenden.';}
+        mappingButton.onclick();
+      }
+    }).catch(error=>{
+      if(request.signal.aborted || !host.isConnected)return;
+      mappingButton.disabled=false;
+      message.hidden=false;message.textContent=error.message;updateControls();
+    });
+  } else if (albumId || spotifyContent?.[1] === 'playlist') {
     const request=new AbortController();spotifyMiniTracklistRequest=request;
     loadSpotifyContextTracks(originalUrl).then(spotifyTracks=>{
       if(request.signal.aborted || !host.isConnected)return;
@@ -21312,6 +21724,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         return;
       }
       spotifyMiniController = controller;
+      if(discogsOrder && discogsSequenceReady)controller.setTrackSequence?.(tracks.map(track=>track.uri));
       syncPlayerVolumeControls();
       activateListeningControllerFrame(host);
       if(controller.isWebPlaybackSdk)controller.addListener('command_failed',event=>{
@@ -21320,10 +21733,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       });
       if(controller.isWebPlaybackSdk)controller.addListener('playback_ended',()=>{
         if(!host.isConnected || spotifyMiniController !== controller)return;
-        if(currentIndex===tracks.length-1 && lastAlbumTrackNearEndAt && Date.now()-lastAlbumTrackNearEndAt<60000) advanceAlbumQueueAtEnd();
+        if(currentIndex===tracks.length-1 && lastAlbumTrackNearEndAt && Date.now()-lastAlbumTrackNearEndAt<60000) finishAlbumPlayback();
       });
       controller.addListener('ready', () => {
         controllerReady = true;
+        if(discogsOrder && !discogsSequenceReady)controller.pause();
         syncPlayerVolumeControls();
         void applyPlayerVolume();
         player.dataset.controllerReady = 'true';
@@ -21336,13 +21750,13 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           // Wiederherstellen ändert den gespeicherten Fortschritt nicht.
         } else {
           // The track list may arrive after ready. Keep the first-track selection pending.
-          if (!startFirstAlbumTrack()) controller.play();
+          if (!startFirstAlbumTrack() && !discogsOrder) controller.play();
         }
         syncFullscreenPlayer();
       });
       controller.addListener('playback_started', event => {
-        if (!host.isConnected || spotifyMiniController !== controller) return;
-        if (controller.isWebPlaybackSdk && spotifyLeftAlbumAfterLastTrack(event.data || {}, tracks, currentIndex, pendingAutoAdvancedTrackUri) && advanceAlbumQueueAtEnd()) return;
+        if (!host.isConnected || spotifyMiniController !== controller || !discogsSequenceReady) return;
+        if (controller.isWebPlaybackSdk && spotifyLeftAlbumAfterLastTrack(event.data || {}, tracks, currentIndex, pendingAutoAdvancedTrackUri) && finishAlbumPlayback()) return;
         if (pendingPlaybackPaused === true && Date.now()-pendingPlaybackAt < 8000) { retryPendingEmbedPlayback(); return; }
         if (!acceptsSpotifyTrackState(event.data || {}, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) return;
         if (albumId && currentIndex < 0 && !event.data?.playbackContextPosition) currentIndex = 0;
@@ -21354,9 +21768,9 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         listeningPlaybackState = { trackUri: playingUri, positionSeconds: 0 };
       });
       controller.addListener('playback_update', event => {
-        if (!host.isConnected || spotifyMiniController !== controller) return;
+        if (!host.isConnected || spotifyMiniController !== controller || !discogsSequenceReady) return;
         const state = event.data || {};
-        if (controller.isWebPlaybackSdk && spotifyLeftAlbumAfterLastTrack(state, tracks, currentIndex, pendingAutoAdvancedTrackUri) && advanceAlbumQueueAtEnd()) return;
+        if (controller.isWebPlaybackSdk && spotifyLeftAlbumAfterLastTrack(state, tracks, currentIndex, pendingAutoAdvancedTrackUri) && finishAlbumPlayback()) return;
         // Spotify Web Playback can start another context track instead of emitting a
         // reliable 'ended' event. Detect the transition after the final album track.
         if (controller.isWebPlaybackSdk && currentIndex === tracks.length - 1 && tracks.length && !lastTrackEndTriggered) {
@@ -21370,7 +21784,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           const recentlyNearEnd = lastAlbumTrackNearEndAt && Date.now()-lastAlbumTrackNearEndAt < 60000;
           const movedToAnotherTrack = reportedUri && reportedUri !== lastUri;
           const finishedAndReset = state.isPaused === true && positionMs < 1500;
-          if (recentlyNearEnd && (movedToAnotherTrack || finishedAndReset) && advanceAlbumQueueAtEnd()) return;
+          if (recentlyNearEnd && (movedToAnotherTrack || finishedAndReset) && finishAlbumPlayback()) return;
         }
         if (!acceptsSpotifyTrackState(state, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) return;
         if (pendingPlaybackPaused !== null) {
@@ -21400,7 +21814,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           seek.value = String(Math.min(position, playbackDuration));
           progress.style.setProperty('--progress', `${playbackDuration > 0 ? Math.min(position / playbackDuration * 100, 100) : 0}%`);
         }
-        if (!controller.isWebPlaybackSdk && normalizeSpotifyAlbumLink(originalUrl) && !playbackIsPaused && playbackDuration > 0
+        if (!controller.isWebPlaybackSdk && (discogsOrder || normalizeSpotifyAlbumLink(originalUrl)) && !playbackIsPaused && playbackDuration > 0
           && position >= playbackDuration - 0.5 && !lastTrackEndTriggered) {
           lastTrackEndTriggered = true;
           if (currentIndex >= 0 && currentIndex < tracks.length - 1) {
@@ -21424,6 +21838,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
             }
           } else if (listeningAlbumQueue.length) {
             playNextQueuedAlbum();
+          } else if(discogsOrder) {
+            controller.pause();pendingRestoredTrackUri=tracks[0]?.uri || '';showPlaybackState(true);
           }
         }
       });
@@ -21470,7 +21886,7 @@ function mountListeningEmbed(container, url, title, item = null, restorePlayback
     dock.classList.remove('is-hidden', 'is-collapsed');
     document.getElementById('albumListeningDockTitle').textContent = title || 'Album anhören';
     dock.hidden = false;
-    currentListeningAlbum = { ...(item || {}), title: title || item?.title || 'Album', listeningUrl: url };
+    currentListeningAlbum = { ...(item || {}), title: title || item?.title || 'Album', listeningUrl: url, ...(spotifyEmbed ? {spotifyAlbumUrl:url} : {}) };
     updateAlbumDockToggle();
     updateAlbumMiniPlayerButton();
     persistListeningSession();
@@ -22810,7 +23226,31 @@ async function searchAppleListening(item, content, controller, status) {
 
 async function openAlbumListening(item, inlineTarget = null, options = {}) {
   const overlay = document.getElementById('albumListeningOverlay');
-  const storedUrl = options.chooseAgain || options.searchQuery ? null : getSupportedListeningUrl(normalizeSpotifyAlbumLink(item.spotifyAlbumUrl || item.listeningUrl) || item.spotifyAlbumUrl || item.listeningUrl);
+  const preferredPlaylist=[item.spotifyAlbumUrl,item.listeningUrl].find(url=>isSpotifyPlaylistUrl(url));
+  let storedUrl = options.chooseAgain || options.searchQuery ? null : getSupportedListeningUrl(preferredPlaylist || normalizeSpotifyAlbumLink(item.spotifyAlbumUrl || item.listeningUrl) || item.spotifyAlbumUrl || item.listeningUrl || getMappedDiscogsUrl(item));
+  if(!storedUrl && !options.chooseAgain && !options.searchQuery && !options.queueSelection && getDiscogsPlaybackTracks(item).length && isSpotifyIntegrationAvailable()) {
+    spotifyMiniController?.pause();
+    closeAlbumListening(true);
+    const request=new AbortController();albumListeningRequest=request;
+    const mappingContent=inlineTarget || document.getElementById('albumListeningContent');
+    const mappingStatus=document.createElement('p');mappingStatus.setAttribute('role','status');mappingStatus.textContent='Discogs-Titel werden Spotify zugeordnet …';mappingContent.append(mappingStatus);
+    if(!inlineTarget){document.getElementById('albumListeningTitle').textContent=`${item.title || 'Album'} anhören`;overlay.classList.add('open');}
+    try {
+      const result=await resolveDiscogsSpotifyMappings(item,'',request.signal,(index,total)=>{mappingStatus.textContent=`Spotify-Titel werden zugeordnet … ${index} von ${total}`;});
+      if(request.signal.aborted)return;
+      storedUrl=getMappedDiscogsUrl(item);
+      if(!storedUrl) {
+        mappingStatus.textContent=result.error || 'Spotify-Zuordnung unvollständig. Bitte fehlende Titel ergänzen.';
+        const edit=document.createElement('button');edit.type='button';edit.textContent='Titel zuordnen';
+        edit.onclick=()=>editDiscogsSpotifyMappings(item,{signal:request.signal,onSave:entries=>{
+          if(entries.length && entries.every(track=>track.uri))void openAlbumListening(item,inlineTarget,options);
+          else mappingStatus.textContent=`${entries.filter(track=>track.uri).length} von ${entries.length} Titeln zugeordnet. Bitte fehlende Titel ergänzen.`;
+        }});
+        mappingContent.append(edit);edit.click();
+        return;
+      }
+    } catch(error) {if(request.signal.aborted)return;await showAlert(error.message);return;}
+  }
   const restorePlayback = options.restorePlayback === true;
   if(storedUrl)preloadSpotifyPlayer(item);
   if (!options.chooseAgain && !options.searchQuery && (item.spotifyAlbumUrl || item.listeningUrl) && !storedUrl) {
