@@ -2029,6 +2029,9 @@
     object-fit:cover;
   }
   .fullscreen-player-menu-item-meta { min-width:0; }
+  .fullscreen-player-menu-item-heading { display:flex; align-items:center; gap:6px; min-width:0; }
+  .fullscreen-player-spotify-check { flex:none; color:#22c55e; font-size:13px; font-weight:700; }
+  .fullscreen-player-spotify-check[hidden] { display:none; }
   .fullscreen-player-menu-item-title {
     display:block;
     overflow:hidden;
@@ -16957,6 +16960,7 @@ function saveSpotifyAlbumLink(item, rawUrl) {
   if (currentDraft && currentDraft.id===item?.id) currentDraft.spotifyAlbumUrl=normalizedUrl;
   const storedItem = ownCollection.find(entry => entry.id === item?.id);
   if (item && item !== storedItem) item.spotifyAlbumUrl=normalizedUrl;
+  updateFullscreenSpotifyLinkIndicator(item);
   if (!viewingOwnCollection || !storedItem || storedItem.spotifyAlbumUrl === normalizedUrl) return false;
   storedItem.spotifyAlbumUrl = normalizedUrl;
   if (item !== storedItem) item.spotifyAlbumUrl = normalizedUrl;
@@ -19619,6 +19623,7 @@ function saveDiscoveredSpotifyAlbumLinks(found) {
     const url = links.get(byKey(item));
     if (url && !normalizeSpotifyAlbumLink(item.spotifyAlbumUrl) && !getQueueableAlbumUrl(item)) {
       item.spotifyAlbumUrl = url;
+      updateFullscreenSpotifyLinkIndicator(item);
       changed++;
     }
   }
@@ -19709,6 +19714,13 @@ async function queueFullscreenCompartment() {
 document.getElementById('fullscreenPlayerQueueCompartment').addEventListener('click',queueFullscreenCompartment);
 
 
+function updateFullscreenSpotifyLinkIndicator(item) {
+  const hasLink = [item?.spotifyAlbumUrl, item?.listeningUrl].some(url => normalizeSpotifyAlbumLink(url));
+  document.querySelectorAll('#fullscreenPlayerMenuList .fullscreen-player-spotify-check').forEach(check => {
+    if (check.dataset.albumId === String(item?.id)) check.hidden = !hasLink;
+  });
+}
+
 function renderFullscreenPlayerMenu() {
   const list = document.getElementById('fullscreenPlayerMenuList');
   if (!list) return;
@@ -19771,7 +19783,17 @@ function renderFullscreenPlayerMenu() {
     const artist = document.createElement('span');
     artist.className = 'fullscreen-player-menu-item-artist';
     artist.textContent = getListeningDisplayText(item.artist, 'Unbekannter Interpret');
-    meta.append(title, artist);
+    const heading = document.createElement('div');
+    heading.className = 'fullscreen-player-menu-item-heading';
+    const spotifyCheck = document.createElement('span');
+    spotifyCheck.className = 'fullscreen-player-spotify-check';
+    spotifyCheck.dataset.albumId = String(item.id);
+    spotifyCheck.textContent = '✓';
+    spotifyCheck.title = 'Spotify-Link vorhanden';
+    spotifyCheck.setAttribute('aria-label', 'Spotify-Link vorhanden');
+    spotifyCheck.hidden = ![item.spotifyAlbumUrl, item.listeningUrl].some(url => normalizeSpotifyAlbumLink(url));
+    heading.append(title, spotifyCheck);
+    meta.append(heading, artist);
     const actions = document.createElement('div');
     actions.className = 'fullscreen-player-menu-item-actions';
     const url = getSupportedListeningUrl(item.spotifyAlbumUrl || item.listeningUrl);
