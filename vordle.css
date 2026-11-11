@@ -52,3 +52,13 @@
 @media(max-width:600px) { .vordle-dialog { width:calc(100vw - 14px); max-height:96dvh; padding:18px 12px; border-radius:14px; }.vordle-daily-label { display:none; }.vordle-form { grid-template-columns:1fr; }.vordle-submit { min-height:46px; }.vordle-grid { min-width:640px; }.vordle-attempts { gap:6px; }.vordle-subtitle { font-size:14px; } }
 
 @media(max-width:600px) { .vordle-launch span:last-child { display:none; }.vordle-launch { padding:6px 9px; } }
+.vordle-cover-hint { margin:20px 0; display:flex; align-items:center; gap:18px; }
+.vordle-cover-frame { width:180px; height:180px; flex:none; overflow:hidden; position:relative; border-radius:12px; border:1px solid var(--border); background:var(--surface-2); }
+.vordle-cover-image { width:100%; height:100%; object-fit:cover; pointer-events:none; user-select:none; }
+.vordle-cover-placeholder { position:absolute; inset:0; display:grid; place-items:center; color:var(--text-muted); font-size:70px; }
+.vordle-cover-caption { max-width:260px; color:var(--text-secondary); font-size:12px; line-height:1.6; }
+.vordle-continue, .vordle-uncover { margin:12px 10px 0 0; padding:10px 16px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text-primary); }
+.vordle-continue { border-color:var(--accent); background:var(--accent); color:#fff; }
+.vordle-practice-tag { display:block; margin-top:5px; font-size:9px; opacity:.8; }
+@media(max-width:600px) { .vordle-cover-frame { width:150px; height:150px; }.vordle-cover-hint { gap:12px; } }
+@media(prefers-reduced-motion:reduce) { .vordle-cover-image { transition:none; } }
