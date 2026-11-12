@@ -292,6 +292,10 @@
     width: min(360px, 90vw);
     max-width: 360px;
     z-index: 2147483647;
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .settings-panel-title {
     margin: 0 0 8px;
@@ -4650,22 +4654,27 @@
   .settings-user-pill > span { margin-right:auto; }
   .settings-primary-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
     margin-top: 8px;
   }
   .settings-primary-actions > .icon-btn,
   .settings-accent-button {
     width: 100%;
     min-width: 0;
-    height: 42px;
+    height: 34px;
+    min-height: 34px;
     padding: 0;
+    display: flex;
+    align-items: center;
     justify-content: center;
   }
   .settings-primary-actions > .icon-btn {
     background: rgba(255,255,255,0.04);
     color: var(--text-secondary);
   }
+  #settingsPanel .settings-primary-actions > .icon-btn { width:100%; min-width:0; height:34px; min-height:34px; }
+  .settings-primary-actions svg { width:16px; height:16px; }
   .settings-mobile-shortcuts { display:none; }
   .settings-accent-button {
     position: relative;
@@ -4750,6 +4759,10 @@
     opacity: 1;
     transform: translateX(-50%) translateY(-14px);
   }
+  /* Hidden tooltips must not enlarge the settings scroll area. */
+  #settingsPanel .tooltip-btn::after { display:none; bottom:100%; left:0; margin:0 0 4px; transform:none; width:max-content; max-width:220px; white-space:normal; }
+  #settingsPanel .tooltip-btn:hover::after { display:block; transform:none; }
+  #settingsPanel .settings-primary-actions > :last-child::after { left:auto; right:0; }
   .filter-help-panel {
     display: none;
     position: absolute;
@@ -7197,6 +7210,7 @@
 .collection-card.multi-select-card.is-selected .multi-select-check svg { width:20px; height:20px; }
 #bulkDeleteBtn:disabled { opacity:.4; cursor:not-allowed; }
 </style>
+<script src="layout-diagnostics.js" defer></script>
 </head>
 <body>
 <div id="cloudSyncBanner" role="status" aria-live="polite" hidden></div>
@@ -7392,11 +7406,16 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 8h6M9 12h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <span>Hilfe &amp; Doku</span>
             </button>
+            <button type="button" id="exportLayoutDiagnosticsBtn" class="settings-fix-btn" title="Bildschirm-, Zoom- und Layoutdaten als JSON speichern">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h16v12H4zM8 20h8m-4-4v4M8 8h8M8 12h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Diagnose exportieren</span>
+            </button>
             <button type="button" id="reviewOwnedAlbumsBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Alle Alben in deinem Besitz nacheinander bearbeiten">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 5h16v14H4zM8 9h8M8 13h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <span>Besessene Alben durchgehen</span>
             </button>
           </div>
+          <p id="layoutDiagnosticsStatus" class="settings-panel-hint" role="status" aria-live="polite"></p>
           <div class="settings-price-refresh-status" id="discogsPriceRefreshStatus" role="status" aria-live="polite" hidden>
             <span id="discogsPriceRefreshMessage"></span>
             <button type="button" id="cancelDiscogsPriceRefreshBtn" hidden>Abbrechen</button>
@@ -10073,6 +10092,7 @@ async function loadCloudData(uid, prefetchedSnap) {
 }
 
 async function performCloudDataSaveNow(allowRemoteView = false) {
+  if (collectionCloudBulkDepth) { collectionCloudBulkRemote ||= allowRemoteView; return false; }
   if (cloudCollectionIntegrityIssue?.uid === currentUid) {
     updateCloudSyncBanner(getCollectionIntegrityMessage(), 'error', false);
     return false;
@@ -10191,7 +10211,23 @@ function saveCloudDataNow(allowRemoteView = false) {
   return cloudSaveInFlightPromise;
 }
 
-function scheduleCloudSave(delay = 1200, allowRemoteView = false) {
+let collectionCloudBulkDepth = 0;
+let collectionCloudBulkRemote = false;
+function beginCollectionCloudBulk() {
+  collectionCloudBulkDepth++;
+  clearTimeout(cloudSaveDebounceTimer);
+  cloudSaveDebounceTimer = null;
+}
+function endCollectionCloudBulk() {
+  if (!collectionCloudBulkDepth) return;
+  if (--collectionCloudBulkDepth) return;
+  const allowRemote = collectionCloudBulkRemote;
+  collectionCloudBulkRemote = false;
+  if (pendingCloudSave) scheduleCloudSave(0, allowRemote);
+}
+
+function scheduleCloudSave(delay = 300, allowRemoteView = false) {
+  if (collectionCloudBulkDepth) { collectionCloudBulkRemote ||= allowRemoteView; return; }
   if (!currentUid || (!viewingOwnCollection && !allowRemoteView)) return;
   if (cloudRetryTimer) {
     clearTimeout(cloudRetryTimer);
@@ -10221,7 +10257,7 @@ function saveCloudDataDebounced(allowRemoteView = false) {
   cloudChangeRevision += 1;
   persistPendingCloudSnapshot();
   updateCloudSyncIndicator();
-  scheduleCloudSave(1200, allowRemoteView);
+  scheduleCloudSave(300, allowRemoteView);
   updateCloudSyncBanner(getPendingCloudStatusMessage());
 }
 
@@ -11091,6 +11127,7 @@ async function refreshDiscogsPrices() {
   let stoppedForAuthError = false;
   const failureExamples = [];
 
+  beginCollectionCloudBulk();
   discogsPriceRefreshRunning = true;
   cancelDiscogsPriceRefresh = false;
   discogsRefreshStatusDismissed = false;
@@ -11186,6 +11223,7 @@ async function refreshDiscogsPrices() {
     scheduleDiscogsRefreshStatusDismissal();
   } finally {
     discogsPriceRefreshRunning = false;
+    endCollectionCloudBulk();
     refreshButton.disabled = false;
     genreRefreshButton.disabled = false;
     cancelButton.hidden = true;
@@ -11255,6 +11293,7 @@ async function refreshDiscogsGenresAndStyles() {
   let stoppedForAuthError = false;
   const failureExamples = [];
 
+  beginCollectionCloudBulk();
   discogsGenreRefreshRunning = true;
   cancelDiscogsGenreRefresh = false;
   discogsRefreshStatusDismissed = false;
@@ -11337,6 +11376,7 @@ async function refreshDiscogsGenresAndStyles() {
     scheduleDiscogsRefreshStatusDismissal();
   } finally {
     discogsGenreRefreshRunning = false;
+    endCollectionCloudBulk();
     refreshButton.disabled = false;
     priceButton.disabled = false;
     cancelButton.hidden = true;
@@ -11817,6 +11857,23 @@ document.getElementById('settingsTopShortcuts').addEventListener('click', event 
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 if (settingsBtn && settingsPanel) {
+  const positionSettingsPanel = () => {
+    const viewport = window.visualViewport;
+    const viewportTop = viewport?.offsetTop || 0;
+    const viewportHeight = viewport?.height || window.innerHeight;
+    const buttonRect = settingsBtn.getBoundingClientRect();
+    const top = Math.min(Math.max(viewportTop + 8, buttonRect.bottom + 8), viewportTop + Math.max(8, viewportHeight - 80));
+    settingsPanel.style.top = `${top}px`;
+    settingsPanel.style.right = `${Math.max(8, window.innerWidth - buttonRect.right)}px`;
+    settingsPanel.style.left = 'auto';
+    settingsPanel.style.maxHeight = `${Math.max(0, viewportTop + viewportHeight - top - 8)}px`;
+  };
+  const repositionOpenSettings = () => {
+    if (settingsPanel.classList.contains('open')) positionSettingsPanel();
+  };
+  window.addEventListener('resize', repositionOpenSettings);
+  window.visualViewport?.addEventListener('resize', repositionOpenSettings);
+  window.visualViewport?.addEventListener('scroll', repositionOpenSettings);
   const closeSettingsPanel = () => {
     settingsPanel.classList.remove('open');
     dismissDiscogsRefreshStatus();
@@ -11830,13 +11887,7 @@ if (settingsBtn && settingsPanel) {
         document.getElementById('discogsPriceRefreshStatus').hidden = false;
       }
       document.body.appendChild(settingsPanel);
-      const buttonRect = settingsBtn.getBoundingClientRect();
-      const top = Math.max(8, buttonRect.bottom + 8);
-      settingsPanel.style.top = `${top}px`;
-      settingsPanel.style.right = `${Math.max(8, window.innerWidth - buttonRect.right)}px`;
-      settingsPanel.style.left = 'auto';
-      settingsPanel.style.maxHeight = `calc(100vh - ${top + 8}px)`;
-      settingsPanel.style.overflowY = 'auto';
+      positionSettingsPanel();
     } else {
       dismissDiscogsRefreshStatus();
     }
@@ -16247,6 +16298,7 @@ async function renderDiscogsAlternativeResults(results) {
 }
 
 let discogsMatchQueue = [];
+let discogsMatchCloudBulk = false;
 let discogsMatchQueueIndex = 0;
 let discogsMatchCurrentItem = null;
 let discogsMatchMode = 'price';
@@ -16497,8 +16549,13 @@ async function openDiscogsMatchQueue(items, mode = 'price', options = {}) {
     return;
   }
   const resumable = options.fresh ? {queue:candidates,index:0} : getResumableReviewQueue('discogsMatch', candidates, mode);
+  if (!discogsMatchCloudBulk) { beginCollectionCloudBulk(); discogsMatchCloudBulk = true; }
   discogsMatchQueue = resumable.queue;
-  await processDiscogsQueueItem(resumable.index);
+  try { await processDiscogsQueueItem(resumable.index); }
+  catch (error) {
+    if (discogsMatchCloudBulk) { discogsMatchCloudBulk = false; endCollectionCloudBulk(); }
+    throw error;
+  }
 }
 
 async function openDiscogsMatchOverlay(results, query, item = null, mode = 'price') {
@@ -16659,6 +16716,7 @@ async function closeDiscogsMatchOverlay() {
     }
   }
   if (overlay) overlay.classList.remove('open');
+  if (discogsMatchCloudBulk) { discogsMatchCloudBulk = false; endCollectionCloudBulk(); }
 }
 
 async function searchDiscogsAlternativeForCurrentDraft() {
@@ -17849,11 +17907,11 @@ let lastObservedListeningTrackUri = '';
 let listeningSyncWriteChain = Promise.resolve();
 let listeningCloudConfirmedAlbum = null;
 let listeningCloudConfirmedTrackUri = '';
-// Pausen-/Fortsetzen-Spam wird erst nach 10 Sekunden stabilem Zustand gespeichert.
+// Schnelle Doppelklicks bündeln, manuelle Pause/Fortsetzen zeitnah synchronisieren.
 let listeningCloudConfirmedPaused = null;
 let listeningCloudPauseTimer = null;
 let listeningCloudLastRequestedPaused = null;
-const LISTENING_CLOUD_PAUSE_DEBOUNCE_MS = 10000;
+const LISTENING_CLOUD_PAUSE_DEBOUNCE_MS = 300;
 function scheduleListeningCloudPauseConfirmation(paused) {
   if (typeof paused !== 'boolean') return;
   if (listeningCloudLastRequestedPaused === paused) return;
@@ -17923,14 +17981,48 @@ function buildListeningSession() {
     queueOpen: !document.getElementById('albumQueuePanel')?.hidden
   };
 }
+function compactListeningAlbum(item) {
+  if (!item) return null;
+  const compact = {id:item.id ?? '',title:item.title || '',artist:item.artist || '',coverUrl:item.coverUrl || '',
+    spotifyAlbumUrl:getSupportedListeningUrl(item.spotifyAlbumUrl) || '',
+    listeningUrl:getQueueableAlbumUrl(item) || getSupportedListeningUrl(item.listeningUrl) || ''};
+  const tracks = usesDiscogsPlaybackOrder(item);
+  if (tracks || item.spotifyPlaybackMode) compact.spotifyPlaybackMode = tracks ? 'tracks' : item.spotifyPlaybackMode;
+  if (tracks) {
+    compact.discogsResourceUrl = item.discogsResourceUrl;
+    // Individual-song links are necessary playback data, not the full Discogs metadata.
+    compact.playbackTracks = getMappedDiscogsTracks(item).map(track => ({position:track.position,title:track.title,
+      uri:track.uri,duration_ms:track.duration_ms || 0}));
+  }
+  return compact;
+}
+function hydrateListeningAlbum(saved) {
+  if (!saved) return null;
+  const stored = ownCollection.find(item => String(item.id) === String(saved.id));
+  const item = {...(stored || {}),...saved};
+  if (Array.isArray(saved.playbackTracks)) {
+    item.tracklist = saved.playbackTracks.map(track => ({position:track.position,title:track.title}));
+    item.spotifyTrackMappings = Object.fromEntries(saved.playbackTracks.map(track => [JSON.stringify([track.position,track.title]),
+      {uri:track.uri,duration_ms:track.duration_ms || 0}]));
+    delete item.playbackTracks;
+  }
+  return item;
+}
+function listeningCloudSharedState(album, queue, playback = {}) {
+  playback ||= {};
+  return {currentAlbum:compactListeningAlbum(hydrateListeningAlbum(album)),
+    queue:(queue || []).map(item => compactListeningAlbum(hydrateListeningAlbum(item))),
+    playback:{trackUri:playback.trackUri || '',paused:typeof playback.paused === 'boolean' ? playback.paused : null}};
+}
+function listeningCloudSharedKey(state) { return stableCloudJson(state); }
+
 function queueListeningCloudSave(session) {
   if (!currentUid || listeningSyncApplyingRemote || listeningQueueBulkDepth) return;
   // Positionsänderungen sind sehr häufig. Die Cloud erhält nur Änderungen
-  // an Album/Warteschlange, nicht jede Playback-Sekunde oder UI-Bewegung.
-  const cloudAlbum = listeningCloudConfirmedAlbum;
-  const cloudTrackUri = listeningCloudConfirmedTrackUri;
-  const cloudPaused = listeningCloudConfirmedPaused;
-  const shared = JSON.stringify({currentAlbum:cloudAlbum,queue:session.queue,trackUri:cloudTrackUri,paused:cloudPaused});
+  // an Album, Warteschlange oder Pause, nicht jede Playback-Sekunde oder UI-Bewegung.
+  const state = listeningCloudSharedState(listeningCloudConfirmedAlbum, session.queue,
+    {trackUri:listeningCloudConfirmedTrackUri,paused:listeningCloudConfirmedPaused});
+  const shared = listeningCloudSharedKey(state);
   if (shared === listeningSyncLastSerialized) return;
   listeningSyncLastSerialized = shared;
   const uid = currentUid;
@@ -17938,8 +18030,10 @@ function queueListeningCloudSave(session) {
   listeningSyncRevision = revision;
   clearTimeout(listeningSyncTimer);
   listeningSyncTimer = setTimeout(() => {
+    if (listeningQueueBulkDepth) { listeningQueueBulkDirty = true; listeningSyncLastSerialized = ''; return; }
     listeningSyncWriteChain = listeningSyncWriteChain.catch(() => {}).then(async () => {
       if (currentUid !== uid) return;
+      if (listeningQueueBulkDepth) { listeningQueueBulkDirty = true; listeningSyncLastSerialized = ''; return; }
       const ref = listeningSessionRef(uid);
       if (!ref) return;
       // Transaktion schützt vor verspäteten Schreibvorgängen anderer Geräte.
@@ -17947,9 +18041,10 @@ function queueListeningCloudSave(session) {
         const snap = await transaction.get(ref);
         const remoteRevision = Number(snap.data()?.revision) || 0;
         if (remoteRevision > revision) return;
+        const remote = snap.data();
+        if (snap.exists && listeningCloudSharedKey(listeningCloudSharedState(remote.currentAlbum, remote.queue, remote.playback)) === shared) return;
         transaction.set(ref, {
-          version: 1, currentAlbum: cloudAlbum || null,
-          queue: session.queue, playback: {trackUri: cloudTrackUri,paused: cloudPaused}, revision, clientId: listeningSyncClientId,
+          version: 1, ...state, revision, clientId: listeningSyncClientId,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       });
@@ -17965,14 +18060,14 @@ function queueListeningCloudSave(session) {
         }, 2500);
       }
     });
-  }, 450);
+  }, 300);
 }
 function applyCloudListeningSession(data, initial = false) {
   if (!data || !Array.isArray(data.queue)) return;
   const revision = Number(data.revision) || 0;
   if (!initial && (data.clientId === listeningSyncClientId || revision < listeningSyncRevision)) return;
   listeningSyncRevision = Math.max(listeningSyncRevision, revision);
-  listeningCloudConfirmedAlbum = data.currentAlbum || null;
+  listeningCloudConfirmedAlbum = hydrateListeningAlbum(data.currentAlbum);
   listeningCloudConfirmedTrackUri = data.playback?.trackUri || '';
   listeningCloudConfirmedPaused = typeof data.playback?.paused === 'boolean' ? data.playback.paused : null;
   clearTimeout(listeningCloudPauseTimer);
@@ -17983,23 +18078,24 @@ function applyCloudListeningSession(data, initial = false) {
   listeningCloudLastPosition = null;
   listeningSyncApplyingRemote = true;
   try {
-    const items = data.queue.filter(item => item && getQueueableAlbumUrl(item))
+    const items = data.queue.map(hydrateListeningAlbum).filter(item => item && (getQueueableAlbumUrl(item) || usesDiscogsPlaybackOrder(item)))
       .map(item => ({...item, listeningUrl: getQueueableAlbumUrl(item)}));
     listeningAlbumQueue.splice(0, listeningAlbumQueue.length, ...items);
-    listeningSyncLastSerialized = JSON.stringify({currentAlbum:data.currentAlbum || null,queue:data.queue,trackUri:data.playback?.trackUri || ''});
+    listeningSyncLastSerialized = listeningCloudSharedKey(listeningCloudSharedState(listeningCloudConfirmedAlbum, items, data.playback));
     if (initial && typeof data.playback?.trackUri === 'string') {
       listeningPlaybackState = {trackUri:data.playback.trackUri,positionSeconds:0};
       lastObservedListeningTrackUri = data.playback.trackUri;
     }
     // Auf anderen Geräten nicht ungefragt die laufende Wiedergabe stoppen.
     // Beim ersten Laden wird das zuletzt aktive Album wiederhergestellt.
-    if (initial && data.currentAlbum && getQueueableAlbumUrl(data.currentAlbum)) {
-      currentListeningAlbum = {...data.currentAlbum, listeningUrl:getQueueableAlbumUrl(data.currentAlbum)};
+    const restoredAlbum = hydrateListeningAlbum(data.currentAlbum);
+    if (initial && restoredAlbum && (getQueueableAlbumUrl(restoredAlbum) || usesDiscogsPlaybackOrder(restoredAlbum))) {
+      currentListeningAlbum = {...restoredAlbum, listeningUrl:getQueueableAlbumUrl(restoredAlbum)};
     }
     updateAlbumQueueControls();
     const dock = document.getElementById('albumListeningDock');
     if (dock && (currentListeningAlbum || listeningAlbumQueue.length)) dock.hidden = false;
-    try {localStorage.setItem(getListeningSessionStorageKey(), JSON.stringify(buildListeningSession()));} catch {}
+    persistListeningSession();
   } finally { listeningSyncApplyingRemote = false; }
 }
 async function startListeningCloudSync(uid) {
@@ -18068,7 +18164,7 @@ function persistListeningSession() {
   const session = buildListeningSession();
   try {
     if (!session.currentAlbum && !session.queue.length) localStorage.removeItem(key);
-    else localStorage.setItem(key, JSON.stringify(session));
+    else localStorage.setItem(key, JSON.stringify({...session,currentAlbum:compactListeningAlbum(session.currentAlbum),queue:session.queue.map(compactListeningAlbum)}));
   } catch (error) { console.error('Wiedergabesitzung konnte nicht lokal gespeichert werden:',error); }
   queueListeningCloudSave(session);
 }
@@ -18093,10 +18189,11 @@ async function restoreListeningSession() {
   if (!saved || typeof saved !== 'object') return;
   const savedQueue = Array.isArray(saved.queue) ? saved.queue : [];
   listeningAlbumQueue.length = 0;
-  savedQueue.forEach(item => {
+  savedQueue.map(hydrateListeningAlbum).forEach(item => {
     const url = getSupportedListeningUrl(item?.spotifyAlbumUrl || item?.listeningUrl);
-    if (getQueueableAlbumUrl(item)) listeningAlbumQueue.push({ ...item, listeningUrl: getQueueableAlbumUrl(item) });
+    if (getQueueableAlbumUrl(item) || usesDiscogsPlaybackOrder(item)) listeningAlbumQueue.push({ ...item, listeningUrl: getQueueableAlbumUrl(item) });
   });
+  saved.currentAlbum = hydrateListeningAlbum(saved.currentAlbum);
   const savedCurrentUrl = getSupportedListeningUrl(saved.currentAlbum?.listeningUrl);
   const hasCurrentAlbum = savedCurrentUrl && (getSpotifyEmbedUrl(savedCurrentUrl) || getYouTubeEmbedUrl(savedCurrentUrl));
   if (hasCurrentAlbum) currentListeningAlbum = { ...saved.currentAlbum, listeningUrl: savedCurrentUrl };
@@ -19457,6 +19554,7 @@ let fullscreenRoomSaveTimer = null;
 let fullscreenRoomSaveQueue = Promise.resolve();
 let fullscreenRoomLoadedUid = null;
 let fullscreenRoomDirty = false;
+let fullscreenRoomSavedState = null;
 
 function updateFullscreenRoomStatus(message) {
   const status=document.getElementById('fullscreenRoomCloudStatus');
@@ -19492,6 +19590,7 @@ function resetFullscreenRoomSession() {
   clearTimeout(fullscreenRoomSaveTimer);
   fullscreenRoomLoadedUid = null;
   fullscreenRoomDirty = false;
+  fullscreenRoomSavedState = null;
   fullscreenRoomStyle = { ...fullscreenRoomDefaults };
   refreshFullscreenRoomControls();
 }
@@ -19525,7 +19624,11 @@ async function saveFullscreenRoomStyle() {
   fullscreenRoomSaveQueue = fullscreenRoomSaveQueue.catch(() => {}).then(async () => {
     if (currentUid !== uid) return;
     try {
-      await trackFirebaseRequest(db.collection('users').doc(uid).collection('privateSettings').doc('playerRoom').set({version:1,style}));
+      const key = stableCloudJson(style);
+      if (fullscreenRoomSavedState?.uid !== uid || fullscreenRoomSavedState.key !== key) {
+        await trackFirebaseRequest(db.collection('users').doc(uid).collection('privateSettings').doc('playerRoom').set({version:1,style}));
+        if (currentUid === uid) fullscreenRoomSavedState = {uid,key};
+      }
       if (currentUid === uid && JSON.stringify(style) === JSON.stringify(normalizeFullscreenRoomStyle(fullscreenRoomStyle))) {
         fullscreenRoomDirty = false;
         localStorage.removeItem(`${FULLSCREEN_ROOM_STORAGE_KEY}:${uid}:pending`);
@@ -19542,6 +19645,7 @@ async function saveFullscreenRoomStyle() {
   return await fullscreenRoomSaveQueue;
 }
 async function loadFullscreenRoomStyle(uid) {
+  fullscreenRoomSavedState = null;
   fullscreenRoomLoadedUid = null;
   fullscreenRoomDirty = false;
   updateFullscreenRoomStatus('Raumeinstellungen werden geladen …');
@@ -19556,6 +19660,7 @@ async function loadFullscreenRoomStyle(uid) {
     const snapshot = await trackFirebaseRequest(db.collection('users').doc(uid).collection('privateSettings').doc('playerRoom').get());
     if (currentUid !== uid) return;
     fullscreenRoomLoadedUid = uid;
+    if (snapshot.exists) fullscreenRoomSavedState = {uid,key:stableCloudJson(normalizeFullscreenRoomStyle(snapshot.data().style))};
     if (fullscreenRoomDirty) { await saveFullscreenRoomStyle(); return; }
     if (snapshot.exists) {
       fullscreenRoomStyle = normalizeFullscreenRoomStyle(snapshot.data().style);
@@ -20988,11 +21093,14 @@ function usesDiscogsPlaybackOrder(item, url = item?.spotifyAlbumUrl || item?.lis
 function setSpotifyPlaybackMode(item, mode) {
   if(!item || !['album','tracks'].includes(mode))return;
   const stored=viewingOwnCollection?ownCollection.find(entry=>String(entry.id)===String(item.id)):null;
+  const playbackChanged=item.spotifyPlaybackMode!==mode;
   const changed=stored && stored.spotifyPlaybackMode!==mode;
   item.spotifyPlaybackMode=mode;
   if(stored && changed){stored.spotifyPlaybackMode=mode;saveCollection();}
   if(currentListeningAlbum && String(currentListeningAlbum.id)===String(item.id))currentListeningAlbum.spotifyPlaybackMode=mode;
   for(const queued of listeningAlbumQueue)if(String(queued.id)===String(item.id))queued.spotifyPlaybackMode=mode;
+  if(listeningCloudConfirmedAlbum && String(listeningCloudConfirmedAlbum.id)===String(item.id))listeningCloudConfirmedAlbum.spotifyPlaybackMode=mode;
+  if(playbackChanged)persistListeningSession();
 }
 
 function spotifyTrackUri(value) {
@@ -21014,6 +21122,7 @@ function getMappedDiscogsUrl(item) {
 }
 function saveDiscogsSpotifyMappings(item, mappings) {
   const serialized=JSON.stringify(mappings);
+  const playbackChanged=JSON.stringify(item.spotifyTrackMappings || {})!==serialized;
   const stored=viewingOwnCollection ? ownCollection.find(entry=>String(entry.id)===String(item.id)) : null;
   const changed=stored && JSON.stringify(stored.spotifyTrackMappings || {})!==serialized;
   item.spotifyTrackMappings=JSON.parse(serialized);
@@ -21023,6 +21132,8 @@ function saveDiscogsSpotifyMappings(item, mappings) {
   }
   if(currentListeningAlbum && String(currentListeningAlbum.id)===String(item.id))currentListeningAlbum.spotifyTrackMappings=JSON.parse(serialized);
   for(const queued of listeningAlbumQueue)if(String(queued.id)===String(item.id))queued.spotifyTrackMappings=JSON.parse(serialized);
+  if(listeningCloudConfirmedAlbum && String(listeningCloudConfirmedAlbum.id)===String(item.id))listeningCloudConfirmedAlbum.spotifyTrackMappings=JSON.parse(serialized);
+  if(playbackChanged)persistListeningSession();
 }
 async function requestSpotifyTrackMapping(path, signal) {
   const token=await getSpotifyAccessToken();
