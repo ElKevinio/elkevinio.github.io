@@ -7097,6 +7097,68 @@
 .fullscreen-player-missing-links ul { list-style:none; padding:0; margin:8px 0 0; display:grid; gap:6px; }
 .fullscreen-player-missing-links button { width:100%; text-align:left; border:1px solid var(--border, #7775); border-radius:8px; padding:8px 10px; background:var(--surface-2, transparent); color:inherit; cursor:pointer; }
 .fullscreen-player-missing-links button:hover { filter:brightness(1.1); }
+
+/* Cross-browser mobile fullscreen layout: use available viewport space rather
+   than iPhone-specific proportions. Scoped to portrait touch-size screens. */
+@media (max-width:700px) and (orientation:portrait) {
+  .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) {
+    justify-content:flex-start;
+    gap:clamp(10px, 2.2dvh, 20px);
+    padding:calc(env(safe-area-inset-top) + 58px) 14px
+            calc(env(safe-area-inset-bottom) + 20px);
+    overflow-x:hidden;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-stage {
+    flex:0 0 auto;
+    width:100%;
+    min-height:0;
+    gap:clamp(12px, 2dvh, 20px);
+  }
+  .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-turntable {
+    width:min(76vw, 34dvh, 360px);
+    max-width:100%;
+  }
+  .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-cover {
+    width:min(43vw, 19dvh, 210px);
+    max-width:100%;
+  }
+  .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-info {
+    flex:0 0 auto;
+    width:100%;
+    min-width:0;
+    gap:5px;
+  }
+  .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-controls {
+    width:min(100%, 440px);
+    margin-top:6px;
+  }
+  .fullscreen-player-top-actions {
+    left:8px;
+    right:8px;
+    justify-content:flex-end;
+    gap:clamp(2px, 1vw, 6px);
+  }
+  .fullscreen-player-top-actions .icon-btn {
+    flex:0 1 40px;
+    min-width:0;
+    width:clamp(32px, 9vw, 40px);
+    height:40px;
+  }
+}
+@media (max-width:700px) and (orientation:portrait) and (max-height:740px) {
+  .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) {
+    gap:10px;
+    padding-top:calc(env(safe-area-inset-top) + 52px);
+  }
+  .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-turntable {
+    width:min(68vw, 30dvh, 300px);
+  }
+  .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-cover {
+    width:min(38vw, 17dvh, 175px);
+  }
+}
 </style>
 </head>
 <body>
