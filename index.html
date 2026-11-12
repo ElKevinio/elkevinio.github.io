@@ -6470,6 +6470,8 @@
 
 .spotify-import-options { display:flex; flex-direction:column; gap:10px; padding:10px 0; }
 .spotify-import-options[hidden] { display:none; }
+.spotify-import-sort { display:flex; align-items:center; flex-wrap:wrap; gap:6px 10px; font-size:12px; color:var(--text-secondary); }
+.spotify-import-sort select { flex:1 1 210px; min-width:0; min-height:44px; max-width:100%; }
 .spotify-import-types,.spotify-import-selection { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
 .spotify-import-types button,.spotify-import-selection button { padding:6px 9px; font-size:12px; min-height:32px; }
 .spotify-import-types button[aria-pressed="true"] { background:var(--accent-bg); border-color:var(--accent); color:var(--accent); }
@@ -7791,6 +7793,14 @@
         <button type="button" data-spotify-import-type="no-singles" aria-pressed="false">Ohne Singles</button>
         <button type="button" data-spotify-import-type="single" aria-pressed="false">Nur Singles</button>
       </div>
+      <label class="spotify-import-sort" for="spotifyImportSort">Sortieren nach
+        <select id="spotifyImportSort">
+          <option value="songs">Meiste Playlist-Songs pro Album</option>
+          <option value="title">Albumtitel · A–Z</option>
+          <option value="artist">Artist · A–Z (Alben gruppiert)</option>
+          <option value="playlist">Playlist-Reihenfolge</option>
+        </select>
+      </label>
       <div class="spotify-import-selection"><button type="button" id="spotifyImportSelectVisible">Sichtbare auswählen</button><button type="button" id="spotifyImportSelectNone">Auswahl aufheben</button><span id="spotifyImportSelectionCount" aria-live="polite"></span></div>
       <div class="spotify-import-destination">
         <label>Importieren als<select id="spotifyImportOwnership"><option value="wishlist">Wunschliste</option><option value="owned">Im Besitz</option></select></label>
@@ -8139,7 +8149,7 @@
 <li>Die Barcode-Suche nutzt nur Discogs.</li>
 </ul>
 <h4>Mehrere Alben auf einmal</h4>
-<p>Spotify-Wiedergabe mit Discogs-Titelliste: Die Titel laufen in Discogs-Reihenfolge, einschließlich B-Seiten. Spotify-Zuordnungen werden automatisch gesucht und gespeichert. Fehlende oder falsche Treffer können im Musikplayer unter „Titel zuordnen“ gesucht oder per Spotify-Track-Link ergänzt werden. Solange Titel fehlen, startet die Platte nicht. Ein gespeicherter Spotify-Playlist-Link verwendet weiterhin die Playlist.</p>
+<p>Spotify-Wiedergabe: Alben und EPs verwenden standardmäßig einen Albumlink, der bei Bedarf automatisch gesucht wird. Singles und Maxi-Singles mit Discogs-Titelliste laufen einschließlich B-Seiten in Discogs-Reihenfolge. Bei Alben lässt sich über „Einzeltitel zuordnen“ ausdrücklich auf diese Zuordnung umschalten. Spotify-Zuordnungen werden automatisch gesucht und gespeichert. Fehlende oder falsche Treffer können im Musikplayer unter „Titel zuordnen“ gesucht oder per Spotify-Track-Link ergänzt werden. Solange Titel fehlen, startet die Platte nicht. Ein gespeicherter Spotify-Playlist-Link verwendet weiterhin die Playlist.</p>
 <p>Mehrere Zeilen in die Suche schreiben (Desktop: <code>Shift+Enter</code>, mobil: Enter) öffnet den <b>Mehrfachimport</b>. Pro Zeile ein Album oder ein Discogs-Link; Links erscheinen dort als „Discogs-Release #id“. Pro Zeile wählst du den passenden Treffer.</p>
 <h4>Mobil: Enter</h4>
 <p>Auf dem Handy erzeugt Enter eine neue Zeile. Gesucht wird mit der Lupe.</p>
@@ -8693,8 +8703,8 @@
 </div><!-- /#appRoot -->
 
 <!-- Firebase SDK (kostenlos, "compat"-Version für einfache Einbindung ohne Build-Tool) -->
-<link rel="stylesheet" href="vordle.css?v=20261112-sammlung">
-<script src="vordle.js?v=20261112-sammlung"></script>
+<link rel="stylesheet" href="vordle.css?v=20261112-albumlinks">
+<script src="vordle.js?v=20261112-albumlinks"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -19986,7 +19996,7 @@ async function playFullscreenCompartment() {
         catch(error){searchError='Die Spotify-Suche konnte nicht fortgesetzt werden.';searchAvailable=false;}
       }
       if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
-      if(url || getDiscogsPlaybackTracks(item).length)playable.push({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:'',listeningUrl:url});
+      if(url || usesDiscogsPlaybackOrder(item))playable.push({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:'',listeningUrl:url});
       else missing.push(item);
     }
     saveDiscoveredSpotifyAlbumLinks(discovered);
@@ -20028,7 +20038,7 @@ async function queueFullscreenCompartment() {
         catch {searchAvailable=false;}
       }
       if(JSON.stringify(fullscreenPlayerCompartment)!==compartmentKey)return;
-      if((url || getDiscogsPlaybackTracks(item).length) && queueAlbumForListening({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:''},url))added++;
+      if((url || usesDiscogsPlaybackOrder(item)) && queueAlbumForListening({...item,spotifyAlbumUrl:getSpotifyEmbedUrl(url)?url:''},url))added++;
     }
     saveDiscoveredSpotifyAlbumLinks(discovered);
     status.textContent=added?`${added} ${added===1?'Album wurde':'Alben wurden'} zur Warteschlange hinzugefügt.${added<all.length?` ${all.length-added} ohne Hörlink übersprungen.`:''}`:'Keine Hörlinks gefunden. Bitte Spotify verbinden oder Album-Hörlinks speichern.';
@@ -20124,14 +20134,14 @@ function renderFullscreenPlayerMenu() {
     const actions = document.createElement('div');
     actions.className = 'fullscreen-player-menu-item-actions';
     const url = getSupportedListeningUrl(item.spotifyAlbumUrl || item.listeningUrl);
-    const queueable = !!getQueueableAlbumUrl(item) || !!getDiscogsPlaybackTracks(item).length;
+    const queueable = !!getQueueableAlbumUrl(item) || usesDiscogsPlaybackOrder(item);
     const queue = document.createElement('button');
     queue.type = 'button';
     queue.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 4v4M16 6h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
     queue.title = queueable ? 'In die Warteschlange' : 'Spotify-Link auswählen und in die Warteschlange';
     queue.setAttribute('aria-label', queue.title);
     queue.addEventListener('click', () => {
-      if (!getQueueableAlbumUrl(item) && !getDiscogsPlaybackTracks(item).length) {
+      if (!getQueueableAlbumUrl(item) && !usesDiscogsPlaybackOrder(item)) {
         openAlbumListening(item, null, { queueSelection:true, providers:['spotify'] });
         return;
       }
@@ -20588,7 +20598,7 @@ document.querySelectorAll('[data-clear-album-queue]').forEach(button=>button.add
 
 function queueAlbumForListening(item, listeningUrl) {
   const safeUrl = getSupportedListeningUrl(listeningUrl);
-  if (!getQueueableAlbumUrl({...item,listeningUrl:safeUrl}) && !getDiscogsPlaybackTracks(item).length) {
+  if (!getQueueableAlbumUrl({...item,listeningUrl:safeUrl}) && !usesDiscogsPlaybackOrder(item)) {
     console.error('Album konnte nicht eingereiht werden: Kein gültiger Spotify-Albumlink oder YouTube-Hörlink vorhanden.');
     return false;
   }
@@ -20884,9 +20894,22 @@ function getDiscogsPlaybackTracks(item) {
 function isSpotifyPlaylistUrl(url) {
   return /\/playlist\//.test(normalizeSpotifyAlbumLink(url));
 }
-function usesDiscogsPlaybackOrder(item, url) {
-  return !!getDiscogsPlaybackTracks(item).length && !isSpotifyPlaylistUrl(url);
+function usesDiscogsPlaybackOrder(item, url = item?.spotifyAlbumUrl || item?.listeningUrl || '') {
+  if(!getDiscogsPlaybackTracks(item).length || isSpotifyPlaylistUrl(url))return false;
+  if(item?.spotifyPlaybackMode==='tracks')return true;
+  if(item?.spotifyPlaybackMode==='album')return false;
+  return ['Single','Maxi Single'].includes(getReleaseType(item));
 }
+function setSpotifyPlaybackMode(item, mode) {
+  if(!item || !['album','tracks'].includes(mode))return;
+  const stored=viewingOwnCollection?ownCollection.find(entry=>String(entry.id)===String(item.id)):null;
+  const changed=stored && stored.spotifyPlaybackMode!==mode;
+  item.spotifyPlaybackMode=mode;
+  if(stored && changed){stored.spotifyPlaybackMode=mode;saveCollection();}
+  if(currentListeningAlbum && String(currentListeningAlbum.id)===String(item.id))currentListeningAlbum.spotifyPlaybackMode=mode;
+  for(const queued of listeningAlbumQueue)if(String(queued.id)===String(item.id))queued.spotifyPlaybackMode=mode;
+}
+
 function spotifyTrackUri(value) {
   const uri=String(value || '').trim().match(/^spotify:track:([A-Za-z0-9]+)$/);
   if(uri)return `spotify:track:${uri[1]}`;
@@ -20900,6 +20923,7 @@ function getMappedDiscogsTracks(item, mappings = item?.spotifyTrackMappings || {
   });
 }
 function getMappedDiscogsUrl(item) {
+  if(!usesDiscogsPlaybackOrder(item))return '';
   const tracks=getMappedDiscogsTracks(item);
   return tracks.length && tracks.every(track=>track.uri) ? `https://open.spotify.com/track/${tracks[0].uri.split(':')[2]}` : '';
 }
@@ -21017,7 +21041,10 @@ function editDiscogsSpotifyMappings(item, {signal, onSave = () => {}} = {}) {
   const abort=()=>{if(dialog.open)dialog.close();};
   dialog.addEventListener('close',()=>{controller.abort();signal?.removeEventListener('abort',abort);dialog.remove();});
   signal?.addEventListener('abort',abort,{once:true});
-  actions.append(save,cancel);dialog.append(heading,hint,status,list,actions);document.body.append(dialog);refresh();dialog.showModal();
+  actions.append(save,cancel);
+  const useAlbum=document.createElement('button');useAlbum.type='button';useAlbum.textContent='Stattdessen Albumlink verwenden';
+  useAlbum.onclick=()=>{setSpotifyPlaybackMode(item,'album');dialog.close();void openAlbumListening(item);};actions.append(useAlbum);
+  dialog.append(heading,hint,status,list,actions);document.body.append(dialog);refresh();dialog.showModal();
   return dialog;
 }
 
@@ -21715,6 +21742,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const albumId = getSpotifyAlbumId(originalUrl);
   const spotifyContent = spotifyPath.match(/^\/(album|track|playlist)\/([A-Za-z0-9]+)\/?$/);
   const spotifyUri = spotifyContent ? `spotify:${spotifyContent[1]}:${spotifyContent[2]}` : '';
+  if(!discogsOrder && getDiscogsPlaybackTracks(item).length && !isSpotifyPlaylistUrl(originalUrl)) {
+    const chooseTracks=document.createElement('button');chooseTracks.type='button';chooseTracks.className='album-mini-control';chooseTracks.textContent='Einzeltitel zuordnen';
+    chooseTracks.dataset.discogsTrackMapping='true';chooseTracks.title='Für dieses Album ausnahmsweise einzelne Spotify-Titel zuordnen';
+    chooseTracks.onclick=()=>{setSpotifyPlaybackMode(item,'tracks');void openAlbumListening(item);};topbar.append(chooseTracks);
+  }
   if (discogsOrder) {
     const request=new AbortController();spotifyMiniTracklistRequest=request;
     const mappingButton=document.createElement('button');mappingButton.type='button';mappingButton.className='album-mini-control';mappingButton.textContent='Titel zuordnen';
@@ -22074,6 +22106,25 @@ async function requestSpotifyPlaylistApi(url, options = {}) {
 let spotifyImportView = 'playlists';
 let spotifyImportPlaylistsStatus = '';
 let spotifyImportType='all';
+function getSortedSpotifyImportAlbums(albums, mode = 'songs') {
+  const sorted=albums.slice();
+  const compare=(a,b)=>String(a || '').localeCompare(String(b || ''),'de',{sensitivity:'base',numeric:true});
+  const byTitle=(a,b)=>compare(a.title,b.title) || compare(a.artist,b.artist) || compare(a.id,b.id);
+  if(mode==='playlist')return sorted;
+  if(mode==='artist')return sorted.sort((a,b)=>compare(a.artist,b.artist) || byTitle(a,b));
+  if(mode==='title')return sorted.sort(byTitle);
+  return sorted.sort((a,b)=>(b.tracklist?.length || 0)-(a.tracklist?.length || 0) || byTitle(a,b));
+}
+function applySpotifyImportSort() {
+  const container=document.getElementById('spotifyPlaylistAlbums');
+  if(!container)return;
+  const rows=new Map([...container.querySelectorAll('.spotify-album-option')].map(row=>[row.dataset.albumId,row]));
+  const mode=document.getElementById('spotifyImportSort')?.value || 'songs';
+  for(const album of getSortedSpotifyImportAlbums(spotifyPlaylistImportAlbums,mode)){
+    const row=rows.get(album.id);if(row)container.append(row);
+  }
+  updateSpotifyImportSelection();
+}
 function matchesSpotifyImportType(album, type=spotifyImportType) {
   const kind=album.spotifyAlbumType || (album.releaseType==='Single'?'single':'album');
   return type==='all' || (type==='no-singles'?kind!=='single':kind===type);
@@ -22099,6 +22150,7 @@ function refreshSpotifyImportDestination() {
 }
 function initializeSpotifyImportOptions() {
   spotifyImportType='all';
+  document.getElementById('spotifyImportSort').value='songs';
   document.querySelectorAll('[data-spotify-import-type]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.spotifyImportType==='all')));
   document.getElementById('spotifyImportOwnership').value='wishlist';
   const shelves=document.getElementById('spotifyImportShelf');shelves.replaceChildren(new Option('Kein Regal zuordnen',''));
@@ -22117,6 +22169,7 @@ document.getElementById('spotifyImportSelectNone').addEventListener('click',()=>
   document.querySelectorAll('#spotifyPlaylistAlbums input:not(:disabled)').forEach(input=>input.checked=false);updateSpotifyImportSelection();
 });
 document.getElementById('spotifyPlaylistAlbums').addEventListener('change',updateSpotifyImportSelection);
+document.getElementById('spotifyImportSort').addEventListener('change',applySpotifyImportSort);
 document.getElementById('spotifyImportShelf').addEventListener('change',()=>{if(document.getElementById('spotifyImportShelf').value)document.getElementById('spotifyImportOwnership').value='owned';refreshSpotifyImportDestination();});
 document.getElementById('spotifyImportOwnership').addEventListener('change',()=>{if(document.getElementById('spotifyImportOwnership').value==='wishlist'){document.getElementById('spotifyImportShelf').value='';refreshSpotifyImportDestination();}});
 
@@ -22218,7 +22271,7 @@ function renderSpotifyPlaylistAlbums() {
   const addButton = document.getElementById('addSpotifyPlaylistAlbumsBtn');
   container.replaceChildren();
   const existingKeys = new Set(collection.map(entry => spotifyPlaylistAlbumKey(entry.title, entry.artist)));
-  spotifyPlaylistImportAlbums.forEach(album => {
+  getSortedSpotifyImportAlbums(spotifyPlaylistImportAlbums,document.getElementById('spotifyImportSort')?.value || 'songs').forEach(album => {
     const alreadyAdded = existingKeys.has(spotifyPlaylistAlbumKey(album.title, album.artist));
     const label = document.createElement('label');
     label.className = 'spotify-album-option';
@@ -22277,6 +22330,7 @@ async function loadSpotifyPlaylist(playlistIdOrUrl, isExternalLink) {
       return;
     }
   }
+  document.getElementById('spotifyImportSort').value='songs';
   setSpotifyImportView('albums');
   status.textContent = 'Lade Playlist-Songs und gruppiere sie nach Album …';
   try {
@@ -22360,7 +22414,7 @@ async function addSelectedSpotifyPlaylistAlbums(options = {}) {
     return;
   }
   const selectedIds = new Set([...document.querySelectorAll('#spotifyPlaylistAlbums .spotify-album-option')].filter(row=>row.style.display!=='none').map(row=>row.querySelector('input:checked:not(:disabled)')).filter(Boolean).map(input=>input.dataset.albumId));
-  const selectedAlbums = spotifyPlaylistImportAlbums.filter(album => selectedIds.has(album.id) && matchesSpotifyImportType(album));
+  const selectedAlbums = getSortedSpotifyImportAlbums(spotifyPlaylistImportAlbums,document.getElementById('spotifyImportSort')?.value || 'songs').filter(album => selectedIds.has(album.id) && matchesSpotifyImportType(album));
   const existingKeys = new Set(collection.map(entry => spotifyPlaylistAlbumKey(entry.title, entry.artist)));
   const newAlbums = selectedAlbums.filter(album => {
     const key = spotifyPlaylistAlbumKey(album.title, album.artist);
@@ -23353,7 +23407,23 @@ async function openAlbumListening(item, inlineTarget = null, options = {}) {
   const overlay = document.getElementById('albumListeningOverlay');
   const preferredPlaylist=[item.spotifyAlbumUrl,item.listeningUrl].find(url=>isSpotifyPlaylistUrl(url));
   let storedUrl = options.chooseAgain || options.searchQuery ? null : getSupportedListeningUrl(preferredPlaylist || normalizeSpotifyAlbumLink(item.spotifyAlbumUrl || item.listeningUrl) || item.spotifyAlbumUrl || item.listeningUrl || getMappedDiscogsUrl(item));
-  if(!storedUrl && !options.chooseAgain && !options.searchQuery && !options.queueSelection && getDiscogsPlaybackTracks(item).length && isSpotifyIntegrationAvailable()) {
+  let albumLinkSearched=false;
+  if(!options.chooseAgain && !options.searchQuery && isSpotifyIntegrationAvailable()
+    && (!storedUrl || (!usesDiscogsPlaybackOrder(item,storedUrl) && spotifyTrackUri(storedUrl)))) {
+    closeAlbumListening(true);
+    const searchRequest=new AbortController();albumListeningRequest=searchRequest;
+    const searchContent=inlineTarget || document.getElementById('albumListeningContent');
+    const searchStatus=document.createElement('p');searchStatus.className='album-listen-status';searchStatus.textContent='Spotify-Albumlink wird gesucht …';searchContent.append(searchStatus);
+    if(!inlineTarget){document.getElementById('albumListeningTitle').textContent=`${item.title || 'Album'} anhören`;overlay.classList.add('open');}
+    albumLinkSearched=true;
+    try {
+      const albumId=await findMatchingSpotifyAlbum(item);
+      if(searchRequest.signal.aborted)return;
+      storedUrl=albumId?`https://open.spotify.com/album/${albumId}`:null;
+      if(storedUrl)saveSpotifyAlbumLink(item,storedUrl);
+    } catch(error) {if(searchRequest.signal.aborted)return;storedUrl=null;console.warn('Spotify-Albumlink konnte nicht automatisch gefunden werden:',error.message);}
+  }
+  if(!storedUrl && !options.chooseAgain && !options.searchQuery && !options.queueSelection && usesDiscogsPlaybackOrder(item) && isSpotifyIntegrationAvailable()) {
     spotifyMiniController?.pause();
     closeAlbumListening(true);
     const request=new AbortController();albumListeningRequest=request;
@@ -23378,7 +23448,7 @@ async function openAlbumListening(item, inlineTarget = null, options = {}) {
   }
   const restorePlayback = options.restorePlayback === true;
   if(storedUrl)preloadSpotifyPlayer(item);
-  if (!options.chooseAgain && !options.searchQuery && (item.spotifyAlbumUrl || item.listeningUrl) && !storedUrl) {
+  if (!albumLinkSearched && !options.chooseAgain && !options.searchQuery && (item.spotifyAlbumUrl || item.listeningUrl) && !storedUrl) {
     await showAlert('Der gespeicherte Hörlink ist ungültig. Bitte verwende einen HTTPS-Link von Spotify, Apple Music oder YouTube.');
     return;
   }
@@ -23393,12 +23463,21 @@ async function openAlbumListening(item, inlineTarget = null, options = {}) {
     document.getElementById('albumListeningTitle').textContent = options.queueSelection ? `${item.title || 'Album'} · Spotify-Link für Warteschlange auswählen` : `${item.title || 'Album'} anhören`;
     overlay.classList.add('open');
   }
-  if (options.queueSelection && storedUrl && getQueueableAlbumUrl({ listeningUrl:storedUrl })) {
+  if (options.queueSelection && storedUrl && getQueueableAlbumUrl({...item,listeningUrl:storedUrl})) {
     queueAlbumForListening(item, storedUrl);
     closeAlbumListening(true);
     return;
   }
   if (!options.queueSelection && storedUrl && mountListeningEmbed(content, storedUrl, item.title || 'Album', item, restorePlayback)) return;
+
+  if(!storedUrl && getDiscogsPlaybackTracks(item).length && !usesDiscogsPlaybackOrder(item)) {
+    const individual=document.createElement('button');individual.type='button';individual.className='btn';individual.textContent='Ausnahme: einzelne Spotify-Titel zuordnen';
+    individual.addEventListener('click',()=>{
+      setSpotifyPlaybackMode(item,'tracks');
+      if(options.queueSelection){if(queueAlbumForListening(item,''))closeAlbumListening(true);}
+      else void openAlbumListening(item,inlineTarget);
+    });content.append(individual);
+  }
 
   if (!inlineTarget) {
     const searchForm = document.createElement('form');
