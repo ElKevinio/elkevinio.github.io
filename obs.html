@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vinyl · OBS Export</title>
+<style>
+*{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{background:#101017;color:#faf9ff;font-family:system-ui,sans-serif}.layout{height:100%;display:grid;grid-template-columns:340fr 240fr 520fr;align-items:center;gap:28px;padding:28px 36px}.deck{position:relative;width:100%;aspect-ratio:1.3;background:linear-gradient(145deg,#39363f,#1b1921);border:3px solid #53505c;border-radius:15px;box-shadow:0 14px 25px #0008,inset 0 0 0 6px #22212a;transform:perspective(800px) rotateX(12deg)}.record{position:absolute;left:7%;top:8%;height:84%;aspect-ratio:1;border-radius:50%;background:repeating-radial-gradient(#111 0 2px,#28262e 3px,#101014 4px);box-shadow:0 3px 7px #000}.record::after{content:'';position:absolute;inset:35%;background:#a8559a;border-radius:50%;border:2px solid #17131c}.record img{position:absolute;width:100%;height:100%;border-radius:50%;z-index:1}.record img[hidden]{display:none}.spindle{position:absolute;inset:48%;border-radius:50%;background:#ddd;z-index:2}.arm{position:absolute;right:10%;top:11%;width:7px;height:65%;background:linear-gradient(90deg,#777,#eee,#777);transform-origin:50% 8%;transform:rotate(24deg);border-radius:5px;box-shadow:3px 2px 4px #000}.arm::before{content:'';position:absolute;top:-5px;left:-9px;width:25px;height:25px;border-radius:50%;background:#aaa;border:5px solid #555}.arm::after{content:'';position:absolute;bottom:-9px;left:-4px;width:15px;height:30px;background:#ccc;border-bottom:7px solid #bd86b8}.light{position:absolute;bottom:7%;right:8%;width:9px;height:9px;border-radius:50%;background:#cf77b6;box-shadow:0 0 12px #ec5cc5}.playing .record{animation:spin 1.8s linear infinite}.record{animation:spin 1.8s linear infinite;animation-play-state:paused}.playing .record{animation-play-state:running}@keyframes spin{to{transform:rotate(360deg)}}.cover{width:100%;aspect-ratio:1;border-radius:5px;object-fit:cover;box-shadow:0 10px 25px #0006}.cover[hidden]{display:none}.placeholder{aspect-ratio:1;background:#24212c;display:grid;place-items:center;border-radius:5px;color:#918698}.meta{min-width:0}.label{font-size:12px;letter-spacing:.2em;color:#c896c3;margin-bottom:12px}h1{font-size:clamp(18px,3.1vw,42px);line-height:1.15;margin:0 0 12px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}p{font-size:clamp(14px,2vw,26px);margin:0;color:#bdb7c7;overflow-wrap:anywhere}#status{font-size:12px;margin-top:12px}
+</style>
+<main class="layout">
+<div class="deck" aria-label="Plattenspieler Nahansicht"><div class="record"><img id="vinyl" alt="" hidden><span class="spindle"></span></div><div class="arm"></div><div class="light"></div></div>
+<div><img id="cover" class="cover" alt="Albumcover" hidden><div id="placeholder" class="placeholder">VINYL</div></div>
+<div class="meta"><div class="label">NOW PLAYING</div><h1 id="title">Warte auf Musikplayer …</h1><p id="artist"></p><p id="status"></p></div>
+</main>
+<script>
+let lastUpdate = Date.now();
+const el = id => document.getElementById(id);
+function image(id, value) {
+  const node = el(id);
+  const safe = typeof value === 'string' && (/^https?:\/\//i.test(value) || /^data:image\//i.test(value));
+  node.hidden = !safe;
+  if (safe && node.getAttribute('src') !== value) node.src = value;
+  if (!safe) node.removeAttribute('src');
+}
+window.addEventListener('message', event => {
+  if (event.source !== window.opener || event.origin !== location.origin || event.data?.type !== 'vinyl-obs-state') return;
+  lastUpdate = Date.now();
+  const state = event.data;
+  el('title').textContent = state.title;
+  el('artist').textContent = state.artist;
+  el('status').textContent = '';
+  document.body.classList.toggle('playing', !!state.playing);
+  image('cover', state.cover);
+  image('vinyl', state.vinyl);
+  el('placeholder').hidden = !el('cover').hidden;
+});
+el('cover').addEventListener('error', () => { el('cover').hidden = true; el('placeholder').hidden = false; });
+setInterval(() => {
+  if (!window.opener || window.opener.closed || Date.now() - lastUpdate > 15000) {
+    document.body.classList.remove('playing');
+    el('status').textContent = 'Musikseite öffnen und OBS-Export erneut starten.';
+  }
+}, 3000);
+</script>
+</html>

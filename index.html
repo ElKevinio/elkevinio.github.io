@@ -2732,8 +2732,8 @@
   .room-settings-actions { flex-wrap:wrap; }
   .fullscreen-player-overlay.is-angled-view .fullscreen-player-room-poster { aspect-ratio:2.6; border:5px solid #29292d; padding:4px; background:#101014; box-shadow:0 3px 0 #08080a, 0 10px 14px #000b, 0 22px 36px #0006, inset 0 0 0 1px #ffffff30; }
   .fullscreen-player-overlay.is-angled-view .fullscreen-player-eq { width:var(--poster-width, var(--shelf-w)); height:clamp(32px, 7vh, 56px); border:5px solid #29292d; border-radius:5px; padding:6px 10px; transform:translateX(-50%); background:linear-gradient(#17171c,#08080b); box-shadow:0 3px 0 #08080a, 0 10px 14px #000b, 0 22px 36px #0006, inset 0 0 0 1px #ffffff20; }
-  .fullscreen-player-room-wall { background:radial-gradient(ellipse at 0% 45%,color-mix(in srgb,var(--room-light-left) var(--light-left-wall,28%),transparent),transparent 65%),radial-gradient(ellipse at 100% 45%,color-mix(in srgb,var(--room-light-right) var(--light-right-wall,28%),transparent),transparent 65%),var(--room-wall-pattern),linear-gradient(var(--room-wall),color-mix(in srgb,var(--room-wall) 65%,black)); }
-  .fullscreen-player-room-wall { background-repeat:no-repeat,no-repeat,repeat,no-repeat; background-size:auto,auto,auto,auto; background-position:center top,center top,center top,center top; }
+  .fullscreen-player-room-wall { background:radial-gradient(ellipse at 0% 45%,color-mix(in srgb,var(--room-light-left) var(--light-left-wall,10%),transparent),transparent 65%),radial-gradient(ellipse at 100% 45%,color-mix(in srgb,var(--room-light-right) var(--light-right-wall,10%),transparent),transparent 65%),var(--room-wall-pattern),linear-gradient(var(--room-wall),color-mix(in srgb,var(--room-wall) 65%,black)); }
+  .fullscreen-player-room-wall { background-repeat:no-repeat,no-repeat,repeat,no-repeat; background-size:auto,auto,auto,auto; background-position:center top,center top,center top,center top; background-blend-mode:soft-light,soft-light,normal,normal; }
   .fullscreen-player-room-floor { background:radial-gradient(ellipse at 20% 60%,color-mix(in srgb,var(--room-light-left) var(--light-left-floor,16%),transparent),transparent 65%),radial-gradient(ellipse at 80% 60%,color-mix(in srgb,var(--room-light-right) var(--light-right-floor,16%),transparent),transparent 65%),var(--room-floor-pattern),var(--room-floor); }
   .fullscreen-player-shelf-left { background:linear-gradient(color-mix(in srgb,var(--room-shelf) 90%,white),var(--room-shelf)); border-color:color-mix(in srgb,var(--room-shelf) 70%,white); }
   .fullscreen-player-shelf-left::before { background:linear-gradient(color-mix(in srgb,var(--room-shelf) 85%,white),var(--room-shelf)); }
@@ -6395,7 +6395,7 @@
 [data-ceiling-light="orb"] .room-ceiling-light { --lamp-source:.5; }
 [data-ceiling-light="led"] .room-ceiling-light { --lamp-source:.16; }
 [data-ceiling-light="off"] .room-ceiling-light { display:none; }
-.room-ceiling-wash { z-index:0; opacity:var(--ceiling-opacity,.65); position:absolute; top:0; bottom:0; width:70%; transform:translateX(-50%); background:radial-gradient(ellipse 48% 85% at 50% 0%,color-mix(in srgb,var(--ceiling-color) 40%,transparent),transparent 85%); }
+.room-ceiling-wash { mix-blend-mode:soft-light; z-index:0; opacity:var(--ceiling-opacity,.65); position:absolute; top:0; bottom:0; width:70%; transform:translateX(-50%); background:radial-gradient(ellipse 48% 85% at 50% 0%,color-mix(in srgb,var(--ceiling-color) 18%,transparent),transparent 85%); }
 .ceiling-wash-left { left:var(--lamp-left); }
 .ceiling-wash-right { left:var(--lamp-right); }
 .room-ceiling-fixture { position:absolute; z-index:2; top:0; transform:translateX(-50%); width:clamp(150px,23%,230px); height:var(--lamp-height); overflow:visible; filter:drop-shadow(5px 10px 5px #0009); }
@@ -6433,7 +6433,7 @@
 
 
 .fullscreen-player-overlay.is-angled-view .room-scene-light {
-  content:''; position:absolute; inset:0; z-index:5; pointer-events:none;
+  content:''; position:absolute; inset:0; z-index:5; pointer-events:none; mix-blend-mode:soft-light;
   --lamp-left:calc((100% - var(--room-shelf-w,var(--shelf-w,300px))) / 4);
   --lamp-right:calc(100% - (100% - var(--room-shelf-w,var(--shelf-w,300px))) / 4);
   opacity:var(--ceiling-opacity,.65);
@@ -6569,6 +6569,17 @@
 .fullscreen-player-overlay.is-angled-view .fullscreen-player-room-poster { top:var(--room-art-top); }
 .fullscreen-player-overlay.is-angled-view .fullscreen-player-eq { top:calc(var(--room-art-top) + var(--poster-height,154px) + 12px); }
 .room-window { top:var(--room-art-top); bottom:calc(var(--room-floor-depth) + 54px); box-sizing:border-box; }
+/* Both frames share dimensions and corner geometry, independent of scenery. */
+.fullscreen-player-overlay .room-window {
+  width:max(8px,calc((100% - var(--room-shelf-w,var(--shelf-w,300px))) / 2 - 32px));
+  min-width:0; max-width:none; margin:0; padding:0;
+  border-width:7px; border-radius:8px;
+}
+.fullscreen-player-overlay .room-window-left { left:16px; right:auto; }
+.fullscreen-player-overlay .room-window-right { right:16px; left:auto; }
+@media (max-width:700px) {
+  .fullscreen-player-overlay .room-window { border-width:5px; border-radius:8px; }
+}
 /* Low wall speakers become a stereo pair of soundbars beneath the windows. */
 .fullscreen-player-overlay.is-angled-view[data-windows="on"][data-speakers="low"] .room-speaker {
   top:auto; bottom:calc(var(--room-floor-depth) + 13px);
@@ -7410,6 +7421,10 @@
           <details class="player-settings-group" id="playerSettingsDetails">
           <summary>Musikplayer-Einstellungen</summary>
           <div id="listeningSettingsBlock">
+          <p class="settings-panel-title">OBS-Export</p>
+          <button type="button" id="startObsExport">OBS-Export starten</button>
+          <p class="settings-panel-hint">In OBS eine Fensteraufnahme hinzufügen und „Vinyl · OBS Export“ auswählen. Empfohlen: 1200 × 320. Zeigt Plattenspieler, Cover, Titel und Interpret live. Musikseite und Exportfenster geöffnet lassen. Die Audioquelle richtest du separat in OBS ein.</p>
+          <p id="obsExportStatus" class="settings-panel-hint" role="status"></p>
           <p class="settings-panel-title">Album anhören</p>
           <div class="listening-provider-list" id="listeningProviderList">
             <div class="listening-provider-row" data-provider="apple" draggable="true">
@@ -18357,6 +18372,37 @@ function scheduleFullscreenPlayerSync() {
 }
 let fullscreenPlayerSyncFrame = null;
 
+let obsExportWindow = null;
+let obsExportTimer = null;
+function sendObsExportState() {
+  if (!obsExportWindow || obsExportWindow.closed) {
+    clearInterval(obsExportTimer);
+    obsExportTimer = null;
+    return;
+  }
+  const content = document.getElementById('albumListeningDockContent');
+  const item = currentListeningAlbum;
+  obsExportWindow.postMessage({type:'vinyl-obs-state',
+    title:content?.querySelector('.album-mini-track-title')?.textContent?.trim() || item?.title || 'Nichts wird abgespielt',
+    artist:content?.querySelector('.album-mini-artist')?.textContent?.trim() || item?.artist || '',
+    cover:item?.coverUrl || '',
+    vinyl:item ? getVinylSvgData(getVinylRecordForItem(item)) : '',
+    playing:getListeningPrimaryToggle()?.getAttribute('aria-label') === 'Wiedergabe pausieren'
+  }, location.origin);
+}
+document.getElementById('startObsExport').addEventListener('click', () => {
+  obsExportWindow = window.open(new URL('obs.html', location.href).href, 'vinyl-obs-export', 'popup,width=1200,height=320');
+  document.getElementById('obsExportStatus').textContent = obsExportWindow
+    ? 'Export gestartet. In OBS als Fensteraufnahme auswählen.'
+    : 'Bitte Pop-ups für diese Seite erlauben und erneut starten.';
+  clearInterval(obsExportTimer);
+  if (obsExportWindow) {
+    obsExportWindow.focus();
+    sendObsExportState();
+    obsExportTimer = setInterval(sendObsExportState, 500);
+  }
+});
+
 function syncFullscreenPlayer() {
   syncPlayerVolumeControls();
   if (!isFullscreenPlayerOpen() || document.hidden) return;
@@ -19267,12 +19313,12 @@ function applyFullscreenRoomStyle(changedKeys = null) {
   const lightsOverlay=document.getElementById('fullscreenPlayerOverlay');
   lightsOverlay.dataset.equalizerMode = fullscreenRoomStyle.equalizerMode;
   for (const side of ['Left','Right']) {
-    const brightness=fullscreenRoomStyle[`light${side}Brightness`]/100;
-    for (const [name,amount] of [['wall',16],['floor',16],['shelf',7]]) setRoomStyleProperty(lightsOverlay,`--light-${side.toLowerCase()}-${name}`,`${brightness*amount}%`);
+    const brightness=Math.max(0,Math.min(100,Number(fullscreenRoomStyle[`light${side}Brightness`]) || 0))/100;
+    for (const [name,amount] of [['wall',10],['floor',12],['shelf',7]]) setRoomStyleProperty(lightsOverlay,`--light-${side.toLowerCase()}-${name}`,`${brightness*amount}%`);
   }
   if (lightsOverlay.dataset.ceilingLight !== String(fullscreenRoomStyle.ceilingLight)) lightsOverlay.dataset.ceilingLight=fullscreenRoomStyle.ceilingLight;
   setRoomStyleProperty(lightsOverlay,'--ceiling-color',fullscreenRoomStyle.ceilingColor);
-  setRoomStyleProperty(lightsOverlay,'--ceiling-opacity',String(fullscreenRoomStyle.ceilingBrightness/100));
+  setRoomStyleProperty(lightsOverlay,'--ceiling-opacity',String(Math.max(0,Math.min(100,Number(fullscreenRoomStyle.ceilingBrightness) || 0))/100));
   const overlay = document.getElementById('fullscreenPlayerOverlay');
   Object.entries({floor:'floor',wall:'wall',grout:'grout',shelf:'shelf',turntable:'turntable',equalizer:'equalizer',lightLeft:'light-left',lightRight:'light-right',rug:'rug',speakerColor:'speaker',speakerAccent:'speaker-accent'}).forEach(([key,variable]) => {
     const value = /^#[0-9a-f]{6}$/i.test(fullscreenRoomStyle[key]) ? fullscreenRoomStyle[key] : fullscreenRoomDefaults[key];
@@ -19884,6 +19930,7 @@ function isFullscreenPlayerMenuOpen() {
 }
 
 function setFullscreenPlayerMenuOpen(isOpen) {
+  if (isOpen) setFullscreenPlayerQueueOpen(false);
   if (isOpen) setFullscreenPlayerTracksOpen(false);
   if (isOpen) setFullscreenRoomSettingsOpen(false);
   const menu = document.getElementById('fullscreenPlayerMenu');
@@ -20025,6 +20072,8 @@ async function playFullscreenCompartment() {
     listeningQueueBulkDirty = true;
     endListeningQueueBulk();
     status.textContent=`${playable.length} ${playable.length===1?'Album wird':'Alben werden'} abgespielt.${skipped?` ${skipped} ohne passenden Hörlink übersprungen.`:''}${searchError?' '+searchError:''}`;
+    setFullscreenPlayerQueueOpen(false);
+    setAlbumQueuePanelOpen(false);
     await openAlbumListening(playable[0]);
   } catch(error) {status.textContent=error.message||'Die Fach-Wiedergabe konnte nicht gestartet werden.';}
   finally {
@@ -20195,6 +20244,7 @@ function isFullscreenPlayerQueueOpen() {
 }
 
 function setFullscreenPlayerQueueOpen(isOpen) {
+  if (isOpen) setFullscreenPlayerMenuOpen(false);
   if (isOpen) setFullscreenPlayerTracksOpen(false);
   if (isOpen) setFullscreenRoomSettingsOpen(false);
   const panel = document.getElementById('fullscreenPlayerQueuePanel');
