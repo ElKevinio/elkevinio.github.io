@@ -4,12 +4,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Vinyl · OBS Export</title>
 <style>
-*{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{background:#101017;color:#faf9ff;font-family:system-ui,sans-serif}.layout{height:100%;display:grid;grid-template-columns:340fr 240fr 520fr;align-items:center;gap:28px;padding:28px 36px}.deck{position:relative;width:100%;aspect-ratio:1.3;background:linear-gradient(145deg,#39363f,#1b1921);border:3px solid #53505c;border-radius:15px;box-shadow:0 14px 25px #0008,inset 0 0 0 6px #22212a;transform:perspective(800px) rotateX(12deg)}.record{position:absolute;left:7%;top:8%;height:84%;aspect-ratio:1;border-radius:50%;background:repeating-radial-gradient(#111 0 2px,#28262e 3px,#101014 4px);box-shadow:0 3px 7px #000}.record::after{content:'';position:absolute;inset:35%;background:#a8559a;border-radius:50%;border:2px solid #17131c}.record img{position:absolute;width:100%;height:100%;border-radius:50%;z-index:1}.record img[hidden]{display:none}.spindle{position:absolute;inset:48%;border-radius:50%;background:#ddd;z-index:2}.arm{position:absolute;right:10%;top:11%;width:7px;height:65%;background:linear-gradient(90deg,#777,#eee,#777);transform-origin:50% 8%;transform:rotate(24deg);border-radius:5px;box-shadow:3px 2px 4px #000}.arm::before{content:'';position:absolute;top:-5px;left:-9px;width:25px;height:25px;border-radius:50%;background:#aaa;border:5px solid #555}.arm::after{content:'';position:absolute;bottom:-9px;left:-4px;width:15px;height:30px;background:#ccc;border-bottom:7px solid #bd86b8}.light{position:absolute;bottom:7%;right:8%;width:9px;height:9px;border-radius:50%;background:#cf77b6;box-shadow:0 0 12px #ec5cc5}.playing .record{animation:spin 1.8s linear infinite}.record{animation:spin 1.8s linear infinite;animation-play-state:paused}.playing .record{animation-play-state:running}@keyframes spin{to{transform:rotate(360deg)}}.cover{width:100%;aspect-ratio:1;border-radius:5px;object-fit:cover;box-shadow:0 10px 25px #0006}.cover[hidden]{display:none}.placeholder{aspect-ratio:1;background:#24212c;display:grid;place-items:center;border-radius:5px;color:#918698}.meta{min-width:0}.label{font-size:12px;letter-spacing:.2em;color:#c896c3;margin-bottom:12px}h1{font-size:clamp(18px,3.1vw,42px);line-height:1.15;margin:0 0 12px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}p{font-size:clamp(14px,2vw,26px);margin:0;color:#bdb7c7;overflow-wrap:anywhere}#status{font-size:12px;margin-top:12px}
-</style>
+*{box-sizing:border-box}[hidden]{display:none!important}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{background:#101017;color:#faf9ff;font-family:system-ui,sans-serif}.layout{height:100%;display:grid;grid-template-columns:340fr 240fr 520fr;align-items:center;gap:28px;padding:28px 36px}.deck{width:100%;height:100%;min-height:0;display:grid;place-items:center}.cover{width:100%;aspect-ratio:1;border-radius:5px;object-fit:cover;box-shadow:0 10px 25px #0006}.cover[hidden]{display:none}.placeholder{aspect-ratio:1;background:#24212c;display:grid;place-items:center;border-radius:5px;color:#918698}.meta{min-width:0}.label{font-size:12px;letter-spacing:.2em;color:#c896c3;margin-bottom:12px}h1{font-size:clamp(18px,3.1vw,42px);line-height:1.15;margin:0 0 12px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}p{font-size:clamp(14px,2vw,26px);margin:0;color:#bdb7c7;overflow-wrap:anywhere}#status{font-size:12px;margin-top:12px}
+.timeline{margin-top:22px}progress{display:block;width:100%;height:6px;border:0;border-radius:8px;overflow:hidden;background:#34303e;accent-color:#ce92c4}progress::-webkit-progress-bar{background:#34303e}progress::-webkit-progress-value{background:#ce92c4;border-radius:8px}progress::-moz-progress-bar{background:#ce92c4}.times{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;color:#bdb7c7;font-variant-numeric:tabular-nums}</style>
 <main class="layout">
-<div class="deck" aria-label="Plattenspieler Nahansicht"><div class="record"><img id="vinyl" alt="" hidden><span class="spindle"></span></div><div class="arm"></div><div class="light"></div></div>
+<div id="deck" class="deck" aria-label="Plattenspieler Draufsicht"></div>
 <div><img id="cover" class="cover" alt="Albumcover" hidden><div id="placeholder" class="placeholder">VINYL</div></div>
-<div class="meta"><div class="label">NOW PLAYING</div><h1 id="title">Warte auf Musikplayer …</h1><p id="artist"></p><p id="status"></p></div>
+<div class="meta"><div class="label">NOW PLAYING</div><h1 id="title">Warte auf Musikplayer …</h1><p id="artist"></p><div class="timeline"><progress id="progress" max="1" value="0" aria-label="Songfortschritt"></progress><div class="times"><span id="position">0:00</span><span id="duration">0:00</span></div></div><p id="status"></p></div>
 </main>
 <script>
 let lastUpdate = Date.now();
@@ -21,24 +21,55 @@ function image(id, value) {
   if (safe && node.getAttribute('src') !== value) node.src = value;
   if (!safe) node.removeAttribute('src');
 }
+const shadow = el('deck').attachShadow({mode:'open'});
+const sharedStyles = document.createElement('style');
+const sizing = document.createElement('style');
+sizing.textContent = `:host{display:grid;width:100%;height:100%;place-items:center}*{box-sizing:border-box}.fullscreen-player-overlay{all:initial!important;display:grid!important;width:100%!important;height:100%!important;place-items:center!important}.fullscreen-player-overlay .fullscreen-player-turntable{position:relative!important;inset:auto!important;width:min(100%,240px)!important;max-height:100%;aspect-ratio:1;transform:none!important;margin:0!important;flex:none!important}.fullscreen-player-platter,.fullscreen-player-vinyl{flex:none;aspect-ratio:1;transform-origin:50% 50%}.fullscreen-player-overlay .fullscreen-player-vinyl{height:auto;min-height:0}.fullscreen-player-overlay .fullscreen-player-tonearm-rod{transition:transform .5s linear}`;
+const player = document.createElement('div');
+player.className = 'fullscreen-player-overlay';
+shadow.append(sharedStyles,sizing,player);
+let lastTurntable = '';
+function time(seconds) {
+  const value = Math.max(0, Math.floor(Number(seconds) || 0));
+  return `${Math.floor(value/60)}:${String(value%60).padStart(2,'0')}`;
+}
 window.addEventListener('message', event => {
-  if (event.source !== window.opener || event.origin !== location.origin || event.data?.type !== 'vinyl-obs-state') return;
+  if (event.source !== window.opener || event.origin !== location.origin || !['vinyl-obs-state','vinyl-obs-style'].includes(event.data?.type)) return;
+  if (event.data.type === 'vinyl-obs-style') { sharedStyles.textContent = event.data.css; return; }
   lastUpdate = Date.now();
   const state = event.data;
   el('title').textContent = state.title;
   el('artist').textContent = state.artist;
   el('status').textContent = '';
-  document.body.classList.toggle('playing', !!state.playing);
+  player.classList.toggle('is-playing', !!state.playing);
   image('cover', state.cover);
-  image('vinyl', state.vinyl);
+  // Preserve the rotating node across updates, including tonearm/progress changes.
+  if (state.turntable && state.turntable !== lastTurntable) {
+    const template = document.createElement('template');
+    template.innerHTML = state.turntable;
+    const next = template.content.firstElementChild;
+    const current = player.querySelector('.fullscreen-player-turntable');
+    const oldVinyl = current?.querySelector('.fullscreen-player-vinyl');
+    const newVinyl = next.querySelector('.fullscreen-player-vinyl');
+    if (oldVinyl && oldVinyl.outerHTML === newVinyl.outerHTML) {
+      current.querySelector('.fullscreen-player-tonearm-rod').style.cssText = next.querySelector('.fullscreen-player-tonearm-rod').style.cssText;
+    } else player.replaceChildren(next);
+    lastTurntable = state.turntable;
+  }
+  const duration = Math.max(0, Number(state.duration) || 0);
+  const position = Math.min(duration, Math.max(0, Number(state.position) || 0));
+  el('progress').value = duration ? position/duration : 0;
+  el('position').textContent = time(position);
+  el('duration').textContent = time(duration);
   el('placeholder').hidden = !el('cover').hidden;
 });
 el('cover').addEventListener('error', () => { el('cover').hidden = true; el('placeholder').hidden = false; });
 setInterval(() => {
   if (!window.opener || window.opener.closed || Date.now() - lastUpdate > 15000) {
-    document.body.classList.remove('playing');
+    player.classList.remove('is-playing');
     el('status').textContent = 'Musikseite öffnen und OBS-Export erneut starten.';
   }
 }, 3000);
+if (window.opener) window.opener.postMessage({type:'vinyl-obs-ready'}, location.origin);
 </script>
 </html>

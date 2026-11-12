@@ -18274,7 +18274,10 @@ let fullscreenPlayerTracksSource = null;
 function renderFullscreenPlayerVinyl() {
   const vinyl = document.getElementById('fullscreenPlayerVinyl');
   if (!vinyl) return;
-  const item = currentListeningAlbum || {};
+  applyListeningVinylAppearance(vinyl, currentListeningAlbum || {});
+}
+
+function applyListeningVinylAppearance(vinyl, item) {
   const design = normalizeVinylDesign(item);
   const record = getVinylRecordForItem(item);
   vinyl.className = `fullscreen-player-vinyl ${record.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${getDiscMediaClasses(item)}`.replace(/\s+/g, ' ').trim();
@@ -18382,14 +18385,28 @@ function sendObsExportState() {
   }
   const content = document.getElementById('albumListeningDockContent');
   const item = currentListeningAlbum;
+  const seek = content?.querySelector('.album-mini-seek');
+  const scale = seek?.dataset.seekUnit === 'milliseconds' ? 1000 : 1;
+  const duration = Math.max(0, Number(seek?.max) / scale || 0);
+  const position = Math.min(duration, Math.max(0, Number(seek?.value) / scale || 0));
+  const turntable = document.querySelector('.fullscreen-player-turntable').cloneNode(true);
+  turntable.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+  applyListeningVinylAppearance(turntable.querySelector('.fullscreen-player-vinyl'), item || {});
+  const timeline = getListeningAlbumTimeline(content?.querySelector('.album-mini-player'), position, duration);
+  turntable.querySelector('.fullscreen-player-tonearm-rod').style.setProperty('--album-progress', timeline.progress.toFixed(5));
   obsExportWindow.postMessage({type:'vinyl-obs-state',
     title:content?.querySelector('.album-mini-track-title')?.textContent?.trim() || item?.title || 'Nichts wird abgespielt',
     artist:content?.querySelector('.album-mini-artist')?.textContent?.trim() || item?.artist || '',
     cover:item?.coverUrl || '',
-    vinyl:item ? getVinylSvgData(getVinylRecordForItem(item)) : '',
+    turntable:turntable.outerHTML, position, duration,
     playing:getListeningPrimaryToggle()?.getAttribute('aria-label') === 'Wiedergabe pausieren'
   }, location.origin);
 }
+window.addEventListener('message', event => {
+  if (event.source !== obsExportWindow || event.origin !== location.origin || event.data?.type !== 'vinyl-obs-ready') return;
+  obsExportWindow.postMessage({type:'vinyl-obs-style', css:[...document.querySelectorAll('style')].map(style => style.textContent).join('\n')}, location.origin);
+  sendObsExportState();
+});
 document.getElementById('startObsExport').addEventListener('click', () => {
   obsExportWindow = window.open(new URL('obs.html', location.href).href, 'vinyl-obs-export', 'popup,width=1200,height=320');
   document.getElementById('obsExportStatus').textContent = obsExportWindow
