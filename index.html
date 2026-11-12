@@ -17481,6 +17481,17 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     throw new Error('Spotify bitte erneut verbinden, um Web Playback freizugeben.');
   }
   const Spotify = await loadSpotifyWebPlaybackScript();
+  return createSpotifyWebPlaybackApi(Spotify,onStatus);
+}
+function activateSpotifyPlaybackFromGesture() {
+  if(!shouldUseSpotifyWebPlayback() || navigator.userActivation?.isActive===false)return;
+  if(persistentSpotifySdkController){persistentSpotifySdkController.activateAudio();return;}
+  if(window.Spotify?.Player){
+    try {createSpotifyWebPlaybackApi(window.Spotify,null).createController(null,{uri:''},controller=>controller.activateAudio());}
+    catch(error){console.warn('Spotify-Audio konnte noch nicht vorbereitet werden:',error.message);}
+  } else void loadSpotifyWebPlaybackScript().catch(()=>{});
+}
+function createSpotifyWebPlaybackApi(Spotify,onStatus) {
   return { createController(target, options, callback) {
     if (persistentSpotifySdkController) {
       persistentSpotifySdkController.rebind(options.uri, onStatus);
@@ -17585,7 +17596,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       },1200);
       else report('Spotify-Player bitte erneut verbinden.',true);
     });
-    sdk.addListener('autoplay_failed',()=>{activated=false;report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');});
+    sdk.addListener('autoplay_failed',()=>{activated=false;emit('autoplay_blocked');report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');});
     for(const [name,text] of [
       ['initialization_error','Dieser Browser kann Spotify Web Playback nicht starten. Du kannst das Embed verwenden.'],
       ['authentication_error','Spotify bitte erneut verbinden und Web Playback erlauben.'],
@@ -17602,8 +17613,12 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       });
       return operation;
     };
-    const activate=()=>{try{Promise.resolve(sdk.activateElement()).catch(()=>{});}catch{}};
+    const activate=()=>{
+      try {Promise.resolve(sdk.activateElement()).catch(()=>{if(destroyed)return;activated=false;emit('autoplay_blocked');report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');});return true;}
+      catch {activated=false;emit('autoplay_blocked');report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');return false;}
+    };
     const controller={isWebPlaybackSdk:true,
+      activateAudio(){if(destroyed)return false;activated=true;return activate();},
       setVolume(value){return sdk.setVolume(value);},
       setTrackSequence(uris){options.trackSequence=Array.isArray(uris)?uris.slice():[];},
       rebind(uri, statusCallback){
@@ -17639,8 +17654,11 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
       },
       play(){
         // activateElement must run in the original tap event, before awaiting a token or network request.
-        if(!activated && navigator.userActivation && !navigator.userActivation.isActive){report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');return false;}
-        activated=true;activate();trustedMediaSession.anchorPlay();
+        if(!activated){
+          if(navigator.userActivation && !navigator.userActivation.isActive){emit('autoplay_blocked');report('Tippe auf Wiedergabe, um Spotify auf diesem Gerät zu starten.');return false;}
+          if(!this.activateAudio())return false;
+        }
+        trustedMediaSession.anchorPlay();
         const uri=pendingUri,position=pendingPosition,version=++commandVersion,selection=selectionVersion;
         desiredUri=uri.startsWith('spotify:track:')?uri:'';desiredPaused=false;desiredUntil=Date.now()+8000;
         return run(async()=>{
@@ -21335,9 +21353,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     updateCurrentTrack();
     if(discogsOrder)spotifyMiniController.setTrackSequence?.(tracks.map(track=>track.uri));
     spotifyMiniController.loadUri(playingUri);
-    spotifyMiniController.play();
+    const accepted=spotifyMiniController.play();
+    if(accepted===false){initialAlbumTrackSelected=false;pendingPlaybackPaused=null;showPlaybackState(true);return true;}
     pendingPlaybackPaused = false; pendingPlaybackAt = Date.now();
     showPlaybackState(false);
+    ensureEmbedPlaybackRetry();
     persistListeningSession();
     return true;
   };
@@ -21351,7 +21371,13 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const ensureEmbedPlaybackRetry = () => {
     if(embedPlaybackRetryTimer || spotifyMiniController?.isWebPlaybackSdk)return;
     embedPlaybackRetryTimer=setInterval(()=>{
-      if(!host.isConnected || pendingPlaybackPaused===null || Date.now()-pendingPlaybackAt>=8000){clearInterval(embedPlaybackRetryTimer);embedPlaybackRetryTimer=null;return;}
+      if(!host.isConnected || pendingPlaybackPaused===null || Date.now()-pendingPlaybackAt>=8000){
+        if(host.isConnected && pendingPlaybackPaused===false && Date.now()-pendingPlaybackAt>=8000){
+          pendingPlaybackPaused=null;pendingRestoredTrackUri=playingUri;
+          showPlaybackState(true);message.hidden=false;message.textContent='Spotify hat den Start noch nicht bestätigt. Tippe auf Wiedergabe, um den Titel zu starten.';
+        }
+        clearInterval(embedPlaybackRetryTimer);embedPlaybackRetryTimer=null;return;
+      }
       retryPendingEmbedPlayback();
     },1500);
   };
@@ -21501,7 +21527,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           updateCurrentTrack();
           spotifyMiniController.loadUri(track.uri);
           spotifyMiniController.play();
-          pendingPlaybackPaused = false; pendingPlaybackAt = Date.now(); showPlaybackState(false);
+          pendingPlaybackPaused = false; pendingPlaybackAt = Date.now(); showPlaybackState(false); ensureEmbedPlaybackRetry();
         } catch (error) {
           console.error('Spotify-Titel konnte nicht gestartet werden:', error);
           message.hidden = false;
@@ -21667,7 +21693,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       updateCurrentTrack();
       spotifyMiniController.loadUri(track.uri);
       spotifyMiniController.play();
-      pendingPlaybackPaused = false; pendingPlaybackAt = Date.now(); showPlaybackState(false);
+      pendingPlaybackPaused = false; pendingPlaybackAt = Date.now(); showPlaybackState(false); ensureEmbedPlaybackRetry();
     } catch (error) {
       console.error('Spotify-Titel konnte nicht gewechselt werden:', error);
       message.hidden = false;
@@ -21879,6 +21905,12 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       if(discogsOrder && discogsSequenceReady)controller.setTrackSequence?.(tracks.map(track=>track.uri));
       syncPlayerVolumeControls();
       activateListeningControllerFrame(host);
+      if(controller.isWebPlaybackSdk)controller.addListener('autoplay_blocked',()=>{
+        if(!host.isConnected || spotifyMiniController!==controller)return;
+        pendingPlaybackPaused=null;
+        pendingRestoredTrackUri=playingUri || tracks[0]?.uri || spotifyUri;
+        showPlaybackState(true);
+      });
       if(controller.isWebPlaybackSdk)controller.addListener('command_failed',event=>{
         pendingAutoAdvancedTrackUri='';pendingPlaybackPaused=null;
         showPlaybackState(event.data.isPaused !== false);updateCurrentTrack(event.data);
@@ -21901,8 +21933,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
           updateControls();
           // Wiederherstellen ändert den gespeicherten Fortschritt nicht.
         } else {
-          // The track list may arrive after ready. Keep the first-track selection pending.
-          if (!startFirstAlbumTrack() && !discogsOrder) controller.play();
+          if(controller.isWebPlaybackSdk && !discogsOrder){
+            const accepted=controller.play();
+            initialAlbumTrackSelected=accepted!==false;
+            if(accepted===false)showPlaybackState(true);
+          } else if (!startFirstAlbumTrack() && !discogsOrder) controller.play();
         }
         syncFullscreenPlayer();
       });
@@ -23014,7 +23049,8 @@ async function restoreSpotifyConnection() {
     return;
   }
   if (refreshToken || sessionToken?.accessToken) {
-    await getSpotifyAccessToken();
+    const token=await getSpotifyAccessToken();
+    if(token && shouldUseSpotifyWebPlayback())void loadSpotifyWebPlaybackScript().catch(()=>{});
     return;
   }
   if (!getSpotifyRedirectUri() || localStorage.getItem(SPOTIFY_AUTO_CONNECT_DISABLED_KEY) === 'true'
@@ -23079,7 +23115,7 @@ function appendListeningProviderResults(content, provider, label, results, item)
         window.open(result.url, '_blank', 'noopener,noreferrer');
         return;
       }
-      if (provider === 'spotify') saveSpotifyAlbumLink(item, result.url);
+      if (provider === 'spotify') { activateSpotifyPlaybackFromGesture();saveSpotifyAlbumLink(item, result.url); }
       content.querySelectorAll('.album-listen-provider-results, .album-listen-track-list, .album-listen-embed, .album-listen-open-platform')
         .forEach(element => element.remove());
       if (mountListeningEmbed(content, result.url, result.title || item.title || provider, item)) {
@@ -23404,6 +23440,7 @@ async function openAlbumListening(item, inlineTarget = null, options = {}) {
   if (!viewingOwnCollection && !options._temporaryRemote) {
     return openAlbumListening({ ...item, spotifyTrackMappings: { ...(item.spotifyTrackMappings || {}) } }, inlineTarget, { ...options, _temporaryRemote: true });
   }
+  if(!options.restorePlayback && !options.queueSelection && (!(item.spotifyAlbumUrl || item.listeningUrl) || getSpotifyEmbedUrl(item.spotifyAlbumUrl || item.listeningUrl)))activateSpotifyPlaybackFromGesture();
   const overlay = document.getElementById('albumListeningOverlay');
   const preferredPlaylist=[item.spotifyAlbumUrl,item.listeningUrl].find(url=>isSpotifyPlaylistUrl(url));
   let storedUrl = options.chooseAgain || options.searchQuery ? null : getSupportedListeningUrl(preferredPlaylist || normalizeSpotifyAlbumLink(item.spotifyAlbumUrl || item.listeningUrl) || item.spotifyAlbumUrl || item.listeningUrl || getMappedDiscogsUrl(item));
