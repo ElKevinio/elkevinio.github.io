@@ -17388,16 +17388,17 @@ const trustedMediaSession = (() => {
   return {
     run,
     publish({key, meta, duration, position, playing}) {
-      const changed = key !== curKey;
+      // Auch nach kurzer Pause (Ladezustand beim Titelwechsel) wieder neu ansetzen.
+      const changed = key !== curKey || (playing && !(cur && cur.playing));
       curKey = key;
       cur = {meta, duration, position, playing, at: Date.now()};
       apply(changed || !(navigator.mediaSession && navigator.mediaSession.metadata));
       if (!playing) { stopTimers(); return; }
       if (changed) {
         burstTimers.forEach(clearTimeout);
-        burstTimers = [400, 1500, 4000, 9000].map((ms, i) => setTimeout(() => {
+        burstTimers = [400, 1500, 3000, 5000, 8000].map((ms, i) => setTimeout(() => {
           if (!cur || !cur.playing) return;
-          if (i < 2) this.anchorPlay(true);
+          if (i < 4) this.anchorPlay(true);
           apply(true);
         }, ms));
       }
