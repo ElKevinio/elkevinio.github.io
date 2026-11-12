@@ -17356,8 +17356,53 @@ const trustedMediaSession = (() => {
     el.loop = true; el.preload = 'auto'; el.setAttribute('playsinline', '');
     return el;
   };
+  const run = fn => { trusted = true; try { return fn(); } finally { trusted = false; } };
+  // iOS-Sperrbildschirm: Beim Songwechsel im Hintergrund startet das Audio-Element im
+  // Spotify-Iframe neu und iOS zeigt dann dessen Anzeige ("Spotify Embedded Player", ohne Cover).
+  // Darum Metadaten + Position nach jedem Titelwechsel mehrfach neu setzen, den stillen Anker
+  // neu starten und die Position lokal weiterrechnen, auch wenn keine SDK-Ereignisse ankommen.
+  let cur = null, curKey = '', keepTimer = null, burstTimers = [];
+  const posNow = () => {
+    if (!cur || !(cur.duration > 0)) return null;
+    const elapsed = cur.playing ? (Date.now() - cur.at) / 1000 : 0;
+    return {duration: cur.duration, position: Math.max(0, Math.min(cur.position + elapsed, cur.duration)), playbackRate: 1};
+  };
+  const apply = withMeta => {
+    const session = navigator.mediaSession;
+    if (!session || !cur) return;
+    run(() => {
+      try {
+        if (withMeta && cur.meta && typeof MediaMetadata === 'function') session.metadata = new MediaMetadata(cur.meta);
+        session.playbackState = cur.playing ? 'playing' : 'paused';
+        const p = posNow();
+        if (p && typeof session.setPositionState === 'function') session.setPositionState(p);
+      } catch {}
+    });
+  };
+  const stopTimers = () => {
+    burstTimers.forEach(clearTimeout); burstTimers = [];
+    if (keepTimer) { clearInterval(keepTimer); keepTimer = null; }
+  };
+  document.addEventListener('visibilitychange', () => apply(true));
+  window.addEventListener('pageshow', () => apply(true));
   return {
-    run(fn) { trusted = true; try { return fn(); } finally { trusted = false; } },
+    run,
+    publish({key, meta, duration, position, playing}) {
+      const changed = key !== curKey;
+      curKey = key;
+      cur = {meta, duration, position, playing, at: Date.now()};
+      apply(changed || !(navigator.mediaSession && navigator.mediaSession.metadata));
+      if (!playing) { stopTimers(); return; }
+      if (changed) {
+        burstTimers.forEach(clearTimeout);
+        burstTimers = [400, 1500, 4000, 9000].map((ms, i) => setTimeout(() => {
+          if (!cur || !cur.playing) return;
+          if (i < 2) this.anchorPlay(true);
+          apply(true);
+        }, ms));
+      }
+      if (!keepTimer) keepTimer = setInterval(() => { if (cur && cur.playing) apply(false); else stopTimers(); }, 5000);
+    },
     anchorPlay(refresh) {
       try {
         anchor = anchor || buildAnchor();
@@ -17467,27 +17512,13 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
           ? {sizes: `${image.width}x${image.height}`} : {}),
         type: 'image/jpeg'
       }));
-      // Always set metadata ourselves. Checking !session.metadata is insufficient:
-      // the previous song's metadata may still be present after a track change.
-      const signature = JSON.stringify([uri, title, artist, album, artwork.map(a => a.src)]);
-      if (signature !== mediaTrackSignature || !session.metadata) {
-        try {
-          if (typeof MediaMetadata === 'function') {
-            trustedMediaSession.run(() => { session.metadata = new MediaMetadata({title, artist, album, artwork}); });
-            mediaTrackUri = uri;
-            mediaTrackSignature = signature;
-          }
-        } catch (error) { console.warn('Spotify-Medieninformationen:', error); }
-      }
-      try { session.playbackState = next.paused ? 'paused' : 'playing'; } catch {}
       const durationMs = Number(track.duration_ms) > 0 ? Number(track.duration_ms) : Number(next.duration);
       const duration = Number.isFinite(durationMs) && durationMs > 0 ? durationMs / 1000 : 0;
       const positionMs = Number(next.position);
       const position = Number.isFinite(positionMs) && positionMs >= 0 ? positionMs / 1000 : 0;
-      if (duration > 0 && typeof session.setPositionState === 'function') {
-        try { trustedMediaSession.run(() => session.setPositionState({duration, position: Math.min(position, duration), playbackRate: 1})); }
-        catch (error) { console.warn('Spotify-Medienposition:', error); }
-      }
+      const signature = JSON.stringify([uri, title, artist, album, artwork.map(a => a.src)]);
+      mediaTrackUri = uri; mediaTrackSignature = signature;
+      trustedMediaSession.publish({key: signature, meta: {title, artist, album, artwork}, duration, position: Math.min(position, duration || position), playing: !next.paused});
     };
     if (navigator.mediaSession?.setActionHandler) {
       for (const [action, handler] of [
@@ -17526,7 +17557,7 @@ async function loadSpotifyWebPlaybackApi(onStatus) {
     sdk.addListener('ready',({device_id})=>{
       if(destroyed)return;sdkReady();clearTimeout(reconnectTimer);reconnectAttempts=0;deviceId=device_id;settleDeviceWaiters(device_id);emit('ready');
       poll=setInterval(async()=>{
-        if(destroyed||polling||document.hidden||(state?.paused && desiredPaused!==false))return;
+        if(destroyed||polling||(state?.paused && desiredPaused!==false))return;
         polling=true;const revision=stateRevision,version=commandVersion;
         try{const next=await sdk.getCurrentState();if(revision===stateRevision && version===commandVersion)pushState(next);}catch{}finally{polling=false;}
       },1000);
@@ -21785,21 +21816,14 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     const albumName = (item && item.title) || '';
     const cover = (item && item.coverUrl) || '';
     const signature = JSON.stringify([title, artistName, albumName, cover]);
-    trustedMediaSession.run(() => {
-      try {
-        if (signature !== session.__vinylEmbedSig || !session.metadata) {
-          session.metadata = new MediaMetadata({title, artist: artistName, album: albumName, artwork: cover ? [{src: cover}] : []});
-          session.__vinylEmbedSig = signature;
-        }
-        session.playbackState = state.isPaused ? 'paused' : 'playing';
-        if (state.isPaused) trustedMediaSession.anchorPause(); else trustedMediaSession.anchorPlay();
-        const duration = (Number(state.duration) || 0) / 1000;
-        const position = (Number(state.position) || 0) / 1000;
-        if (duration > 0 && typeof session.setPositionState === 'function') {
-          session.setPositionState({duration, position: Math.min(Math.max(position, 0), duration), playbackRate: 1});
-        }
-      } catch (error) { console.warn('Embed-Medieninformationen:', error); }
+    trustedMediaSession.publish({
+      key: signature,
+      meta: {title, artist: artistName, album: albumName, artwork: cover ? [{src: cover}] : []},
+      duration: (Number(state.duration) || 0) / 1000,
+      position: Math.max(0, (Number(state.position) || 0) / 1000),
+      playing: !state.isPaused
     });
+    if (state.isPaused) trustedMediaSession.anchorPause(); else trustedMediaSession.anchorPlay();
   };
   if (navigator.mediaSession?.setActionHandler) {
     try { navigator.mediaSession.setActionHandler('previoustrack', () => previous.click()); } catch {}
