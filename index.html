@@ -2903,6 +2903,10 @@
   .fullscreen-player-tracks-panel header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
   .fullscreen-player-tracks-panel header strong { min-width:0; font-size:15px; }
   .fullscreen-player-tracks-panel header button { flex:0 0 32px; width:32px; min-width:32px; height:32px; padding:0; font-size:22px; }
+  .fullscreen-player-tracks-panel header #fullscreenPlayerTrackMapping { flex:0 0 34px; width:34px; min-width:34px; height:34px; padding:5px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; }
+  .fullscreen-player-tracks-panel header #fullscreenPlayerTrackMapping[hidden] { display:none; }
+  .fullscreen-player-tracks-panel header #fullscreenPlayerTrackMapping svg { display:block; width:23px; height:23px; }
+  .fullscreen-player-tracks-panel header #fullscreenPlayerTracksClose { flex:0 0 32px; }
   .fullscreen-player-tracks-panel p { margin:0; font-size:12px; }
   .fullscreen-player-tracks-list { flex:1; min-height:0; margin:0; padding:0; overflow-y:auto; list-style:none; overscroll-behavior:contain; }
   .fullscreen-player-tracks-list .album-mini-track { min-height:42px; text-align:left; }
@@ -7159,6 +7163,26 @@
     width:min(38vw, 17dvh, 175px);
   }
 }
+
+/* Mehrfachauswahl: ganze Albumkarte als auswählbare Fläche */
+.collection-card.multi-select-card { cursor:pointer; position:relative; }
+.collection-card.multi-select-card .card-actions,
+.collection-card.multi-select-card .album-listen-card-btn { display:none !important; }
+.collection-card.multi-select-card::after {
+  content:""; position:absolute; inset:0; z-index:8; pointer-events:none;
+  background:rgba(25,115,230,.43); border:2px solid #55a9ff;
+  border-radius:inherit; opacity:0; transition:opacity .14s ease;
+}
+.collection-card.multi-select-card.is-selected::after { opacity:1; }
+.collection-card .multi-select-check {
+  position:absolute; top:12px; right:12px; z-index:9; width:32px; height:32px;
+  display:grid; place-items:center; border-radius:50%; pointer-events:none;
+  background:rgba(0,0,0,.48); border:2px solid rgba(255,255,255,.7);
+  color:white; opacity:0; transition:opacity .14s ease;
+}
+.collection-card.multi-select-card.is-selected .multi-select-check { opacity:1; background:#1677ed; border-color:white; }
+.collection-card.multi-select-card.is-selected .multi-select-check svg { width:20px; height:20px; }
+#bulkDeleteBtn:disabled { opacity:.4; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -7697,6 +7721,9 @@
           <button id="clearSelectionBtn" class="settings-fix-btn bulk-action-btn tooltip-btn" title="Auswahl löschen" aria-label="Auswahl löschen" data-tooltip="Auswahl löschen">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
+          <button type="button" id="bulkDeleteBtn" class="settings-fix-btn bulk-action-btn tooltip-btn" title="Ausgewählte Alben löschen" aria-label="Ausgewählte Alben löschen" data-tooltip="Alben löschen" disabled style="color:#e35c65;">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2m4 0-1 15H6L5 6m5 4v7m4-7v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <button id="bulkEditBtn" class="settings-fix-btn bulk-action-btn tooltip-btn" title="Auswahl bearbeiten" aria-label="Auswahl bearbeiten" data-tooltip="Bearbeiten" disabled>
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4.5L20 8.5a2 2 0 0 0-4-4L4 16.5V20Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13 6 5 5" stroke="currentColor" stroke-width="1.8"/></svg>
           </button>
@@ -8049,7 +8076,7 @@
     </div>
   </div>
   <section id="fullscreenPlayerTracksPanel" class="fullscreen-player-tracks-panel" aria-label="Album-Titelliste" hidden>
-    <header><strong id="fullscreenPlayerTracksTitle">Album-Titelliste</strong><button type="button" id="fullscreenPlayerTrackMapping" hidden>Titel zuordnen</button><button type="button" id="fullscreenPlayerTracksClose" aria-label="Album-Titelliste schließen">×</button></header>
+    <header><strong id="fullscreenPlayerTracksTitle">Album-Titelliste</strong><button type="button" id="fullscreenPlayerTrackMapping" aria-label="Titel zuordnen" title="Titel zuordnen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 17V5l9-2v9"/><circle cx="6" cy="17" r="3"/><path d="M18 12.5l3 3-5.7 5.7-3.6.6.6-3.6z" fill="currentColor" fill-opacity=".12"/><path d="m17.3 13.2 3 3"/></svg></button><button type="button" id="fullscreenPlayerTracksClose" aria-label="Album-Titelliste schließen">×</button></header>
     <p id="fullscreenPlayerTracksStatus" class="settings-panel-hint" role="status"></p>
     <ol id="fullscreenPlayerTracksList" class="fullscreen-player-tracks-list"></ol>
   </section>
@@ -8182,7 +8209,7 @@
 <h4>Sortierung</h4>
 <p>Neueste, Titel, Interpret, Jahr, Genre, Status, Zustand, Lagerort, Waschdatum, Preis, Farbe und Format. Der Pfeil kehrt die Richtung um. In der Tabelle sortiert ein Klick auf die Spaltenüberschrift.</p>
 <h4>Mehrfachauswahl</h4>
-<p>Der Auswahl-Button zeigt Häkchen auf den Karten. Dann: ausgewählte anzeigen, Auswahl löschen oder <b>Bearbeiten</b> (gemeinsames Genre, Typ, Zustand, Lagerort usw. für alle).</p>
+<p>Im Auswahlmodus wählt ein Tipp auf die gesamte Albumkarte das Album aus. Ausgewählte Karten bleiben blau überlagert und zeigen ein Häkchen; ein erneuter Tipp hebt die Auswahl auf. Die Einzelaktionen sind in diesem Modus ausgeblendet. Oben lassen sich Alben gesammelt bearbeiten oder nach Sicherheitsabfrage löschen.</p>
 <h4>Album-Suche einklappen</h4>
 <p>Der Button links in der Toolbar blendet das Suchpanel aus. Kontoweite Einstellungen werden automatisch mit Firebase synchronisiert; Sortierungen bleiben lokal auf diesem Gerät. Den Synchronisierungsstatus siehst du am Cloud-Symbol beim Konto.</p></div></details>
     <details id="doc-storage" data-keywords="regal fach sortierung drag unsortiert"><summary>Lagerorte &amp; Lageransicht</summary><div class="docs-section">
@@ -8666,8 +8693,8 @@
 </div><!-- /#appRoot -->
 
 <!-- Firebase SDK (kostenlos, "compat"-Version für einfache Einbindung ohne Build-Tool) -->
-<link rel="stylesheet" href="vordle.css?v=20261112-lights">
-<script src="vordle.js?v=20261112-lights"></script>
+<link rel="stylesheet" href="vordle.css?v=20261112-owned">
+<script src="vordle.js?v=20261112-hints789"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -17204,6 +17231,12 @@ function normalizeSpotifyAlbumLink(rawUrl) {
 }
 
 function saveSpotifyAlbumLink(item, rawUrl) {
+  // Fremde Sammlungen: Hörlink nur im temporären Player-Objekt halten.
+  if (!viewingOwnCollection) {
+    const temporaryUrl = normalizeSpotifyAlbumLink(rawUrl);
+    if (temporaryUrl && item) item.spotifyAlbumUrl = temporaryUrl;
+    return false;
+  }
   const normalizedUrl = normalizeSpotifyAlbumLink(rawUrl);
   if (!normalizedUrl) return false;
   if (currentDraft && currentDraft.id===item?.id) currentDraft.spotifyAlbumUrl=normalizedUrl;
@@ -20840,7 +20873,7 @@ function getMappedDiscogsUrl(item) {
 }
 function saveDiscogsSpotifyMappings(item, mappings) {
   const serialized=JSON.stringify(mappings);
-  const stored=ownCollection.find(entry=>String(entry.id)===String(item.id));
+  const stored=viewingOwnCollection ? ownCollection.find(entry=>String(entry.id)===String(item.id)) : null;
   const changed=stored && JSON.stringify(stored.spotifyTrackMappings || {})!==serialized;
   item.spotifyTrackMappings=JSON.parse(serialized);
   if(stored && viewingOwnCollection && changed) {
@@ -23287,6 +23320,11 @@ async function searchAppleListening(item, content, controller, status) {
 }
 
 async function openAlbumListening(item, inlineTarget = null, options = {}) {
+  // Niemals das Albumobjekt einer fremden Sammlung durch Hörlink-Suche verändern.
+  // Die Kopie lebt nur für diesen Player-Aufruf und wird nicht gespeichert.
+  if (!viewingOwnCollection && !options._temporaryRemote) {
+    return openAlbumListening({ ...item, spotifyTrackMappings: { ...(item.spotifyTrackMappings || {}) } }, inlineTarget, { ...options, _temporaryRemote: true });
+  }
   const overlay = document.getElementById('albumListeningOverlay');
   const preferredPlaylist=[item.spotifyAlbumUrl,item.listeningUrl].find(url=>isSpotifyPlaylistUrl(url));
   let storedUrl = options.chooseAgain || options.searchQuery ? null : getSupportedListeningUrl(preferredPlaylist || normalizeSpotifyAlbumLink(item.spotifyAlbumUrl || item.listeningUrl) || item.spotifyAlbumUrl || item.listeningUrl || getMappedDiscogsUrl(item));
@@ -24128,6 +24166,7 @@ function updateBulkUI() {
   const count = selectedItemIds.size;
   document.getElementById('bulkSelectedCount').textContent = `${count} ausgewählt`;
   document.getElementById('bulkEditBtn').disabled = count === 0;
+  document.getElementById('bulkDeleteBtn').disabled = count === 0 || !viewingOwnCollection;
   document.getElementById('createSpotifyPlaylistFromSelectionBtn').disabled = count === 0;
   document.getElementById('selectAllCheckbox').checked = false;
   document.getElementById('selectAllCheckbox').indeterminate = count > 0 && count < collection.length;
@@ -24492,6 +24531,19 @@ if (selectModeBtn) {
   selectModeBtn.style.display = viewingOwnCollection ? 'flex' : 'none';
   selectModeBtn.addEventListener('click', toggleSelectMode);
 }
+document.getElementById('bulkDeleteBtn')?.addEventListener('click', async () => {
+  if (!viewingOwnCollection || !selectedItemIds.size) return;
+  const ids = new Set(selectedItemIds);
+  const count = collection.filter(item => ids.has(item.id)).length;
+  if (!count) return;
+  const ok = await showConfirm(`${count} ${count === 1 ? 'Album' : 'Alben'} wirklich aus deiner Sammlung löschen?`, { confirmLabel: `${count} ${count === 1 ? 'Album' : 'Alben'} löschen`, danger: true });
+  if (!ok) return;
+  collection = collection.filter(item => !ids.has(item.id));
+  selectedItemIds.clear();
+  updateBulkUI();
+  saveCollection();
+  renderCollection();
+});
 const bulkEditBtn = document.getElementById('bulkEditBtn');
 if (bulkEditBtn) {
   bulkEditBtn.addEventListener('click', openBulkEditDialog);
@@ -26381,7 +26433,7 @@ function renderCollection() {
         return;
       }
       const card = document.createElement('div');
-      card.className = 'collection-card' + (item.owned ? ' owned' : ' wishlist') + (!viewingOwnCollection ? ' remote-view' : '');
+      card.className = 'collection-card' + (item.owned ? ' owned' : ' wishlist') + (!viewingOwnCollection ? ' remote-view' : '') + (selectModeActive && allowEdit ? ' multi-select-card' : '') + (selectModeActive && selectedItemIds.has(item.id) && allowEdit ? ' is-selected' : '');
       const cardStyles = getCardBackground(item);
       Object.assign(card.style, cardStyles);
       card.style.setProperty('--condition-overlay', getConditionOverlay(item.condition || 'Sehr gut'));
@@ -26412,7 +26464,7 @@ function renderCollection() {
               <span>Zu meiner Sammlung</span>
             </button>
           ` : '';
-      const actionButtons = allowEdit ? `
+      const actionButtons = allowEdit && !selectModeActive ? `
             <button class="toggle-own ${item.owned ? 'owned' : ''}" title="${item.owned ? 'Auf Wunschliste verschieben' : 'Als besessen markieren'}" aria-label="${item.owned ? 'Auf Wunschliste verschieben' : 'Als besessen markieren'}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">${getOwnedToggleIcon(item)}</svg>
             </button>
@@ -26426,7 +26478,7 @@ function renderCollection() {
 
       card.innerHTML = `
         <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${isCollectionVinylDirty && !isCdItem(item) ? 'is-dirty' : ''} ${getDiscMediaClasses(item)}" style="--picture-background:${vinylDesignPreview.pictureBackgroundColor};--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${vinylRecordPreview.labelColor};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="${isCdItem(item) ? 'CD-Design' : 'Vinyl-Design'}">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : `${getVinylLiquidMarkup(vinylRecordPreview, vinylDesignPreview.discStyle)}${collectionVinylEffectsMarkup}`}</div></div>
-        ${selectModeActive ? `<div class="collection-card-checkbox" style="position:absolute;top:10px;left:10px;z-index:4;"><input type="checkbox" data-item-id="${item.id}" style="cursor:pointer; width:18px; height:18px;" ${selectedItemIds.has(item.id) ? 'checked' : ''}></div>` : ''}
+        ${selectModeActive && allowEdit ? `<span class="multi-select-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m5 12 5 5L20 7" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : ''}
         <div class="media">
           <img src="${item.coverUrl || ''}" alt="" loading="lazy" decoding="async">
           ${item.year ? `<div class="year-badge">${escapeHtml(item.year)}</div>` : ''}
@@ -26445,7 +26497,7 @@ ${actionButtons}
               <span class="release-badge ${badge.className}">${escapeHtml(badge.label)}</span>
             </div>
           </div>
-          <button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album ${escapeHtml(item.title)} anhören"><span aria-hidden="true">▶︎</span><span>Anhören</span></button>
+          ${selectModeActive ? '' : `<button type="button" class="album-listen-card-btn" title="Album anhören" aria-label="Album ${escapeHtml(item.title)} anhören"><span aria-hidden="true">▶︎</span><span>Anhören</span></button>`}
           ${commonBadgeHtml}
           ${showCollectionExtra && viewingOwnCollection && item.owned && (getStorageLabel(item) || item.lastWashed) ? `<div class="collection-extra">${getStorageLabel(item) ? `<span>${escapeHtml(getStorageLabel(item))}</span>` : ''}${item.lastWashed ? `<span>Gewaschen: ${escapeHtml(getWashedDateLabel(item))}</span>` : ''}</div>` : ''}
         </div>
@@ -26453,16 +26505,26 @@ ${actionButtons}
       `;
 
       if (allowEdit) {
-        card.querySelector('.toggle-own').addEventListener('click', e => { e.stopPropagation(); toggleOwned(item.id); });
-        card.querySelector('.edit').addEventListener('click', e => { e.stopPropagation(); editEntry(item.id); });
-        card.querySelector('.del').addEventListener('click', e => { e.stopPropagation(); deleteEntry(item.id); });
-        card.querySelector('.media').addEventListener('click', () => editEntry(item.id));
-        const checkbox = card.querySelector('input[data-item-id]');
-        if (checkbox) {
-          checkbox.addEventListener('change', e => {
-            e.stopPropagation();
+        if (selectModeActive) {
+          card.setAttribute('role', 'checkbox');
+          card.setAttribute('tabindex', '0');
+          card.setAttribute('aria-checked', String(selectedItemIds.has(item.id)));
+          card.setAttribute('aria-label', `${getDisplayName(item.title)} auswählen`);
+          card.addEventListener('click', event => {
+            event.preventDefault();
             toggleItemSelection(item.id);
           });
+          card.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              toggleItemSelection(item.id);
+            }
+          });
+        } else {
+          card.querySelector('.toggle-own')?.addEventListener('click', e => { e.stopPropagation(); toggleOwned(item.id); });
+          card.querySelector('.edit')?.addEventListener('click', e => { e.stopPropagation(); editEntry(item.id); });
+          card.querySelector('.del')?.addEventListener('click', e => { e.stopPropagation(); deleteEntry(item.id); });
+          card.querySelector('.media').addEventListener('click', () => editEntry(item.id));
         }
       } else {
         const addBtn = card.querySelector('.collection-card-add-overlay');
@@ -26478,7 +26540,8 @@ ${actionButtons}
           });
         }
       }
-      card.querySelector('.album-listen-card-btn').addEventListener('click', event => {
+      card.querySelector('.album-listen-card-btn')?.addEventListener('click', event => {
+        event.preventDefault();
         event.stopPropagation();
         openAlbumListening(item);
       });
@@ -26551,7 +26614,7 @@ ${actionButtons}
               ` : `<button class="add-to-own primary" onclick="addRemoteEntryToOwn('${item.id}')" title="Zu eigener Sammlung hinzufügen">Hinzufügen</button>`;
       // If viewing remote collection, only show add button for items not in own collection
       const remoteAddButton = !ownKeys.has(getAlbumComparisonKey(item)) ? `<button class="add-to-own primary" onclick="addRemoteEntryToOwn('${item.id}')" title="Zu eigener Sammlung hinzufügen">Hinzufügen</button>` : '';
-      const actionCellFinal = allowEdit ? (`` + `
+      const actionCellFinal = allowEdit && selectModeActive ? '' : allowEdit ? (`` + `
                 <div class="table-actions">
                   <button class="toggle-own ${item.owned ? 'owned' : ''}" onclick="toggleOwned('${item.id}')" title="${item.owned ? 'Auf Wunschliste verschieben' : 'Als besessen markieren'}" aria-label="${item.owned ? 'Auf Wunschliste verschieben' : 'Als besessen markieren'}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">${getOwnedToggleIcon(item)}</svg>
@@ -26566,6 +26629,11 @@ ${actionButtons}
               `) : remoteAddButton;
 
       const tr = document.createElement('tr');
+      if (selectModeActive && allowEdit) {
+        tr.style.cursor = 'pointer';
+        if (selectedItemIds.has(item.id)) tr.style.background = 'rgba(25,115,230,.32)';
+        tr.addEventListener('click', event => { event.preventDefault(); toggleItemSelection(item.id); });
+      }
       cols.forEach(col => {
           // Respect visibility or force-show common for remote view
           if (!(ts.visible[col.key] || (col.key === 'common' && !viewingOwnCollection))) return;

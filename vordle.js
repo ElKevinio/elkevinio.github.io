@@ -35,12 +35,14 @@
     return {official,guesses:official.concat(lost?extra:[]),lost,practiceSolved,uncovered,practicing,canGuess:!score?.solved && (!lost || practicing)};
   }
   function candidateFromItem(item) {
+    if (item.owned !== true) return null;
     const title = text(item.title).slice(0,240), artist = text(item.artist).slice(0,240);
     if (!normalize(title) || !normalize(artist)) return null;
     const yearValue = Number(item.year), priceValue = Number(item.discogsLowestPrice);
     const genreValues = Array.isArray(item.genre) ? item.genre : String(item.genre || '').split(',');
     const genres = [...new Map(genreValues.map(value => [normalize(value),text(value).slice(0,64)]).filter(([key])=>key)).values()].slice(0,12);
-    return {title,artist,coverUrl:validCoverUrl(item.coverUrl),year:Number.isInteger(yearValue) && yearValue>=1000 && yearValue<=3000?yearValue:null,genres,
+    const collections = Array.isArray(item.vordleCollections) ? [...new Set(item.vordleCollections.map(text).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de')).slice(0,100) : [];
+    return {title,artist,collections,coverUrl:validCoverUrl(item.coverUrl),year:Number.isInteger(yearValue) && yearValue>=1000 && yearValue<=3000?yearValue:null,genres,
       format:text(item.releaseType || 'Album').slice(0,64),
       price:!item.priceManual && Number.isFinite(priceValue) && priceValue>0?Math.round(priceValue*100)/100:null,
       currency:text(item.discogsCurrency || '€').replace(/^EUR$/i,'€').slice(0,8)};
@@ -56,7 +58,7 @@
       else {
         const covers=[previous.coverUrl,candidate.coverUrl].filter(Boolean).sort();
         const best=quality(candidate)>quality(previous) || quality(candidate)===quality(previous) && JSON.stringify(candidate)<JSON.stringify(previous)?candidate:previous;
-        map.set(key,{...best,coverUrl:covers[0] || ''});
+        map.set(key,{...best,collections:[...new Set([...previous.collections,...candidate.collections])].sort((a,b)=>a.localeCompare(b,'de')).slice(0,100),coverUrl:covers[0] || ''});
       }
     }
     return [...map.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([,album])=>album);
@@ -77,6 +79,7 @@
     return parts.map((items,index)=>({id:`p${String(index).padStart(4,'0')}`,items,albumIds:items.map(album=>album.id)}));
   }
   function initialHint(value) {return Array.from(text(value)).find(char=>/[\p{L}\p{N}]/u.test(char))?.toLocaleUpperCase('de') || '—';}
+  function progressiveHint(value, count) {return Array.from(text(value)).slice(0, count).join('').toLocaleUpperCase('de') || '—';}
   function feedback(guess, answer) {
     const won=guess.id===answer.id;
     const numeric=(value,target)=>{
@@ -120,7 +123,7 @@
     coverFrame.append(coverImage,coverPlaceholder);coverInfo.append(hints,coverCaption);coverFigure.append(coverFrame,coverInfo);
     coverImage.addEventListener('error',()=>{failedCoverUrl=coverImage.getAttribute('src') || '';coverImage.hidden=true;coverPlaceholder.hidden=false;coverCaption.textContent='Cover konnte nicht geladen werden. Du kannst mit den Tabellenhinweisen weiterraten.';});
     const help=el('details','vordle-help');help.append(el('summary',null,'So funktioniert’s'));
-    help.append(el('p',null,'Errate ein Album aus den Sammlungen aller Nutzer. Titel und Artist werden gelb, wenn sie passen, aber das Album noch falsch ist. Falsche Felder bleiben grau. Jahr- und Preis-Pfeile: unter 3 Abstand grün, 3 bis unter 10 gelb, ab 10 rot. Genres zeigen nur gemeinsame Treffer. Nach 5 Tipps erscheint der erste Buchstabe des Artists, nach 8 der des Titels. Genre ist grün, sobald mindestens eines übereinstimmt; Format bei gleicher Veröffentlichungsart. ↑ bedeutet: neueres Jahr oder höherer Preis gesucht. ↓ bedeutet: älter oder günstiger. Fehlende Daten bleiben grau. Preise sind eingefrorene Discogs-Ab-Preise, keine Kaufpreise. Das Cover wird nach jedem Fehlversuch schärfer. Nach zehn Fehlversuchen kannst du ohne Wertung weiterspielen oder die Lösung aufdecken. Zusätzliche Tipps bleiben auf diesem Gerät; die Gesamtzahl wird in der Rangliste geteilt. Jeden Tag um 00:00 Uhr in Berlin beginnt ein neues Spiel.'));
+    help.append(el('p',null,'Errate ein Album, das jemand in seiner Sammlung besitzt.  Titel und Artist werden gelb, wenn sie passen, aber das Album noch falsch ist. Falsche Felder bleiben grau. Jahr- und Preis-Pfeile: unter 3 Abstand grün, 3 bis unter 10 gelb, ab 10 rot. Genres zeigen nur gemeinsame Treffer. Nach Tipp 7 siehst du jeweils den ersten Buchstaben von Artist und Titel, nach Tipp 8 jeweils zwei und nach Tipp 9 jeweils drei Buchstaben. Genre ist grün, sobald mindestens eines übereinstimmt; Format bei gleicher Veröffentlichungsart. ↑ bedeutet: neueres Jahr oder höherer Preis gesucht. ↓ bedeutet: älter oder günstiger. Fehlende Daten bleiben grau. Preise sind eingefrorene Discogs-Ab-Preise, keine Kaufpreise. Das Cover wird nach jedem Fehlversuch schärfer. Nach zehn Fehlversuchen kannst du ohne Wertung weiterspielen oder die Lösung aufdecken. Zusätzliche Tipps bleiben auf diesem Gerät; die Gesamtzahl wird in der Rangliste geteilt. Jeden Tag um 00:00 Uhr in Berlin beginnt ein neues Spiel.'));
     const form=el('form','vordle-form'),label=el('label',null,'Dein Album-Tipp');label.htmlFor='vordleSearch';
     const input=el('input');input.id='vordleSearch';input.type='search';input.placeholder='Artist oder Album suchen …';input.autocomplete='off';input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls','vordleSuggestions');input.setAttribute('aria-expanded','false');
     const suggestions=el('ul','vordle-suggestions');suggestions.id='vordleSuggestions';suggestions.setAttribute('role','listbox');suggestions.hidden=true;
@@ -184,14 +187,16 @@
       const roots=await track(db.collection('users').get({source:'server'}));const items=[];
       const jobs=[];
       for(const root of roots.docs){const data=root.data(),uid=root.id;
-        if(data.collectionStorageVersion===2){for(const id of data.collectionChunkIds || [])jobs.push({ref:db.collection('users').doc(uid).collection('collectionChunks').doc(id),json:true});}
-        else if(data.collectionStorageVersion===1){for(const id of data.collectionItemIds || [])jobs.push({ref:db.collection('users').doc(uid).collection('collectionItems').doc(id)});}
-        else items.push(...(Array.isArray(data.collection)?data.collection:[]));
+        const collectionName=text(data.username || data.displayName || data.title || 'Unbekannte Sammlung').slice(0,80);
+        const addItems=entries=>items.push(...entries.filter(item=>item && typeof item==='object' && item.owned===true).map(item=>({...item,vordleCollections:[collectionName]})));
+        if(data.collectionStorageVersion===2){for(const id of data.collectionChunkIds || [])jobs.push({ref:db.collection('users').doc(uid).collection('collectionChunks').doc(id),json:true,collectionName});}
+        else if(data.collectionStorageVersion===1){for(const id of data.collectionItemIds || [])jobs.push({ref:db.collection('users').doc(uid).collection('collectionItems').doc(id),collectionName});}
+        else addItems(Array.isArray(data.collection)?data.collection:[]);
       }
       for(let offset=0;offset<jobs.length;offset+=12){
         if(!getUser()?.uid)throw new Error('Du wurdest abgemeldet.');
         const slice=jobs.slice(offset,offset+12),snapshots=await Promise.all(slice.map(job=>track(job.ref.get({source:'server'}))));
-        snapshots.forEach((snap,index)=>{if(!snap.exists)throw new Error('Eine Sammlung wird gerade geändert. Bitte Vordle erneut laden.');if(slice[index].json){const parsed=JSON.parse(snap.data().json);if(!Array.isArray(parsed))throw new Error('Ein Sammlungsblock ist beschädigt.');items.push(...parsed);}else items.push(snap.data());});
+        snapshots.forEach((snap,index)=>{if(!snap.exists)throw new Error('Eine Sammlung wird gerade geändert. Bitte Vordle erneut laden.');if(slice[index].json){const parsed=JSON.parse(snap.data().json);if(!Array.isArray(parsed))throw new Error('Ein Sammlungsblock ist beschädigt.');items.push(...parsed.filter(item=>item && item.owned===true).map(item=>({...item,vordleCollections:[slice[index].collectionName]})));}else {const item=snap.data();if(item?.owned===true)items.push({...item,vordleCollections:[slice[index].collectionName]});}});
         onProgress(Math.min(offset+12,jobs.length),jobs.length);
       }
       return catalogueFromItems(items);
@@ -209,7 +214,7 @@
           const catalogue=await readCollectionCatalogue((done,total)=>{if(state.open)setStatus(`Sammlungen werden geladen … ${done} von ${total} Blöcken`);});
           if(!sameUser(user.uid,epoch))throw new Error('Die Sitzung hat sich geändert.');
           if(dayKey()!==key)throw new Error('Ein neuer Vordle-Tag hat begonnen. Bitte erneut laden.');
-          if(!catalogue.length)throw new Error('In den Sammlungen wurden noch keine Alben mit Artist und Titel gefunden.');
+          if(!catalogue.length)throw new Error('In den Sammlungen wurden noch keine Alben im Besitz mit Artist und Titel gefunden.');
           const parts=catalogueParts(catalogue);
           const bytes=new TextEncoder().encode(JSON.stringify(parts)).length;
           if(parts.length>200 || bytes>8*1024*1024)throw new Error('Der gemeinsame Albumkatalog ist zu groß. Bitte den Vordle-Katalog serverseitig vorbereiten.');
@@ -324,7 +329,7 @@
       hints.hidden=current.uncovered;coverCaption.hidden=current.uncovered;
       coverFigure.classList.toggle('is-revealed',current.uncovered);
       hints.replaceChildren();
-      if(!current.uncovered){hints.append(el('span',guesses.length>=5?'is-unlocked':'',guesses.length>=5?`Artist beginnt mit: ${initialHint(state.day?.answer.artist)}`:'Artist-Hinweis ab Tipp 5'),el('span',guesses.length>=8?'is-unlocked':'',guesses.length>=8?`Titel beginnt mit: ${initialHint(state.day?.answer.title)}`:'Titel-Hinweis ab Tipp 8'));}
+      if(!current.uncovered){const count=Math.min(3,Math.max(0,guesses.length-6));hints.append(el('span',count?'is-unlocked':'',count?`Artist beginnt mit: ${progressiveHint(state.day?.answer.artist,count)}`:'Artist-Hinweis ab Tipp 7'),el('span',count?'is-unlocked':'',count?`Titel beginnt mit: ${progressiveHint(state.day?.answer.title,count)}`:'Titel-Hinweis ab Tipp 7'));}
       coverFigure.hidden=!state.day;
       const coverUrl=validCoverUrl(state.day?.answer.coverUrl);
       if(coverUrl && coverImage.getAttribute('src')!==coverUrl){failedCoverUrl='';coverImage.src=coverUrl;coverImage.hidden=false;}
@@ -342,7 +347,7 @@
       }
       gridWrap.scrollTop=0;
       solution.hidden=!current.uncovered;solution.replaceChildren();
-      if(current.uncovered){const album=state.day.answer;solution.append(el('strong',null,album.title),el('span','vordle-solution-artist',album.artist));}
+      if(current.uncovered){const album=state.day.answer;solution.append(el('strong',null,album.title),el('span','vordle-solution-artist',album.artist));if(album.collections?.length)solution.append(el('span','vordle-solution-collections',`Im Besitz bei: ${album.collections.join(', ')}`));}
       reveal.hidden=current.uncovered || !current.lost;reveal.classList.toggle('is-practicing',current.practicing);reveal.replaceChildren();
       if(current.uncovered){
         sub.textContent=state.score?.solved?`Gefunden in ${current.official.length}/${MAX_GUESSES} Versuchen`:current.practiceSolved?`Gefunden nach ${guesses.length} Versuchen · X/${MAX_GUESSES}`:`Aufgedeckt nach ${guesses.length} Versuchen · X/${MAX_GUESSES}`;
