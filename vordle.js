@@ -111,6 +111,7 @@
     const title=el('h2',null,'Vordle');title.id='vordleTitle';wordmark.append(title,el('span','vordle-daily-label','DAILY VINYL'));
     const close=el('button','vordle-close','×');close.type='button';close.setAttribute('aria-label','Vordle schließen');close.onclick=()=>dialog.close();hero.append(wordmark,close);
     const sub=el('p','vordle-subtitle','0 von 10 Versuchen');
+    const attempts=el('div','vordle-attempts');attempts.setAttribute('role','group');
     const dayLabel=el('p','vordle-day');const status=el('p','vordle-status');status.setAttribute('role','status');
     const coverFigure=el('figure','vordle-cover-hint'),coverFrame=el('div','vordle-cover-frame');
     const coverImage=el('img','vordle-cover-image');coverImage.alt='Verschwommenes Cover des gesuchten Albums';coverImage.draggable=false;coverImage.referrerPolicy='no-referrer';
@@ -131,6 +132,7 @@
     const tbody=el('tbody');grid.append(thead,tbody);gridWrap.append(grid);
     const reveal=el('div','vordle-reveal');reveal.hidden=true;
     const ranking=el('section','vordle-ranking'),rankingHead=el('div','vordle-ranking-head'),rankingTitle=el('h3',null,'Heute auf dem Plattenteller');
+    ranking.hidden=true;ranking.style.display='none';
     const refresh=el('button','vordle-ranking-refresh','Ergebnisse aktualisieren');refresh.type='button';
     const rankingStatus=el('p','vordle-ranking-status');rankingStatus.setAttribute('role','status');
     const rankingList=el('ol','vordle-ranking-list');rankingHead.append(rankingTitle,refresh);ranking.append(rankingHead,rankingStatus,rankingList);
@@ -142,11 +144,12 @@
     gamePanel.setAttribute('role','tabpanel');ranking.setAttribute('role','tabpanel');
     gamePanel.setAttribute('aria-labelledby','vordleGameTab');ranking.setAttribute('aria-labelledby','vordleRankTab');
     for(const [button,id,panel] of [[gameTab,'vordleGameTab',gamePanel],[rankTab,'vordleRankTab',ranking]]){button.type='button';button.id=id;button.setAttribute('role','tab');button.setAttribute('aria-controls',panel.id);tabs.append(button);}
-    function showTab(tab){state.activeTab=tab;const playing=tab==='game';gamePanel.hidden=!playing;ranking.hidden=playing;gameTab.setAttribute('aria-selected',String(playing));rankTab.setAttribute('aria-selected',String(!playing));gameTab.tabIndex=playing?0:-1;rankTab.tabIndex=playing?-1:0;if(!playing)void loadScores(true);}
+    function showTab(tab){state.activeTab=tab;const playing=tab==='game';gamePanel.hidden=!playing;gamePanel.style.display=playing?'block':'none';ranking.hidden=playing;ranking.style.display=playing?'none':'block';gameTab.setAttribute('aria-selected',String(playing));rankTab.setAttribute('aria-selected',String(!playing));gameTab.tabIndex=playing?0:-1;rankTab.tabIndex=playing?-1:0;if(!playing)void loadScores(true);}
     gameTab.onclick=()=>showTab('game');rankTab.onclick=()=>showTab('ranking');
     for(const button of [gameTab,rankTab])button.onkeydown=event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();showTab(state.activeTab==='game'?'ranking':'game');(state.activeTab==='game'?gameTab:rankTab).focus();}};
-    gamePanel.append(solution,coverFigure,form,status,retry,legend,gridWrap,reveal,help);
-    dialog.append(hero,sub,dayLabel,tabs,gamePanel,ranking);document.body.append(dialog);showTab('game');
+    coverInfo.append(solution);
+    gamePanel.append(coverFigure,form,status,retry,legend,gridWrap,reveal,help);
+    dialog.append(hero,attempts,sub,dayLabel,tabs,gamePanel,ranking);document.body.append(dialog);showTab('game');
     let matches=[],active=-1;
     const dayRef=key=>db.collection('vordleDays').doc(key);
     const liveUser=()=>{const user=getUser();if(!user?.uid)throw new Error('Bitte melde dich an, um Vordle zu spielen.');return user;};
@@ -312,6 +315,14 @@
       const current=progress(),guesses=current.guesses,done=!current.canGuess;
       dayLabel.textContent=state.day?`${state.day.day.split('-').reverse().join('.')} · ${state.day.albumCount.toLocaleString('de')} Alben · für alle gleich`:'';
       sub.textContent=current.lost?`${guesses.length} Versuche · X/${MAX_GUESSES}${current.practicing?' · Endlosmodus':''}`:`${guesses.length} von ${MAX_GUESSES} Versuchen`;
+      attempts.replaceChildren();attempts.setAttribute('aria-label',`${Math.max(0,MAX_GUESSES-current.official.length)} von ${MAX_GUESSES} gewerteten Versuchen übrig`);
+      for(let index=0;index<MAX_GUESSES;index++){
+        const used=index<current.official.length,solved=state.score?.solved && index===current.official.length-1;
+        const lamp=el('span',`vordle-attempt-light${used?' is-used':''}${solved?' is-solved':''}`);
+        lamp.setAttribute('role','img');lamp.setAttribute('aria-label',`Versuch ${index+1}: ${solved?'richtig':used?'verbraucht':'übrig'}`);lamp.title=`Versuch ${index+1}: ${used?'verbraucht':'übrig'}`;attempts.append(lamp);
+      }
+      hints.hidden=current.uncovered;coverCaption.hidden=current.uncovered;
+      coverFigure.classList.toggle('is-revealed',current.uncovered);
       hints.replaceChildren();
       if(!current.uncovered){hints.append(el('span',guesses.length>=5?'is-unlocked':'',guesses.length>=5?`Artist beginnt mit: ${initialHint(state.day?.answer.artist)}`:'Artist-Hinweis ab Tipp 5'),el('span',guesses.length>=8?'is-unlocked':'',guesses.length>=8?`Titel beginnt mit: ${initialHint(state.day?.answer.title)}`:'Titel-Hinweis ab Tipp 8'));}
       coverFigure.hidden=!state.day;
@@ -331,7 +342,7 @@
       }
       gridWrap.scrollTop=0;
       solution.hidden=!current.uncovered;solution.replaceChildren();
-      if(current.uncovered){const album=state.day.answer;solution.append(el('strong',null,album.title),el('span','vordle-solution-artist',album.artist),el('p',null,[album.year,album.format,album.price==null?'':`${album.price.toLocaleString('de')} ${album.currency}`,album.genres.join(', ')].filter(Boolean).join(' · ')));}
+      if(current.uncovered){const album=state.day.answer;solution.append(el('strong',null,album.title),el('span','vordle-solution-artist',album.artist));}
       reveal.hidden=current.uncovered || !current.lost;reveal.classList.toggle('is-practicing',current.practicing);reveal.replaceChildren();
       if(current.uncovered){
         sub.textContent=state.score?.solved?`Gefunden in ${current.official.length}/${MAX_GUESSES} Versuchen`:current.practiceSolved?`Gefunden nach ${guesses.length} Versuchen · X/${MAX_GUESSES}`:`Aufgedeckt nach ${guesses.length} Versuchen · X/${MAX_GUESSES}`;
