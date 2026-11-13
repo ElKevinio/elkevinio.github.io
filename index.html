@@ -7246,6 +7246,36 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
 .album-queue-drag-handle span { width:42px; height:4px; border-radius:4px; background:var(--border-strong); }
 @media(max-width:760px) { body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) { right:max(8px,env(safe-area-inset-right)); width:calc(100vw - 16px); } }
 
+
+/* Mobile player corrections (Nov 2026) */
+.fullscreen-player-controls {
+  display:flex !important; flex-wrap:nowrap !important; justify-content:center;
+  align-items:center; gap:clamp(5px,1.4vw,13px); width:100%; max-width:100%;
+}
+.fullscreen-player-controls > .album-mini-control {
+  grid-column:auto !important; grid-row:auto !important;
+  flex:0 1 clamp(34px,5.2vw,52px); min-width:0;
+  width:clamp(34px,5.2vw,52px); height:clamp(34px,5.2vw,52px);
+  margin:0; justify-self:auto !important;
+}
+.fullscreen-player-controls > .album-mini-control.primary {
+  flex:0 0 clamp(46px,7vw,66px); width:clamp(46px,7vw,66px); height:clamp(46px,7vw,66px);
+}
+#fullscreenPlayerShuffle { order:0; }
+#fullscreenPlayerPrev { order:1; }
+#fullscreenPlayerToggle { order:2; }
+#fullscreenPlayerNext { order:3; }
+#fullscreenPlayerFavorite { order:4; }
+#fullscreenPlayerSkipAlbum { order:5; }
+.album-listening-dock:not(.is-collapsed) .album-mini-topbar { flex:0 0 auto; }
+@media (max-width:900px), (pointer:coarse) {
+  #startObsExport, #obsExportStatus { display:none !important; }
+}
+@media (max-width:700px) {
+  .fullscreen-player-controls { gap:clamp(3px,1.2vw,9px) !important; }
+  .fullscreen-player-controls > .album-mini-control { flex-basis:clamp(30px,8vw,44px) !important; width:clamp(30px,8vw,44px) !important; height:clamp(30px,8vw,44px) !important; }
+  .fullscreen-player-controls > .album-mini-control.primary { flex-basis:clamp(42px,12vw,58px) !important; width:clamp(42px,12vw,58px) !important; height:clamp(42px,12vw,58px) !important; }
+}
 </style>
 <script src="layout-diagnostics.js" defer></script>
 </head>
@@ -17461,7 +17491,7 @@ function preloadSpotifyPlayer(item) {
 const trustedMediaSession = (() => {
   let trusted = false;
   const proto = window.MediaSession && window.MediaSession.prototype;
-  if (proto && typeof proto.setPositionState === 'function' && !proto.__vinylGuard) {
+  if (false && proto && typeof proto.setPositionState === 'function' && !proto.__vinylGuard) {
     proto.__vinylGuard = true;
     const nativePosition = proto.setPositionState;
     proto.setPositionState = function (state) { if (!trusted) return; return nativePosition.call(this, state); };
@@ -17619,7 +17649,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
     // durations to iOS as seconds. Our SDK state stays in milliseconds;
     // only Media Session metadata and position are converted to seconds.
     const restoreSpotifyPositionState = () => {};
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
@@ -17667,7 +17697,8 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       if(desiredPaused!==null && next.paused===desiredPaused && (!desiredUri || uri===desiredUri)) { desiredUri='';desiredPaused=null; }
       stateRevision++;
       const previous=state;state=next;
-      syncSpotifyMediaSession(next);
+      // Spotify SDK owns the native iOS Now Playing session; avoid a competing metadata publisher.
+      // syncSpotifyMediaSession(next);
       // Only actual Spotify pause/resume transitions affect the audio anchor.
       // A new song while playing must not stop/restart it.
       if (next.paused) {
@@ -17751,7 +17782,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       seek(seconds){
         const position=Math.max(0,Math.round((Number(seconds)||0)*1000));
         seekTargetMs=position; seekHoldUntil=Date.now()+4500;
-        if (state) { state={...state,position}; syncSpotifyMediaSession(state); }
+        if (state) { state={...state,position}; }
         if(pendingUri){pendingPosition=position;return Promise.resolve();}
         // Seek-Befehle nicht durch Play/Pause-Versionswechsel verwerfen.
         return run(async()=>{
@@ -19419,8 +19450,8 @@ function getFullscreenPlayerLayout() {
 }
 function sortFullscreenPlayerActions() {
   const toolbar=document.querySelector('.fullscreen-player-top-actions');
-  const order=['#fullscreenPlayerMusicSettings','#fullscreenPlayerZoomToggle','#fullscreenPlayerViewToggle','#fullscreenPlayerLayoutToggle','#fullscreenPlayerTracksToggle','#fullscreenPlayerQueueToggle','#fullscreenPlayerMenuToggle','[data-page-fullscreen]','#fullscreenPlayerRoomSettings','#closeFullscreenPlayerBtn'];
-  const buttons=order.map(selector=>toolbar.querySelector(selector)).filter(Boolean);
+  const order=['#spotifyPlaylistPlayBtn','#fullscreenPlayerMusicSettings','#fullscreenPlayerZoomToggle','#fullscreenPlayerViewToggle','#fullscreenPlayerLayoutToggle','#fullscreenPlayerTracksToggle','#fullscreenPlayerQueueToggle','#fullscreenPlayerMenuToggle','[data-page-fullscreen]','#fullscreenPlayerRoomSettings','#closeFullscreenPlayerBtn'];
+  const buttons=order.map(selector=>document.querySelector(selector)).filter(Boolean);
   if(buttons.every((button,index)=>toolbar.children[index]===button))return;
   toolbar.append(...buttons);
 }
@@ -19436,7 +19467,7 @@ function applyFullscreenPlayerPresentation() {
   overlay.classList.toggle('is-detail-zoom', zoomEnabled);
   const stage = document.querySelector('.fullscreen-player-stage');
   const rect = stage.getBoundingClientRect();
-  overlay.classList.toggle('has-speaker-space', window.innerWidth >= 1100 && window.innerHeight >= 500 && rect.width >= 650);
+  overlay.classList.toggle('has-speaker-space', (window.innerWidth >= 1100 && window.innerHeight >= 500 && rect.width >= 650) || (mobileMode === 'landscape' && rect.width >= 540 && rect.height >= 260));
 
   const layout = document.getElementById('fullscreenPlayerLayoutToggle');
   layout.hidden = !!mobileMode;
@@ -21538,7 +21569,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
 
   main.append(cover, meta);
   progress.append(seek);
-  player.append(expandHandle, topbar, trackList, main, host, message, progress);
+  player.append(expandHandle, trackList, topbar, main, host, message, progress);
   container.append(player);
 
   const setExpanded = expanded => {
