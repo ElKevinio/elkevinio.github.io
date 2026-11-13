@@ -17510,7 +17510,7 @@ const trustedMediaSession = (() => {
   // iOS: Keep our silent audio anchor running across SDK track transitions.
   // Restarting it on every track change can relinquish the active Now Playing session.
   // Metadata is republished separately; iOS may still prefer the SDK iframe.
-  let cur = null, curKey = '', keepTimer = null, burstTimers = [];
+  let cur = null, curKey = '', keepTimer = null, burstTimers = [], anchor = null;
   const posNow = () => {
     if (!cur || !(cur.duration > 0)) return null;
     const elapsed = cur.playing ? (Date.now() - cur.at) / 1000 : 0;
@@ -17556,8 +17556,15 @@ const trustedMediaSession = (() => {
       }
       // iOS extrapolates playback position; periodic setPositionState can cause jumping.
     },
-    anchorPlay() {},
-    anchorPause() {}
+    anchorPlay() {
+      if (!anchor) {
+        anchor = document.createElement('audio');
+        anchor.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7';
+        anchor.loop = true; anchor.volume = 0.001;
+      }
+      try { anchor.play().catch(() => {}); } catch {}
+    },
+    anchorPause() { if (anchor) try { anchor.pause(); } catch {} }
   };
 })();
 let spotifyIframeApiPromise = null;
@@ -17651,7 +17658,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
     // durations to iOS as seconds. Our SDK state stays in milliseconds;
     // only Media Session metadata and position are converted to seconds.
     const restoreSpotifyPositionState = () => {};
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
@@ -18095,7 +18102,7 @@ function buildListeningSession() {
 }
 function compactListeningAlbum(item) {
   if (!item) return null;
-  const compact = {id:item.id ?? '',title:item.title || '',artist:item.artist || '',coverUrl:item.coverUrl || '',
+  const compact = {id:item.id ?? '',title:item.title || '',artist:item.artist || '',coverUrl:item.coverUrl || '',isListeningPlaylist:!!item.isListeningPlaylist,
     spotifyAlbumUrl:getSupportedListeningUrl(item.spotifyAlbumUrl) || '',
     listeningUrl:getQueueableAlbumUrl(item) || getSupportedListeningUrl(item.listeningUrl) || ''};
   const tracks = usesDiscogsPlaybackOrder(item);
@@ -18306,7 +18313,7 @@ async function restoreListeningSession() {
     if (getQueueableAlbumUrl(item) || usesDiscogsPlaybackOrder(item)) listeningAlbumQueue.push({ ...item, listeningUrl: getQueueableAlbumUrl(item) });
   });
   saved.currentAlbum = hydrateListeningAlbum(saved.currentAlbum);
-  const savedCurrentUrl = getSupportedListeningUrl(saved.currentAlbum?.listeningUrl);
+  const savedCurrentUrl = getSupportedListeningUrl(saved.currentAlbum?.spotifyAlbumUrl || saved.currentAlbum?.listeningUrl);
   const hasCurrentAlbum = savedCurrentUrl && (getSpotifyEmbedUrl(savedCurrentUrl) || getYouTubeEmbedUrl(savedCurrentUrl));
   if (hasCurrentAlbum) currentListeningAlbum = { ...saved.currentAlbum, listeningUrl: savedCurrentUrl };
   const savedPlayback = saved.playback && typeof saved.playback === 'object' ? saved.playback : {};
