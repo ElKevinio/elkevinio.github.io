@@ -17493,7 +17493,7 @@ function preloadSpotifyPlayer(item) {
 const trustedMediaSession = (() => {
   let trusted = false;
   const proto = window.MediaSession && window.MediaSession.prototype;
-  if (false && proto && typeof proto.setPositionState === 'function' && !proto.__vinylGuard) {
+  if (proto && typeof proto.setPositionState === 'function' && !proto.__vinylGuard) {
     proto.__vinylGuard = true;
     const nativePosition = proto.setPositionState;
     proto.setPositionState = function (state) { if (!trusted) return; return nativePosition.call(this, state); };
@@ -17651,7 +17651,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
     // durations to iOS as seconds. Our SDK state stays in milliseconds;
     // only Media Session metadata and position are converted to seconds.
     const restoreSpotifyPositionState = () => {};
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
