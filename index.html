@@ -7210,6 +7210,42 @@
 .collection-card.multi-select-card.is-selected .multi-select-check { opacity:1; background:#1677ed; border-color:white; }
 .collection-card.multi-select-card.is-selected .multi-select-check svg { width:20px; height:20px; }
 #bulkDeleteBtn:disabled { opacity:.4; cursor:not-allowed; }
+
+/* Compact mini-player: consistent single-row transport and no wrapping. */
+.album-listening-dock:not(.is-collapsed) .album-mini-controls {
+  display:flex !important; flex-wrap:nowrap !important; justify-content:center;
+  gap:clamp(4px,1.4vw,10px); width:100%; max-width:none; margin:12px 0 0;
+}
+.album-listening-dock:not(.is-collapsed) .album-mini-controls > .album-mini-control {
+  grid-column:auto !important; grid-row:auto !important; justify-self:auto !important;
+  flex:0 1 44px; min-width:0; width:clamp(32px,8vw,44px); height:clamp(32px,8vw,44px);
+}
+.album-listening-dock:not(.is-collapsed) .album-mini-controls > .album-mini-control.primary {
+  flex:0 0 clamp(42px,11vw,54px); width:clamp(42px,11vw,54px); height:clamp(42px,11vw,54px);
+}
+.album-listening-dock:not(.is-collapsed) .album-mini-controls > [data-listening-track-shuffle] { order:0; }
+.album-listening-dock:not(.is-collapsed) .album-mini-controls > [aria-label="Vorheriger Titel"] { order:1; }
+.album-listening-dock:not(.is-collapsed) .album-mini-controls > .primary { order:2; }
+.album-listening-dock:not(.is-collapsed) .album-mini-controls > [aria-label="Nächster Titel"] { order:3; }
+.album-listening-dock:not(.is-collapsed) .album-mini-controls > [data-listening-favorite] { order:4; }
+.album-listening-dock:not(.is-collapsed) .album-mini-controls > .album-mini-queue-next { order:5; }
+.album-listening-dock:not(.is-collapsed) .album-mini-topbar { flex-wrap:nowrap; justify-content:flex-end; }
+.album-listening-dock .album-mini-topbar [data-discogs-track-mapping] { display:none !important; }
+/* Queue is an independent sheet above the player, not part of its drag/scroll surface. */
+body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
+  position:fixed; z-index:2147483647; right:18px;
+  bottom:var(--album-queue-bottom, 210px);
+  width:min(400px,calc(100vw - 24px)); min-width:0;
+  height:var(--album-queue-height, min(45dvh, 360px));
+  max-height:calc(100dvh - var(--album-queue-bottom, 210px) - 12px);
+  box-sizing:border-box; display:flex; flex-direction:column;
+  overflow:hidden; padding:8px 12px 12px;
+}
+#albumQueuePanel .album-queue-list { overflow-y:auto; min-height:0; flex:1; }
+.album-queue-drag-handle { height:24px; flex:0 0 24px; display:flex; justify-content:center; align-items:center; cursor:ns-resize; touch-action:none; }
+.album-queue-drag-handle span { width:42px; height:4px; border-radius:4px; background:var(--border-strong); }
+@media(max-width:760px) { body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) { right:max(8px,env(safe-area-inset-right)); width:calc(100vw - 16px); } }
+
 </style>
 <script src="layout-diagnostics.js" defer></script>
 </head>
@@ -7960,6 +7996,7 @@
   </div>
   <div id="albumListeningDockContent"></div>
   <section id="albumQueuePanel" class="album-queue-panel" aria-label="Album-Warteschlange" hidden>
+    <div class="album-queue-drag-handle" role="slider" tabindex="0" aria-label="Warteschlange höher oder niedriger ziehen" aria-valuemin="0" aria-valuemax="100" aria-valuenow="55"><span></span></div>
     <div class="album-queue-header"><h2 class="album-queue-heading">Warteschlange</h2><button type="button" class="album-queue-clear" data-clear-album-queue title="Warteschlange leeren">Warteschlange leeren</button><button type="button" class="album-queue-shuffle" data-shuffle-album-queue title="Wartende Alben zufällig mischen" aria-label="Album-Warteschlange mischen" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 4-4m4-4c1-2 2-4 4-4h3m-4-4 4 4-4 4"/></svg><span>Shuffle</span></button></div>
     <ol id="albumQueueList" class="album-queue-list"></ol>
   </section>
@@ -18361,6 +18398,49 @@ function createExpandedDockCloseButton() {
   return button;
 }
 
+// Queue sheet height is adjusted independently of the mini-player and its tracklist.
+(function installQueueSheetDrag() {
+  const panel = document.getElementById('albumQueuePanel');
+  const handle = panel?.querySelector('.album-queue-drag-handle');
+  const dock = document.getElementById('albumListeningDock');
+  if (!panel || !handle || !dock) return;
+  const updateBottom = () => {
+    if (panel.hidden || dock.hidden || document.body.classList.contains('fullscreen-player-open')) return;
+    const dockRect = dock.getBoundingClientRect();
+    panel.style.setProperty('--album-queue-bottom', `${Math.max(8, window.innerHeight - dockRect.top + 10)}px`);
+  };
+  const observer = new ResizeObserver(updateBottom);
+  observer.observe(dock);
+  window.addEventListener('resize', updateBottom);
+  const panelObserver = new MutationObserver(updateBottom);
+  panelObserver.observe(panel, {attributes:true,attributeFilter:['hidden']});
+  panelObserver.observe(dock, {attributes:true,attributeFilter:['class','hidden']});
+  let startY = null, startHeight = 0;
+  const resize = height => {
+    updateBottom();
+    const bottom = parseFloat(getComputedStyle(panel).getPropertyValue('--album-queue-bottom')) || 210;
+    const maximum = Math.max(110, window.innerHeight - bottom - 12);
+    const next = Math.max(110, Math.min(maximum, height));
+    panel.style.setProperty('--album-queue-height', `${next}px`);
+    handle.setAttribute('aria-valuenow', String(Math.round(100 * next / maximum)));
+  };
+  handle.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    startY = event.clientY; startHeight = panel.getBoundingClientRect().height;
+    handle.setPointerCapture(event.pointerId); event.preventDefault();
+  });
+  handle.addEventListener('pointermove', event => {
+    if (startY !== null) resize(startHeight + startY - event.clientY);
+  });
+  const stop = () => { startY = null; };
+  handle.addEventListener('pointerup', stop);
+  handle.addEventListener('pointercancel', stop);
+  handle.addEventListener('keydown', event => {
+    if (!['ArrowUp','ArrowDown'].includes(event.key)) return;
+    event.preventDefault(); resize(panel.getBoundingClientRect().height + (event.key === 'ArrowUp' ? 48 : -48));
+  });
+})();
+
 function setAlbumQueuePanelOpen(isOpen) {
   const panel = document.getElementById('albumQueuePanel');
   if (!panel) return;
@@ -18392,7 +18472,7 @@ function createFullscreenPlayerToggle() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'album-queue-toggle album-mini-fullscreen-toggle';
-  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="3.5" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="12.2" r="5.4" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="12.2" r="1.1" fill="currentColor"/><circle cx="17.9" cy="6.1" r="1.5" stroke="currentColor" stroke-width="1.4"/><path d="m17.9 6.1-2.9 9.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
+  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
   button.title = 'Vollbild-Player öffnen';
   button.setAttribute('aria-label', button.title);
   button.addEventListener('click', openFullscreenPlayer);
@@ -22036,14 +22116,14 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   if(!discogsOrder && getDiscogsPlaybackTracks(item).length && !isSpotifyPlaylistUrl(originalUrl)) {
     const chooseTracks=document.createElement('button');chooseTracks.type='button';chooseTracks.className='album-mini-control';chooseTracks.textContent='Einzeltitel zuordnen';
     chooseTracks.dataset.discogsTrackMapping='true';chooseTracks.title='Für dieses Album ausnahmsweise einzelne Spotify-Titel zuordnen';
-    chooseTracks.onclick=()=>{setSpotifyPlaybackMode(item,'tracks');void openAlbumListening(item);};topbar.append(chooseTracks);
+    chooseTracks.onclick=()=>{setSpotifyPlaybackMode(item,'tracks');void openAlbumListening(item);};/* Track assignment remains accessible through album settings; no text button in mini player. */
   }
   if (discogsOrder) {
     const request=new AbortController();spotifyMiniTracklistRequest=request;
     const mappingButton=document.createElement('button');mappingButton.type='button';mappingButton.className='album-mini-control';mappingButton.textContent='Titel zuordnen';
     mappingButton.dataset.discogsTrackMapping='true';
     mappingButton.title='Spotify-Zuordnungen der Discogs-Titelliste prüfen und ändern';
-    topbar.append(mappingButton);
+    /* Keep mapping control off the compact mini-player toolbar. */
     mappingButton.disabled=true;
     const applyMappings=entries=>{
       if(request.signal.aborted || !host.isConnected)return;
