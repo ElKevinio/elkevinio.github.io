@@ -17440,10 +17440,9 @@ const trustedMediaSession = (() => {
     return el;
   };
   const run = fn => { trusted = true; try { return fn(); } finally { trusted = false; } };
-  // iOS-Sperrbildschirm: Beim Songwechsel im Hintergrund startet das Audio-Element im
-  // Spotify-Iframe neu und iOS zeigt dann dessen Anzeige ("Spotify Embedded Player", ohne Cover).
-  // Darum Metadaten + Position nach jedem Titelwechsel mehrfach neu setzen, den stillen Anker
-  // neu starten und die Position lokal weiterrechnen, auch wenn keine SDK-Ereignisse ankommen.
+  // iOS: Keep our silent audio anchor running across SDK track transitions.
+  // Restarting it on every track change can relinquish the active Now Playing session.
+  // Metadata is republished separately; iOS may still prefer the SDK iframe.
   let cur = null, curKey = '', keepTimer = null, burstTimers = [];
   const posNow = () => {
     if (!cur || !(cur.duration > 0)) return null;
@@ -17466,8 +17465,9 @@ const trustedMediaSession = (() => {
     burstTimers.forEach(clearTimeout); burstTimers = [];
     if (keepTimer) { clearInterval(keepTimer); keepTimer = null; }
   };
-  document.addEventListener('visibilitychange', () => apply(true));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) apply(true); });
   window.addEventListener('pageshow', () => apply(true));
+  window.addEventListener('focus', () => apply(true));
   return {
     run,
     publish({key, meta, duration, position, playing}) {
@@ -17478,21 +17478,29 @@ const trustedMediaSession = (() => {
       apply(changed || !(navigator.mediaSession && navigator.mediaSession.metadata));
       if (!playing) { stopTimers(); return; }
       if (changed) {
+        console.debug('[Vinyl MediaSession] Track/Playback aktiv:', meta?.title || key);
+        // Never pause/restart the anchor merely because Spotify switched tracks.
+        this.anchorPlay();
         burstTimers.forEach(clearTimeout);
-        burstTimers = [400, 1500, 3000, 5000, 8000].map((ms, i) => setTimeout(() => {
-          if (!cur || !cur.playing) return;
-          if (i < 4) this.anchorPlay(true);
+        const expectedKey = key;
+        burstTimers = [250, 750, 1500, 3000, 5000, 8000].map(ms => setTimeout(() => {
+          if (!cur?.playing || curKey !== expectedKey) return;
           apply(true);
         }, ms));
       }
       if (!keepTimer) keepTimer = setInterval(() => { if (cur && cur.playing) apply(false); else stopTimers(); }, 5000);
     },
-    anchorPlay(refresh) {
+    anchorPlay() {
       try {
         anchor = anchor || buildAnchor();
-        if (refresh && !anchor.paused) { anchor.pause(); anchor.currentTime = 0; }
-        const result = anchor.play(); if (result && result.catch) result.catch(() => {});
-      } catch {}
+        if (!anchor.paused) return; // Preserve the current iOS audio session.
+        const result = anchor.play();
+        if (result && typeof result.catch === 'function') result.catch(error => {
+          console.debug('[Vinyl MediaSession] Audio-Anker blockiert:', error?.name || error);
+        });
+      } catch (error) {
+        console.debug('[Vinyl MediaSession] Audio-Anker fehlgeschlagen:', error);
+      }
     },
     anchorPause() { try { if (anchor) anchor.pause(); } catch {} }
   };
@@ -17632,7 +17640,13 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       stateRevision++;
       const previous=state;state=next;
       syncSpotifyMediaSession(next);
-      if (next.paused) trustedMediaSession.anchorPause(); else trustedMediaSession.anchorPlay(!previous || previous.paused);
+      // Only actual Spotify pause/resume transitions affect the audio anchor.
+      // A new song while playing must not stop/restart it.
+      if (next.paused) {
+        if (!previous || !previous.paused) trustedMediaSession.anchorPause();
+      } else {
+        trustedMediaSession.anchorPlay();
+      }
       if(!next.paused) {
         clearTimeout(persistentSpotifyIdleTimer);
         persistentSpotifyIdleTimer = null;
