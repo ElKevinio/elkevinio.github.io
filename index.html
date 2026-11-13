@@ -4898,6 +4898,8 @@
   .spotify-import-box .spotify-playlist-import-status { margin:0 0 4px; }
   .storage-result-overlay { z-index: 115; }
   #albumListeningOverlay { z-index: 150; }
+  /* Playlist dialog must sit above the fullscreen player (z-index 2147483646). */
+  #spotifyPlaylistPlayOverlay { z-index: 2147483647; }
   body.fullscreen-player-open #albumListeningOverlay { z-index: 2147483647; }
   .wash-mode-overlay { z-index: 99; }
   .shop-mode-overlay { z-index: 99; background:var(--surface-1); padding:0; align-items:stretch; justify-content:center; inset:var(--shop-top, 0px) 0 0 0; }
@@ -17649,7 +17651,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
     // durations to iOS as seconds. Our SDK state stays in milliseconds;
     // only Media Session metadata and position are converted to seconds.
     const restoreSpotifyPositionState = () => {};
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
@@ -17697,8 +17699,8 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       if(desiredPaused!==null && next.paused===desiredPaused && (!desiredUri || uri===desiredUri)) { desiredUri='';desiredPaused=null; }
       stateRevision++;
       const previous=state;state=next;
-      // Spotify SDK owns the native iOS Now Playing session; avoid a competing metadata publisher.
-      // syncSpotifyMediaSession(next);
+      // Own iOS Now Playing metadata and convert Spotify milliseconds to seconds.
+      syncSpotifyMediaSession(next);
       // Only actual Spotify pause/resume transitions affect the audio anchor.
       // A new song while playing must not stop/restart it.
       if (next.paused) {
@@ -17782,7 +17784,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       seek(seconds){
         const position=Math.max(0,Math.round((Number(seconds)||0)*1000));
         seekTargetMs=position; seekHoldUntil=Date.now()+4500;
-        if (state) { state={...state,position}; }
+        if (state) { state={...state,position}; syncSpotifyMediaSession(state); }
         if(pendingUri){pendingPosition=position;return Promise.resolve();}
         // Seek-Befehle nicht durch Play/Pause-Versionswechsel verwerfen.
         return run(async()=>{
