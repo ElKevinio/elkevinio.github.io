@@ -2662,6 +2662,7 @@
     background:var(--accent, #fff);
     transition:width .45s linear;
   }
+  .album-mini-control.is-active { color:#1ed760 !important; }
   .fullscreen-player-controls {
     display:flex;
     align-items:center;
@@ -7332,6 +7333,7 @@
 <button id="washModeHeaderBtn" class="icon-btn" type="button" title="Waschmodus" aria-label="Waschmodus">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.4"/><path d="M12 3v3M8 4.5l1 2M16 4.5l-1 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       <span class="settings-shortcut-label">Waschmodus</span></button>
+<button id="spotifyPlaylistPlayBtn" class="icon-btn" type="button" title="Spotify-Playlist abspielen" aria-label="Spotify-Playlist abspielen" style="color:#1ed760;"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="18" rx="3"/><path d="M7 8h9M7 12h7M7 16h4"/><path d="m16 14 4 3-4 3z" fill="currentColor"/></svg></button>
 <button id="spotifyPlaylistImportBtn" class="icon-btn" type="button" title="Alben aus Spotify-Playlisten hinzufügen" aria-label="Alben aus Spotify-Playlisten hinzufügen" style="color:#1ed760;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.7"/><path d="M6.8 9.4c3.5-1 7.4-.6 10.6 1.2M7.4 12.7c3-.8 6.3-.5 9 1M8 15.8c2.4-.6 4.8-.3 6.9.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
       <span class="settings-shortcut-label">Spotify-Playlist importieren</span></button>
@@ -7812,6 +7814,16 @@
     </div>
   </div>
 </div>
+<div class="modal-overlay" id="spotifyPlaylistPlayOverlay" aria-modal="true" role="dialog" aria-labelledby="spotifyPlaylistPlayTitle">
+  <section class="modal-box spotify-playlist-box spotify-import-box">
+    <h2 id="spotifyPlaylistPlayTitle">Spotify-Playlist abspielen</h2>
+    <p id="spotifyPlaylistPlayStatus" class="spotify-playlist-import-status" role="status">Wähle eine Playlist. Die Titel werden als Spotify-Wiedergabekontext geladen.</p>
+    <input id="spotifyPlaylistPlaySearch" type="search" placeholder="Playlisten durchsuchen …" aria-label="Playlisten durchsuchen">
+    <div class="spotify-import-scroll"><div id="spotifyPlaylistPlayList" class="spotify-playlist-list"></div></div>
+    <div class="spotify-playlist-toolbar"><input id="spotifyPlaylistPlayUrl" type="text" placeholder="Spotify-Playlist-Link oder spotify:playlist:…" aria-label="Spotify-Playlist-Link"><button id="spotifyPlaylistPlayLink" type="button" class="btn">Abspielen</button></div>
+    <div class="modal-actions"><button id="spotifyPlaylistPlayClose" type="button" class="btn">Schließen</button></div>
+  </section>
+</div>
 <div class="modal-overlay" id="spotifyPlaylistImportOverlay" aria-modal="true" role="dialog" aria-labelledby="spotifyPlaylistImportTitle">
   <section class="modal-box spotify-playlist-box spotify-import-box">
     <h2 id="spotifyPlaylistImportTitle" style="margin:0 0 8px;">Alben aus Spotify-Playlisten</h2>
@@ -8139,6 +8151,7 @@
     <div class="fullscreen-player-progress"><span id="fullscreenPlayerProgressBar"></span><input type="range" id="fullscreenPlayerSeek" min="0" max="0" value="0" step="1" aria-label="Wiedergabeposition im Vollbild" disabled></div>
     <div class="fullscreen-player-time"><span id="fullscreenPlayerPosition">0:00</span><span id="fullscreenPlayerDuration">0:00</span></div>
     <div class="fullscreen-player-controls">
+      <button type="button" id="fullscreenPlayerShuffle" class="album-mini-control" title="Album zufällig abspielen" aria-label="Shuffle umschalten" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 4-4m4-4c1-2 2-4 4-4h3m-4-4 4 4-4 4"/></svg></button>
       <button type="button" id="fullscreenPlayerPrev" class="album-mini-control" title="Vorheriger Titel" aria-label="Vorheriger Titel"></button>
       <button type="button" id="fullscreenPlayerToggle" class="album-mini-control primary" title="Wiedergabe starten" aria-label="Wiedergabe starten"></button>
       <button type="button" id="fullscreenPlayerNext" class="album-mini-control" title="Nächster Titel" aria-label="Nächster Titel"></button>
@@ -11907,7 +11920,7 @@ const headerActions = document.querySelector('header .header-actions');
 const mobileShortcuts = document.getElementById('settingsMobileShortcutsItems');
 const desktopModeShortcuts=document.createElement('div');desktopModeShortcuts.className='desktop-mode-shortcuts';
 headerActions?.insertBefore(desktopModeShortcuts,headerActions.querySelector('.settings-wrap'));
-const modeShortcutIds=['viewStorageBtn','washModeHeaderBtn','spotifyPlaylistImportBtn','openDocsHeaderBtn'];
+const modeShortcutIds=['viewStorageBtn','washModeHeaderBtn','spotifyPlaylistImportBtn','spotifyPlaylistPlayBtn','openDocsHeaderBtn'];
 function updateDesktopModeShortcuts() {
   const desktop=window.matchMedia('(min-width:1200px) and (min-height:650px) and (hover:hover) and (pointer:fine)').matches;
   const destination=desktop?desktopModeShortcuts:document.getElementById('settingsTopShortcuts');
@@ -17406,9 +17419,8 @@ function preloadSpotifyPlayer(item) {
   void (shouldUseSpotifyWebPlayback()?loadSpotifyWebPlaybackScript():loadSpotifyIframeApi()).catch(()=>{});
   if(isSpotifyIntegrationAvailable())void loadSpotifyContextTracks(url).catch(()=>{});
 }
-// iOS Now Playing: Das Spotify-SDK schreibt Millisekunden-Werte in setPositionState
-// (iOS liest sie als Sekunden -> "43:20:41") und ueberschreibt Titel/Cover. Fremde Aufrufe
-// werden blockiert; nur Aufrufe innerhalb von trustedMediaSession.run() kommen durch.
+// Media Session: Spotify state is in milliseconds; the browser API expects seconds.
+// The local metadata/position writer is guarded against competing same-context writes.
 const trustedMediaSession = (() => {
   let trusted = false;
   const proto = window.MediaSession && window.MediaSession.prototype;
@@ -17424,21 +17436,7 @@ const trustedMediaSession = (() => {
       });
     }
   }
-  // Das SDK spielt in einem Iframe ("Spotify Embedded Player"); iOS zeigt dann dessen Medienanzeige.
-  // Ein stilles Audio-Element der Seite selbst macht unsere Medienanzeige zur aktiven.
-  let anchor = null;
-  const buildAnchor = () => {
-    const rate = 8000, n = rate, buf = new Uint8Array(44 + n), dv = new DataView(buf.buffer);
-    const w = (o, t) => { for (let i = 0; i < t.length; i++) buf[o + i] = t.charCodeAt(i); };
-    w(0, 'RIFF'); dv.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt ');
-    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
-    dv.setUint32(24, rate, true); dv.setUint32(28, rate, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
-    w(36, 'data'); dv.setUint32(40, n, true); buf.fill(128, 44);
-    let bin = ''; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-    const el = new Audio('data:audio/wav;base64,' + btoa(bin));
-    el.loop = true; el.preload = 'auto'; el.setAttribute('playsinline', '');
-    return el;
-  };
+  // No silent audio element: it can steal iOS Now Playing ownership from Spotify.
   const run = fn => { trusted = true; try { return fn(); } finally { trusted = false; } };
   // iOS: Keep our silent audio anchor running across SDK track transitions.
   // Restarting it on every track change can relinquish the active Now Playing session.
@@ -17475,12 +17473,11 @@ const trustedMediaSession = (() => {
       const changed = key !== curKey || (playing && !(cur && cur.playing));
       curKey = key;
       cur = {meta, duration, position, playing, at: Date.now()};
-      apply(changed || !(navigator.mediaSession && navigator.mediaSession.metadata));
+      if (changed) apply(true);
       if (!playing) { stopTimers(); return; }
       if (changed) {
         console.debug('[Vinyl MediaSession] Track/Playback aktiv:', meta?.title || key);
         // Never pause/restart the anchor merely because Spotify switched tracks.
-        this.anchorPlay();
         burstTimers.forEach(clearTimeout);
         const expectedKey = key;
         burstTimers = [250, 750, 1500, 3000, 5000, 8000].map(ms => setTimeout(() => {
@@ -17488,21 +17485,10 @@ const trustedMediaSession = (() => {
           apply(true);
         }, ms));
       }
-      if (!keepTimer) keepTimer = setInterval(() => { if (cur && cur.playing) apply(false); else stopTimers(); }, 5000);
+      // iOS extrapolates playback position; periodic setPositionState can cause jumping.
     },
-    anchorPlay() {
-      try {
-        anchor = anchor || buildAnchor();
-        if (!anchor.paused) return; // Preserve the current iOS audio session.
-        const result = anchor.play();
-        if (result && typeof result.catch === 'function') result.catch(error => {
-          console.debug('[Vinyl MediaSession] Audio-Anker blockiert:', error?.name || error);
-        });
-      } catch (error) {
-        console.debug('[Vinyl MediaSession] Audio-Anker fehlgeschlagen:', error);
-      }
-    },
-    anchorPause() { try { if (anchor) anchor.pause(); } catch {} }
+    anchorPlay() {},
+    anchorPause() {}
   };
 })();
 let spotifyIframeApiPromise = null;
@@ -17586,6 +17572,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
     const settleDeviceWaiters=(id,error)=>{const waiting=deviceWaiters.splice(0);for(const waiter of waiting){clearTimeout(waiter.timer);if(error)waiter.reject(error);else waiter.resolve(id);}};
     const waitForDevice=(timeout=12000)=>{if(destroyed)return Promise.reject(new Error('Spotify-Player wurde geschlossen.'));if(deviceId)return Promise.resolve(deviceId);return new Promise((resolve,reject)=>{const waiter={resolve,reject,timer:null};waiter.timer=setTimeout(()=>{deviceWaiters=deviceWaiters.filter(item=>item!==waiter);reject(new Error('Spotify-Gerät ist nicht bereit. Bitte Player erneut verbinden.'));},timeout);deviceWaiters.push(waiter);});};
     let commandVersion=0,stateRevision=0,desiredUri='',desiredPaused=null,desiredUntil=0;
+    let seekHoldUntil=0, seekTargetMs=null;
     let selectionVersion=0,lastAcceptedSelection=-1,lastAcceptedUri='';
     const listeners=new Map();
     let activeStatus=onStatus;
@@ -17635,6 +17622,10 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
     const pushState=next => {
       if(destroyed||!next)return;
       const uri=next.track_window?.current_track?.uri || '';
+      if (seekTargetMs !== null && Date.now() < seekHoldUntil &&
+          Math.abs(Number(next.position) - seekTargetMs) > 2500 &&
+          uri === state?.track_window?.current_track?.uri) return;
+      if (Date.now() >= seekHoldUntil) seekTargetMs = null;
       if(Date.now()<desiredUntil && ((desiredUri && uri!==desiredUri) || (desiredPaused!==null && next.paused!==desiredPaused)))return;
       if(desiredPaused!==null && next.paused===desiredPaused && (!desiredUri || uri===desiredUri)) { desiredUri='';desiredPaused=null; }
       stateRevision++;
@@ -17722,6 +17713,8 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       loadUri(uri){commandVersion++;selectionVersion++;pendingUri=uri;pendingPosition=0;desiredUri=uri.startsWith('spotify:track:')?uri:'';desiredUntil=Date.now()+8000;},
       seek(seconds){
         const position=Math.max(0,Math.round((Number(seconds)||0)*1000));
+        seekTargetMs=position; seekHoldUntil=Date.now()+4500;
+        if (state) { state={...state,position}; syncSpotifyMediaSession(state); }
         if(pendingUri){pendingPosition=position;return Promise.resolve();}
         // Seek-Befehle nicht durch Play/Pause-Versionswechsel verwerfen.
         return run(async()=>{
@@ -17793,6 +17786,14 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       destroy(){listeners.clear();activeStatus=null;},
       hardDestroy(){trustedMediaSession.anchorPause();restoreSpotifyPositionState();destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
     };
+    // Register native iOS lock-screen track controls for this playback engine.
+    if (navigator.mediaSession?.setActionHandler) {
+      for (const [action, method] of [['nexttrack', 'nextTrack'], ['previoustrack', 'previousTrack']]) {
+        try { navigator.mediaSession.setActionHandler(action, () => sdk[method]()); } catch (error) {
+          console.debug('[Vinyl MediaSession] Aktion nicht verfügbar:', action, error);
+        }
+      }
+    }
     persistentSpotifySdkController=controller;
     callback(controller);
     if(!destroyed){readyTimeout=setTimeout(()=>{deviceId='';settleDeviceWaiters('',new Error('Spotify-Gerät konnte nicht verbunden werden.'));sdk.disconnect();report('Spotify-Gerät konnte nicht verbunden werden. Bitte erneut versuchen oder das Embed verwenden.',true);},20000);sdk.connect().then(ok=>{if(!ok&&!destroyed){sdkReady();report('Spotify-Gerät konnte nicht verbunden werden.',true);}}).catch(()=>{sdkReady();report('Spotify-Gerät konnte nicht verbunden werden.',true);});}
@@ -17898,6 +17899,33 @@ function wrapPlayerTransport(controls) {
   row.append(controls,createPlayerVolumeControl());
   return row;
 }
+// Spotify-Album-Shuffle ist unabhängig vom Shuffle der Album-Warteschlange.
+let listeningTrackShuffle = false;
+const MUSIC_SHUFFLE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 4-4m4-4c1-2 2-4 4-4h3m-4-4 4 4-4 4"/></svg>';
+function syncListeningShuffleButtons() {
+  document.querySelectorAll('[data-listening-track-shuffle],#fullscreenPlayerShuffle').forEach(button => {
+    button.setAttribute('aria-pressed', String(listeningTrackShuffle));
+    button.classList.toggle('is-active', listeningTrackShuffle);
+    button.style.color = listeningTrackShuffle ? '#1ed760' : '';
+    button.title = listeningTrackShuffle ? 'Shuffle ausschalten' : 'Titel im aktuellen Album mischen';
+  });
+}
+async function setListeningTrackShuffle(enabled) {
+  if (!spotifyMiniController?.isWebPlaybackSdk) throw new Error('Shuffle benötigt den Spotify Web Playback Player.');
+  const token = await getSpotifyAccessToken();
+  if (!token) throw new Error('Bitte Spotify verbinden.');
+  const response = await fetch(`https://api.spotify.com/v1/me/player/shuffle?state=${enabled}`, {
+    method: 'PUT', headers: {Authorization:`Bearer ${token}`}
+  });
+  if (!response.ok) throw new Error(`Spotify Shuffle: HTTP ${response.status}`);
+  listeningTrackShuffle = enabled;
+  syncListeningShuffleButtons();
+}
+async function toggleListeningTrackShuffle() {
+  try { await setListeningTrackShuffle(!listeningTrackShuffle); }
+  catch (error) { console.error(error); alert(error.message || 'Shuffle konnte nicht geändert werden.'); }
+}
+document.getElementById('fullscreenPlayerShuffle')?.addEventListener('click',toggleListeningTrackShuffle);
 const fullscreenTransport=document.querySelector('.fullscreen-player-controls');
 if (fullscreenTransport) wrapPlayerTransport(fullscreenTransport);
 
@@ -18382,10 +18410,36 @@ let fullscreenSeekWheelAt = 0;
 let fullscreenPlayerTracksSignature = '';
 let fullscreenPlayerTracksSource = null;
 
+const playlistVinylColors = new Map();
+async function updateListeningPlaylistVinylColor(art) {
+  if (!currentListeningAlbum?.isListeningPlaylist || !art) return;
+  try {
+    let color = playlistVinylColors.get(art);
+    if (!color) {
+      const img = new Image(); img.crossOrigin = 'anonymous'; img.src = art;
+      await img.decode();
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 24;
+      const context = canvas.getContext('2d', {willReadFrequently:true});
+      context.drawImage(img, 0, 0, 24, 24);
+      const pixels = context.getImageData(0,0,24,24).data;
+      let r=0,g=0,b=0,n=0;
+      for(let i=0;i<pixels.length;i+=4) if(pixels[i+3]>128) {r+=pixels[i];g+=pixels[i+1];b+=pixels[i+2];n++;}
+      if (!n) return;
+      color = '#' + [r/n,g/n,b/n].map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+      playlistVinylColors.set(art,color);
+    }
+    if (currentListeningAlbum?.isListeningPlaylist && currentListeningAlbum.coverUrl === art) {
+      const vinyl = document.getElementById('fullscreenPlayerVinyl');
+      vinyl?.style.setProperty('--vinyl-base',color);
+      vinyl?.style.setProperty('--vinyl-label',color);
+    }
+  } catch (error) { console.debug('Playlist-Cover-Farbe nicht verfügbar:',error); }
+}
 function renderFullscreenPlayerVinyl() {
   const vinyl = document.getElementById('fullscreenPlayerVinyl');
   if (!vinyl) return;
   applyListeningVinylAppearance(vinyl, currentListeningAlbum || {});
+  if (currentListeningAlbum?.isListeningPlaylist) void updateListeningPlaylistVinylColor(currentListeningAlbum.coverUrl);
 }
 
 function applyListeningVinylAppearance(vinyl, item) {
@@ -18402,6 +18456,7 @@ function renderFullscreenPlayerCover() {
   const coverUrl = currentListeningAlbum?.coverUrl || '';
   cover.hidden = !coverUrl;
   if (coverUrl && cover.getAttribute('src') !== coverUrl) cover.src = coverUrl;
+  if (currentListeningAlbum?.isListeningPlaylist) void updateListeningPlaylistVinylColor(coverUrl);
 }
 
 let fullscreenPlayerObserver = null;
@@ -18573,6 +18628,8 @@ function syncFullscreenPlayer() {
   const next = document.getElementById('fullscreenPlayerNext');
   setPlayerHtml(prev, LISTENING_ICON_SVG.previous);
   setPlayerHtml(next, LISTENING_ICON_SVG.next);
+  document.getElementById('fullscreenPlayerShuffle').disabled = !spotifyMiniController?.isWebPlaybackSdk;
+  syncListeningShuffleButtons();
   prev.disabled = !prevSource || prevSource.disabled;
   next.disabled = !nextSource || nextSource.disabled;
   const seek = dockContent?.querySelector('.album-mini-seek');
@@ -21311,6 +21368,12 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const collapsedTitle = document.createElement('span');
   collapsedTitle.className = 'album-mini-collapsed-title';
   collapsedTitle.textContent = getListeningDisplayText(title, 'Album');
+  const shuffle = document.createElement('button');
+  shuffle.type = 'button'; shuffle.className = 'album-mini-control';
+  shuffle.dataset.listeningTrackShuffle = 'true'; shuffle.innerHTML = MUSIC_SHUFFLE_ICON;
+  shuffle.setAttribute('aria-label', 'Shuffle umschalten');
+  shuffle.addEventListener('click', toggleListeningTrackShuffle);
+  syncListeningShuffleButtons();
   const previous = document.createElement('button');
   previous.type = 'button';
   previous.className = 'album-mini-control';
@@ -21381,6 +21444,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   const expandedClose = createExpandedDockCloseButton();
   controls.append(
     collapsedTitle,
+    shuffle,
     previous,
     toggle,
     next,
@@ -21662,6 +21726,16 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       }
     }
     if (currentIndex < 0 && reportedName && !pendingAutoAdvancedTrackUri) setPlayerText(currentTrack,reportedName);
+    if (item?.isListeningPlaylist) {
+      const spotifyTrack = state.track_window?.current_track || state.currentTrack;
+      const art = spotifyTrack?.album?.images?.[0]?.url || '';
+      if (art && currentListeningAlbum?.isListeningPlaylist && currentListeningAlbum.coverUrl !== art) {
+        currentListeningAlbum.coverUrl = art;
+        cover.src = art; cover.hidden = false;
+        renderFullscreenPlayerCover();
+        updateListeningPlaylistVinylColor(art);
+      }
+    }
     const reportedArtists=state.track_window?.current_track?.artists || state.currentTrack?.artists;
     if (Array.isArray(reportedArtists) && !pendingAutoAdvancedTrackUri) setPlayerText(artist,reportedArtists.map(value=>value.name).filter(Boolean).join(', ') || item?.artist || 'Spotify');
     trackList.querySelectorAll('.album-mini-track').forEach((button, index) => {
@@ -21778,6 +21852,11 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
         if (cover.getAttribute('src') !== spotifyCoverUrl) cover.src = spotifyCoverUrl;
         cover.hidden = false;
         cover.alt = `Cover: ${track.album?.name || track.name}`;
+        if (currentListeningAlbum?.isListeningPlaylist && currentListeningAlbum.coverUrl !== spotifyCoverUrl) {
+          currentListeningAlbum.coverUrl = spotifyCoverUrl;
+          renderFullscreenPlayerCover();
+          void updateListeningPlaylistVinylColor(spotifyCoverUrl);
+        }
       }
       // iOS-Sperrbildschirm/Medienanzeige: Metadaten nur für die eigene
       // aktive Vinyls-Mediensitzung aktualisieren, nicht fremde Spotify-Player übernehmen.
@@ -21802,13 +21881,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
               session.metadata = new MediaMetadata({title: nextTitle, artist: nextArtist, album: nextAlbum, artwork});
             });
           }
-          const duration = Number(track.duration_ms) / 1000;
-          const position = Number(data.progress_ms) / 1000;
-          if (duration > 0 && Number.isFinite(position) && typeof session.setPositionState === 'function') {
-            trustedMediaSession.run(() => session.setPositionState({
-              duration, position: Math.max(0, Math.min(position, duration)), playbackRate: 1
-            }));
-          }
+          // Do not overwrite the SDK's position with delayed Web API progress_ms.
         } catch (error) { console.debug('iOS-Medienanzeige konnte nicht aktualisiert werden:', error); }
       }
       const matchedIndex = tracks.findIndex(t => t.uri === track.uri);
@@ -22271,6 +22344,11 @@ function mountListeningEmbed(container, url, title, item = null, restorePlayback
     persistListeningSession();
   }
   if (spotifyEmbed) {
+    if (!item?.isListeningPlaylist && listeningTrackShuffle) {
+      listeningTrackShuffle = false; syncListeningShuffleButtons();
+      getSpotifyAccessToken().then(token => token && fetch('https://api.spotify.com/v1/me/player/shuffle?state=false',
+        {method:'PUT',headers:{Authorization:`Bearer ${token}`}})).catch(console.debug);
+    }
     buildSpotifyMiniPlayer(playerContainer, url, item, title, restorePlayback);
   } else if (youtubeEmbed) {
     const videoId = getYouTubeVideoId(url);
@@ -22291,6 +22369,77 @@ function getSpotifyRedirectUri() {
   return `${window.location.origin}${window.location.pathname}`;
 }
 
+let spotifyPlaylistPlayRequest = 0;
+function closeSpotifyPlaylistPlay() {
+  spotifyPlaylistPlayRequest++;
+  document.getElementById('spotifyPlaylistPlayOverlay')?.classList.remove('open');
+}
+function spotifyPlaylistPlaybackId(value) {
+  const text = String(value || '').trim();
+  const uri = text.match(/^spotify:playlist:([A-Za-z0-9]+)$/i);
+  if (uri) return uri[1];
+  try {
+    const url = new URL(text);
+    if (url.protocol === 'https:' && url.hostname === 'open.spotify.com')
+      return url.pathname.match(/^\/(?:intl-[a-z]{2}\/)?playlist\/([A-Za-z0-9]+)\/?$/i)?.[1] || '';
+  } catch {}
+  return '';
+}
+async function playSpotifyPlaylistContext(playlistId, playlist = null) {
+  if (!/^[A-Za-z0-9]+$/.test(playlistId)) throw new Error('Ungültige Spotify-Playlist.');
+  const data = playlist || await requestSpotifyPlaylistApi(`https://api.spotify.com/v1/playlists/${playlistId}`);
+  const url = `https://open.spotify.com/playlist/${playlistId}`;
+  closeSpotifyPlaylistPlay();
+  // Replaces the active album playback context. The playlist itself is the track queue.
+  listeningTrackShuffle = false; syncListeningShuffleButtons();
+  const item = {title:data.name || 'Spotify-Playlist', artist:data.owner?.display_name || 'Spotify',
+    coverUrl:data.images?.[0]?.url || '', listeningUrl:url, spotifyAlbumUrl:url,
+    isListeningPlaylist:true};
+  activateSpotifyPlaybackFromGesture();
+  mountListeningEmbed(document.getElementById('albumListeningDockContent'),url,item.title,item);
+  if (isFullscreenPlayerOpen()) {renderFullscreenPlayerVinyl();renderFullscreenPlayerCover();syncFullscreenPlayer();}
+}
+async function openSpotifyPlaylistPlay() {
+  const overlay = document.getElementById('spotifyPlaylistPlayOverlay');
+  const status = document.getElementById('spotifyPlaylistPlayStatus');
+  const list = document.getElementById('spotifyPlaylistPlayList');
+  overlay.classList.add('open');list.replaceChildren();status.textContent='Lade deine Spotify-Playlisten …';
+  const request = ++spotifyPlaylistPlayRequest;
+  try {
+    let url='https://api.spotify.com/v1/me/playlists?limit=50&offset=0';
+    while(url) {
+      const page=await requestSpotifyPlaylistApi(url);
+      if(request!==spotifyPlaylistPlayRequest)return;
+      for(const playlist of page.items || []) {
+        if(!playlist?.id)continue;
+        const button=document.createElement('button');button.type='button';button.className='spotify-playlist-option';
+        button.dataset.search=normalizeSpotifyMatchText(`${playlist.name || ''} ${playlist.owner?.display_name || ''}`);
+        const img=document.createElement('img');img.alt='';img.loading='lazy';img.src=playlist.images?.[0]?.url || '';
+        const label=document.createElement('span');const strong=document.createElement('strong');strong.textContent=playlist.name || 'Playlist';
+        const detail=document.createElement('small');detail.textContent=`${playlist.owner?.display_name || 'Spotify'} · ${playlist.tracks?.total ?? playlist.items?.total ?? 0} Songs`;
+        label.append(strong,detail);button.append(img,label);
+        button.addEventListener('click',()=>{playSpotifyPlaylistContext(playlist.id,playlist).catch(error=>{status.textContent=error.message;});});
+        list.append(button);
+      }
+      url=page.next || '';
+    }
+    status.textContent='Playlist wählen oder einen Spotify-Playlist-Link einfügen.';
+  } catch(error) {if(request===spotifyPlaylistPlayRequest)status.textContent=error.message || 'Playlisten konnten nicht geladen werden.';}
+}
+document.getElementById('spotifyPlaylistPlayBtn')?.addEventListener('click',openSpotifyPlaylistPlay);
+document.getElementById('spotifyPlaylistPlayClose')?.addEventListener('click',closeSpotifyPlaylistPlay);
+document.getElementById('spotifyPlaylistPlayOverlay')?.addEventListener('click',e=>{if(e.target.id==='spotifyPlaylistPlayOverlay')closeSpotifyPlaylistPlay();});
+document.getElementById('spotifyPlaylistPlaySearch')?.addEventListener('input',e=>{
+  const search=normalizeSpotifyMatchText(e.target.value);
+  document.querySelectorAll('#spotifyPlaylistPlayList .spotify-playlist-option').forEach(button=>{button.hidden=!button.dataset.search.includes(search);});
+});
+document.getElementById('spotifyPlaylistPlayLink')?.addEventListener('click',async()=>{
+  const status=document.getElementById('spotifyPlaylistPlayStatus');
+  const id=spotifyPlaylistPlaybackId(document.getElementById('spotifyPlaylistPlayUrl').value);
+  if(!id){status.textContent='Bitte einen gültigen Spotify-Playlist-Link einfügen.';return;}
+  try {status.textContent='Lade Playlist …';await playSpotifyPlaylistContext(id);}
+  catch(error){status.textContent=error.message || 'Playlist konnte nicht gestartet werden.';}
+});
 let spotifyPlaylistImportAlbums = [];
 let spotifyPlaylistImportRequest = 0;
 
