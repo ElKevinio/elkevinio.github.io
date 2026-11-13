@@ -17554,7 +17554,9 @@ const trustedMediaSession = (() => {
           apply(true);
         }, ms));
       }
-      // iOS extrapolates playback position; periodic setPositionState can cause jumping.
+      // iOS: re-apply our metadata periodically to overwrite SDK writes.
+      if (keepTimer) clearInterval(keepTimer);
+      keepTimer = setInterval(function(){ if (!cur||!cur.playing){clearInterval(keepTimer);keepTimer=null;return;} apply(true); }, 3000);
     },
     anchorPlay() {
       if (!anchor) {
@@ -17658,7 +17660,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
     // durations to iOS as seconds. Our SDK state stays in milliseconds;
     // only Media Session metadata and position are converted to seconds.
     const restoreSpotifyPositionState = () => {};
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
