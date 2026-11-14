@@ -27423,39 +27423,50 @@ document.getElementById('searchBtn').addEventListener('click', searchAlbums);
 
 let barcodeScanState = null;
 let barcodeScanCallback = null;
+let zxingLibraryPromise = null;
 
 function loadZxingLibrary() {
   if (window.ZXing) return Promise.resolve(window.ZXing);
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js';
-    s.onload = () => window.ZXing ? resolve(window.ZXing) : reject(new Error('ZXing fehlt'));
-    s.onerror = () => reject(new Error('Scanner-Bibliothek konnte nicht geladen werden'));
-    document.head.appendChild(s);
-  });
+  if (zxingLibraryPromise) return zxingLibraryPromise;
+  zxingLibraryPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    let timeout;
+    const finish = error => {
+      clearTimeout(timeout);
+      script.onload = script.onerror = null;
+      if (error) { script.remove(); reject(error); }
+      else resolve(window.ZXing);
+    };
+    // Same-origin, pinned copy: camera scanning must not depend on a third-party CDN.
+    script.src = 'assets/vendor/zxing/index.min.js';
+    script.onload = () => finish(window.ZXing ? null : new Error('Scanner-Bibliothek ist unvollständig.'));
+    script.onerror = () => finish(new Error('Scanner-Bibliothek konnte nicht geladen werden. Bitte die Seite neu laden.'));
+    timeout = setTimeout(() => finish(new Error('Scanner-Bibliothek lädt zu lange. Bitte erneut versuchen.')), 12000);
+    document.head.appendChild(script);
+  }).catch(error => { zxingLibraryPromise = null; throw error; });
+  return zxingLibraryPromise;
 }
 
 function stopBarcodeScan() {
-  const st = barcodeScanState;
+  const state = barcodeScanState;
   barcodeScanState = null;
-  if (!st) return;
-  st.stopped = true;
-  try { st.reader?.reset(); } catch (e) {}
-  st.stream?.getTracks().forEach(t => t.stop());
-  st.overlay.remove();
   barcodeScanCallback = null;
+  if (!state) return;
+  state.stopped = true;
+  clearTimeout(state.timer);
+  try { state.reader?.reset(); } catch {}
+  state.stream?.getTracks().forEach(track => track.stop());
+  state.video.srcObject = null;
+  state.overlay.remove();
 }
 
-function onBarcodeDetected(rawValue) {
+function onBarcodeDetected(rawValue, state = barcodeScanState) {
+  if (!state || state.stopped || barcodeScanState !== state) return;
   const code = String(rawValue || '').replace(/\D/g, '');
   if (!code) return;
+  const callback = barcodeScanCallback;
   stopBarcodeScan();
-  if (barcodeScanCallback) {
-    const callback = barcodeScanCallback;
-    barcodeScanCallback = null;
-    callback(code);
-    return;
-  }
+  if (callback) { callback(code); return; }
   document.getElementById('searchInput').value = code;
   pendingBarcodeSearch = code;
   searchAlbums();
@@ -27465,61 +27476,107 @@ async function startBarcodeScan(callback = null) {
   if (barcodeScanState) return;
   barcodeScanCallback = typeof callback === 'function' ? callback : null;
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2147483646;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;';
-  overlay.innerHTML = '<video playsinline muted autoplay style="width:100%;max-width:520px;max-height:60vh;border-radius:12px;background:#000;object-fit:cover;"></video>' +
-    '<p class="scan-msg" style="color:#fff;font-size:14px;text-align:center;margin:0;">Barcode ins Bild halten…</p>' +
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;';
+  overlay.setAttribute('role','dialog');
+  overlay.setAttribute('aria-modal','true');
+  overlay.setAttribute('aria-label','Barcode scannen');
+  overlay.innerHTML = '<video playsinline muted autoplay style="width:100%;max-width:640px;max-height:65dvh;border-radius:12px;background:#000;object-fit:contain;"></video>' +
+    '<p class="scan-msg" role="status" style="color:#fff;font-size:16px;text-align:center;margin:0;">Kamera wird gestartet …</p>' +
+    '<p style="color:#ccc;font-size:14px;text-align:center;margin:0;max-width:520px;">Den ganzen Barcode mit etwas Rand zeigen, ruhig halten und Spiegelungen vermeiden. Bei Unschärfe etwas mehr Abstand halten.</p>' +
     '<button type="button" class="scan-cancel manual-btn" style="display:inline-flex;">Abbrechen</button>';
   document.body.appendChild(overlay);
   const video = overlay.querySelector('video');
+  video.muted = true;
+  video.playsInline = true;
   const msg = overlay.querySelector('.scan-msg');
-  const state = { overlay, stopped: false, stream: null, reader: null };
+  const state = {overlay,video,stopped:false,stream:null,reader:null,timer:null};
   barcodeScanState = state;
-  overlay.querySelector('.scan-cancel').addEventListener('click', stopBarcodeScan);
-
+  overlay.querySelector('.scan-cancel').addEventListener('click',stopBarcodeScan);
   if (!navigator.mediaDevices?.getUserMedia) {
     msg.textContent = 'Kamera nicht verfügbar. Die Seite muss über HTTPS (oder localhost) geöffnet werden.';
     return;
   }
-  const constraints = { video: { facingMode: { ideal: 'environment' } }, audio: false };
-  try {
-    if ('BarcodeDetector' in window) {
-      let detector;
-      try { detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] }); } catch (e) { detector = null; }
-      if (detector) {
-        state.stream = await navigator.mediaDevices.getUserMedia(constraints);
-        if (state.stopped) { state.stream.getTracks().forEach(t => t.stop()); return; }
-        video.srcObject = state.stream;
-        await video.play().catch(() => {});
-        const tick = async () => {
-          if (state.stopped) return;
-          try {
-            const found = await detector.detect(video);
-            if (found.length) { onBarcodeDetected(found[0].rawValue); return; }
-          } catch (e) {}
-          setTimeout(tick, 200);
-        };
-        tick();
-        return;
-      }
-    }
-    msg.textContent = 'Scanner wird geladen…';
+  const constraints = {video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false};
+  const startFallback = async () => {
+    if (state.stopped) return;
+    msg.textContent = 'Barcode-Erkennung wird geladen …';
     const ZX = await loadZxingLibrary();
     if (state.stopped) return;
     const hints = new Map();
-    hints.set(ZX.DecodeHintType.POSSIBLE_FORMATS, [ZX.BarcodeFormat.EAN_13, ZX.BarcodeFormat.EAN_8, ZX.BarcodeFormat.UPC_A, ZX.BarcodeFormat.UPC_E]);
-    hints.set(ZX.DecodeHintType.TRY_HARDER, true);
+    hints.set(ZX.DecodeHintType.POSSIBLE_FORMATS,[ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E]);
+    hints.set(ZX.DecodeHintType.TRY_HARDER,true);
     state.reader = new ZX.BrowserMultiFormatReader(hints);
-    msg.textContent = 'Barcode ins Bild halten…';
-    await state.reader.decodeFromConstraints(constraints, video, (result) => {
-      if (result && !state.stopped) onBarcodeDetected(result.getText());
+    state.reader.timeBetweenDecodingAttempts = 150;
+    msg.textContent = 'Barcode ins Bild halten …';
+    // Reuse the active camera instead of opening a second, potentially busy camera.
+    await state.reader.decodeFromStream(state.stream,video,result => {
+      if (result) onBarcodeDetected(result.getText(),state);
     });
-  } catch (e) {
-    const denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
-    msg.textContent = denied
-      ? 'Kamerazugriff wurde verweigert. Bitte in den Browser-Einstellungen erlauben.'
-      : 'Scanner konnte nicht gestartet werden: ' + (e?.message || e);
-  }
+    if (state.stopped) state.reader.reset();
+  };
+  const showError = error => {
+    if (state.stopped) return;
+    clearTimeout(state.timer);
+    try { state.reader?.reset(); } catch {}
+    state.stream?.getTracks().forEach(track => track.stop());
+    video.srcObject = null;
+    const denied = ['NotAllowedError','SecurityError'].includes(error?.name);
+    msg.textContent = denied ? 'Kamerazugriff wurde verweigert. Bitte in den Browser-Einstellungen erlauben.'
+      : error?.name === 'NotReadableError' ? 'Die Kamera wird möglicherweise von einer anderen App verwendet. Bitte dort schließen und erneut scannen.'
+      : error?.name === 'NotFoundError' ? 'Keine Kamera gefunden.'
+      : 'Scanner konnte nicht gestartet werden: ' + (error?.message || error);
+  };
+  try {
+    state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (state.stopped) {state.stream.getTracks().forEach(track => track.stop());return;}
+    video.srcObject = state.stream;
+    await video.play();
+    if (state.stopped) return;
+    const track = state.stream.getVideoTracks?.()[0];
+    try {
+      if (track?.getCapabilities?.().focusMode?.includes('continuous'))
+        await track.applyConstraints({advanced:[{focusMode:'continuous'}]});
+    } catch {} // Focus controls are optional; scanning continues on unsupported devices.
+    if (state.stopped) return;
+    msg.textContent = 'Barcode ins Bild halten …';
+    let detector = null;
+    try {
+      if (typeof window.BarcodeDetector === 'function') {
+        const wanted = ['ean_13','ean_8','upc_a','upc_e'];
+        const supported = window.BarcodeDetector.getSupportedFormats ? await window.BarcodeDetector.getSupportedFormats() : wanted;
+        // Use ZXing if even one of the required retail formats is unsupported.
+        if (wanted.every(format => supported.includes(format))) detector = new window.BarcodeDetector({formats:wanted});
+      }
+    } catch {}
+    if (state.stopped) return;
+    if (!detector) {await startFallback();return;}
+    const started = Date.now();
+    let failures = 0;
+    const tick = async () => {
+      if (state.stopped) return;
+      try {
+        if (video.readyState >= 2) {
+          const found = await detector.detect(video);
+          if (state.stopped) return;
+          if (found.length) {onBarcodeDetected(found[0].rawValue,state);return;}
+          failures = 0;
+        }
+      } catch {failures++;}
+      if (state.stopped) return;
+      // Some browsers expose a detector that fails or silently never finds retail barcodes.
+      if (failures >= 3 || Date.now()-started >= 6000) {
+        try {await startFallback();} catch (error) {showError(error);}
+        return;
+      }
+      state.timer = setTimeout(tick,200);
+    };
+    void tick();
+  } catch (error) {showError(error);}
 }
+window.addEventListener('pagehide',stopBarcodeScan);
+document.addEventListener('keydown',event => {
+  if (event.key === 'Escape' && barcodeScanState) {event.preventDefault();stopBarcodeScan();}
+});
 
 document.getElementById('barcodeScanBtn').addEventListener('click', () => startBarcodeScan());
 document.getElementById('searchInput').addEventListener('keydown', e => {
