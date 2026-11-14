@@ -91,6 +91,7 @@
     const status=document.getElementById('layoutDiagnosticsStatus');
     try {
       const report={schema:'vinyl-layout-diagnostics',version:1,
+        barcodeScanner:typeof window.getBarcodeScanDiagnostics==='function'?window.getBarcodeScanDiagnostics():null,
         browser:{userAgent:navigator.userAgent,platform:navigator.platform,languages:navigator.languages,
           maxTouchPoints:navigator.maxTouchPoints,cookieEnabled:navigator.cookieEnabled,online:navigator.onLine},
         capabilities:{visualViewport:!!window.visualViewport,cssGrid:CSS.supports('display','grid'),

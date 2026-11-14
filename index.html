@@ -27463,6 +27463,123 @@ function loadZxingLibrary() {
   return zxingLibraryPromise;
 }
 
+// Camera diagnostics contain numbers and state only, never images or decoded barcodes.
+let barcodeCameraId = '';
+let barcodeLastDiagnostics = {};
+function getBarcodeScanDiagnostics() {
+  return {...barcodeLastDiagnostics,active:!!barcodeScanState};
+}
+function barcodeGrayFrame(image) {
+  const gray = new Uint8ClampedArray(image.width*image.height);
+  for (let i=0;i<gray.length;i++) gray[i]=(image.data[i*4]+2*image.data[i*4+1]+image.data[i*4+2])>>2;
+  return {gray,width:image.width,height:image.height};
+}
+function analyzeBarcodeFrame(frame) {
+  const {gray,width,height}=frame;
+  const histogram=new Uint32Array(256);
+  let sum=0,count=0;
+  for(let y=Math.floor(height*.2);y<height*.8;y+=3)for(let x=Math.floor(width*.1);x<width*.9;x+=3){const v=gray[y*width+x];histogram[v]++;sum+=v;count++;}
+  const percentile=ratio=>{let total=0;for(let i=0;i<256;i++){total+=histogram[i];if(total>=count*ratio)return i;}return 255;};
+  const low=percentile(.05),high=percentile(.95),contrast=high-low,threshold=(low+high)/2;
+  const scanLines=vertical=>{
+    let best={transitions:0,span:0,sharpness:0,clipped:false};
+    const across=vertical?height:width,along=vertical?width:height;
+    for(const ratio of [.32,.4,.5,.6,.68]){
+      const fixed=Math.min(along-1,Math.floor(along*ratio));
+      let transitions=0,first=-1,last=0,edgeSum=0;
+      const at=i=>vertical?gray[i*width+fixed]:gray[fixed*width+i];
+      for(let i=1;i<across;i++){
+        const a=at(i-1),b=at(i);
+        if(contrast>25 && (a<threshold)!==(b<threshold)){
+          transitions++;if(first<0)first=i;last=i;edgeSum+=Math.abs(b-a);
+        }
+      }
+      if(transitions>best.transitions)best={transitions,span:(last-first)/across,
+        sharpness:transitions?edgeSum/transitions/Math.max(1,contrast):0,
+        clipped:first>=0 && first<across*.025 && last>across*.975};
+    }
+    return best;
+  };
+  const horizontal=scanLines(false),vertical=scanLines(true);
+  const stripes=horizontal.transitions>=vertical.transitions?horizontal:vertical;
+  return {brightness:Math.round(sum/Math.max(1,count)),contrast,low,high,
+    transitions:stripes.transitions,barcodeLike:contrast>35 && stripes.transitions>=18,
+    span:stripes.span,sharpness:stripes.sharpness,clipped:stripes.clipped,
+    orientation:horizontal.transitions>=vertical.transitions?'horizontal':'vertical'};
+}
+function barcodeFrameHint(quality,partial=false) {
+  if(quality.brightness<45)return {kind:'dark',text:'Zu dunkel – mehr Licht auf den Barcode richten.'};
+  if(quality.brightness>238 && quality.contrast<45)return {kind:'bright',text:'Bild sehr hell – Spiegelungen vermeiden oder Kamera leicht kippen.'};
+  if(quality.barcodeLike && quality.sharpness<.15)return {kind:'blur',text:'Streifenmuster wirkt unscharf – ruhig halten, neu fokussieren oder etwas mehr Abstand nehmen.'};
+  if(quality.barcodeLike && quality.clipped)return {kind:'cropped',text:'Streifen reichen bis zum Bildrand – weiter weg, damit der ganze Barcode mit weißem Rand sichtbar ist.'};
+  if(quality.barcodeLike && quality.span<.28)return {kind:'small',text:'Mögliches Barcode-Muster ist klein – etwas näher herangehen, solange es scharf bleibt.'};
+  if(partial)return {kind:'partial',text:'Ein Barcode wurde teilweise gelesen, ist aber noch nicht vollständig gültig. Ruhig halten und Spiegelungen vermeiden.'};
+  if(quality.barcodeLike)return {kind:'pattern',text:'Streifenmuster erkannt – Zahlen noch nicht lesbar. Barcode gerader halten und etwas mehr weißen Rand zeigen.'};
+  if(quality.contrast<35)return {kind:'contrast',text:'Wenig Kontrast im Suchbereich – Barcode mittig zeigen und Beleuchtung prüfen.'};
+  return {kind:'searching',text:'Noch kein eindeutiges Barcode-Muster. Barcode mittig und möglichst groß mit etwas Rand zeigen.'};
+}
+function cropBarcodeFrame(frame) {
+  const width=Math.max(1,Math.floor(frame.width*.9)),height=Math.max(1,Math.floor(frame.height*.55));
+  const left=Math.floor((frame.width-width)/2),top=Math.floor((frame.height-height)/2);
+  const gray=new Uint8ClampedArray(width*height);
+  for(let y=0;y<height;y++)gray.set(frame.gray.subarray((top+y)*frame.width+left,(top+y)*frame.width+left+width),y*width);
+  return {gray,width,height};
+}
+function rotateBarcodeFrame(frame,degrees) {
+  const angle=degrees*Math.PI/180,cos=Math.cos(angle),sin=Math.sin(angle);
+  const width=Math.round(Math.abs(frame.width*cos)+Math.abs(frame.height*sin));
+  const height=Math.round(Math.abs(frame.width*sin)+Math.abs(frame.height*cos));
+  const gray=new Uint8ClampedArray(width*height);gray.fill(255);
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    const dx=x-(width-1)/2,dy=y-(height-1)/2;
+    const sx=Math.round(dx*cos+dy*sin+(frame.width-1)/2),sy=Math.round(-dx*sin+dy*cos+(frame.height-1)/2);
+    if(sx>=0 && sx<frame.width && sy>=0 && sy<frame.height)gray[y*width+x]=frame.gray[sy*frame.width+sx];
+  }
+  return {gray,width,height};
+}
+function enhanceBarcodeFrame(frame,quality) {
+  const gray=new Uint8ClampedArray(frame.gray.length);
+  const range=Math.max(30,quality.high-quality.low);
+  for(let y=0;y<frame.height;y++)for(let x=0;x<frame.width;x++){
+    const i=y*frame.width+x,v=frame.gray[i];
+    const sharp=x>0 && x<frame.width-1?v*2-(frame.gray[i-1]+frame.gray[i+1])/2:v;
+    gray[i]=Math.max(0,Math.min(255,(sharp-quality.low)*255/range));
+  }
+  return {...frame,gray};
+}
+function decodeBarcodeFrame(ZX,reader,frame,quality,attempt) {
+  let partial=false;
+  const read=(image,hybrid=false)=>{
+    try {
+      const luminance=new ZX.RGBLuminanceSource(image.gray,image.width,image.height);
+      const bitmap=new ZX.BinaryBitmap(hybrid?new ZX.HybridBinarizer(luminance):new ZX.GlobalHistogramBinarizer(luminance));
+      return reader.decodeWithState(bitmap).getText();
+    } catch(error) {
+      if(error instanceof ZX.ChecksumException || error instanceof ZX.FormatException)partial=true;
+      else if(!(error instanceof ZX.NotFoundException))throw error;
+      return '';
+    }
+  };
+  const crop=cropBarcodeFrame(frame);
+  let code=read(crop) || read(frame);
+  if(!code){
+    const rotated=rotateBarcodeFrame(frame,quality.orientation==='vertical'?90:attempt%3===0?90:attempt%3===1?12:-12);
+    code=read(rotated);
+  }
+  if(!code && attempt%2===0)code=read(enhanceBarcodeFrame(crop,quality),true);
+  // MultiFormatReader hides checksum failures as NotFound; inspect EAN rows for honest partial-read feedback.
+  if(!code && quality.barcodeLike){
+    const bitmap=new ZX.BinaryBitmap(new ZX.GlobalHistogramBinarizer(new ZX.RGBLuminanceSource(frame.gray,frame.width,frame.height)));
+    const ean=new ZX.EAN13Reader();
+    for(const fraction of [.5,.4,.6]){
+      const row=Math.min(frame.height-1,Math.floor(frame.height*fraction));
+      try{code=ean.decodeRow(row,bitmap.getBlackRow(row,null)).getText();break;}
+      catch(error){if(error instanceof ZX.ChecksumException || error instanceof ZX.FormatException)partial=true;else if(!(error instanceof ZX.NotFoundException))throw error;}
+    }
+  }
+  return {code,partial};
+}
+
 function stopBarcodeScan() {
   const state = barcodeScanState;
   barcodeScanState = null;
@@ -27492,102 +27609,101 @@ async function startBarcodeScan(callback = null) {
   if (barcodeScanState) return;
   barcodeScanCallback = typeof callback === 'function' ? callback : null;
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;';
-  overlay.setAttribute('role','dialog');
-  overlay.setAttribute('aria-modal','true');
-  overlay.setAttribute('aria-label','Barcode scannen');
-  overlay.innerHTML = '<video playsinline muted autoplay style="width:100%;max-width:640px;max-height:65dvh;border-radius:12px;background:#000;object-fit:contain;"></video>' +
-    '<p class="scan-msg" role="status" style="color:#fff;font-size:16px;text-align:center;margin:0;">Kamera wird gestartet …</p>' +
-    '<p style="color:#ccc;font-size:14px;text-align:center;margin:0;max-width:520px;">Den ganzen Barcode mit etwas Rand zeigen, ruhig halten und Spiegelungen vermeiden. Bei Unschärfe etwas mehr Abstand halten.</p>' +
-    '<button type="button" class="scan-cancel manual-btn" style="display:inline-flex;">Abbrechen</button>';
+  overlay.style.cssText='position:fixed;inset:0;background:#08090df5;z-index:2147483647;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;overflow-y:auto;color:#fff;';
+  overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','Barcode scannen');
+  overlay.innerHTML='<div style="position:relative;width:100%;max-width:640px;min-height:120px;flex-shrink:0;"><video playsinline muted autoplay style="display:block;width:100%;max-height:48dvh;border-radius:12px;background:#000;object-fit:contain;"></video><div aria-hidden="true" style="position:absolute;inset:22.5% 5%;border:2px solid #ffffff90;border-radius:8px;pointer-events:none;"></div></div>'+
+    '<p class="scan-msg" role="status" aria-live="polite" style="font-size:16px;text-align:center;min-height:44px;margin:0;max-width:640px;">Kamera wird gestartet …</p>'+
+    '<small class="scan-quality" style="color:#c8cbd4;text-align:center;"></small>'+
+    '<small class="scan-note" style="color:#9da3b1;text-align:center;max-width:560px;">Bildhinweise sind Schätzungen. Barcode vollständig mit weißem Rand zeigen. Kamerabilder werden nur auf deinem Gerät verarbeitet.</small>'+
+    '<label class="scan-camera-row" hidden style="width:100%;max-width:380px;">Kamera <select class="scan-camera" style="width:100%;font-size:16px;"></select></label>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"><button type="button" class="scan-focus" hidden>Neu fokussieren</button><button type="button" class="scan-torch" hidden>Licht an</button><button type="button" class="scan-cancel">Abbrechen</button></div>';
   document.body.appendChild(overlay);
-  const video = overlay.querySelector('video');
-  video.muted = true;
-  video.playsInline = true;
-  const msg = overlay.querySelector('.scan-msg');
-  const state = {overlay,video,stopped:false,stream:null,reader:null,timer:null};
-  barcodeScanState = state;
+  const video=overlay.querySelector('video'),msg=overlay.querySelector('.scan-msg'),qualityLine=overlay.querySelector('.scan-quality');
+  video.muted=true;video.playsInline=true;
+  const state={overlay,video,stopped:false,stream:null,reader:null,timer:null,frames:0,started:Date.now()};
+  barcodeScanState=state;barcodeLastDiagnostics={version:3,phase:'starting',frames:0};
   overlay.querySelector('.scan-cancel').addEventListener('click',stopBarcodeScan);
-  if (!navigator.mediaDevices?.getUserMedia) {
-    msg.textContent = 'Kamera nicht verfügbar. Die Seite muss über HTTPS (oder localhost) geöffnet werden.';
-    return;
-  }
-  const constraints = {video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false};
-  const startFallback = async () => {
-    if (state.stopped) return;
-    msg.textContent = 'Barcode-Erkennung wird geladen …';
-    const ZX = await loadZxingLibrary();
-    if (state.stopped) return;
-    const hints = new Map();
-    hints.set(ZX.DecodeHintType.POSSIBLE_FORMATS,[ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E]);
-    hints.set(ZX.DecodeHintType.TRY_HARDER,true);
-    state.reader = new ZX.BrowserMultiFormatReader(hints);
-    state.reader.timeBetweenDecodingAttempts = 150;
-    msg.textContent = 'Barcode ins Bild halten …';
-    // Reuse the active camera instead of opening a second, potentially busy camera.
-    await state.reader.decodeFromStream(state.stream,video,result => {
-      if (result) onBarcodeDetected(result.getText(),state);
-    });
-    if (state.stopped) state.reader.reset();
+  const fail=error=>{
+    if(state.stopped)return;
+    clearTimeout(state.timer);state.stream?.getTracks().forEach(track=>track.stop());video.srcObject=null;
+    barcodeLastDiagnostics={...barcodeLastDiagnostics,phase:'error',errorName:error?.name || 'Error'};
+    msg.textContent=['NotAllowedError','SecurityError'].includes(error?.name)?'Kamerazugriff verweigert. Bitte für diese Website erlauben.'
+      :error?.name==='NotReadableError'?'Kamera ist belegt. Andere Kamera-Apps schließen und erneut versuchen.'
+      :'Scanner-Fehler: '+(error?.message || 'Unbekannter Fehler.');
   };
-  const showError = error => {
-    if (state.stopped) return;
-    clearTimeout(state.timer);
-    try { state.reader?.reset(); } catch {}
-    state.stream?.getTracks().forEach(track => track.stop());
-    video.srcObject = null;
-    const denied = ['NotAllowedError','SecurityError'].includes(error?.name);
-    msg.textContent = denied ? 'Kamerazugriff wurde verweigert. Bitte in den Browser-Einstellungen erlauben.'
-      : error?.name === 'NotReadableError' ? 'Die Kamera wird möglicherweise von einer anderen App verwendet. Bitte dort schließen und erneut scannen.'
-      : error?.name === 'NotFoundError' ? 'Keine Kamera gefunden.'
-      : 'Scanner konnte nicht gestartet werden: ' + (error?.message || error);
-  };
+  if(!navigator.mediaDevices?.getUserMedia){fail(new Error('Kamera nicht verfügbar. Bitte die Website über HTTPS öffnen.'));return;}
   try {
-    state.stream = await navigator.mediaDevices.getUserMedia(constraints);
-    if (state.stopped) {state.stream.getTracks().forEach(track => track.stop());return;}
-    video.srcObject = state.stream;
-    await video.play();
-    if (state.stopped) return;
-    const track = state.stream.getVideoTracks?.()[0];
-    try {
-      if (track?.getCapabilities?.().focusMode?.includes('continuous'))
-        await track.applyConstraints({advanced:[{focusMode:'continuous'}]});
-    } catch {} // Focus controls are optional; scanning continues on unsupported devices.
-    if (state.stopped) return;
-    msg.textContent = 'Barcode ins Bild halten …';
-    let detector = null;
-    try {
-      if (typeof window.BarcodeDetector === 'function') {
-        const wanted = ['ean_13','ean_8','upc_a','upc_e'];
-        const supported = window.BarcodeDetector.getSupportedFormats ? await window.BarcodeDetector.getSupportedFormats() : wanted;
-        // Use ZXing if even one of the required retail formats is unsupported.
-        if (wanted.every(format => supported.includes(format))) detector = new window.BarcodeDetector({formats:wanted});
-      }
-    } catch {}
-    if (state.stopped) return;
-    if (!detector) {await startFallback();return;}
-    const started = Date.now();
-    let failures = 0;
-    const tick = async () => {
-      if (state.stopped) return;
+    const camera=barcodeCameraId?{deviceId:{exact:barcodeCameraId}}:{facingMode:{ideal:'environment'}};
+    state.stream=await navigator.mediaDevices.getUserMedia({video:{...camera,width:{ideal:1920},height:{ideal:1080}},audio:false});
+    if(state.stopped){state.stream.getTracks().forEach(track=>track.stop());return;}
+    video.srcObject=state.stream;await video.play();if(state.stopped)return;
+    const track=state.stream.getVideoTracks?.()[0];
+    let capabilities={};
+    try{capabilities=track?.getCapabilities?.() || {};}catch{}
+    const focusButton=overlay.querySelector('.scan-focus');
+    if(capabilities.focusMode?.includes('continuous')){
+      focusButton.hidden=false;
+      const focus=async()=>{try{await track.applyConstraints({advanced:[{focusMode:'continuous'}]});}catch{if(!state.stopped)msg.textContent='Autofokus konnte nicht umgestellt werden. Abstand leicht verändern.';}};
+      focusButton.addEventListener('click',async()=>{
+        try{if(capabilities.focusMode.includes('single-shot'))await track.applyConstraints({advanced:[{focusMode:'single-shot'}]});}catch{}
+        if(!state.stopped)await focus();
+      });
+      void focus();
+    }
+    if(capabilities.torch){
+      const torch=overlay.querySelector('.scan-torch');torch.hidden=false;let lit=false;
+      torch.addEventListener('click',async()=>{try{await track.applyConstraints({advanced:[{torch:!lit}]});if(state.stopped)return;lit=!lit;torch.textContent=lit?'Licht aus':'Licht an';}catch{if(!state.stopped)msg.textContent='Kameralicht ist hier nicht verfügbar.';}});
+    }
+    if(navigator.mediaDevices.enumerateDevices)void navigator.mediaDevices.enumerateDevices().then(devices=>{
+      if(state.stopped)return;
+      const cameras=devices.filter(device=>device.kind==='videoinput');
+      if(cameras.length<2)return;
+      const select=overlay.querySelector('.scan-camera');select.replaceChildren();
+      const active=track?.getSettings?.().deviceId || barcodeCameraId;
+      cameras.forEach((device,index)=>{const option=document.createElement('option');option.value=device.deviceId;option.textContent=device.label || `Kamera ${index+1}`;select.appendChild(option);});
+      if(active)select.value=active;
+      overlay.querySelector('.scan-camera-row').hidden=false;
+      select.addEventListener('change',()=>{const next=select.value,handler=barcodeScanCallback;stopBarcodeScan();barcodeCameraId=next;void startBarcodeScan(handler);});
+    }).catch(()=>{});
+    msg.textContent='Barcode-Decoder startet …';
+    const ZX=await loadZxingLibrary();if(state.stopped)return;
+    const hints=new Map([[ZX.DecodeHintType.POSSIBLE_FORMATS,[ZX.BarcodeFormat.EAN_13,ZX.BarcodeFormat.EAN_8,ZX.BarcodeFormat.UPC_A,ZX.BarcodeFormat.UPC_E]],[ZX.DecodeHintType.TRY_HARDER,true]]);
+    state.reader=new ZX.MultiFormatReader();state.reader.setHints(hints);
+    const canvas=document.createElement('canvas'),context=canvas.getContext('2d',{willReadFrequently:true});
+    if(!context)throw new Error('Kamerabild kann in diesem Browser nicht ausgewertet werden.');
+    let lastVideoTime=-1,lastFrameAt=Date.now(),hintKey='',hintRepeats=0;
+    const tick=()=>{
+      if(state.stopped)return;
       try {
-        if (video.readyState >= 2) {
-          const found = await detector.detect(video);
-          if (state.stopped) return;
-          if (found.length) {onBarcodeDetected(found[0].rawValue,state);return;}
-          failures = 0;
+        if(video.readyState<2 || !video.videoWidth || !video.videoHeight){
+          msg.textContent='Warte auf Kamerabild …';qualityLine.textContent='Noch keine Kamerabilder empfangen.';
+        }else if(video.currentTime===lastVideoTime){
+          if(Date.now()-lastFrameAt>2500)msg.textContent='Kamerabild steht still. Kamera wechseln oder Scanner neu öffnen.';
+        }else{
+          lastVideoTime=video.currentTime;lastFrameAt=Date.now();
+          const scale=Math.min(1,1280/Math.max(video.videoWidth,video.videoHeight));
+          const width=Math.max(1,Math.round(video.videoWidth*scale)),height=Math.max(1,Math.round(video.videoHeight*scale));
+          if(canvas.width!==width || canvas.height!==height){canvas.width=width;canvas.height=height;}
+          context.drawImage(video,0,0,width,height);
+          const frame=barcodeGrayFrame(context.getImageData(0,0,width,height));
+          const quality=analyzeBarcodeFrame(frame);
+          const result=decodeBarcodeFrame(ZX,state.reader,frame,quality,state.frames++);
+          barcodeLastDiagnostics={version:3,phase:'scanning',frames:state.frames,videoWidth:video.videoWidth,videoHeight:video.videoHeight,
+            decodeWidth:width,decodeHeight:height,brightness:quality.brightness,contrast:quality.contrast,
+            sharpness:Number(quality.sharpness.toFixed(3)),stripeTransitions:quality.transitions,partial:result.partial};
+          if(result.code){onBarcodeDetected(result.code,state);return;}
+          const hint=barcodeFrameHint(quality,result.partial);
+          hintRepeats=hintKey===hint.kind?hintRepeats+1:1;hintKey=hint.kind;
+          if((hintRepeats>=2 || state.frames===1) && msg.textContent!==hint.text)msg.textContent=hint.text;
+          barcodeLastDiagnostics.hint=hint.kind;
+          const sharpness=quality.barcodeLike?(quality.sharpness<.15?'gering':quality.sharpness<.2?'mittel':'gut'):'noch nicht beurteilbar';
+          qualityLine.textContent=`Schärfe: ${sharpness} · Helligkeit: ${quality.brightness<45?'dunkel':quality.brightness>238?'sehr hell':'okay'} · ${result.partial?'teilweise gelesen':quality.barcodeLike?'Streifenmuster sichtbar':'suche Muster'} · ${state.frames} Bilder geprüft`;
         }
-      } catch {failures++;}
-      if (state.stopped) return;
-      // Some browsers expose a detector that fails or silently never finds retail barcodes.
-      if (failures >= 3 || Date.now()-started >= 6000) {
-        try {await startFallback();} catch (error) {showError(error);}
-        return;
-      }
-      state.timer = setTimeout(tick,200);
+      }catch(error){fail(error);return;}
+      state.timer=setTimeout(tick,250);
     };
-    void tick();
-  } catch (error) {showError(error);}
+    tick();
+  }catch(error){if(!state.stopped)fail(error);}
 }
 window.addEventListener('pagehide',stopBarcodeScan);
 document.addEventListener('keydown',event => {
