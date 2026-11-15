@@ -7292,6 +7292,11 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .discogs-label-logo { position:absolute; height:23%; object-fit:contain; }
   .discogs-label-effect { position:absolute; inset:0; background-size:100% 100%; }
   .vinyl-card-preview::before, .vinyl-editor-disc::before, .fullscreen-player-vinyl::before { z-index:3; }
+
+  .discogs-label-image-choices { display:flex; flex-wrap:wrap; gap:8px; width:100%; }
+  .discogs-label-image-choices button { display:flex; flex-direction:column; align-items:center; gap:6px; width:120px; padding:8px; border:2px solid var(--border); border-radius:8px; font-size:11px; }
+  .discogs-label-image-choices button[aria-pressed="true"] { border-color:var(--accent); background:var(--surface-3); }
+  .discogs-label-image-choices img { width:100%; height:70px; object-fit:contain; background:#fff; border-radius:4px; }
 </style>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -14424,6 +14429,25 @@ async function compressCdPictureFile(source, backgroundColor = '#111111') {
   throw new Error('Das Bild konnte nicht klein genug komprimiert werden.');
 }
 
+function normalizeDiscogsLabelImages(images) {
+  const seen = new Set();
+  return (Array.isArray(images) ? images : []).map(image => ({
+    url: safeDiscogsLogoUrl(image.uri) || safeDiscogsLogoUrl(image.resource_url) || safeDiscogsLogoUrl(image.uri150),
+    thumbnail: safeDiscogsLogoUrl(image.uri150) || safeDiscogsLogoUrl(image.uri) || safeDiscogsLogoUrl(image.resource_url),
+    primary: image.type === 'primary'
+  })).filter(image => {
+    if (!image.url || seen.has(image.url)) return false;
+    seen.add(image.url); return true;
+  });
+}
+function renderDiscogsLabelImageChoices(layer) {
+  const images = discogsLabelImages.get(Number(layer.labelId));
+  if (!layer.labelId) return '';
+  if (!images) return '<button type="button" data-load-label-images>Bilder anzeigen</button>';
+  if (!images.length) return '<p class="settings-panel-hint">Für dieses Label sind keine Bilder verfügbar.</p>';
+  return `<div class="discogs-label-image-choices" role="group" aria-label="Label-Bild auswählen">${images.map((image,index) => `<button type="button" data-label-image="${index}" aria-pressed="${layer.logoUrl === image.url}" title="Bild ${index+1}${image.primary ? ' · Hauptbild' : ''}"><img src="${escapeHtml(image.thumbnail)}" alt="Label-Bild ${index+1}" loading="lazy" referrerpolicy="no-referrer"><span>Bild ${index+1}${image.primary ? ' · Hauptbild' : ''}</span></button>`).join('')}</div>`;
+}
+
 function renderVinylLayerDetailControls(layer) {
   if (layer.type === 'Label') {
     const choices = discogsLabelChoices.get(discogsLabelReleaseId()) || [];
@@ -14431,6 +14455,7 @@ function renderVinylLayerDetailControls(layer) {
     const stored = layer.labelId && !choices.some(label => label.id === Number(layer.labelId)) ? `<option value="${layer.labelId}" selected>${escapeHtml(layer.labelName || 'Gespeichertes Label')}</option>` : '';
     return `<label>Discogs-Label<select data-logo-label><option value="">Label auswählen …</option>${stored}${options}</select></label>
       <button type="button" data-load-labels>Labels laden</button>
+      ${renderDiscogsLabelImageChoices(layer)}
       <label>Platzierung<select data-layer-field="logoPosition"><option value="top" ${layer.logoPosition !== 'bottom' ? 'selected' : ''}>Oben</option><option value="bottom" ${layer.logoPosition === 'bottom' ? 'selected' : ''}>Unten</option></select></label>
       <label>Breite %<input type="number" data-layer-field="logoWidth" min="10" max="85" value="${layer.logoWidth || 50}"></label>
       <p class="settings-panel-hint" role="status">${escapeHtml(discogsLogoStatus.get(layer) || (layer.logoDataUrl || layer.logoUrl ? 'Logo gespeichert.' : 'Wähle ein Label, um sein Logo zu laden.'))}</p>
@@ -24542,6 +24567,7 @@ document.getElementById('vinylEditorOverlay').addEventListener('click', event =>
   else closeVinylEditor();
 });
 const discogsLabelChoices = new Map();
+const discogsLabelImages = new Map();
 const discogsLogoStatus = new WeakMap();
 const discogsLogoRequests = new WeakMap();
 function discogsLabelReleaseId() {
@@ -24572,31 +24598,45 @@ async function loadDiscogsLabelChoices() {
     status(discogsLabelChoices.get(id).length ? 'Labels geladen. Wähle ein Label aus.' : 'Für diesen Release sind keine Labels hinterlegt.');
   } catch (error) { if (labelEditorDraft === draft) status(error.message || 'Labels konnten nicht geladen werden.'); }
 }
+async function loadDiscogsLabelImages(layer) {
+  if (!labelEditorDraft || !layer.labelId) return;
+  const draft = labelEditorDraft, id = Number(layer.labelId), request = {};
+  discogsLogoRequests.set(layer, request);
+  const active = () => labelEditorDraft === draft && draft.layers.includes(layer) && Number(layer.labelId) === id && discogsLogoRequests.get(layer) === request;
+  discogsLogoStatus.set(layer, 'Lade Bilder des Labels …'); renderVinylEditor();
+  try {
+    if (!discogsLabelImages.has(id)) {
+      const detail = await fetchDiscogsLogoJson(`labels/${id}`);
+      discogsLabelImages.set(id, normalizeDiscogsLabelImages(detail.images));
+    }
+    if (!active()) return;
+    const images = discogsLabelImages.get(id);
+    discogsLogoStatus.set(layer, images.length ? `${images.length} Bilder verfügbar. Wähle das gewünschte Bild aus.` : 'Für dieses Label sind bei Discogs keine Bilder hinterlegt.');
+  } catch (error) { if (active()) discogsLogoStatus.set(layer, error.message || 'Bilder konnten nicht geladen werden. Klicke auf „Bilder anzeigen“, um es erneut zu versuchen.'); }
+  if (active()) renderVinylEditor();
+}
 document.getElementById('vinylLayerList').addEventListener('click', event => {
   if (event.target.closest('[data-load-labels]')) loadDiscogsLabelChoices();
+  const button = event.target.closest('[data-load-label-images], [data-label-image]');
+  if (!button || !labelEditorDraft) return;
+  const layer = labelEditorDraft.layers[Number(button.closest('[data-layer-index]').dataset.layerIndex)];
+  if (!layer) return;
+  if (button.hasAttribute('data-load-label-images')) { loadDiscogsLabelImages(layer); return; }
+  const image = discogsLabelImages.get(Number(layer.labelId))?.[Number(button.dataset.labelImage)];
+  if (!image) return;
+  layer.logoUrl = image.url; layer.logoDataUrl = '';
+  discogsLogoStatus.set(layer, 'Bild ausgewählt. Der Bildhintergrund wird wie von Discogs geliefert übernommen.');
+  renderVinylEditor();
 });
-document.getElementById('vinylLayerList').addEventListener('change', async event => {
+document.getElementById('vinylLayerList').addEventListener('change', event => {
   if (!event.target.matches('[data-logo-label]') || !labelEditorDraft) return;
-  const draft = labelEditorDraft;
-  const layer = draft.layers[Number(event.target.closest('[data-layer-index]').dataset.layerIndex)];
+  const layer = labelEditorDraft.layers[Number(event.target.closest('[data-layer-index]').dataset.layerIndex)];
   const label = (discogsLabelChoices.get(discogsLabelReleaseId()) || []).find(label => label.id === Number(event.target.value));
-  const request = {}; discogsLogoRequests.set(layer, request);
-  if (!label) { layer.labelId = 0; layer.labelName = ''; layer.logoDataUrl = ''; layer.logoUrl = ''; discogsLogoStatus.delete(layer); renderVinylEditor(); return; }
-  layer.labelId = label.id; layer.labelName = label.name; layer.logoDataUrl = ''; layer.logoUrl = '';
-  discogsLogoStatus.set(layer, 'Lade Label-Logo …'); renderVinylEditor();
-  const active = () => labelEditorDraft === draft && draft.layers.includes(layer) && discogsLogoRequests.get(layer) === request;
-  try {
-    const detail = await fetchDiscogsLogoJson(`labels/${label.id}`);
-    const images = Array.isArray(detail.images) ? detail.images : [];
-    const image = images.find(image => image.type === 'primary') || images[0];
-    if (!image) throw new Error('Für dieses Label ist bei Discogs kein Logo hinterlegt.');
-    const url = safeDiscogsLogoUrl(image.uri || image.resource_url || image.uri150);
-    if (!url) throw new Error('Für dieses Label ist keine gültige Discogs-Bildadresse hinterlegt.');
-    if (!active()) return;
-    layer.logoUrl = url;
-    discogsLogoStatus.set(layer, 'Logo verknüpft. Der Bildhintergrund wird wie von Discogs geliefert übernommen.');
-  } catch (error) { if (active()) discogsLogoStatus.set(layer, error.message || 'Logo konnte nicht geladen werden (Netzwerk oder Bildfreigabe).'); }
-  if (active()) renderVinylEditor();
+  discogsLogoRequests.set(layer, {});
+  layer.labelId = label?.id || 0; layer.labelName = label?.name || ''; layer.logoDataUrl = ''; layer.logoUrl = '';
+  discogsLogoStatus.delete(layer);
+  renderVinylEditor();
+  if (label) loadDiscogsLabelImages(layer);
 });
 document.getElementById('editLabelBtn').addEventListener('click', () => {
   const record = editorRecord();
