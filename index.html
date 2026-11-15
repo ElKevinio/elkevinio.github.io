@@ -7297,6 +7297,13 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .discogs-label-image-choices button { display:flex; flex-direction:column; align-items:center; gap:6px; width:120px; padding:8px; border:2px solid var(--border); border-radius:8px; font-size:11px; }
   .discogs-label-image-choices button[aria-pressed="true"] { border-color:var(--accent); background:var(--surface-3); }
   .discogs-label-image-choices img { width:100%; height:70px; object-fit:contain; background:#fff; border-radius:4px; }
+
+  .discogs-label-image-dialog { box-sizing:border-box; width:min(780px,94vw); max-height:85dvh; padding:24px; overflow:auto; border:1px solid var(--border); border-radius:16px; color:var(--text-primary); background:var(--surface-2); box-shadow:0 24px 80px #0008; }
+  .discogs-label-image-dialog::backdrop { background:#0009; }
+  .discogs-label-image-dialog h2 { margin:0; font-size:19px; }
+  .discogs-label-image-dialog .discogs-label-image-choices { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
+  .discogs-label-image-dialog .discogs-label-image-choices button { width:100%; min-width:0; cursor:pointer; color:var(--text-primary); background:var(--surface-1); }
+  .discogs-label-image-dialog .discogs-label-image-choices img { height:105px; }
 </style>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -14072,6 +14079,7 @@ function normalizeVinylDesign(item) {
             labelName: String(layer.labelName || '').slice(0, 200),
             logoDataUrl: safeLabelLogoData(layer.logoDataUrl),
             logoUrl: safeDiscogsLogoUrl(layer.logoUrl),
+            logoBackground: ['light','dark'].includes(layer.logoBackground) ? layer.logoBackground : 'original',
             logoPosition: layer.logoPosition === 'bottom' ? 'bottom' : 'top',
             logoWidth: Math.max(10, Math.min(85, Number(layer.logoWidth) || 50))
           } : {}),
@@ -14197,7 +14205,7 @@ function getLabelLayerMarkup(record, enlarged = false) {
   const content = [...layers].reverse().map(layer => {
     if (layer.type === 'Label' && safeDiscogsLogoUrl(layer.logoUrl)) {
       const width = Math.max(10, Math.min(85, Number(layer.logoWidth) || 50));
-      return `<img class="discogs-label-logo" src="${escapeHtml(safeDiscogsLogoUrl(layer.logoUrl))}" alt="" referrerpolicy="no-referrer" draggable="false" style="width:${width}%;left:${50-width/2}%;top:${layer.logoPosition === 'bottom' ? 61 : 16}%;">`;
+      return `<img class="discogs-label-logo" src="${escapeHtml(safeDiscogsLogoUrl(layer.logoUrl))}" alt="" referrerpolicy="no-referrer" draggable="false" style="mix-blend-mode:${layer.logoBackground === 'light' ? 'multiply' : layer.logoBackground === 'dark' ? 'screen' : 'normal'};width:${width}%;left:${50-width/2}%;top:${layer.logoPosition === 'bottom' ? 61 : 16}%;">`;
     }
     return `<span class="discogs-label-effect" style="background-image:${getVinylSvgData({layers:[layer],labelArtwork:true})}"></span>`;
   }).join('');
@@ -14455,7 +14463,9 @@ function renderVinylLayerDetailControls(layer) {
     const stored = layer.labelId && !choices.some(label => label.id === Number(layer.labelId)) ? `<option value="${layer.labelId}" selected>${escapeHtml(layer.labelName || 'Gespeichertes Label')}</option>` : '';
     return `<label>Discogs-Label<select data-logo-label><option value="">Label auswählen …</option>${stored}${options}</select></label>
       <button type="button" data-load-labels>Labels laden</button>
-      ${renderDiscogsLabelImageChoices(layer)}
+      ${layer.labelId ? '<button type="button" data-open-label-images>Logo auswählen …</button>' : ''}
+      <label>Bildhintergrund<select data-layer-field="logoBackground"><option value="original" ${!['light','dark'].includes(layer.logoBackground) ? 'selected' : ''}>Original</option><option value="light" ${layer.logoBackground === 'light' ? 'selected' : ''}>Weiß ausblenden</option><option value="dark" ${layer.logoBackground === 'dark' ? 'selected' : ''}>Schwarz ausblenden</option></select></label>
+      <p class="settings-panel-hint">Optische Überblendung: Weiß ausblenden eignet sich für dunkle Logos, Schwarz ausblenden für helle Logos. Andere Bildfarben können sich dabei mit der Label-Farbe mischen.</p>
       <label>Platzierung<select data-layer-field="logoPosition"><option value="top" ${layer.logoPosition !== 'bottom' ? 'selected' : ''}>Oben</option><option value="bottom" ${layer.logoPosition === 'bottom' ? 'selected' : ''}>Unten</option></select></label>
       <label>Breite %<input type="number" data-layer-field="logoWidth" min="10" max="85" value="${layer.logoWidth || 50}"></label>
       <p class="settings-panel-hint" role="status">${escapeHtml(discogsLogoStatus.get(layer) || (layer.logoDataUrl || layer.logoUrl ? 'Logo gespeichert.' : 'Wähle ein Label, um sein Logo zu laden.'))}</p>
@@ -14550,7 +14560,7 @@ function renderVinylEditor() {
       <div class="vinyl-layer-fields">
         <div class="vinyl-layer-main-row ${layer.type === 'Liquid' ? 'vinyl-layer-liquid-main' : ''}">
           <label class="vinyl-layer-captionless"><select data-layer-field="type" aria-label="Effekt" title="Effekt">${VINYL_EFFECT_TYPES.filter(type => type !== 'Label' || labelEditorDraft).map(type => `<option value="${type}" ${type === layer.type ? 'selected' : ''}>${escapeHtml(getVinylEffectLabel(type))}</option>`).join('')}</select></label>
-          <label class="vinyl-layer-captionless"><input type="color" data-layer-field="color" aria-label="Effektfarbe" title="Effektfarbe" value="${layer.color}"></label>
+          ${layer.type === 'Label' ? '' : `<label class="vinyl-layer-captionless"><input type="color" data-layer-field="color" aria-label="Effektfarbe" title="Effektfarbe" value="${layer.color}"></label>`}
           ${['Liquid', 'VollFarbe', 'Farbe Innen', 'Label'].includes(layer.type) ? '' : `<label class="vinyl-layer-count">Anzahl<input type="number" data-layer-field="count" aria-label="Anzahl" min="1" max="100" value="${layer.count}"></label>`}
           <div class="vinyl-layer-actions">
             <button type="button" data-layer-action="up" aria-label="Effekt nach oben verschieben" title="Nach oben" ${index === 0 || record.layers.length === 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
@@ -24598,12 +24608,50 @@ async function loadDiscogsLabelChoices() {
     status(discogsLabelChoices.get(id).length ? 'Labels geladen. Wähle ein Label aus.' : 'Für diesen Release sind keine Labels hinterlegt.');
   } catch (error) { if (labelEditorDraft === draft) status(error.message || 'Labels konnten nicht geladen werden.'); }
 }
+let labelImageDialog = null;
+let labelImageDialogLayer = null;
+function refreshLabelImageDialog() {
+  if (!labelImageDialog?.open || !labelImageDialogLayer) return;
+  const layer = labelImageDialogLayer;
+  labelImageDialog.querySelector('h2').textContent = `Logo auswählen · ${layer.labelName || 'Label'}`;
+  labelImageDialog.querySelector('[data-image-status]').textContent = discogsLogoStatus.get(layer) || '';
+  labelImageDialog.querySelector('[data-image-grid]').innerHTML = renderDiscogsLabelImageChoices(layer);
+}
+function openLabelImageDialog(layer) {
+  if (!labelImageDialog) {
+    labelImageDialog = document.createElement('dialog');
+    labelImageDialog.className = 'discogs-label-image-dialog';
+    labelImageDialog.setAttribute('aria-labelledby', 'labelImageDialogTitle');
+    labelImageDialog.innerHTML = `<div class="vinyl-editor-toolbar"><h2 id="labelImageDialogTitle">Logo auswählen</h2><button type="button" data-close-image-dialog aria-label="Bildauswahl schließen">×</button></div><p class="settings-panel-hint" data-image-status role="status"></p><div data-image-grid></div><div class="vinyl-editor-footer"><button type="button" data-close-image-dialog>Schließen</button></div>`;
+    labelImageDialog.addEventListener('keydown', event => event.stopPropagation());
+    labelImageDialog.addEventListener('click', event => {
+      if (event.target === labelImageDialog || event.target.closest('[data-close-image-dialog]')) { labelImageDialog.close(); return; }
+      const layer = labelImageDialogLayer;
+      if (!layer || !labelEditorDraft?.layers.includes(layer)) { labelImageDialog.close(); return; }
+      if (event.target.closest('[data-load-label-images]')) { loadDiscogsLabelImages(layer); return; }
+      const button = event.target.closest('[data-label-image]');
+      if (!button) return;
+      const image = discogsLabelImages.get(Number(layer.labelId))?.[Number(button.dataset.labelImage)];
+      if (!image) return;
+      layer.logoUrl = image.url; layer.logoDataUrl = '';
+      discogsLogoStatus.set(layer, 'Bild ausgewählt.');
+      renderVinylEditor();
+      labelImageDialog.close();
+    });
+    labelImageDialog.addEventListener('close', () => { labelImageDialogLayer = null; });
+    document.body.append(labelImageDialog);
+  }
+  labelImageDialogLayer = layer;
+  labelImageDialog.showModal();
+  refreshLabelImageDialog();
+  if (!discogsLabelImages.has(Number(layer.labelId))) loadDiscogsLabelImages(layer);
+}
 async function loadDiscogsLabelImages(layer) {
   if (!labelEditorDraft || !layer.labelId) return;
   const draft = labelEditorDraft, id = Number(layer.labelId), request = {};
   discogsLogoRequests.set(layer, request);
   const active = () => labelEditorDraft === draft && draft.layers.includes(layer) && Number(layer.labelId) === id && discogsLogoRequests.get(layer) === request;
-  discogsLogoStatus.set(layer, 'Lade Bilder des Labels …'); renderVinylEditor();
+  discogsLogoStatus.set(layer, 'Lade Bilder des Labels …'); renderVinylEditor(); refreshLabelImageDialog();
   try {
     if (!discogsLabelImages.has(id)) {
       const detail = await fetchDiscogsLogoJson(`labels/${id}`);
@@ -24613,20 +24661,14 @@ async function loadDiscogsLabelImages(layer) {
     const images = discogsLabelImages.get(id);
     discogsLogoStatus.set(layer, images.length ? `${images.length} Bilder verfügbar. Wähle das gewünschte Bild aus.` : 'Für dieses Label sind bei Discogs keine Bilder hinterlegt.');
   } catch (error) { if (active()) discogsLogoStatus.set(layer, error.message || 'Bilder konnten nicht geladen werden. Klicke auf „Bilder anzeigen“, um es erneut zu versuchen.'); }
-  if (active()) renderVinylEditor();
+  if (active()) { renderVinylEditor(); refreshLabelImageDialog(); }
 }
 document.getElementById('vinylLayerList').addEventListener('click', event => {
   if (event.target.closest('[data-load-labels]')) loadDiscogsLabelChoices();
-  const button = event.target.closest('[data-load-label-images], [data-label-image]');
+  const button = event.target.closest('[data-open-label-images]');
   if (!button || !labelEditorDraft) return;
   const layer = labelEditorDraft.layers[Number(button.closest('[data-layer-index]').dataset.layerIndex)];
-  if (!layer) return;
-  if (button.hasAttribute('data-load-label-images')) { loadDiscogsLabelImages(layer); return; }
-  const image = discogsLabelImages.get(Number(layer.labelId))?.[Number(button.dataset.labelImage)];
-  if (!image) return;
-  layer.logoUrl = image.url; layer.logoDataUrl = '';
-  discogsLogoStatus.set(layer, 'Bild ausgewählt. Der Bildhintergrund wird wie von Discogs geliefert übernommen.');
-  renderVinylEditor();
+  if (layer?.labelId) openLabelImageDialog(layer);
 });
 document.getElementById('vinylLayerList').addEventListener('change', event => {
   if (!event.target.matches('[data-logo-label]') || !labelEditorDraft) return;
@@ -24636,7 +24678,7 @@ document.getElementById('vinylLayerList').addEventListener('change', event => {
   layer.labelId = label?.id || 0; layer.labelName = label?.name || ''; layer.logoDataUrl = ''; layer.logoUrl = '';
   discogsLogoStatus.delete(layer);
   renderVinylEditor();
-  if (label) loadDiscogsLabelImages(layer);
+  if (label) openLabelImageDialog(layer);
 });
 document.getElementById('editLabelBtn').addEventListener('click', () => {
   const record = editorRecord();
@@ -24726,6 +24768,7 @@ document.getElementById('vinylLayerList').addEventListener('input', event => {
     layer.type = VINYL_EFFECT_TYPES.includes(event.target.value) ? event.target.value : 'Punkte Random';
     if (layer.type === 'Liquid' && layer.amount == null) layer.amount = 50;
   }
+  else if (field === 'logoBackground') layer.logoBackground = ['light','dark'].includes(event.target.value) ? event.target.value : 'original';
   else if (field === 'logoPosition') layer.logoPosition = event.target.value === 'bottom' ? 'bottom' : 'top';
   else if (field === 'amount') {
     const requestedAmount = Math.max(0, Math.min(100, Number(event.target.value) || 0));
