@@ -7336,7 +7336,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   @media (min-width:1100px) {
     .vinyl-editor-box.has-photo-reference { width:min(1480px,98vw); max-width:1480px; }
     .has-photo-reference .vinyl-editor-layout { grid-template-columns:minmax(190px,.8fr) minmax(220px,.9fr) minmax(380px,1.5fr); gap:16px; }
-    .vinyl-reference-overlay, .vinyl-reference-opacity { display:none; }
+
   }
   @media (max-width:1099px) {
     .has-photo-reference .vinyl-reference-panel { grid-column:1 / -1; flex-direction:row; flex-wrap:wrap; align-items:center; overflow:visible; padding:8px; gap:8px; }
@@ -7504,6 +7504,15 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .storage-mobile-pending h3 { margin:0 0 10px; font-size:14px; }
   .storage-mobile-items, .storage-mobile-contents { display:flex; flex-direction:column; gap:6px; }
   .storage-mobile-compartment { flex-shrink:0; }
+  .storage-mobile-compartment .storage-mobile-contents {
+    max-height:190px;
+    max-height:min(190px, 32dvh);
+    overflow-y:auto;
+    overscroll-behavior-y:contain;
+    scrollbar-gutter:stable;
+    touch-action:pan-y;
+  }
+  .storage-mobile-contents > .storage-record { flex-shrink:0; }
   .storage-mobile-compartment:not(.storage-mobile-open) .storage-mobile-contents { display:none; }
   .storage-mobile .storage-record { display:flex; align-items:center; width:100%; min-width:0; height:auto; min-height:58px; padding:6px; gap:8px; white-space:normal; }
   .storage-mobile .storage-record img { width:40px; height:40px; flex-shrink:0; object-fit:cover; }
@@ -7515,6 +7524,16 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .storage-mobile-moving { padding:10px; background:var(--accent-bg); border-radius:8px; font-size:13px; }
   .storage-mobile .drag-over { outline:2px solid var(--accent); background:var(--accent-bg); }
   .storage-mobile.storage-item-dragging .storage-mobile-contents { display:none; }
+
+
+  .vinyl-reference-color-button { margin-top:6px; min-height:36px; padding:6px 8px; font-size:12px; white-space:normal; }
+  .vinyl-reference-color-button[hidden] { display:none; }
+  .vinyl-reference-color-dialog { width:min(560px, calc(100vw - 24px)); max-height:90dvh; overflow:auto; padding:16px; border:1px solid var(--border-strong); border-radius:12px; color:var(--text-primary); background:var(--surface-1); }
+  .vinyl-reference-color-dialog::backdrop { background:rgba(0,0,0,.75); }
+  .vinyl-reference-color-dialog img { display:block; width:100%; height:min(52dvh, 460px); object-fit:contain; cursor:crosshair; touch-action:manipulation; }
+  .vinyl-reference-color-dialog header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .vinyl-reference-color-dialog button { min-height:44px; }
+  .vinyl-reference-color-dialog input[type=file] { width:100%; }
 
 </style>
 <script src="layout-diagnostics.js" defer></script>
@@ -8759,7 +8778,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
         <div class="vinyl-editor-toolbar"><strong>Fotovorlage</strong><button type="button" id="hideVinylReferenceBtn" aria-label="Fotovorlage ausblenden">×</button></div>
         <img id="vinylReferenceImage" alt="Ausgewähltes Discogs-Release-Foto als Vorlage" referrerpolicy="no-referrer">
         <div class="vinyl-reference-navigation"><button type="button" id="previousVinylReferenceBtn" aria-label="Vorheriges Referenzfoto">←</button><span id="vinylReferenceCounter"></span><button type="button" id="nextVinylReferenceBtn" aria-label="Nächstes Referenzfoto">→</button><button type="button" id="chooseVinylReferenceBtn">Auswahl</button></div>
-        <label class="vinyl-reference-opacity">Überlagerung <output id="vinylReferenceOpacityValue">50%</output><input type="range" id="vinylReferenceOpacity" min="0" max="100" value="50" aria-label="Deckkraft der Fotovorlage"></label>
+        <label class="vinyl-reference-opacity">Überlagerung <output id="vinylReferenceOpacityValue">100%</output><input type="range" id="vinylReferenceOpacity" min="0" max="100" value="100" aria-label="Deckkraft der Fotovorlage"></label>
         <p class="settings-panel-hint" id="vinylReferenceStatus" role="status"></p>
       </aside>
       <section class="vinyl-editor-preview" aria-label="Vinyl-Vorschau">
@@ -8772,8 +8791,8 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
               <option value="picture-disc">Picture Disc</option>
             </select>
           </label>
-          <label>Grundfarbe<input type="color" id="vinylBaseColor" value="#000000"></label>
-          <label>Label-Farbe<input type="color" id="vinylLabelColor" value="#ffffff"></label>
+          <label>Grundfarbe<input type="color" id="vinylBaseColor" value="#000000"><button type="button" class="vinyl-reference-color-button" data-reference-color="baseColor" hidden>Aus Fotovorlage wählen</button></label>
+          <label>Label-Farbe<input type="color" id="vinylLabelColor" value="#ffffff"><button type="button" class="vinyl-reference-color-button" data-reference-color="labelColor" hidden>Aus Fotovorlage wählen</button></label>
           <label class="vinyl-transparency-label">Transparenz <span id="vinylTransparencyValue">0%</span><input type="range" id="vinylTransparencyInput" min="0" max="100" value="0" aria-label="Transparenz"></label>
         </div>
       </section>
@@ -14205,7 +14224,7 @@ function getVinylLayerLength(layer, random = createVinylRandom(layer.seed)) {
 let vinylEditorDesign = null;
 let labelEditorDraft = null;
 let selectedShapeIndex = 0;
-let vinylReference = {url:'', index:0, releaseId:'', opacity:50};
+let vinylReference = {url:'', index:0, releaseId:'', opacity:100};
 const VINYL_SHAPES = ['Kreis', 'Quadrat', 'Rechteck', 'Halbkreis', 'Dreieck'];
 function editorRecord() { return labelEditorDraft || vinylEditorDesign.records[activeVinylIndex]; }
 function finishLabelEditor(save = false) {
@@ -14980,7 +14999,7 @@ function openVinylEditor() {
   document.getElementById('suggestVinylFromDiscogsBtn').disabled=false;
   document.getElementById('vinylDiscogsSuggestionStatus').textContent='';
   vinylEditorOriginalPictureDataUrl = '';
-  vinylReference = {url:'', index:0, releaseId:'', opacity:50};
+  vinylReference = {url:'', index:0, releaseId:'', opacity:100};
   pictureColorMarker = null;
   pictureColorMarkerMode = false;
   const markerButton = document.getElementById('setPictureColorMarkerBtn');
@@ -24856,7 +24875,7 @@ function selectVinylReference(index) {
   const id = discogsLabelReleaseId(), images = discogsReleasePictures.get(id) || [];
   if (!images.length) return;
   const selected = ((index % images.length) + images.length) % images.length;
-  vinylReference = {...vinylReference, url:images[selected].url, index:selected, releaseId:id};
+  vinylReference = {...vinylReference, url:images[selected].url, index:selected, releaseId:id, opacity:100};
   renderVinylReference();
 }
 function renderVinylReference() {
@@ -24865,6 +24884,7 @@ function renderVinylReference() {
   if (vinylReference.releaseId && vinylReference.releaseId !== discogsLabelReleaseId()) vinylReference.url = '';
   const visible = !!vinylReference.url;
   panel.hidden = !visible;
+  document.querySelectorAll('[data-reference-color]').forEach(button => { button.hidden = !visible; });
   document.querySelector('#vinylEditorOverlay .vinyl-editor-box').classList.toggle('has-photo-reference',visible);
   disc.querySelector('.vinyl-reference-overlay')?.remove();
   if (!visible) { document.getElementById('vinylReferenceImage').removeAttribute('src'); return; }
@@ -24882,6 +24902,103 @@ function renderVinylReference() {
   image.onerror = () => { document.getElementById('vinylReferenceStatus').textContent = 'Foto konnte nicht geladen werden. Wähle ein anderes Bild.'; };
   image.onload = () => { document.getElementById('vinylReferenceStatus').textContent = ''; };
 }
+// Reference sampling only changes the active record's chosen color, never its artwork.
+function referencePhotoCoordinates(image, clientX, clientY) {
+  const bounds = image.getBoundingClientRect();
+  const scale = Math.min(bounds.width / image.naturalWidth, bounds.height / image.naturalHeight);
+  if (!(scale > 0) || !Number.isFinite(scale)) return null;
+  const width = image.naturalWidth * scale, height = image.naturalHeight * scale;
+  const x = (clientX - bounds.left - (bounds.width - width) / 2) / width;
+  const y = (clientY - bounds.top - (bounds.height - height) / 2) / height;
+  return x >= 0 && x <= 1 && y >= 0 && y <= 1 ? {x, y} : null;
+}
+async function sampleReferencePhotoColor(source, point) {
+  const image = await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Der Bildserver erlaubt keine Farbauswahl. Nutze die Bildschirm-Pipette oder öffne dasselbe Foto unten als Datei.'));
+    image.crossOrigin = 'anonymous';
+    image.referrerPolicy = 'no-referrer';
+    image.src = source;
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Die Farbauswahl wird von diesem Browser nicht unterstützt.');
+  const x = Math.max(0, Math.min(image.naturalWidth - 1, Math.floor(point.x * image.naturalWidth)));
+  const y = Math.max(0, Math.min(image.naturalHeight - 1, Math.floor(point.y * image.naturalHeight)));
+  context.drawImage(image, x, y, 1, 1, 0, 0, 1, 1);
+  let pixel;
+  try { pixel = context.getImageData(0, 0, 1, 1).data; }
+  catch { throw new Error('Das Foto ist für die Farbauswahl gesperrt. Nutze die Bildschirm-Pipette oder öffne dasselbe Foto unten als Datei.'); }
+  if (pixel[3] < 128) throw new Error('Bitte einen sichtbaren, nicht transparenten Bildbereich auswählen.');
+  return '#' + [...pixel].slice(0, 3).map(value => value.toString(16).padStart(2, '0')).join('');
+}
+let activeReferenceColorDialog = null;
+function openReferenceColorPicker(field) {
+  if (!vinylReference.url || !vinylEditorDesign || !['baseColor', 'labelColor'].includes(field)) return;
+  activeReferenceColorDialog?.close();
+  const record = editorRecord(), design = vinylEditorDesign;
+  vinylReference.opacity = 100;
+  renderVinylReference();
+  const dialog = document.createElement('dialog');
+  dialog.className = 'vinyl-reference-color-dialog';
+  dialog.setAttribute('aria-label', `${field === 'baseColor' ? 'Grundfarbe' : 'Label-Farbe'} aus Fotovorlage`);
+  dialog.innerHTML = `<header><strong>${field === 'baseColor' ? 'Grundfarbe' : 'Label-Farbe'} auswählen</strong><button type="button" data-close aria-label="Farbauswahl schließen">×</button></header>
+    <p>Tippe auf die gewünschte Farbe im Foto.</p><img alt="Fotovorlage zur Farbauswahl" referrerpolicy="no-referrer">
+    <p role="status" aria-live="polite"></p><button type="button" data-eyedropper hidden>Bildschirm-Pipette</button>
+    <details><summary>Foto als Datei öffnen</summary><p>Falls der Bildserver die Farbauswahl sperrt, kannst du dasselbe Foto hier öffnen.</p><input type="file" accept="image/*" aria-label="Fotovorlage für Farbauswahl öffnen"></details>`;
+  const image = dialog.querySelector('img'), status = dialog.querySelector('[role=status]');
+  let source = vinylReference.url, request = 0, localUrl = '';
+  image.src = source;
+  const apply = color => {
+    if (!dialog.open || design !== vinylEditorDesign || record !== editorRecord()) return;
+    record[field] = color;
+    document.getElementById(field === 'baseColor' ? 'vinylBaseColor' : 'vinylLabelColor').value = color;
+    scheduleVinylEditorPreview();
+    dialog.close();
+  };
+  image.addEventListener('click', async event => {
+    const point = referencePhotoCoordinates(image, event.clientX, event.clientY);
+    if (!point) { status.textContent = 'Bitte direkt auf das Foto tippen.'; return; }
+    const token = ++request;
+    status.textContent = 'Lese Farbe …';
+    try {
+      const color = await sampleReferencePhotoColor(source, point);
+      if (token === request) apply(color);
+    } catch (error) { if (token === request && dialog.open) status.textContent = error.message; }
+  });
+  const pipette = dialog.querySelector('[data-eyedropper]');
+  pipette.hidden = typeof window.EyeDropper !== 'function';
+  pipette.addEventListener('click', async () => {
+    ++request;
+    try { const result = await new window.EyeDropper().open(); apply(result.sRGBHex); }
+    catch (error) { if (error.name !== 'AbortError') status.textContent = 'Pipette konnte nicht gestartet werden. Tippe direkt auf das Foto.'; }
+  });
+  dialog.querySelector('input').addEventListener('change', event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    ++request;
+    if (localUrl) URL.revokeObjectURL(localUrl);
+    source = localUrl = URL.createObjectURL(file);
+    image.src = source;
+    status.textContent = 'Foto geöffnet. Tippe auf die gewünschte Farbe.';
+  });
+  dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+  dialog.addEventListener('close', () => {
+    ++request;
+    if (localUrl) URL.revokeObjectURL(localUrl);
+    if (activeReferenceColorDialog === dialog) activeReferenceColorDialog = null;
+    dialog.remove();
+  }, {once:true});
+  document.body.appendChild(dialog);
+  activeReferenceColorDialog = dialog;
+  dialog.showModal();
+}
+document.querySelectorAll('[data-reference-color]').forEach(button => {
+  button.addEventListener('click', () => openReferenceColorPicker(button.dataset.referenceColor));
+});
+
 document.getElementById('showVinylReferenceBtn').addEventListener('click',() => openDiscogsReleasePictures('reference'));
 document.getElementById('chooseVinylReferenceBtn').addEventListener('click',() => openDiscogsReleasePictures('reference'));
 document.getElementById('hideVinylReferenceBtn').addEventListener('click',() => { vinylReference.url = ''; renderVinylReference(); });
