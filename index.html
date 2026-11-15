@@ -7304,6 +7304,12 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .discogs-label-image-dialog .discogs-label-image-choices { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; }
   .discogs-label-image-dialog .discogs-label-image-choices button { width:100%; min-width:0; cursor:pointer; color:var(--text-primary); background:var(--surface-1); }
   .discogs-label-image-dialog .discogs-label-image-choices img { height:105px; }
+
+  .vinyl-layer-detail-row.vinyl-label-detail-row { grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); align-items:end; gap:10px; }
+  .vinyl-label-detail-row > p, .vinyl-label-detail-row > a { grid-column:1 / -1; margin:0; overflow-wrap:anywhere; }
+  .vinyl-label-detail-row label { white-space:normal; }
+  .vinyl-label-detail-row button { min-height:34px; }
+  .vinyl-label-detail-row a { color:var(--accent); font-size:12px; }
 </style>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -14209,7 +14215,7 @@ function getLabelLayerMarkup(record, enlarged = false) {
     }
     return `<span class="discogs-label-effect" style="background-image:${getVinylSvgData({layers:[layer],labelArtwork:true})}"></span>`;
   }).join('');
-  return `<span class="discogs-label-art${enlarged ? ' is-enlarged' : ''}" aria-hidden="true">${content}</span>`;
+  return `<span class="discogs-label-art${enlarged ? ' is-enlarged' : ''}" style="background-color:${safeVinylColor(enlarged ? record.baseColor : record.labelColor, '#ffffff')}" aria-hidden="true">${content}</span>`;
 }
 
 function safeLabelLogoData(value) {
@@ -14568,7 +14574,7 @@ function renderVinylEditor() {
             <button type="button" data-layer-action="remove" aria-label="Effekt löschen" title="Löschen">×</button>
           </div>
         </div>
-        <div class="vinyl-layer-detail-row">
+        <div class="vinyl-layer-detail-row ${layer.type === 'Label' ? 'vinyl-label-detail-row' : ''}">
         ${renderVinylLayerDetailControls(layer)}
         </div>
       </div>
