@@ -104,18 +104,30 @@
     if(guesses.includes(guessId))throw new Error('Dieses Album hast du bereits versucht.');
     return {version:VERSION,day:key,uid:user.uid,username:text(user.username || 'Spieler').slice(0,80),guesses:[...guesses,guessId],solved:guessId===answerId,attempts:guesses.length+1,partId};
   }
+  function previousDay(key) { const date=new Date(`${key}T12:00:00Z`);date.setUTCDate(date.getUTCDate()-1);return date.toISOString().slice(0,10); }
+  function playerStatistics(entries, today=dayKey()) {
+    const games=[...new Map(entries.filter(entry=>entry.score?.guesses?.length).map(entry=>[entry.day.day,entry])).values()];
+    const wins=games.filter(entry=>entry.score.solved), solvedDays=new Set(wins.map(entry=>entry.day.day));
+    const todayLost=games.some(entry=>entry.day.day===today && !entry.score.solved && entry.score.guesses.length>=MAX_GUESSES);
+    let date=solvedDays.has(today)?today:todayLost?null:previousDay(today),streak=0;
+    while(solvedDays.has(date)){streak++;date=previousDay(date);}
+    let best=0,run=0,last='';
+    for(const date of [...solvedDays].sort()){run=last===previousDay(date)?run+1:1;best=Math.max(best,run);last=date;}
+    return {played:games.length,solved:wins.length,streak,best,average:wins.length?wins.reduce((sum,entry)=>sum+entry.score.guesses.length,0)/wins.length:null};
+  }
+  function scoreRank(scores, score) { return score?.solved ? 1+scores.filter(other=>other.solved && other.uid!==score.uid && other.attempts<score.attempts).length : null; }
   function create(options) {
     const {db,getUser,timestamp,serverTimestamp,track=promise=>promise}=options;
-    const state={day:null,catalogue:[],parts:new Map(),score:null,scores:[],loading:false,busy:false,selected:null,open:false,epoch:0,timer:null,dayPromise:null,cataloguePromise:null,rankingPromise:null,activeTab:'game',practiceResults:new Map(),practice:{guesses:[],active:false,revealed:false}};
+    const state={day:null,catalogue:[],parts:new Map(),score:null,scores:[],loading:false,busy:false,selected:null,open:false,epoch:0,timer:null,dayPromise:null,cataloguePromise:null,rankingPromise:null,activeTab:'game',history:[],historyUid:null,historyLoading:false,historyEpoch:0,historySelection:0,historyReady:false,historyCatalogues:new Map(),practiceResults:new Map(),practice:{guesses:[],active:false,revealed:false}};
     const el=(tag,className,content)=>{const node=document.createElement(tag);if(className)node.className=className;if(content!=null)node.textContent=content;return node;};
     const dialog=el('dialog','vordle-dialog');dialog.setAttribute('aria-labelledby','vordleTitle');
     const hero=el('header','vordle-hero'),wordmark=el('div','vordle-wordmark');
     wordmark.append(el('span','vordle-record','◉'));
     const title=el('h2',null,'Vordle');title.id='vordleTitle';wordmark.append(title,el('span','vordle-daily-label','DAILY VINYL'));
     const close=el('button','vordle-close','×');close.type='button';close.setAttribute('aria-label','Vordle schließen');close.onclick=()=>dialog.close();hero.append(wordmark,close);
-    const sub=el('p','vordle-subtitle','0 von 10 Versuchen');
+    const sub=el('span','vordle-subtitle','0 von 10 Versuchen');
     const attempts=el('div','vordle-attempts');attempts.setAttribute('role','group');
-    const dayLabel=el('p','vordle-day');const status=el('p','vordle-status');status.setAttribute('role','status');
+    const dayLabel=el('span','vordle-day');const headerRank=el('span','vordle-header-rank');headerRank.hidden=true;const headerMeta=el('div','vordle-header-meta');headerMeta.append(dayLabel,sub,attempts,headerRank);hero.append(headerMeta);const status=el('p','vordle-status');status.setAttribute('role','status');
     const coverFigure=el('figure','vordle-cover-hint'),coverFrame=el('div','vordle-cover-frame');
     const coverImage=el('img','vordle-cover-image');coverImage.alt='Verschwommenes Cover des gesuchten Albums';coverImage.draggable=false;coverImage.referrerPolicy='no-referrer';
     const coverPlaceholder=el('span','vordle-cover-placeholder','◉');coverPlaceholder.setAttribute('aria-hidden','true');
@@ -140,19 +152,36 @@
     const rankingStatus=el('p','vordle-ranking-status');rankingStatus.setAttribute('role','status');
     const rankingList=el('ol','vordle-ranking-list');rankingHead.append(rankingTitle,refresh);ranking.append(rankingHead,rankingStatus,rankingList);
     const retry=el('button','vordle-retry','Erneut laden');retry.type='button';retry.hidden=true;retry.onclick=()=>open();
+    const historyPanel=el('section','vordle-history');historyPanel.id='vordleHistoryPanel';historyPanel.setAttribute('role','tabpanel');historyPanel.setAttribute('aria-labelledby','vordleHistoryTab');
+    const historyHeading=el('div','vordle-ranking-heading'),historyTitle=el('strong',null,'Deine Vordles'),historyRefresh=el('button','vordle-ranking-refresh','Aktualisieren');historyRefresh.type='button';historyHeading.append(historyTitle,historyRefresh);
+    const statistics=el('div','vordle-statistics'),historyStatus=el('p','vordle-status');historyStatus.setAttribute('role','status');
+    const historyLayout=el('div','vordle-history-layout'),historyList=el('div','vordle-history-list'),historyDetail=el('section','vordle-history-detail');historyDetail.setAttribute('aria-label','Bisherige Tipps des ausgewählten Tages');historyLayout.append(historyList,historyDetail);
+    const statsHelp=el('details','vordle-help');statsHelp.append(el('summary',null,'So werden die Statistiken gezählt'),el('p',null,'Gespielt zählt Tage mit mindestens einem gewerteten Tipp. Die Serie zählt aufeinanderfolgende gelöste Tage; ein noch offenes heutiges Rätsel unterbricht die gestrige Serie nicht. Ø Tipps zählt nur gewertete Siege bis zehn Versuche. Zusätzliche Tipps werden angezeigt, soweit sie auf diesem Gerät gespeichert sind. Die Historie ist schreibgeschützt.'));
+    historyPanel.append(historyHeading,statistics,historyStatus,historyLayout,statsHelp);
     const tabs=el('div','vordle-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Vordle-Ansichten');
-    const gameTab=el('button','vordle-tab','Rätsel'),rankTab=el('button','vordle-tab','Rangliste');
+    const gameTab=el('button','vordle-tab','Rätsel'),rankTab=el('button','vordle-tab','Rangliste'),historyTab=el('button','vordle-tab','Historie');
     const gamePanel=el('section','vordle-game-panel'),solution=el('section','vordle-solution');solution.hidden=true;
     gamePanel.id='vordleGamePanel';ranking.id='vordleRankingPanel';
     gamePanel.setAttribute('role','tabpanel');ranking.setAttribute('role','tabpanel');
     gamePanel.setAttribute('aria-labelledby','vordleGameTab');ranking.setAttribute('aria-labelledby','vordleRankTab');
-    for(const [button,id,panel] of [[gameTab,'vordleGameTab',gamePanel],[rankTab,'vordleRankTab',ranking]]){button.type='button';button.id=id;button.setAttribute('role','tab');button.setAttribute('aria-controls',panel.id);tabs.append(button);}
-    function showTab(tab){state.activeTab=tab;const playing=tab==='game';gamePanel.hidden=!playing;gamePanel.style.display=playing?'block':'none';ranking.hidden=playing;ranking.style.display=playing?'none':'block';gameTab.setAttribute('aria-selected',String(playing));rankTab.setAttribute('aria-selected',String(!playing));gameTab.tabIndex=playing?0:-1;rankTab.tabIndex=playing?-1:0;if(!playing)void loadScores(true);}
-    gameTab.onclick=()=>showTab('game');rankTab.onclick=()=>showTab('ranking');
-    for(const button of [gameTab,rankTab])button.onkeydown=event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();showTab(state.activeTab==='game'?'ranking':'game');(state.activeTab==='game'?gameTab:rankTab).focus();}};
+    for(const [button,id,panel] of [[gameTab,'vordleGameTab',gamePanel],[rankTab,'vordleRankTab',ranking],[historyTab,'vordleHistoryTab',historyPanel]]){button.type='button';button.id=id;button.setAttribute('role','tab');button.setAttribute('aria-controls',panel.id);tabs.append(button);}
+    function showTab(tab){
+      state.activeTab=tab;
+      for(const [key,button,panel] of [['game',gameTab,gamePanel],['ranking',rankTab,ranking],['history',historyTab,historyPanel]]){
+        const selected=tab===key;panel.hidden=!selected;panel.style.display=selected?'block':'none';button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;
+      }
+      if(tab==='ranking')void loadScores(true);
+      if(tab==='history')void loadHistory();
+    }
+    const tabButtons=[gameTab,rankTab,historyTab];
+    for(const [index,button] of tabButtons.entries()){
+      button.onclick=()=>showTab(['game','ranking','history'][index]);
+      button.onkeydown=event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();const next=(index+(event.key==='ArrowLeft'?2:1))%3;showTab(['game','ranking','history'][next]);tabButtons[next].focus();}};
+    }
+    historyRefresh.onclick=()=>void loadHistory(true);
     coverInfo.append(solution);
     gamePanel.append(coverFigure,form,status,retry,legend,gridWrap,reveal,help);
-    dialog.append(hero,attempts,sub,dayLabel,tabs,gamePanel,ranking);document.body.append(dialog);showTab('game');
+    dialog.append(hero,tabs,gamePanel,ranking,historyPanel);document.body.append(dialog);showTab('game');
     let matches=[],active=-1;
     const dayRef=key=>db.collection('vordleDays').doc(key);
     const liveUser=()=>{const user=getUser();if(!user?.uid)throw new Error('Bitte melde dich an, um Vordle zu spielen.');return user;};
@@ -164,13 +193,14 @@
       state.practice={guesses:[],active:false,revealed:false};
       if(!state.day)return;
       try {const saved=JSON.parse(localStorage.getItem(practiceKey()) || 'null');
+        if(saved?.day && Array.isArray(saved.guesses) && saved.guesses.length)localStorage.setItem(`${practiceKey()}:${saved.day}`,JSON.stringify(saved));
         if(saved?.day===state.day.day && saved.stamp===puzzleStamp(state.day) && saved.answerId===state.day.answer.id){
           const known=new Set(state.catalogue.map(album=>album.id)),official=new Set(state.score?.guesses || []);
           state.practice={guesses:[...new Set(Array.isArray(saved.guesses)?saved.guesses:[])].filter(id=>known.has(id) && !official.has(id)),active:saved.active===true,revealed:saved.revealed===true};
         }
       }catch{}
     }
-    function savePractice(){try {localStorage.setItem(practiceKey(),JSON.stringify({...state.practice,day:state.day.day,stamp:puzzleStamp(state.day),answerId:state.day.answer.id}));}catch{}}
+    function savePractice(){try {const saved={...state.practice,day:state.day.day,stamp:puzzleStamp(state.day),answerId:state.day.answer.id};localStorage.setItem(practiceKey(),JSON.stringify(saved));localStorage.setItem(`${practiceKey()}:${state.day.day}`,JSON.stringify(saved));}catch{}}
     function clearPractice(){state.practice={guesses:[],active:false,revealed:false};}
     function canGuess(){return progress().canGuess;}
     function setStatus(message,error=false){status.textContent=message;status.classList.toggle('is-error',error);}
@@ -241,7 +271,7 @@
         if(!sameUser(user.uid,epoch))throw new Error('Die Sitzung hat sich geändert.');
         if(day.version!==VERSION || day.day!==key || !day.answer?.id || !Array.isArray(day.partIds))throw new Error('Das Tagesrätsel hat ein unbekanntes Format.');
         if(dayKey()!==key)throw new Error('Ein neuer Vordle-Tag hat begonnen. Bitte erneut laden.');
-        if(state.catalogueDay && (state.catalogueDay!==key || state.catalogueStamp!==puzzleStamp(day))){state.catalogue=[];state.score=null;state.scores=[];state.practiceResults.clear();state.selected=null;clearPractice();}
+        if(state.catalogueDay && (state.catalogueDay!==key || state.catalogueStamp!==puzzleStamp(day))){state.catalogue=[];state.score=null;state.scores=[];state.rankingLoadedDay=null;state.historyReady=false;state.practiceResults.clear();state.selected=null;clearPractice();}
         state.day=day;scheduleMidnight();return day;
       })();
       state.dayPromise={key,promise};
@@ -280,12 +310,79 @@
       if(state.rankingPromise){await state.rankingPromise;if(force && state.open)return loadScores();return;}
       refresh.disabled=true;rankingStatus.textContent='Ergebnisse werden geladen …';
       const promise=(async()=>{
-        try{const [snap,extras]=await Promise.all([track(dayRef(day).collection('scores').get({source:'server'})),track(dayRef(day).collection('practiceResults').get({source:'server'}))]);if(!sameUser(uid,epoch) || state.day?.day!==day)return;state.practiceResults=new Map([...state.practiceResults,...extras.docs.map(doc=>[doc.id,doc.data()])]);state.scores=snap.docs.map(doc=>doc.data()).filter(score=>score.uid!==uid);if(state.score)state.scores.push(state.score);rankingStatus.textContent='';renderRanking();}
+        try{const [snap,extras]=await Promise.all([track(dayRef(day).collection('scores').get({source:'server'})),track(dayRef(day).collection('practiceResults').get({source:'server'}))]);if(!sameUser(uid,epoch) || state.day?.day!==day)return;state.practiceResults=new Map([...state.practiceResults,...extras.docs.map(doc=>[doc.id,doc.data()])]);state.scores=snap.docs.map(doc=>doc.data()).filter(score=>score.uid!==uid);if(state.score)state.scores.push(state.score);state.rankingLoadedDay=day;rankingStatus.textContent='';renderRanking();}
         catch(error){rankingStatus.textContent=errorMessage(error);}
         finally{refresh.disabled=false;}
       })();state.rankingPromise=promise;try{await promise;}finally{if(state.rankingPromise===promise)state.rankingPromise=null;}
     }
-    function renderRanking(){rankingList.replaceChildren();
+    function renderHeaderRank(){
+      const rank=state.rankingLoadedDay===state.day?.day?scoreRank(state.scores,state.score):null;headerRank.hidden=rank==null;
+      headerRank.textContent=rank==null?'':`Platz ${rank}`;headerRank.title='Tagesrangliste · gleiche Versuchszahl bedeutet gleicher Platz';
+    }
+    function localHistoryPractice(day){
+      try {const saved=JSON.parse(localStorage.getItem(`${practiceKey()}:${day.day}`)||localStorage.getItem(practiceKey())||'null');return saved?.day===day.day && saved.stamp===puzzleStamp(day) && saved.answerId===day.answer.id && Array.isArray(saved.guesses)?saved.guesses:[];}catch{return [];}
+    }
+    async function loadHistory(force=false){
+      if(state.historyLoading || !state.open)return;
+      const user=liveUser(),epoch=state.epoch;
+      if(state.historyReady && state.historyUid===user.uid && !force){renderHistory();return;}
+      state.historyLoading=true;historyRefresh.disabled=true;historyStatus.textContent='Lade deine bisherigen Tagesergebnisse …';
+      try {
+        const days=await track(db.collection('vordleDays').get({source:'server'})),entries=[];
+        const available=days.docs.map(doc=>doc.data()).filter(day=>/^\d{4}-\d{2}-\d{2}$/.test(day.day) && day.day<=dayKey() && day.answer?.id).sort((a,b)=>b.day.localeCompare(a.day));
+        for(let offset=0;offset<available.length;offset+=12){
+          if(!sameUser(user.uid,epoch) || !state.open)return;
+          const batch=await Promise.all(available.slice(offset,offset+12).map(async day=>{const snap=await track(dayRef(day.day).collection('scores').doc(user.uid).get({source:'server'}));return snap.exists?{day,score:snap.data()}:null;}));
+          entries.push(...batch.filter(entry=>entry?.score.guesses?.length));
+        }
+        if(!sameUser(user.uid,epoch) || !state.open)return;
+        state.history=entries;state.historyUid=user.uid;state.historyReady=true;historyStatus.textContent='';renderHistory();
+      }catch(error){if(sameUser(user.uid,epoch))historyStatus.textContent=errorMessage(error);}
+      finally{if(sameUser(user.uid,epoch)){state.historyLoading=false;historyRefresh.disabled=false;}}
+    }
+    function renderHistory(){
+      const entries=state.history.filter(entry=>entry.day.day!==state.day?.day);
+      if(state.score?.guesses?.length)entries.unshift({day:state.day,score:state.score});
+      entries.sort((a,b)=>b.day.day.localeCompare(a.day.day));
+      state.historyView=entries;statistics.replaceChildren();
+      const stats=playerStatistics(entries);
+      for(const [label,value] of [['Gespielt',stats.played],['Gelöst',stats.solved],['Serie',`${stats.streak} Tage`],['Beste Serie',`${stats.best} Tage`],['Ø Tipps · gelöst',stats.average==null?'—':stats.average.toLocaleString('de',{maximumFractionDigits:2})]]){
+        const card=el('div','vordle-statistic');card.append(el('strong',null,String(value)),el('span',null,label));statistics.append(card);
+      }
+      historyList.replaceChildren();historyDetail.replaceChildren();
+      if(!entries.length){historyDetail.append(el('p','vordle-status','Noch keine gespielten Vordles gespeichert.'));return;}
+      state.historySelection=Math.min(state.historySelection,entries.length-1);
+      for(const [index,entry] of entries.entries()){
+        const button=el('button','vordle-history-day');button.type='button';button.setAttribute('aria-pressed',String(index===state.historySelection));
+        button.append(el('strong',null,entry.day.day.split('-').reverse().join('.')),el('span',null,entry.score.solved?`${entry.score.guesses.length}/${MAX_GUESSES} · gelöst`:entry.score.guesses.length>=MAX_GUESSES?'X/10':`${entry.score.guesses.length}/10 · ${entry.day.day===dayKey()?'offen':'nicht beendet'}`));
+        button.onclick=()=>{state.historySelection=index;renderHistory();};historyList.append(button);
+      }
+      void renderHistoryDay(entries[state.historySelection]);
+    }
+    async function renderHistoryDay(entry){
+      const request=++state.historyEpoch,uid=getUser()?.uid,epoch=state.epoch;historyDetail.replaceChildren();
+      const heading=el('h3',null,entry.day.day.split('-').reverse().join('.'));historyDetail.append(heading,el('p','vordle-status','Lade die gespeicherten Tipps …'));
+      try {
+        let catalogue;
+        const key=`${entry.day.day}:${puzzleStamp(entry.day)}`;
+        if(entry.day.day===state.catalogueDay && puzzleStamp(entry.day)===state.catalogueStamp)catalogue=state.catalogue;
+        else if(state.historyCatalogues.has(key))catalogue=state.historyCatalogues.get(key);
+        else {
+          const parts=await Promise.all((entry.day.partIds||[]).map(async id=>{const snap=await track(dayRef(entry.day.day).collection('catalogue').doc(id).get({source:'server'}));if(!snap.exists)throw new Error('Der Katalog dieses Tages ist nicht mehr verfügbar.');return snap.data().items||[];}));
+          catalogue=parts.flat();if(request!==state.historyEpoch || !sameUser(uid,epoch))return;state.historyCatalogues.set(key,catalogue);
+        }
+        if(request!==state.historyEpoch || !sameUser(uid,epoch))return;
+        historyDetail.replaceChildren(heading);
+        if(entry.day.day<dayKey() || entry.score.solved || (entry.day.day===state.day?.day && progress().uncovered))historyDetail.append(el('p','vordle-history-answer',`Lösung: ${entry.day.answer.artist} – ${entry.day.answer.title}`));
+        const extra=entry.score.guesses.length>=MAX_GUESSES?localHistoryPractice(entry.day).filter(id=>!entry.score.guesses.includes(id)):[];
+        const wrap=el('div','vordle-grid-wrap'),table=el('table','vordle-grid'),head=el('thead'),headRow=el('tr'),body=el('tbody');
+        for(const label of ['Album','Artist','Jahr','Genre','Format','Sammlung'])headRow.append(el('th',null,label));head.append(headRow);table.append(head,body);wrap.append(table);historyDetail.append(wrap);
+        renderGuessRows(body,entry.score.guesses.concat(extra),catalogue,entry.day.answer,entry.score.guesses.length);
+        const known=new Set(catalogue.map(album=>album.id));if(entry.score.guesses.some(id=>!known.has(id)))historyDetail.append(el('p','vordle-status','Einige Albumdaten dieses Tages sind nicht mehr verfügbar.'));
+        if(extra.length)historyDetail.append(el('p','vordle-status',`${extra.length} zusätzliche Tipps von diesem Gerät.`));
+      }catch(error){if(request===state.historyEpoch && sameUser(uid,epoch)){historyDetail.replaceChildren(heading,el('p','vordle-status',errorMessage(error)));}}
+    }
+    function renderRanking(){renderHeaderRank();rankingList.replaceChildren();
       const scores=state.scores.slice().sort((a,b)=>Number(b.solved)-Number(a.solved) || (a.solved?a.attempts-b.attempts:0) || a.username.localeCompare(b.username,'de'));
       if(!scores.length){rankingList.append(el('li','vordle-ranking-empty','Noch keine Tipps. Leg die erste Platte auf!'));return;}
       let lastAttempts=-1,rank=0;
@@ -316,10 +413,21 @@
       if(event.key==='Enter' && !suggestions.hidden){event.preventDefault();if(active>=0)select(matches[active]);else if(matches.length===1)select(matches[0]);}
     });
     dialog.addEventListener('click',event=>{if(!searchWrap.contains(event.target)){suggestions.hidden=true;input.setAttribute('aria-expanded','false');}});
+    function renderGuessRows(target,guesses,catalogue,answer,officialCount){
+      target.replaceChildren();const byId=new Map(catalogue.map(album=>[album.id,album]));
+      for(const [guessIndex,id] of Array.from(guesses.entries()).reverse()){const album=byId.get(id);if(!album)continue;const hints=feedback(album,answer),row=el('tr');
+        const guessedCollections=Array.isArray(album.collections)?album.collections:[];
+        const answerCollections=Array.isArray(answer.collections)?answer.collections:[];
+        const sharedCollections=guessedCollections.filter(name=>answerCollections.some(other=>normalize(name)===normalize(other)));
+        const collectionHint={state:!guessedCollections.length || !answerCollections.length?'unknown':sharedCollections.length?'correct':'wrong',hint:!guessedCollections.length?'Sammlung für dieses Album nicht verfügbar':!answerCollections.length?'Sammlungsabgleich für dieses Tagesrätsel nicht verfügbar':sharedCollections.length?`Gleiche Sammlung: ${sharedCollections.join(', ')}`:'Keine gemeinsame Sammlung mit dem gesuchten Album'};
+        const values={title:album.title,artist:album.artist,year:album.year || '—',genres:hints.genres.matches.join(', '),format:album.format || '—',collection:guessedCollections.length?guessedCollections.join(', '):'—'};
+        for(const field of ['title','artist','year','genres','format','collection']){const hint=field==='collection'?collectionHint:hints[field],cell=el('td',`vordle-cell is-${hint.state}`);cell.setAttribute('data-label',({title:'Album',artist:'Artist',year:'Jahr',genres:'Genre',format:'Format',collection:'Sammlung'})[field]+(field==='title'?` · ${guessIndex+1}`:''));cell.setAttribute('aria-label',`${values[field]}: ${{correct:'Passt',partial:'Teilweise passend',wrong:'Passt nicht',unknown:'Unbekannt'}[hint.state]}. ${hint.hint}`);cell.title=`${values[field]} · ${hint.hint}`;cell.append(el('span','vordle-cell-value',values[field]),el('span',`vordle-cell-mark${hint.tone?' is-'+hint.tone:''}`,hint.arrow || {correct:'✓',partial:'≈',wrong:'×',unknown:'–'}[hint.state]));if(field==='title' && guessIndex>=officialCount)cell.append(el('small','vordle-practice-tag','Weiterspielen'));row.append(cell);}target.append(row);
+      }
+    }
     function render(){
       const current=progress(),guesses=current.guesses,done=!current.canGuess;
-      dayLabel.textContent=state.day?`${state.day.day.split('-').reverse().join('.')} · ${state.day.albumCount.toLocaleString('de')} Alben · für alle gleich`:'';
-      sub.textContent=current.lost?`${guesses.length} Versuche · X/${MAX_GUESSES}${current.practicing?' · Endlosmodus':''}`:`${guesses.length} von ${MAX_GUESSES} Versuchen`;
+      dayLabel.textContent=(state.day?.day || dayKey()).split('-').reverse().join('.');
+      sub.textContent=`${guesses.length}/${MAX_GUESSES}`;sub.setAttribute('aria-label',`${guesses.length} Versuche${current.lost?' · gewertet X/10':''}`);
       attempts.replaceChildren();attempts.setAttribute('aria-label',`${Math.max(0,MAX_GUESSES-current.official.length)} von ${MAX_GUESSES} gewerteten Versuchen übrig`);
       for(let index=0;index<MAX_GUESSES;index++){
         const used=index<current.official.length,solved=state.score?.solved && index===current.official.length-1;
@@ -340,28 +448,19 @@
       coverImage.alt=current.uncovered?`Cover: ${state.day?.answer.artist} – ${state.day?.answer.title}`:'Verschwommenes Cover des gesuchten Albums';
       coverCaption.textContent=failedCoverUrl===coverUrl && coverUrl?'Cover konnte nicht geladen werden. Du kannst mit den Tabellenhinweisen weiterraten.':coverUrl?(current.uncovered?'Das gesuchte Cover':current.practicing?'Weiterspielen · Cover bleibt fast sichtbar':`Cover-Hinweis · wird mit jedem Fehlversuch schärfer`):'Dieses bereits angelegte Tagesrätsel hat noch keinen Cover-Hinweis.';
       input.disabled=state.loading || state.busy || done || !state.catalogue.length;submit.disabled=input.disabled || !state.selected;
-      tbody.replaceChildren();const byId=new Map(state.catalogue.map(album=>[album.id,album]));
-      for(const [guessIndex,id] of Array.from(guesses.entries()).reverse()){const album=byId.get(id);if(!album)continue;const hints=feedback(album,state.day.answer),row=el('tr');
-        const guessedCollections=Array.isArray(album.collections)?album.collections:[];
-        const answerCollections=Array.isArray(state.day.answer.collections)?state.day.answer.collections:[];
-        const sharedCollections=guessedCollections.filter(name=>answerCollections.some(other=>normalize(name)===normalize(other)));
-        const collectionHint={state:!guessedCollections.length || !answerCollections.length?'unknown':sharedCollections.length?'correct':'wrong',hint:!guessedCollections.length?'Sammlung für dieses Album nicht verfügbar':!answerCollections.length?'Sammlungsabgleich für dieses Tagesrätsel nicht verfügbar':sharedCollections.length?`Gleiche Sammlung: ${sharedCollections.join(', ')}`:'Keine gemeinsame Sammlung mit dem gesuchten Album'};
-        const values={title:album.title,artist:album.artist,year:album.year || '—',genres:hints.genres.matches.join(', '),format:album.format || '—',collection:guessedCollections.length?guessedCollections.join(', '):'—'};
-        for(const field of ['title','artist','year','genres','format','collection']){const hint=field==='collection'?collectionHint:hints[field],cell=el('td',`vordle-cell is-${hint.state}`);cell.setAttribute('data-label',({title:'Album',artist:'Artist',year:'Jahr',genres:'Genre',format:'Format',collection:'Sammlung'})[field]+(field==='title'?` · ${guessIndex+1}`:''));cell.setAttribute('aria-label',`${values[field]}: ${{correct:'Passt',partial:'Teilweise passend',wrong:'Passt nicht',unknown:'Unbekannt'}[hint.state]}. ${hint.hint}`);cell.title=`${values[field]} · ${hint.hint}`;cell.append(el('span','vordle-cell-value',values[field]),el('span',`vordle-cell-mark${hint.tone?' is-'+hint.tone:''}`,hint.arrow || {correct:'✓',partial:'≈',wrong:'×',unknown:'–'}[hint.state]));if(field==='title' && guessIndex>=current.official.length)cell.append(el('small','vordle-practice-tag','Weiterspielen'));row.append(cell);}tbody.append(row);
-      }
+      renderGuessRows(tbody,guesses,state.catalogue,state.day?.answer,current.official.length);
       gridWrap.scrollTop=0;
       solution.hidden=!current.uncovered;solution.replaceChildren();
       if(current.uncovered){const album=state.day.answer;solution.append(el('strong',null,album.title),el('span','vordle-solution-artist',album.artist));if(album.collections?.length)solution.append(el('span','vordle-solution-collections',`Im Besitz bei: ${album.collections.join(', ')}`));}
       reveal.hidden=current.uncovered || !current.lost;reveal.classList.toggle('is-practicing',current.practicing);reveal.replaceChildren();
       if(current.uncovered){
-        sub.textContent=state.score?.solved?`Gefunden in ${current.official.length}/${MAX_GUESSES} Versuchen`:current.practiceSolved?`Gefunden nach ${guesses.length} Versuchen · X/${MAX_GUESSES}`:`Aufgedeckt nach ${guesses.length} Versuchen · X/${MAX_GUESSES}`;
-        setStatus(state.score?.solved?'Dein Ergebnis ist gespeichert. Vergleiche dich mit den anderen Spielern.':`Dein gewertetes Ergebnis bleibt X/${MAX_GUESSES}.`);
+        setStatus(state.score?.solved?'':`Dein gewertetes Ergebnis bleibt X/${MAX_GUESSES}.`);
       } else if(current.lost){
         reveal.append(el('strong',null,current.practicing?'Weiterspielen ohne Wertung':'Zehn Versuche gespielt – die Lösung bleibt verborgen.'),el('p',null,`Gewertetes Ergebnis: X/${MAX_GUESSES}. Zusätzliche Tipps verändern die Rangliste nicht.`));
         if(!current.practicing){const keepPlaying=el('button','vordle-continue','Weiterspielen');keepPlaying.type='button';keepPlaying.onclick=()=>{state.practice.active=true;savePractice();clearSelection();render();input.focus();};reveal.append(keepPlaying);}
         if(current.practicing){const uncover=el('button','vordle-uncover','Lösung aufdecken');uncover.type='button';uncover.onclick=()=>{state.practice.revealed=true;state.practice.active=false;savePractice();clearSelection();render();void syncPracticeResult();};reveal.append(uncover);}
         setStatus(current.practicing?`${guesses.length} Versuche insgesamt · Endlosmodus`:'10 Versuche erreicht · Weiterspielen möglich.');
-      } else if(!state.loading && state.day)setStatus(`${guesses.length} von ${MAX_GUESSES} Versuchen · Welches Album ist es?`);
+      } else if(!state.loading && state.day)setStatus('');
       renderRanking();
     }
     async function submitGuess(event){event.preventDefault();if(state.busy || state.loading || !state.selected || !canGuess())return;
@@ -376,7 +475,7 @@
         const ref=dayRef(day.day).collection('scores').doc(user.uid);
         const saved=await track(db.runTransaction(async transaction=>{const existing=await transaction.get(ref);const result=nextScore(existing.exists?existing.data():null,album.id,day.answer.id,user,day.day,partId);transaction.set(ref,{...result,updatedAt:serverTimestamp()});return result;}));
         if(!sameUser(user.uid,epoch) || state.day?.day!==day.day)return;
-        state.score=saved;state.scores=state.scores.filter(score=>score.uid!==user.uid).concat(saved);clearSelection();input.value='';suggestions.hidden=true;render();
+        state.score=saved;state.historyReady=false;state.scores=state.scores.filter(score=>score.uid!==user.uid).concat(saved);clearSelection();input.value='';suggestions.hidden=true;render();
         if(saved.solved)void loadScores(true);
         if(!saved.solved && saved.attempts<MAX_GUESSES)input.focus();
       }catch(error){
@@ -397,11 +496,11 @@
       }catch(error){if(sameUser(uid,epoch)){setStatus(errorMessage(error),true);retry.hidden=false;}}
       finally{if(sameUser(uid,epoch)){state.loading=false;input.disabled=retry.hidden===false || !canGuess();}}
     }
-    function reset(){state.epoch++;clearTimeout(state.timer);state.day=null;state.dayPromise=null;state.cataloguePromise=null;state.rankingPromise=null;state.score=null;state.scores=[];state.practiceResults.clear();state.selected=null;state.catalogue=[];state.catalogueDay=null;state.catalogueStamp=null;state.parts.clear();state.loading=false;state.busy=false;state.open=false;clearPractice();if(dialog.open)dialog.close();}
+    function reset(){state.epoch++;state.rankingLoadedDay=null;state.historyEpoch++;state.history=[];state.historyView=[];state.historyReady=false;state.historyUid=null;state.historyLoading=false;state.historyCatalogues.clear();historyList.replaceChildren();historyDetail.replaceChildren();statistics.replaceChildren();clearTimeout(state.timer);state.day=null;state.dayPromise=null;state.cataloguePromise=null;state.rankingPromise=null;state.score=null;state.scores=[];state.practiceResults.clear();state.selected=null;state.catalogue=[];state.catalogueDay=null;state.catalogueStamp=null;state.parts.clear();state.loading=false;state.busy=false;state.open=false;clearPractice();if(dialog.open)dialog.close();}
     dialog.addEventListener('close',()=>{state.open=false;suggestions.hidden=true;});
     document.getElementById('vordleLaunch')?.addEventListener('click',()=>void open());
     document.addEventListener('visibilitychange',()=>{if(!document.hidden && getUser()?.uid && state.day?.day!==dayKey())void (state.open?open():prewarm());});
     return {open,prewarm,reset,state};
   }
-  global.Vordle={initialHint,validCoverUrl,coverBlur,gameProgress,create,dayKey,dayBounds,albumIdentity,candidateFromItem,deduplicateCandidates,catalogueFromItems,catalogueParts,feedback,nextScore,MAX_GUESSES};
+  global.Vordle={playerStatistics,scoreRank,previousDay,initialHint,validCoverUrl,coverBlur,gameProgress,create,dayKey,dayBounds,albumIdentity,candidateFromItem,deduplicateCandidates,catalogueFromItems,catalogueParts,feedback,nextScore,MAX_GUESSES};
 })(globalThis);

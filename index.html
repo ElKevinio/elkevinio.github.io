@@ -1751,7 +1751,7 @@
     position:fixed;
     right:18px;
     bottom:18px;
-    z-index:2147483647;
+    z-index:90;
     width:min(400px, calc(100vw - 24px));
     padding:10px 12px 12px;
     border:1px solid var(--border-strong);
@@ -7235,7 +7235,7 @@
 .album-listening-dock .album-mini-topbar [data-discogs-track-mapping] { display:none !important; }
 /* Queue is an independent sheet above the player, not part of its drag/scroll surface. */
 body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
-  position:fixed; z-index:2147483647; right:18px;
+  position:fixed; z-index:91; right:18px;
   bottom:var(--album-queue-bottom, 210px);
   width:min(400px,calc(100vw - 24px)); min-width:0;
   height:var(--album-queue-height, min(45dvh, 360px));
@@ -7346,6 +7346,140 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     .vinyl-editor-command-row { gap:4px; margin:6px 0 10px; }
     .vinyl-editor-command-row button { padding:7px 4px; font-size:11px; }
   }
+
+  /* Layout audit: accessible dialog actions and bounded floating controls. */
+  .modal-overlay, #authOverlay { box-sizing:border-box; }
+  .auth-box { box-sizing:border-box; max-height:calc(100dvh - 24px); overflow-y:auto; }
+  .user-card-uid { display:none; }
+  .genre-chip-remove { width:32px !important; min-width:32px !important; height:32px !important; min-height:32px !important; display:inline-flex; align-items:center; justify-content:center; font-size:18px; }
+  .album-editor-form .genre-chip-input, .album-editor-form .name-chip-field { height:auto; min-height:44px; max-height:120px; flex-wrap:wrap; overflow-y:auto; overflow-x:hidden; }
+  .album-editor-form .genre-chip { white-space:normal; overflow-wrap:anywhere; }
+  .modal-box { box-sizing:border-box; max-height:calc(100dvh - 24px); overflow-y:auto; overscroll-behavior:contain; }
+  .modal-overlay .icon-btn, .discogs-label-image-dialog [aria-label$="schließen"],
+  .vinyl-layer-actions button, .storage-order-item-actions button, .storage-order-direction,
+  .album-queue-item-actions button, .listening-provider-actions button {
+    display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+    min-width:36px; min-height:36px; padding:0; line-height:1;
+  }
+  .icon-btn svg, .vinyl-layer-actions svg, .storage-order-direction svg,
+  .album-queue-item-actions svg, .listening-provider-actions svg { display:block; flex-shrink:0; margin:auto; }
+  .album-editor-box > .album-editor-heading { position:sticky; top:-14px; z-index:3; background:var(--surface-2); padding:8px 0; }
+  .album-editor-form .form-actions { position:sticky; bottom:-14px; z-index:2; background:var(--surface-2); padding:8px 0; }
+  .modal-overlay .modal-title, .discogs-label-image-dialog h2 { min-width:0; overflow-wrap:anywhere; }
+  .spotify-import-options { display:block; }
+  .spotify-import-options > summary { cursor:pointer; min-height:44px; padding:10px 0; font-size:13px; }
+  .spotify-import-options > summary span { margin-left:8px; color:var(--text-muted); font-size:12px; }
+  .spotify-import-options-content { display:flex; flex-direction:column; gap:10px; padding:8px 0; min-width:0; }
+  #spotifyPlaylistImportOverlay .spotify-import-box:has(#spotifyImportOptions:not([hidden])) > .spotify-playlist-toolbar { display:none; }
+  .settings-panel.open { max-height:calc(100dvh - 72px); scrollbar-gutter:stable; }
+  .settings-primary-actions .icon-btn:empty { display:none; }
+  .editor-help { margin:8px 0; color:var(--text-secondary); font-size:12px; }
+  .editor-help summary { cursor:pointer; padding:8px 0; min-height:36px; box-sizing:border-box; }
+  .editor-help p { line-height:1.5; margin:6px 0; }
+  .vinyl-label-detail-row > .editor-help { grid-column:1 / -1; margin:0; }
+  .vinyl-discogs-suggestion:has(.settings-panel-hint:empty) { display:none; }
+  .vinyl-editor-box > .vinyl-editor-toolbar { flex-wrap:nowrap; align-items:flex-start; }
+  .vinyl-editor-box > .vinyl-editor-toolbar > div { min-width:0; flex:1; }
+  .vinyl-editor-command-row { flex-wrap:nowrap; }
+  .vinyl-editor-command-row button { min-height:36px; }
+  .vinyl-layer-detail-row { grid-template-columns:repeat(auto-fit,minmax(76px,1fr)); }
+  .vinyl-layer-detail-row input[type="number"], .vinyl-layer-detail-row select { min-height:36px; }
+  .vinyl-layer-main-row { display:flex; flex-wrap:wrap; gap:8px; }
+  .vinyl-layer-main-row > label:has(select) { flex:1 1 140px; }
+  .vinyl-layer-main-row > label:has(input[type="color"]) { flex:0 0 44px; }
+  .vinyl-layer-main-row .vinyl-layer-count { flex:0 0 68px; }
+  .vinyl-layer-actions { display:flex; align-items:center; gap:4px; margin-left:auto; }
+  .vinyl-layer-main-row select, .vinyl-layer-main-row input { min-height:36px; }
+  .vinyl-editor-footer { flex-wrap:wrap; gap:8px; }
+  .discogs-label-image-dialog { padding:16px; max-height:calc(100dvh - 24px); scrollbar-gutter:stable; }
+  .discogs-label-image-dialog > .vinyl-editor-toolbar { position:sticky; top:-16px; z-index:2; background:var(--surface-2); padding:10px 0; }
+  .discogs-label-image-dialog > .vinyl-editor-footer { position:sticky; bottom:-16px; z-index:2; background:var(--surface-2); padding:10px 0; }
+  .album-mini-track { min-height:36px; }
+  .album-listening-dock { max-height:calc(100dvh - 24px); }
+  .album-listening-dock.is-expanded .album-mini-tracklist { max-height:max(48px,calc(100dvh - 280px)); }
+  .album-queue-panel { max-height:min(55dvh,calc(100dvh - 230px)); overflow-y:auto; }
+  .storage-order-item-actions { flex-shrink:0; }
+  .storage-result-genre { grid-column:1 / -1; }
+  .storage-result-facts dd { word-break:normal; overflow-wrap:break-word; }
+  #bulkEditModal { box-sizing:border-box; max-height:calc(100dvh - 24px) !important; }
+  #bulkEditModal > div:last-child { position:sticky; bottom:-24px; padding:12px 0; background:var(--surface-2); }
+  #shelfLocationsOverlay .modal-box { max-width:620px; }
+  .shelf-location-row .shelf-name-input { width:100%; min-width:0; }
+  .shelf-location-row .storage-dimension-control input { min-height:36px; }
+  @media (max-width:900px), (pointer:coarse) {
+    .modal-overlay button, .discogs-label-image-dialog button { min-height:44px; }
+    .modal-overlay .icon-btn, .vinyl-layer-actions button, .storage-order-item-actions button,
+    .storage-order-direction, .album-queue-item-actions button, .listening-provider-actions button,
+    .fullscreen-player-top-actions .icon-btn { min-width:44px; min-height:44px; }
+    .modal-overlay select, .modal-overlay input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    .vinyl-layer-main-row select, .vinyl-layer-detail-row input[type="number"] { min-height:44px; }
+    .spotify-import-options[open] .spotify-import-options-content { max-height:180px; overflow:auto; padding-right:4px; }
+    .genre-chip-remove { width:36px !important; min-width:36px !important; height:36px !important; min-height:36px !important; }
+    .album-mini-track { min-height:44px; }
+    #bulkEditModal button, #bulkEditModal select, #bulkEditModal input:not([type="checkbox"]) { min-height:44px; }
+    .album-mini-topbar { flex-wrap:wrap; }
+    .album-queue-item-actions { gap:4px; }
+    .album-queue-item-actions button { width:44px; height:44px; }
+    .vinyl-layer-detail-row { grid-template-columns:repeat(auto-fit,minmax(94px,1fr)); gap:8px; }
+    .vinyl-layer-main-row > label:has(select) { flex-basis:160px; }
+    .vinyl-layer-actions button { width:44px; height:44px; }
+    .vinyl-editor-command-row button { min-height:44px; }
+    .settings-panel button:not(.icon-btn), .docs-panel button { min-height:44px; }
+    #logoutBtn, #cloudSyncIndicator { width:44px; min-width:44px; height:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+    .fullscreen-player-controls > .album-mini-control { min-width:44px; min-height:44px; }
+    .album-listening-dock .album-mini-topbar { gap:4px; }
+    .album-listening-dock .album-mini-topbar button, .album-listening-dock .album-mini-topbar a { min-width:40px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+    .listening-provider-row { flex-wrap:wrap; }
+    .listening-provider-actions { margin-left:auto; }
+    .shelf-location-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px !important; }
+    .shelf-location-row > .shelf-name-input { grid-column:1 / 3; }
+    .shelf-location-row > .remove-shelf-btn { grid-column:3; grid-row:1; }
+    .shelf-location-row .storage-dimension-control { min-width:0; }
+    .shelf-location-row .storage-dimension-control input { min-width:0; width:100%; }
+    .shelf-location-new { grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; }
+    .shelf-location-new > label:first-child, .shelf-location-new > button { grid-column:1 / -1; }
+    .storage-compartment-header { flex-wrap:wrap; min-height:44px; }
+    .storage-compartment-header button, .storage-shelf-header button, .storage-order-drag-handle { min-width:36px; min-height:36px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+    .fullscreen-player-top-actions { max-width:calc(100% - 16px); overflow-x:auto; justify-content:flex-start; padding-bottom:4px; }
+    #closeFullscreenPlayerBtn { position:sticky; right:0; z-index:2; background:var(--surface-2); }
+    .fullscreen-player-menu-item-actions button { min-width:44px; min-height:44px; }
+    .fullscreen-player-menu-heading button, .room-settings-heading button { min-width:44px; min-height:44px; }
+    .room-settings-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  }
+  @media (orientation:landscape) and (max-height:520px) {
+    .modal-overlay { padding:8px; }
+    .modal-box { max-height:calc(100dvh - 16px); }
+    .album-listening-dock.is-expanded { max-height:calc(100dvh - 24px); overflow-y:auto; overscroll-behavior:contain; }
+    .album-queue-panel { max-height:calc(100dvh - 220px); }
+    .spotify-import-box { height:calc(100dvh - 16px); max-height:calc(100dvh - 16px); padding:12px; }
+    .spotify-import-box h2 { font-size:18px; margin:0 0 4px !important; }
+    .spotify-import-box .spotify-playlist-import-status { font-size:12px; margin:2px 0; }
+    #spotifyPlaylistImportOverlay .spotify-import-box:has(#spotifyImportOptions:not([hidden])) {
+      display:grid; grid-template-columns:minmax(220px,.8fr) minmax(0,1.4fr); grid-template-rows:auto auto 44px minmax(80px,1fr) auto; gap:6px 12px;
+    }
+    #spotifyPlaylistImportOverlay h2, #spotifyPlaylistImportStatus { grid-column:1 / -1; }
+    #spotifyPlaylistImportOverlay .spotify-import-searchrow { grid-column:2; grid-row:3; margin:0; }
+    #spotifyPlaylistImportOverlay #spotifyImportOptions { grid-column:1; grid-row:3 / 5; overflow-y:auto; padding:0 4px 0 0; min-height:0; gap:8px; }
+    #spotifyPlaylistImportOverlay #spotifyImportScroll { grid-column:2; grid-row:4; margin:0; }
+    #spotifyPlaylistImportOverlay .spotify-import-box:has(#spotifyImportOptions:not([hidden])) > .spotify-playlist-toolbar { display:none; }
+    #spotifyPlaylistImportOverlay .modal-actions { grid-column:1 / -1; grid-row:5; margin:0; }
+    .spotify-import-sort { font-size:11px; }
+    .spotify-import-destination { gap:6px; }
+    .spotify-import-destination label { flex-basis:100%; }
+    .storage-result-facts { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .storage-result-facts .storage-result-genre { grid-column:1 / -1; }
+    .vinyl-editor-box:not(.is-picture-disc) .vinyl-editor-layout { grid-template-rows:minmax(0,1fr); }
+    .vinyl-editor-box .vinyl-editor-controls { overflow-y:auto; }
+    .vinyl-editor-box .vinyl-editor-preview { overflow-y:auto; align-content:start; align-items:start; }
+    .vinyl-editor-box .vinyl-editor-preview .vinyl-editor-meta { align-self:start; }
+    .vinyl-editor-command-row { margin:4px 0 8px; gap:4px; }
+    .vinyl-editor-command-row .command-long { display:none; }
+    .vinyl-editor-command-row .command-short { display:inline; }
+    .discogs-label-image-dialog { padding:12px; }
+    .discogs-label-image-dialog .discogs-label-image-choices img { height:80px; }
+    .fullscreen-player-menu { top:64px; }
+  }
+
 </style>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -7584,7 +7718,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
           <div id="listeningSettingsBlock">
           <p class="settings-panel-title">OBS-Export</p>
           <button type="button" id="startObsExport">OBS-Export starten</button>
-          <p class="settings-panel-hint">In OBS eine Fensteraufnahme hinzufügen und „Vinyl · OBS Export“ auswählen. Empfohlen: 1200 × 320. Zeigt Plattenspieler, Cover, Titel und Interpret live. Musikseite und Exportfenster geöffnet lassen. Die Audioquelle richtest du separat in OBS ein.</p>
+          <details class="editor-help"><summary>OBS einrichten</summary><p class="settings-panel-hint">In OBS eine Fensteraufnahme hinzufügen und „Vinyl · OBS Export“ auswählen. Empfohlen: 1200 × 320. Zeigt Plattenspieler, Cover, Titel und Interpret live. Musikseite und Exportfenster geöffnet lassen. Die Audioquelle richtest du separat in OBS ein.</p></details>
           <p id="obsExportStatus" class="settings-panel-hint" role="status"></p>
           <p class="settings-panel-title">Album anhören</p>
           <div class="listening-provider-list" id="listeningProviderList">
@@ -7972,7 +8106,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
       <button type="button" class="icon-btn" id="spotifyImportBackBtn" title="Zurück zu den Playlisten" aria-label="Zurück zu den Playlisten" hidden>‹</button>
       <input id="spotifyImportSearch" type="search" placeholder="Playlisten durchsuchen …" autocomplete="off" spellcheck="false" aria-label="Playlisten oder Alben durchsuchen">
     </div>
-    <section id="spotifyImportOptions" class="spotify-import-options" aria-label="Importoptionen" hidden>
+    <details id="spotifyImportOptions" class="spotify-import-options" aria-label="Importoptionen" hidden><summary>Filter &amp; Importziel <span id="spotifyImportSelectionCount" aria-live="polite"></span></summary><div class="spotify-import-options-content">
       <div class="spotify-import-types" role="group" aria-label="Veröffentlichungen filtern">
         <button type="button" data-spotify-import-type="all" aria-pressed="true">Alle</button>
         <button type="button" data-spotify-import-type="album" aria-pressed="false">Nur Alben</button>
@@ -7987,13 +8121,13 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
           <option value="playlist">Playlist-Reihenfolge</option>
         </select>
       </label>
-      <div class="spotify-import-selection"><button type="button" id="spotifyImportSelectVisible">Sichtbare auswählen</button><button type="button" id="spotifyImportSelectNone">Auswahl aufheben</button><span id="spotifyImportSelectionCount" aria-live="polite"></span></div>
+      <div class="spotify-import-selection"><button type="button" id="spotifyImportSelectVisible">Sichtbare auswählen</button><button type="button" id="spotifyImportSelectNone">Auswahl aufheben</button></div>
       <div class="spotify-import-destination">
         <label>Importieren als<select id="spotifyImportOwnership"><option value="wishlist">Wunschliste</option><option value="owned">Im Besitz</option></select></label>
         <label>Regal<select id="spotifyImportShelf"><option value="">Kein Regal zuordnen</option></select></label>
         <label>Fach<select id="spotifyImportCompartment" disabled><option value="">Fach wählen</option></select></label>
       </div>
-    </section>
+    </div></details>
     <div class="spotify-import-scroll" id="spotifyImportScroll">
       <div id="spotifyPlaylistList" class="spotify-playlist-list"></div>
       <div id="spotifyPlaylistAlbums" class="spotify-album-list" hidden></div>
@@ -8636,13 +8770,13 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
             <label>Zoom<input type="range" id="cdPictureZoomInput" min="0.5" max="6" step="0.05" value="1"><output id="cdPictureZoomValue">1×</output></label>
             <label>Drehung<input type="range" id="cdPictureRotationInput" min="-180" max="180" step="1" value="0"><output id="cdPictureRotationValue">0°</output></label>
           </div>
-          <p class="settings-panel-hint" style="margin:0;">Das ganze Bild bleibt beim Bearbeiten erhalten. Discogs-Fotos werden als Bild-Link mit Ausschnitt und Drehung gespeichert. Bei hochgeladenen Bildern kannst du zusätzlich mit dem Farbmarker eine Farbe aufnehmen. Ziehen zum Verschieben · Mausrad oder Trackpad-Pinch zum Zoomen · auf dem Handy mit zwei Fingern zoomen.</p>
+          <details class="editor-help"><summary>Bild ausrichten · Hilfe</summary><p class="settings-panel-hint" style="margin:0;">Das ganze Bild bleibt beim Bearbeiten erhalten. Discogs-Fotos werden als Bild-Link mit Ausschnitt und Drehung gespeichert. Bei hochgeladenen Bildern kannst du zusätzlich mit dem Farbmarker eine Farbe aufnehmen. Ziehen zum Verschieben · Mausrad oder Trackpad-Pinch zum Zoomen · auf dem Handy mit zwei Fingern zoomen.</p></details>
           <p class="cd-picture-status" id="cdPictureStatus" aria-live="polite"></p>
         </div>
         <div class="vinyl-editor-actions">
           <button type="button" id="addVinylLayerBtn" class="small primary">+ Effekt-Ebene</button>
         </div>
-<p class="settings-panel-hint" id="shapeDragHint">Form-Ebene anklicken und die Form in der Vorschau ziehen. Position und Größe lassen sich auch über die Felder einstellen.</p><div id="vinylLayerList" class="vinyl-editor-layer-list"></div>
+<details class="editor-help"><summary>Bedienhilfe</summary><p class="settings-panel-hint" id="shapeDragHint">Form-Ebene anklicken und die Form in der Vorschau ziehen. Position und Größe lassen sich auch über die Felder einstellen.</p></details><div id="vinylLayerList" class="vinyl-editor-layer-list"></div>
       </section>
     </div>
     <div class="vinyl-editor-footer">
@@ -8727,7 +8861,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
       </div>
       <div class="wash-mode-actions">
         <button type="button" id="listenToWashAlbumBtn">Anhören</button>
-        <button type="button" id="markWashCompartmentBtn">Ganzes Fach als gewaschen markieren</button>
+        <button type="button" id="markWashCompartmentBtn" title="Ganzes Fach als gewaschen markieren" aria-label="Ganzes Fach als gewaschen markieren">Fach gewaschen</button>
         <button type="button" id="switchWashCompartmentBtn" hidden>Fach wechseln</button>
         <button type="button" id="markVinylWashedBtn" class="primary">Gewaschen</button>
         <button type="button" id="endWashModeBtn">Waschen beenden</button>
@@ -8772,7 +8906,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
             <dl class="storage-result-facts">
               <div class="wide"><dt>Lagerort</dt><dd id="storageResultLocation"></dd></div>
               <div><dt>Jahr</dt><dd id="storageResultYear"></dd></div>
-              <div><dt>Genre</dt><dd id="storageResultGenre"></dd></div>
+              <div class="storage-result-genre"><dt>Genre</dt><dd id="storageResultGenre"></dd></div>
               <div><dt>Format</dt><dd id="storageResultFormat"></dd></div>
               <div><dt>Zustand</dt><dd id="storageResultCondition"></dd></div>
             </dl>
@@ -8805,7 +8939,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
       <button type="button" id="closeShelfLocationsBtn" class="icon-btn" title="Schließen" aria-label="Schließen">✕︎</button>
     </div>
     <div id="shelfLocationsList" style="display:grid; gap:8px; margin:14px 0;"></div>
-    <div style="display:grid; grid-template-columns:minmax(0,1fr) 88px 88px auto; align-items:end; gap:8px;">
+    <div class="shelf-location-new" style="display:grid; grid-template-columns:minmax(0,1fr) 88px 88px auto; align-items:end; gap:8px;">
       <label style="font-size:12px; color:var(--text-secondary);">Regalname<input type="text" id="newShelfName" placeholder="z. B. Regal Wohnzimmer" style="display:block; width:100%; margin-top:5px;"></label>
       <label style="font-size:12px; color:var(--text-secondary);">Reihen<input type="number" id="newShelfRows" min="1" max="10" value="4" style="display:block; width:100%; margin-top:5px;"></label>
       <label style="font-size:12px; color:var(--text-secondary);">Spalten<input type="number" id="newShelfColumns" min="1" max="10" value="2" style="display:block; width:100%; margin-top:5px;"></label>
@@ -13560,7 +13694,7 @@ function renderShelfLocationsManager() {
     return;
   }
   list.innerHTML = shelfLocations.map(shelf => `
-    <div data-shelf-id="${escapeHtml(shelf.id)}" style="display:grid; grid-template-columns:minmax(0,1fr) 104px 104px auto; gap:8px; align-items:center; padding:8px; border:0.5px solid var(--border); border-radius:8px;">
+    <div class="shelf-location-row" data-shelf-id="${escapeHtml(shelf.id)}" style="display:grid; grid-template-columns:minmax(0,1fr) 104px 104px auto; gap:8px; align-items:center; padding:8px; border:0.5px solid var(--border); border-radius:8px;">
       <input type="text" class="shelf-name-input" value="${escapeHtml(shelf.name)}" aria-label="Regalname">
       <label class="storage-dimension-control">Reihen <input type="number" class="shelf-rows-input" min="1" max="10" value="${shelf.rows}" aria-label="Reihen"></label>
       <label class="storage-dimension-control">Spalten <input type="number" class="shelf-columns-input" min="1" max="10" value="${shelf.columns}" aria-label="Spalten"></label>
@@ -14520,7 +14654,7 @@ function renderVinylLayerDetailControls(layer) {
       <button type="button" data-load-labels>Labels laden</button>
       ${layer.labelId ? '<button type="button" data-open-label-images>Logo auswählen …</button>' : ''}
       <label>Bildhintergrund<select data-layer-field="logoBackground"><option value="original" ${!['light','dark'].includes(layer.logoBackground) ? 'selected' : ''}>Original</option><option value="light" ${layer.logoBackground === 'light' ? 'selected' : ''}>Weiß ausblenden</option><option value="dark" ${layer.logoBackground === 'dark' ? 'selected' : ''}>Schwarz ausblenden</option></select></label>
-      <p class="settings-panel-hint">Optische Überblendung: Weiß ausblenden eignet sich für dunkle Logos, Schwarz ausblenden für helle Logos. Andere Bildfarben können sich dabei mit der Label-Farbe mischen.</p>
+      <details class="editor-help vinyl-logo-help"><summary>Hintergrund · Hilfe</summary><p class="settings-panel-hint">Optische Überblendung: Weiß ausblenden eignet sich für dunkle Logos, Schwarz ausblenden für helle Logos. Andere Bildfarben können sich dabei mit der Label-Farbe mischen.</p></details>
       <label>Platzierung<select data-layer-field="logoPosition"><option value="top" ${layer.logoPosition !== 'bottom' ? 'selected' : ''}>Oben</option><option value="bottom" ${layer.logoPosition === 'bottom' ? 'selected' : ''}>Unten</option></select></label>
       <label>Breite %<input type="number" data-layer-field="logoWidth" min="10" max="85" value="${layer.logoWidth || 50}"></label>
       <p class="settings-panel-hint" role="status">${escapeHtml(discogsLogoStatus.get(layer) || (layer.logoDataUrl || layer.logoUrl ? 'Logo gespeichert.' : 'Wähle ein Label, um sein Logo zu laden.'))}</p>

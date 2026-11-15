@@ -75,3 +75,48 @@
 /* Sammlungsspalte: grün, wenn mindestens eine Sammlung mit der Lösung übereinstimmt. */
 .vordle-grid th:last-child { width:22%; }
 .vordle-cell[data-label="Sammlung"] .vordle-cell-value { overflow-wrap:anywhere; }
+
+/* Compact header keeps the clue and guess field reachable on short screens. */
+.vordle-close { display:inline-flex; align-items:center; justify-content:center; padding:0; line-height:1; }
+.vordle-help summary { min-height:44px; display:flex; align-items:center; }
+@media (orientation:landscape) and (max-height:520px) {
+  .vordle-dialog { padding:12px; max-height:calc(100dvh - 16px); }
+  .vordle-wordmark h2 { font-size:22px; }
+  .vordle-record { width:30px; height:30px; font-size:20px; }
+  .vordle-attempts { margin:4px 0; gap:7px; }
+  .vordle-subtitle { margin:2px 0; font-size:12px; }
+  .vordle-day { margin:0 0 4px; }
+  .vordle-tabs { gap:6px; padding-bottom:4px; }
+  .vordle-tab { min-height:44px; padding:6px 12px; }
+  .vordle-cover-hint { margin:6px 0; gap:10px; }
+  .vordle-cover-frame { width:64px; height:64px; }
+  .vordle-cover-caption { display:none; }
+  .vordle-letter-hints { gap:4px; font-size:11px; }
+  .vordle-ranking-list { max-height:45dvh; }
+}
+
+/* Date, attempts and rank remain visible while browsing any Vordle view. */
+.vordle-hero { position:sticky; top:-20px; z-index:5; display:grid; grid-template-columns:auto minmax(0,1fr) 44px; gap:10px; padding:8px 0; background:var(--surface-1); border-bottom:1px solid var(--border); }
+.vordle-wordmark { grid-column:1; grid-row:1; }.vordle-close { grid-column:3; grid-row:1; }
+.vordle-header-meta { grid-column:2; grid-row:1; display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px; min-width:0; }
+.vordle-header-meta .vordle-day,.vordle-header-meta .vordle-subtitle { margin:0; white-space:nowrap; font-size:12px; }
+.vordle-header-meta .vordle-attempts { margin:0; gap:4px; }.vordle-header-meta .vordle-attempt-light { width:10px; height:10px; }
+.vordle-header-rank { color:#81d8a2; font-size:12px; font-weight:700; white-space:nowrap; }
+.vordle-status:empty { display:none; }.vordle-tabs { padding-top:8px; }.vordle-tab { min-height:44px; }
+.vordle-history { padding-top:12px; }.vordle-ranking-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.vordle-statistics { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; margin:12px 0; }
+.vordle-statistic { display:flex; flex-direction:column; gap:4px; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); }
+.vordle-statistic strong { font-size:19px; }.vordle-statistic span { font-size:10px; color:var(--text-secondary); }
+.vordle-history-layout { display:grid; grid-template-columns:155px minmax(0,1fr); gap:12px; }.vordle-history-list { display:flex; flex-direction:column; gap:6px; max-height:48dvh; overflow:auto; }
+.vordle-history-day { flex:none; min-height:54px; display:flex; flex-direction:column; gap:4px; padding:9px; border:1px solid var(--border); border-radius:7px; background:var(--surface-2); color:var(--text-primary); text-align:left; }
+.vordle-history-day span { font-size:11px; color:var(--text-secondary); }.vordle-history-day[aria-pressed=true] { border-color:var(--accent); box-shadow:inset 3px 0 var(--accent); }
+.vordle-history-detail { min-width:0; }.vordle-history-detail h3 { margin:0 0 8px; font-size:15px; }.vordle-history-answer { font-size:12px; overflow-wrap:anywhere; }
+.vordle-history-detail .vordle-grid { min-width:550px; }
+@media(max-width:600px) {
+ .vordle-hero { top:-10px; grid-template-columns:minmax(0,1fr) 44px; gap:5px 8px; }.vordle-close { grid-column:2; }.vordle-header-meta { grid-column:1/-1; grid-row:2; justify-content:flex-start; padding-bottom:4px; }
+ .vordle-daily-label { display:none; }.vordle-tab { flex:1; min-width:0; padding:7px 5px; font-size:11px !important; }
+ .vordle-statistics { grid-template-columns:repeat(3,minmax(0,1fr)); }.vordle-statistic { padding:8px; }.vordle-statistic strong { font-size:17px; }
+ .vordle-history-layout { grid-template-columns:minmax(0,1fr); }.vordle-history-list { flex-direction:row; max-height:none; padding-bottom:5px; }.vordle-history-day { min-width:120px; }
+ .vordle-history-detail .vordle-grid { min-width:0; }
+}
+@media(orientation:landscape) and (max-height:520px) { .vordle-hero { top:-12px; }.vordle-daily-label { display:none; }.vordle-statistic { padding:6px; }.vordle-statistics { margin:8px 0; } }
