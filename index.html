@@ -7278,6 +7278,14 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .fullscreen-player-controls > .album-mini-control { flex-basis:clamp(30px,8vw,44px) !important; width:clamp(30px,8vw,44px) !important; height:clamp(30px,8vw,44px) !important; }
   .fullscreen-player-controls > .album-mini-control.primary { flex-basis:clamp(42px,12vw,58px) !important; width:clamp(42px,12vw,58px) !important; height:clamp(42px,12vw,58px) !important; }
 }
+
+  .is-label-editor #vinylEditorDisc::after { display:none; }
+  .is-label-editor #cdDesignControl, .is-label-editor .vinyl-transparency-label,
+  .is-label-editor #vinylLabelColor, .is-label-editor .vinyl-editor-meta label:has(#vinylLabelColor),
+  .is-label-editor .vinyl-discogs-suggestion, .is-label-editor .vinyl-count-control,
+  .is-label-editor label:has(#vinylIndexSelect), .is-label-editor #copyVinylDesignBtn,
+  .is-label-editor #editLabelBtn, .is-label-editor #cdPictureControls { display:none !important; }
+  #vinylEditorDisc { touch-action:none; }
 </style>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -8562,7 +8570,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
           <button type="button" id="copyVinylDesignBtn" class="small">Auf andere Vinyls kopieren</button>
           <button type="button" id="addVinylLayerBtn" class="small primary">+ Effekt-Ebene</button>
         </div>
-        <div id="vinylLayerList" class="vinyl-editor-layer-list"></div>
+        <button type="button" id="editLabelBtn">Label bearbeiten</button><p class="settings-panel-hint" id="shapeDragHint">Form-Ebene anklicken und die Form in der Vorschau ziehen. Position und Größe lassen sich auch über die Felder einstellen.</p><div id="vinylLayerList" class="vinyl-editor-layer-list"></div>
       </section>
     </div>
     <div class="vinyl-editor-footer">
@@ -12607,7 +12615,7 @@ function renderWashCurrentVinyl({ entering = false } = {}) {
   disc.style.setProperty('--wash-disc-size', `${discSize}px`);
   disc.style.setProperty('--wash-label-offset', `${discSize * 0.65}px`);
   disc.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
-  disc.style.setProperty('--vinyl-label', record.labelColor);
+  disc.style.setProperty('--vinyl-label', getVinylLabelBackground(record));
   disc.style.setProperty('--vinyl-art', getVinylSvgData(record));
   const [scratchOpacity, scratchWidth] = getWashScratchSettings(conditionSelect.value);
   disc.style.setProperty('--wash-scratch-opacity', scratchOpacity);
@@ -13929,7 +13937,7 @@ function normalizeColors(colors) {
   return (Array.isArray(colors) ? colors : []).map(normalizeColor).filter(Boolean);
 }
 
-const VINYL_EFFECT_TYPES = ['VollFarbe', 'Streifen Random', 'Punkte Random', 'Quadrate Random', 'Marble Random', 'Farbe Innen', 'Liquid'];
+const VINYL_EFFECT_TYPES = ['VollFarbe', 'Streifen Random', 'Punkte Random', 'Quadrate Random', 'Marble Random', 'Farbe Innen', 'Liquid', 'Kreis', 'Quadrat', 'Rechteck', 'Halbkreis', 'Dreieck', 'Label'];
 const VINYL_EFFECT_LABELS = {
   'VollFarbe': 'Vollfarbe',
   'Streifen Random': 'Streifen',
@@ -13953,6 +13961,22 @@ function getVinylLayerLength(layer, random = createVinylRandom(layer.seed)) {
 }
 
 let vinylEditorDesign = null;
+let labelEditorDraft = null;
+let selectedShapeIndex = 0;
+const VINYL_SHAPES = ['Kreis', 'Quadrat', 'Rechteck', 'Halbkreis', 'Dreieck'];
+function editorRecord() { return labelEditorDraft || vinylEditorDesign.records[activeVinylIndex]; }
+function finishLabelEditor(save = false) {
+  if (!labelEditorDraft) return false;
+  if (save) {
+    const record = vinylEditorDesign.records[activeVinylIndex];
+    record.labelColor = labelEditorDraft.baseColor;
+    record.labelLayers = labelEditorDraft.layers;
+  }
+  labelEditorDraft = null;
+  renderVinylEditor();
+  return true;
+}
+
 let vinylEditorOriginalPictureDataUrl = '';
 let pictureColorMarker = null;
 let pictureColorMarkerMode = false;
@@ -13977,7 +14001,7 @@ function safeVinylLabelColor(value, fallback = '#ffffff') {
 }
 
 function makeDefaultVinylRecord(color = '#000000', labelColor = '#ffffff') {
-  return { baseColor: safeVinylBaseColor(color), labelColor: safeVinylLabelColor(labelColor), transparency: 0, layers: [] };
+  return { baseColor: safeVinylBaseColor(color), labelColor: safeVinylLabelColor(labelColor), transparency: 0, layers: [], labelLayers: [] };
 }
 
 function normalizeCdImageUrl(value) {
@@ -14026,11 +14050,24 @@ function normalizeVinylDesign(item) {
       records: source.records.slice(0, 8).map(record => ({
         baseColor: safeVinylBaseColor(record?.baseColor),
         labelColor: safeVinylLabelColor(record?.labelColor),
+        labelLayers: Array.isArray(record?.labelLayers) ? normalizeVinylDesign({vinylDesign:{records:[{layers:record.labelLayers}]}}).records[0].layers : [],
         transparency: Math.max(0, Math.min(100, Number(record?.transparency) || 0)),
         layers: Array.isArray(record?.layers) ? record.layers.map(layer => ({
           id: String(layer.id || Math.random().toString(36).slice(2)),
           type: VINYL_EFFECT_TYPES.includes(layer.type) ? layer.type : 'Punkte Random',
           color: safeVinylColor(layer.color),
+          ...(layer.type === 'Label' ? {
+            labelId: Math.max(0, Math.floor(Number(layer.labelId) || 0)),
+            labelName: String(layer.labelName || '').slice(0, 200),
+            logoDataUrl: safeLabelLogoData(layer.logoDataUrl),
+            logoPosition: layer.logoPosition === 'bottom' ? 'bottom' : 'top',
+            logoWidth: Math.max(10, Math.min(85, Number(layer.logoWidth) || 50))
+          } : {}),
+          x: Math.max(-100, Math.min(100, Number(layer.x) || 0)),
+          y: Math.max(-100, Math.min(100, Number(layer.y) || 0)),
+          width: Math.max(1, Math.min(200, Number(layer.width) || 50)),
+          height: Math.max(1, Math.min(200, Number(layer.height) || 50)),
+          rotation: Math.max(-180, Math.min(180, Number(layer.rotation) || 0)),
           count: Math.max(1, Math.min(100, Number(layer.count) || 12)),
           length: Math.max(1, Math.min(100, Number(layer.length) || 65)),
           lengthMin: Math.max(0, Math.min(100, Number(layer.lengthMin ?? 0) || 0)),
@@ -14136,6 +14173,10 @@ function vinylWavyCirclePath(radius, seed) {
 
 const vinylSvgCache = new Map();
 
+function safeLabelLogoData(value) {
+  return typeof value === 'string' && value.length <= 180000 && /^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(value) ? value : '';
+}
+
 function getVinylSvgData(record) {
   const cacheKey = JSON.stringify(record || { layers: [] });
   if (vinylSvgCache.has(cacheKey)) return vinylSvgCache.get(cacheKey);
@@ -14147,9 +14188,26 @@ function getVinylSvgData(record) {
     const length = getVinylLayerLength(layer);
     const start = Number(layer.startAngle) || 0;
     const end = Number(layer.endAngle ?? 360);
-    if (layer.type === 'VollFarbe') {
+    if (layer.type === 'Label' && record.labelArtwork) {
+      const image = safeLabelLogoData(layer.logoDataUrl);
+      const width = Math.max(10, Math.min(85, Number(layer.logoWidth) || 50)) * 4;
+      const y = layer.logoPosition === 'bottom' ? 244 : 64;
+      if (image) parts.push(`<image href="${image}" x="${200-width/2}" y="${y}" width="${width}" height="92" preserveAspectRatio="xMidYMid meet"/>`);
+    } else if (VINYL_SHAPES.includes(layer.type)) {
+      const x = 200 + (Number(layer.x) || 0) * 2, y = 200 + (Number(layer.y) || 0) * 2;
+      const w = Math.max(1, Math.min(200, Number(layer.width) || 50)) * 4;
+      const h = layer.type === 'Quadrat' || layer.type === 'Kreis' ? w : Math.max(1, Math.min(200, Number(layer.height) || 50)) * 4;
+      const shape = layer.type === 'Kreis' ? `<circle r="${w/2}"/>`
+        : layer.type === 'Halbkreis' ? `<path d="M ${-w/2} 0 A ${w/2} ${h/2} 0 0 1 ${w/2} 0 Z"/>`
+        : layer.type === 'Dreieck' ? `<path d="M 0 ${-h/2} L ${w/2} ${h/2} L ${-w/2} ${h/2} Z"/>`
+        : `<rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}"/>`;
+      parts.push(`<g fill="${color}" transform="translate(${x} ${y}) rotate(${Number(layer.rotation) || 0})">${shape}</g>`);
+    } else if (layer.type === 'VollFarbe') {
       const path = vinylSectorPath(198, start, end);
       if (path) parts.push(`<path d="${path}" fill="${color}"/>`);
+    } else if (layer.type === 'Liquid' && record.labelArtwork) {
+      const boundary = 400 - Math.max(0, Math.min(100, Number(layer.amount ?? 50))) * 4;
+      parts.push(`<path d="M 0 400 L 0 ${boundary} Q 100 ${boundary-24} 200 ${boundary} T 400 ${boundary} L 400 400 Z" fill="${color}"/>`);
     } else if (layer.type === 'Farbe Innen') {
       const radius = 58 + Math.max(1, Math.min(100, Number(layer.length) || 65)) * 1.38;
       const path = layer.lengthMode === 'random'
@@ -14197,6 +14255,10 @@ function getVinylSvgData(record) {
   if (vinylSvgCache.size >= 256) vinylSvgCache.delete(vinylSvgCache.keys().next().value);
   vinylSvgCache.set(cacheKey, image);
   return image;
+}
+
+function getVinylLabelBackground(record) {
+  return `${record.labelColor} ${getVinylSvgData({layers:record.labelLayers || [], labelArtwork:true})} center / cover`;
 }
 
 function getVinylLiquidMarkup(record, discStyle = 'vinyl') {
@@ -14337,6 +14399,19 @@ async function compressCdPictureFile(source, backgroundColor = '#111111') {
 }
 
 function renderVinylLayerDetailControls(layer) {
+  if (layer.type === 'Label') {
+    const choices = discogsLabelChoices.get(discogsLabelReleaseId()) || [];
+    const options = choices.map(label => `<option value="${label.id}" ${Number(layer.labelId) === label.id ? 'selected' : ''}>${escapeHtml(label.name)}${label.catno ? ' · ' + escapeHtml(label.catno) : ''}</option>`).join('');
+    const stored = layer.labelId && !choices.some(label => label.id === Number(layer.labelId)) ? `<option value="${layer.labelId}" selected>${escapeHtml(layer.labelName || 'Gespeichertes Label')}</option>` : '';
+    return `<label>Discogs-Label<select data-logo-label><option value="">Label auswählen …</option>${stored}${options}</select></label>
+      <button type="button" data-load-labels>Labels laden</button>
+      <label>Platzierung<select data-layer-field="logoPosition"><option value="top" ${layer.logoPosition !== 'bottom' ? 'selected' : ''}>Oben</option><option value="bottom" ${layer.logoPosition === 'bottom' ? 'selected' : ''}>Unten</option></select></label>
+      <label>Breite %<input type="number" data-layer-field="logoWidth" min="10" max="85" value="${layer.logoWidth || 50}"></label>
+      <p class="settings-panel-hint" role="status">${escapeHtml(discogsLogoStatus.get(layer) || (layer.logoDataUrl ? 'Logo gespeichert.' : 'Wähle ein Label, um sein Logo zu laden.'))}</p>
+      ${layer.labelId ? `<a href="https://www.discogs.com/label/${layer.labelId}" target="_blank" rel="noopener noreferrer">Label auf Discogs</a>` : ''}`;
+  }
+
+  if (VINYL_SHAPES.includes(layer.type)) return [['x','Horizontal %',-100,100,0],['y','Vertikal %',-100,100,0],['width','Breite / Durchmesser %',1,200,50],['height','Höhe %',1,200,50],['rotation','Drehung °',-180,180,0]].map(([key,label,min,max,value]) => `<label>${label}<input type="number" data-layer-field="${key}" min="${min}" max="${max}" value="${layer[key] ?? value}"></label>`).join('');
   if (layer.type === 'Liquid') {
     return `<label class="vinyl-liquid-control">Liquid-Anteil <span data-liquid-amount>${layer.amount ?? 50}%</span><input type="range" data-layer-field="amount" min="0" max="100" value="${layer.amount ?? 50}" aria-label="Liquid-Anteil"></label>`;
   }
@@ -14364,22 +14439,25 @@ function renderVinylLayerDetailControls(layer) {
 }
 
 function renderVinylEditor() {
-  const record = vinylEditorDesign.records[activeVinylIndex];
+  const record = editorRecord();
+  document.querySelector('#vinylEditorOverlay .vinyl-editor-box').classList.toggle('is-label-editor', !!labelEditorDraft);
+  document.getElementById('vinylEditorTitle').textContent = labelEditorDraft ? `Label gestalten · LP ${activeVinylIndex + 1}` : 'Vinyl gestalten';
+  document.getElementById('saveVinylEditorBtn').textContent = labelEditorDraft ? 'Label übernehmen' : 'Übernehmen';
   const preview = document.getElementById('vinylEditorDisc');
-  const isCd = isCdItem(currentDraft);
+  const isCd = !labelEditorDraft && isCdItem(currentDraft);
   const editorBox = document.querySelector('#vinylEditorOverlay .vinyl-editor-box');
   editorBox.classList.toggle('is-cd', isCd);
-  editorBox.classList.toggle('is-picture-disc', vinylEditorDesign.discStyle === 'picture-disc');
+  editorBox.classList.toggle('is-picture-disc', !labelEditorDraft && vinylEditorDesign.discStyle === 'picture-disc');
   preview.classList.toggle('is-cd', isCd);
-  preview.classList.toggle('is-picture-disc', vinylEditorDesign.discStyle === 'picture-disc');
+  preview.classList.toggle('is-picture-disc', !labelEditorDraft && vinylEditorDesign.discStyle === 'picture-disc');
   preview.style.setProperty('--picture-background', vinylEditorDesign.pictureBackgroundColor);
   preview.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
-  preview.style.setProperty('--vinyl-label', record.labelColor);
-  preview.style.setProperty('--vinyl-art', getVinylSvgData(record));
+  preview.style.setProperty('--vinyl-label', getVinylLabelBackground(record));
+  preview.style.setProperty('--vinyl-art', getVinylSvgData(labelEditorDraft ? {...record, labelArtwork:true} : record));
   const previewDesign = vinylEditorOriginalPictureDataUrl
     ? { ...vinylEditorDesign, cdImagePreviewDataUrl: vinylEditorOriginalPictureDataUrl }
     : vinylEditorDesign;
-  preview.innerHTML = `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
+  preview.innerHTML = labelEditorDraft ? '' : `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
   renderPictureColorMarker();
   const pictureImage = preview.querySelector('.cd-picture-art');
   if (pictureImage) pictureImage.addEventListener('error', () => {
@@ -14420,9 +14498,9 @@ function renderVinylEditor() {
     <div class="vinyl-layer-row" data-layer-index="${index}">
       <div class="vinyl-layer-fields">
         <div class="vinyl-layer-main-row ${layer.type === 'Liquid' ? 'vinyl-layer-liquid-main' : ''}">
-          <label class="vinyl-layer-captionless"><select data-layer-field="type" aria-label="Effekt" title="Effekt">${VINYL_EFFECT_TYPES.map(type => `<option value="${type}" ${type === layer.type ? 'selected' : ''}>${escapeHtml(getVinylEffectLabel(type))}</option>`).join('')}</select></label>
+          <label class="vinyl-layer-captionless"><select data-layer-field="type" aria-label="Effekt" title="Effekt">${VINYL_EFFECT_TYPES.filter(type => type !== 'Label' || labelEditorDraft).map(type => `<option value="${type}" ${type === layer.type ? 'selected' : ''}>${escapeHtml(getVinylEffectLabel(type))}</option>`).join('')}</select></label>
           <label class="vinyl-layer-captionless"><input type="color" data-layer-field="color" aria-label="Effektfarbe" title="Effektfarbe" value="${layer.color}"></label>
-          ${['Liquid', 'VollFarbe', 'Farbe Innen'].includes(layer.type) ? '' : `<label class="vinyl-layer-count">Anzahl<input type="number" data-layer-field="count" aria-label="Anzahl" min="1" max="100" value="${layer.count}"></label>`}
+          ${['Liquid', 'VollFarbe', 'Farbe Innen', 'Label'].includes(layer.type) ? '' : `<label class="vinyl-layer-count">Anzahl<input type="number" data-layer-field="count" aria-label="Anzahl" min="1" max="100" value="${layer.count}"></label>`}
           <div class="vinyl-layer-actions">
             <button type="button" data-layer-action="up" aria-label="Effekt nach oben verschieben" title="Nach oben" ${index === 0 || record.layers.length === 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
             <button type="button" data-layer-action="down" aria-label="Effekt nach unten verschieben" title="Nach unten" ${index === record.layers.length - 1 || record.layers.length === 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>
@@ -14438,21 +14516,21 @@ function renderVinylEditor() {
 }
 
 function updateVinylEditorPreview() {
-  const record = vinylEditorDesign.records[activeVinylIndex];
+  const record = editorRecord();
   const preview = document.getElementById('vinylEditorDisc');
-  const isCd = isCdItem(currentDraft);
+  const isCd = !labelEditorDraft && isCdItem(currentDraft);
   const editorBox = document.querySelector('#vinylEditorOverlay .vinyl-editor-box');
-  editorBox.classList.toggle('is-picture-disc', vinylEditorDesign.discStyle === 'picture-disc');
+  editorBox.classList.toggle('is-picture-disc', !labelEditorDraft && vinylEditorDesign.discStyle === 'picture-disc');
   preview.classList.toggle('is-cd', isCd);
-  preview.classList.toggle('is-picture-disc', vinylEditorDesign.discStyle === 'picture-disc');
+  preview.classList.toggle('is-picture-disc', !labelEditorDraft && vinylEditorDesign.discStyle === 'picture-disc');
   preview.style.setProperty('--picture-background', vinylEditorDesign.pictureBackgroundColor);
   preview.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
-  preview.style.setProperty('--vinyl-label', record.labelColor);
-  preview.style.setProperty('--vinyl-art', getVinylSvgData(record));
+  preview.style.setProperty('--vinyl-label', getVinylLabelBackground(record));
+  preview.style.setProperty('--vinyl-art', getVinylSvgData(labelEditorDraft ? {...record, labelArtwork:true} : record));
   const previewDesign = vinylEditorOriginalPictureDataUrl
     ? { ...vinylEditorDesign, cdImagePreviewDataUrl: vinylEditorOriginalPictureDataUrl }
     : vinylEditorDesign;
-  preview.innerHTML = `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
+  preview.innerHTML = labelEditorDraft ? '' : `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
   renderPictureColorMarker();
   updatePictureTransformControls();
   const pictureImage = preview.querySelector('.cd-picture-art');
@@ -14819,6 +14897,7 @@ document.getElementById('fReleaseType').addEventListener('change', () => {
 });
 
 function closeVinylEditor() {
+  if (finishLabelEditor(false)) return;
   pictureColorMarker = null;
   pictureColorMarkerMode = false;
   const markerButton = document.getElementById('setPictureColorMarkerBtn');
@@ -18572,7 +18651,7 @@ function applyListeningVinylAppearance(vinyl, item) {
   const design = normalizeVinylDesign(item);
   const record = getVinylRecordForItem(item);
   vinyl.className = `fullscreen-player-vinyl ${record.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${getDiscMediaClasses(item)}`.replace(/\s+/g, ' ').trim();
-  vinyl.style.cssText = `--picture-background:${design.pictureBackgroundColor};--vinyl-base:${hexToRgba(record.baseColor, 1 - record.transparency / 100)};--vinyl-label:${record.labelColor};--vinyl-art:${getVinylSvgData(record)}`;
+  vinyl.style.cssText = `--picture-background:${design.pictureBackgroundColor};--vinyl-base:${hexToRgba(record.baseColor, 1 - record.transparency / 100)};--vinyl-label:${getVinylLabelBackground(record)};--vinyl-art:${getVinylSvgData(record)}`;
   vinyl.innerHTML = `${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(record, design.discStyle)}`;
 }
 
@@ -24404,6 +24483,7 @@ albumEditorOverlay.addEventListener('click', event => {
 
 document.getElementById('openVinylEditorBtn').addEventListener('click', openVinylEditor);
 document.getElementById('closeVinylEditorBtn').addEventListener('click', () => {
+  if (labelEditorDraft) { finishLabelEditor(false); return; }
   if (vinylMigrationActive) commitVinylMigrationItem(false);
   else closeVinylEditor();
 });
@@ -24431,20 +24511,127 @@ document.getElementById('vinylMigrationIndexInput').addEventListener('keydown', 
 });
 document.getElementById('vinylEditorOverlay').addEventListener('click', event => {
   if (event.target.id !== 'vinylEditorOverlay') return;
+  if (labelEditorDraft) { finishLabelEditor(false); return; }
   if (vinylMigrationActive) commitVinylMigrationItem(false);
   else closeVinylEditor();
 });
+const discogsLabelChoices = new Map();
+const discogsLogoStatus = new WeakMap();
+const discogsLogoRequests = new WeakMap();
+function discogsLabelReleaseId() {
+  const value = document.getElementById('fDiscogsUrl')?.value.trim() || currentDraft?.discogsResourceUrl || currentDraft?.discogsUrl || '';
+  const input = parseDiscogsInput(value);
+  return input?.type === 'release' ? String(input.id) : '';
+}
+async function fetchDiscogsLogoJson(path) {
+  const token = getDiscogsToken();
+  const response = await fetch(`https://api.discogs.com/${path}${token ? '?token=' + encodeURIComponent(token) : ''}`);
+  if (!response.ok) throw new Error(`Discogs-Fehler ${response.status}. Bitte Verbindung und Discogs-Token prüfen.`);
+  return response.json();
+}
+async function loadDiscogsLabelChoices() {
+  if (!labelEditorDraft) return;
+  const draft = labelEditorDraft, id = discogsLabelReleaseId();
+  const layers = draft.layers.filter(layer => layer.type === 'Label');
+  const status = text => { for (const layer of layers) discogsLogoStatus.set(layer, text); if (labelEditorDraft === draft) renderVinylEditor(); };
+  if (!id) { status('Bitte zuerst einen konkreten Discogs-Release verknüpfen.'); return; }
+  status('Lade Labels des Releases …');
+  try {
+    if (!discogsLabelChoices.has(id)) {
+      const release = await fetchDiscogsLogoJson(`releases/${id}`);
+      const labels = (Array.isArray(release.labels) ? release.labels : []).filter(label => Number.isSafeInteger(Number(label.id)) && Number(label.id) > 0).map(label => ({id:Number(label.id),name:String(label.name || ''),catno:String(label.catno || '')}));
+      discogsLabelChoices.set(id, labels);
+    }
+    if (labelEditorDraft !== draft || discogsLabelReleaseId() !== id) return;
+    status(discogsLabelChoices.get(id).length ? 'Labels geladen. Wähle ein Label aus.' : 'Für diesen Release sind keine Labels hinterlegt.');
+  } catch (error) { if (labelEditorDraft === draft) status(error.message || 'Labels konnten nicht geladen werden.'); }
+}
+async function embedDiscogsLabelLogo(url) {
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'https:' || !/(^|\.)discogs\.com$/.test(parsed.hostname)) throw new Error('Ungültige Discogs-Bildadresse.');
+  const response = await fetch(parsed.href);
+  if (!response.ok) throw new Error('Das Logo konnte nicht geladen werden.');
+  const blob = await response.blob();
+  if (!/^image\/(png|jpeg|webp)$/.test(blob.type) || blob.size > 10000000) throw new Error('Dieses Logo-Bildformat wird nicht unterstützt.');
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const scale = Math.min(1, 384 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    let data = canvas.toDataURL('image/png');
+    if (!safeLabelLogoData(data)) data = canvas.toDataURL('image/webp', .85);
+    if (!safeLabelLogoData(data)) throw new Error('Das Logo ist zu groß zum Speichern.');
+    return data;
+  } finally { bitmap.close(); }
+}
+document.getElementById('vinylLayerList').addEventListener('click', event => {
+  if (event.target.closest('[data-load-labels]')) loadDiscogsLabelChoices();
+});
+document.getElementById('vinylLayerList').addEventListener('change', async event => {
+  if (!event.target.matches('[data-logo-label]') || !labelEditorDraft) return;
+  const draft = labelEditorDraft;
+  const layer = draft.layers[Number(event.target.closest('[data-layer-index]').dataset.layerIndex)];
+  const label = (discogsLabelChoices.get(discogsLabelReleaseId()) || []).find(label => label.id === Number(event.target.value));
+  const request = {}; discogsLogoRequests.set(layer, request);
+  if (!label) { layer.labelId = 0; layer.labelName = ''; layer.logoDataUrl = ''; discogsLogoStatus.delete(layer); renderVinylEditor(); return; }
+  layer.labelId = label.id; layer.labelName = label.name; layer.logoDataUrl = '';
+  discogsLogoStatus.set(layer, 'Lade Label-Logo …'); renderVinylEditor();
+  const active = () => labelEditorDraft === draft && draft.layers.includes(layer) && discogsLogoRequests.get(layer) === request;
+  try {
+    const detail = await fetchDiscogsLogoJson(`labels/${label.id}`);
+    const images = Array.isArray(detail.images) ? detail.images : [];
+    const image = images.find(image => image.type === 'primary') || images[0];
+    if (!image) throw new Error('Für dieses Label ist bei Discogs kein Logo hinterlegt.');
+    const data = await embedDiscogsLabelLogo(image.uri || image.resource_url || image.uri150);
+    if (!active()) return;
+    layer.logoDataUrl = data;
+    discogsLogoStatus.set(layer, 'Logo gespeichert. Der Bildhintergrund wird wie von Discogs geliefert übernommen.');
+  } catch (error) { if (active()) discogsLogoStatus.set(layer, error.message || 'Logo konnte nicht geladen werden (Netzwerk oder Bildfreigabe).'); }
+  if (active()) renderVinylEditor();
+});
+document.getElementById('editLabelBtn').addEventListener('click', () => {
+  const record = editorRecord();
+  labelEditorDraft = {baseColor:record.labelColor, labelColor:record.labelColor, transparency:0, layers:JSON.parse(JSON.stringify(record.labelLayers || []))};
+  renderVinylEditor();
+});
+document.getElementById('vinylLayerList').addEventListener('pointerdown', event => {
+  const row = event.target.closest('[data-layer-index]');
+  if (row) selectedShapeIndex = Number(row.dataset.layerIndex);
+});
+let shapeDrag = null;
+document.getElementById('vinylEditorDisc').addEventListener('pointerdown', event => {
+  if (!vinylEditorDesign || (!labelEditorDraft && vinylEditorDesign.discStyle === 'picture-disc')) return;
+  const layer = editorRecord().layers[selectedShapeIndex];
+  if (!layer || !VINYL_SHAPES.includes(layer.type)) return;
+  const disc = event.currentTarget;
+  shapeDrag = {id:event.pointerId, layer, x:event.clientX, y:event.clientY, startX:layer.x || 0, startY:layer.y || 0, size:disc.getBoundingClientRect().width};
+  disc.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+document.getElementById('vinylEditorDisc').addEventListener('pointermove', event => {
+  if (!shapeDrag || shapeDrag.id !== event.pointerId) return;
+  const d = shapeDrag;
+  d.layer.x = Math.max(-100, Math.min(100, Math.round(d.startX + (event.clientX-d.x)/d.size*200)));
+  d.layer.y = Math.max(-100, Math.min(100, Math.round(d.startY + (event.clientY-d.y)/d.size*200)));
+  for (const field of ['x','y']) {
+    const input = document.querySelector(`#vinylLayerList [data-layer-index="${selectedShapeIndex}"] [data-layer-field="${field}"]`);
+    if (input) input.value = d.layer[field];
+  }
+  scheduleVinylEditorPreview();
+});
+for (const type of ['pointerup','pointercancel']) document.getElementById('vinylEditorDisc').addEventListener(type, () => { shapeDrag = null; });
 document.getElementById('vinylBaseColor').addEventListener('input', event => {
-  vinylEditorDesign.records[activeVinylIndex].baseColor = event.target.value;
+  editorRecord().baseColor = event.target.value;
   scheduleVinylEditorPreview();
 });
 document.getElementById('vinylLabelColor').addEventListener('input', event => {
-  vinylEditorDesign.records[activeVinylIndex].labelColor = event.target.value;
+  editorRecord().labelColor = event.target.value;
   scheduleVinylEditorPreview();
 });
 document.getElementById('vinylTransparencyInput').addEventListener('input', event => {
   const transparency = Math.max(0, Math.min(100, Number(event.target.value) || 0));
-  vinylEditorDesign.records[activeVinylIndex].transparency = transparency;
+  editorRecord().transparency = transparency;
   document.getElementById('vinylTransparencyValue').textContent = `${transparency}%`;
   scheduleVinylEditorPreview();
 });
@@ -24464,7 +24651,8 @@ document.getElementById('vinylIndexSelect').addEventListener('change', event => 
   renderVinylEditor();
 });
 document.getElementById('addVinylLayerBtn').addEventListener('click', () => {
-  vinylEditorDesign.records[activeVinylIndex].layers.push({
+  selectedShapeIndex = editorRecord().layers.length;
+  editorRecord().layers.push({
     id: Math.random().toString(36).slice(2), type: 'Punkte Random', color: '#d4537e',
     count: 12, length: 65, lengthMin: 0, lengthMax: 65, lengthMode: 'fixed', sizeMode: 'random', size: 4, startAngle: 0, endAngle: 360,
     seed: hashVinylSeed(`${Date.now()}-${Math.random()}`)
@@ -24473,7 +24661,7 @@ document.getElementById('addVinylLayerBtn').addEventListener('click', () => {
   scheduleVinylEditorPreview();
 });
 document.getElementById('copyVinylDesignBtn').addEventListener('click', () => {
-  const source = vinylEditorDesign.records[activeVinylIndex];
+  const source = editorRecord();
   vinylEditorDesign.records.forEach((record, index) => {
     if (index !== activeVinylIndex) vinylEditorDesign.records[index] = JSON.parse(JSON.stringify(source));
   });
@@ -24483,13 +24671,14 @@ document.getElementById('vinylLayerList').addEventListener('input', event => {
   const field = event.target.dataset.layerField;
   if (!field) return;
   const row = event.target.closest('[data-layer-index]');
-  const layer = vinylEditorDesign.records[activeVinylIndex].layers[Number(row.dataset.layerIndex)];
+  const layer = editorRecord().layers[Number(row.dataset.layerIndex)];
   if (!layer) return;
   if (field === 'color') layer.color = safeVinylColor(event.target.value);
   else if (field === 'type') {
     layer.type = VINYL_EFFECT_TYPES.includes(event.target.value) ? event.target.value : 'Punkte Random';
     if (layer.type === 'Liquid' && layer.amount == null) layer.amount = 50;
   }
+  else if (field === 'logoPosition') layer.logoPosition = event.target.value === 'bottom' ? 'bottom' : 'top';
   else if (field === 'amount') {
     const requestedAmount = Math.max(0, Math.min(100, Number(event.target.value) || 0));
     layer.amount = Math.abs(requestedAmount - 50) <= 2 ? 50 : requestedAmount;
@@ -24502,7 +24691,8 @@ document.getElementById('vinylLayerList').addEventListener('input', event => {
   else if (event.target.type === 'number') {
     if (event.target.value === '') return;
     const parsedValue = Number(event.target.value);
-    if (Number.isFinite(parsedValue)) layer[field] = parsedValue;
+    if (Number.isFinite(parsedValue)) layer[field] = Math.max(Number(event.target.min), Math.min(Number(event.target.max), parsedValue));
+    scheduleVinylEditorPreview();
     return;
   }
   const randomLengthOption = row.querySelector('[data-layer-field="lengthMode"] option[value="random"]');
@@ -24515,12 +24705,13 @@ document.getElementById('vinylLayerList').addEventListener('change', event => {
   if (['type', 'sizeMode', 'lengthMode'].includes(field)) {
     renderVinylEditor();
     scheduleVinylEditorPreview();
+    if (field === 'type' && labelEditorDraft && editorRecord().layers.some(layer => layer.type === 'Label')) loadDiscogsLabelChoices();
     return;
   }
   if (event.target.type !== 'number') return;
   const row = event.target.closest('[data-layer-index]');
-  const layer = vinylEditorDesign.records[activeVinylIndex].layers[Number(row.dataset.layerIndex)];
-  const limits = field === 'startAngle' || field === 'endAngle' ? [0, 360]
+  const layer = editorRecord().layers[Number(row.dataset.layerIndex)];
+  const limits = field === 'logoWidth' ? [10,85] : ['x','y'].includes(field) ? [-100,100] : field === 'rotation' ? [-180,180] : ['width','height'].includes(field) ? [1,200] : field === 'startAngle' || field === 'endAngle' ? [0, 360]
     : field === 'size' ? [1, 20]
       : field === 'lengthMin' ? [0, 100] : [1, 100];
   const parsedValue = event.target.value === '' ? limits[0] : Number(event.target.value);
@@ -24539,7 +24730,7 @@ document.getElementById('vinylLayerList').addEventListener('change', event => {
 document.getElementById('vinylLayerList').addEventListener('click', event => {
   const button = event.target.closest('[data-layer-action]');
   if (!button) return;
-  const record = vinylEditorDesign.records[activeVinylIndex];
+  const record = editorRecord();
   const index = Number(button.closest('[data-layer-index]').dataset.layerIndex);
   const action = button.dataset.layerAction;
   if (action === 'remove') record.layers.splice(index, 1);
@@ -24549,6 +24740,7 @@ document.getElementById('vinylLayerList').addEventListener('click', event => {
   scheduleVinylEditorPreview();
 });
 document.getElementById('saveVinylEditorBtn').addEventListener('click', async () => {
+  if (finishLabelEditor(true)) return;
   if (vinylMigrationActive) {
     await commitVinylMigrationItem(true);
     return;
@@ -25515,7 +25707,7 @@ function renderStorageRandomResult(item) {
   disc.classList.toggle('is-picture-disc', design.discStyle === 'picture-disc');
   disc.style.setProperty('--picture-background', design.pictureBackgroundColor);
   disc.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
-  disc.style.setProperty('--vinyl-label', record.labelColor);
+  disc.style.setProperty('--vinyl-label', getVinylLabelBackground(record));
   disc.style.setProperty('--vinyl-art', getVinylSvgData(record));
   disc.innerHTML = `${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(record, design.discStyle)}`;
   document.getElementById('storageResultTitle').textContent = getDisplayName(item.title) || 'Unbekanntes Album';
@@ -27085,7 +27277,7 @@ function renderCollection() {
           ` : '';
 
       card.innerHTML = `
-        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${isCollectionVinylDirty && !isCdItem(item) ? 'is-dirty' : ''} ${getDiscMediaClasses(item)}" style="--picture-background:${vinylDesignPreview.pictureBackgroundColor};--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${vinylRecordPreview.labelColor};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="${isCdItem(item) ? 'CD-Design' : 'Vinyl-Design'}">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : `${getVinylLiquidMarkup(vinylRecordPreview, vinylDesignPreview.discStyle)}${collectionVinylEffectsMarkup}`}</div></div>
+        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${isCollectionVinylDirty && !isCdItem(item) ? 'is-dirty' : ''} ${getDiscMediaClasses(item)}" style="--picture-background:${vinylDesignPreview.pictureBackgroundColor};--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${getVinylLabelBackground(vinylRecordPreview)};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="${isCdItem(item) ? 'CD-Design' : 'Vinyl-Design'}">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : `${getVinylLiquidMarkup(vinylRecordPreview, vinylDesignPreview.discStyle)}${collectionVinylEffectsMarkup}`}</div></div>
         ${selectModeActive && allowEdit ? `<span class="multi-select-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m5 12 5 5L20 7" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : ''}
         <div class="media">
           <img src="${item.coverUrl || ''}" alt="" loading="lazy" decoding="async">
@@ -27277,7 +27469,7 @@ ${actionButtons}
             td.textContent = pVal > 0 ? (pVal.toFixed(2).replace(/\.00$/, '') + ' ' + escapeHtml(item.discogsCurrency || '€')) : '';
           } else if (col.key === 'color') {
             const discRecord = getVinylRecordForItem(item);
-            td.innerHTML = `<div class="vinyl-editor-disc table-vinyl-disc ${getDiscMediaClasses(item)}" title="${escapeHtml(getVisibleLabel(item))}" style="${getDiscPictureBackgroundStyle(item)} --vinyl-base: ${hexToRgba(discRecord.baseColor, 1 - discRecord.transparency / 100)}; --vinyl-label: ${discRecord.labelColor}; --vinyl-art: ${getVinylSvgData(discRecord)};">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(discRecord, normalizeVinylDesign(item).discStyle)}</div>`;
+            td.innerHTML = `<div class="vinyl-editor-disc table-vinyl-disc ${getDiscMediaClasses(item)}" title="${escapeHtml(getVisibleLabel(item))}" style="${getDiscPictureBackgroundStyle(item)} --vinyl-base: ${hexToRgba(discRecord.baseColor, 1 - discRecord.transparency / 100)}; --vinyl-label: ${getVinylLabelBackground(discRecord)}; --vinyl-art: ${getVinylSvgData(discRecord)};">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(discRecord, normalizeVinylDesign(item).discStyle)}</div>`;
           } else if (col.key === 'status') {
             td.innerHTML = `<span class="state-pill">${item.owned ? 'Besitze ich' : 'Wunschliste'}</span>`;
           } else if (col.key === 'actions') {
