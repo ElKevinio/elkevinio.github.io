@@ -8576,6 +8576,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
           <label>Eigenes Bild hochladen<input type="file" id="cdPictureFileInput" accept="image/*"></label>
           <label>Oder Bild-Link<input type="url" id="cdPictureUrlInput" placeholder="https://…"></label>
           <div class="cd-picture-actions">
+            <button type="button" id="chooseDiscogsPictureBtn">Release-Fotos auswählen …</button>
             <button type="button" id="applyCdPictureUrlBtn">Bild-Link verwenden</button>
             <button type="button" id="resetCdPictureBtn">Cover verwenden</button>
             <button type="button" id="centerCdPictureBtn">Bild zentrieren</button>
@@ -8587,7 +8588,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
             <label>Zoom<input type="range" id="cdPictureZoomInput" min="0.5" max="6" step="0.05" value="1"><output id="cdPictureZoomValue">1×</output></label>
             <label>Drehung<input type="range" id="cdPictureRotationInput" min="-180" max="180" step="1" value="0"><output id="cdPictureRotationValue">0°</output></label>
           </div>
-          <p class="settings-panel-hint" style="margin:0;">Das ganze Bild bleibt beim Bearbeiten erhalten. Setze den Farbmarker auf einen Bildpunkt; beim Übernehmen wird der Disc-Ausschnitt gespeichert und genau dort die Farbe aufgenommen. Ziehen zum Verschieben · Mausrad oder Trackpad-Pinch zum Zoomen · auf dem Handy mit zwei Fingern zoomen.</p>
+          <p class="settings-panel-hint" style="margin:0;">Das ganze Bild bleibt beim Bearbeiten erhalten. Discogs-Fotos werden als Bild-Link mit Ausschnitt und Drehung gespeichert. Bei hochgeladenen Bildern kannst du zusätzlich mit dem Farbmarker eine Farbe aufnehmen. Ziehen zum Verschieben · Mausrad oder Trackpad-Pinch zum Zoomen · auf dem Handy mit zwei Fingern zoomen.</p>
           <p class="cd-picture-status" id="cdPictureStatus" aria-live="polite"></p>
         </div>
         <div class="vinyl-editor-actions">
@@ -14580,6 +14581,7 @@ function renderVinylEditor() {
       </div>
     </div>
   `).join('') || '<p class="settings-panel-hint">Noch keine Effekt-Ebenen. Die Platte bleibt einfarbig.</p>';
+  renderPictureColorMarker();
 }
 
 function updateVinylEditorPreview() {
@@ -14607,6 +14609,15 @@ function updateVinylEditorPreview() {
 }
 
 function renderPictureColorMarker() {
+  const linkedDiscogsPicture = !vinylEditorOriginalPictureDataUrl && !vinylEditorDesign?.cdImageDataUrl && safeDiscogsLogoUrl(vinylEditorDesign?.cdImageUrl || currentDraft?.coverUrl);
+  document.getElementById('setPictureColorMarkerBtn').disabled = !!linkedDiscogsPicture;
+  if (linkedDiscogsPicture) {
+    pictureColorMarker = null; pictureColorMarkerMode = false;
+    document.getElementById('setPictureColorMarkerBtn').textContent = 'Farbmarker setzen';
+    document.getElementById('setPictureColorMarkerBtn').setAttribute('aria-pressed','false');
+    document.getElementById('cdPictureStatus').textContent = 'Discogs-Foto verknüpft. Bild-Link, Position, Zoom und Drehung werden gespeichert. Die Farbaufnahme ist bei Discogs-Bildern nicht verfügbar.';
+  }
+
   const preview = document.getElementById('vinylEditorDisc');
   preview.querySelector('.cd-picture-color-marker')?.remove();
   preview.classList.toggle('is-picture-marker-mode', pictureColorMarkerMode);
@@ -15140,6 +15151,12 @@ async function applyVinylEditorDesignToDraft() {
       || designToApply.cdImageUrl
       || currentDraft.coverUrl
       || '';
+    const linkedDiscogsPicture = !vinylEditorOriginalPictureDataUrl && !designToApply.cdImageDataUrl && safeDiscogsLogoUrl(pictureSource);
+    if (linkedDiscogsPicture) {
+      designToApply.cdImageUrl = linkedDiscogsPicture;
+      designToApply.cdImageDataUrl = '';
+      designToApply.pictureTransform = normalizePictureTransform(designToApply.pictureTransform);
+    } else {
     if (pictureSource) {
       const croppedPicture = await cropPictureForDisc(
         pictureSource,
@@ -15162,6 +15179,7 @@ async function applyVinylEditorDesignToDraft() {
     }
     designToApply.cdImageUrl = '';
     designToApply.pictureTransform = normalizePictureTransform(null);
+    }
   }
   currentDraft.vinylDesign = designToApply;
   vinylEditorOriginalPictureDataUrl = '';
@@ -24614,6 +24632,59 @@ async function loadDiscogsLabelChoices() {
     status(discogsLabelChoices.get(id).length ? 'Labels geladen. Wähle ein Label aus.' : 'Für diesen Release sind keine Labels hinterlegt.');
   } catch (error) { if (labelEditorDraft === draft) status(error.message || 'Labels konnten nicht geladen werden.'); }
 }
+const discogsReleasePictures = new Map();
+let releasePictureDialog = null;
+let releasePictureRequest = 0;
+function selectDiscogsReleasePicture(url) {
+  const safeUrl = safeDiscogsLogoUrl(url);
+  if (!safeUrl || !vinylEditorDesign) return;
+  vinylEditorOriginalPictureDataUrl = '';
+  vinylEditorDesign.cdImageDataUrl = '';
+  vinylEditorDesign.cdImageUrl = safeUrl;
+  vinylEditorDesign.pictureTransform = normalizePictureTransform(null);
+  pictureColorMarker = null; pictureColorMarkerMode = false;
+  renderVinylEditor();
+}
+async function openDiscogsReleasePictures() {
+  if (!vinylEditorDesign) return;
+  if (!releasePictureDialog) {
+    releasePictureDialog = document.createElement('dialog');
+    releasePictureDialog.className = 'discogs-label-image-dialog';
+    releasePictureDialog.setAttribute('aria-labelledby','releasePictureTitle');
+    releasePictureDialog.innerHTML = `<div class="vinyl-editor-toolbar"><h2 id="releasePictureTitle">Discogs-Release-Fotos</h2><button type="button" data-close-release-pictures aria-label="Fotoauswahl schließen">×</button></div><p class="settings-panel-hint" data-release-status role="status"></p><div class="discogs-label-image-choices" data-release-grid></div><div class="vinyl-editor-footer"><button type="button" data-retry-release-pictures>Erneut laden</button><button type="button" data-close-release-pictures>Schließen</button></div>`;
+    releasePictureDialog.addEventListener('keydown', event => event.stopPropagation());
+    releasePictureDialog.addEventListener('close', () => { releasePictureRequest++; });
+    releasePictureDialog.addEventListener('click', event => {
+      if (event.target === releasePictureDialog || event.target.closest('[data-close-release-pictures]')) { releasePictureDialog.close(); return; }
+      if (event.target.closest('[data-retry-release-pictures]')) { discogsReleasePictures.delete(discogsLabelReleaseId()); openDiscogsReleasePictures(); return; }
+      const button = event.target.closest('[data-release-picture]');
+      if (!button) return;
+      const image = discogsReleasePictures.get(discogsLabelReleaseId())?.[Number(button.dataset.releasePicture)];
+      if (!image) return;
+      selectDiscogsReleasePicture(image.url);
+      releasePictureDialog.close();
+    });
+    document.body.append(releasePictureDialog);
+  }
+  if (!releasePictureDialog.open) releasePictureDialog.showModal();
+  const id = discogsLabelReleaseId(), design = vinylEditorDesign, request = ++releasePictureRequest;
+  const status = releasePictureDialog.querySelector('[data-release-status]'), grid = releasePictureDialog.querySelector('[data-release-grid]');
+  grid.innerHTML = '';
+  if (!id) { status.textContent = 'Bitte zuerst einen konkreten Discogs-Release verknüpfen.'; return; }
+  status.textContent = 'Lade Fotos des Releases …';
+  try {
+    if (!discogsReleasePictures.has(id)) {
+      const release = await fetchDiscogsLogoJson(`releases/${id}`);
+      discogsReleasePictures.set(id, normalizeDiscogsLabelImages(release.images));
+    }
+    if (request !== releasePictureRequest || vinylEditorDesign !== design || discogsLabelReleaseId() !== id || !releasePictureDialog.open) return;
+    const images = discogsReleasePictures.get(id);
+    status.textContent = images.length ? 'Wähle ein Foto der Platte. Danach kannst du es verschieben, drehen und zoomen.' : 'Für diesen Release sind keine Fotos verfügbar.';
+    grid.innerHTML = images.map((image,index) => `<button type="button" data-release-picture="${index}" aria-pressed="${design.cdImageUrl === image.url}"><img src="${escapeHtml(image.thumbnail)}" alt="Release-Foto ${index+1}" loading="lazy" referrerpolicy="no-referrer"><span>Foto ${index+1}${image.primary ? ' · Hauptbild' : ''}</span></button>`).join('');
+  } catch (error) { if (request === releasePictureRequest && releasePictureDialog.open) status.textContent = error.message || 'Release-Fotos konnten nicht geladen werden.'; }
+}
+document.getElementById('chooseDiscogsPictureBtn').addEventListener('click',openDiscogsReleasePictures);
+
 let labelImageDialog = null;
 let labelImageDialogLayer = null;
 function refreshLabelImageDialog() {
