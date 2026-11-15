@@ -7286,6 +7286,12 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .is-label-editor label:has(#vinylIndexSelect), .is-label-editor #copyVinylDesignBtn,
   .is-label-editor #editLabelBtn, .is-label-editor #cdPictureControls { display:none !important; }
   #vinylEditorDisc { touch-action:none; }
+
+  .discogs-label-art { position:absolute; width:30%; height:30%; left:35%; top:35%; overflow:hidden; border-radius:50%; z-index:2; pointer-events:none; }
+  .discogs-label-art.is-enlarged { inset:0; width:100%; height:100%; }
+  .discogs-label-logo { position:absolute; height:23%; object-fit:contain; }
+  .discogs-label-effect { position:absolute; inset:0; background-size:100% 100%; }
+  .vinyl-card-preview::before, .vinyl-editor-disc::before, .fullscreen-player-vinyl::before { z-index:3; }
 </style>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -14060,6 +14066,7 @@ function normalizeVinylDesign(item) {
             labelId: Math.max(0, Math.floor(Number(layer.labelId) || 0)),
             labelName: String(layer.labelName || '').slice(0, 200),
             logoDataUrl: safeLabelLogoData(layer.logoDataUrl),
+            logoUrl: safeDiscogsLogoUrl(layer.logoUrl),
             logoPosition: layer.logoPosition === 'bottom' ? 'bottom' : 'top',
             logoWidth: Math.max(10, Math.min(85, Number(layer.logoWidth) || 50))
           } : {}),
@@ -14173,6 +14180,25 @@ function vinylWavyCirclePath(radius, seed) {
 
 const vinylSvgCache = new Map();
 
+function safeDiscogsLogoUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && /(^|\.)discogs\.com$/.test(url.hostname) && !url.username && !url.password ? url.href : '';
+  } catch { return ''; }
+}
+function getLabelLayerMarkup(record, enlarged = false) {
+  const layers = enlarged ? record.layers : record?.labelLayers;
+  if (!layers?.some(layer => layer.type === 'Label' && safeDiscogsLogoUrl(layer.logoUrl))) return '';
+  const content = [...layers].reverse().map(layer => {
+    if (layer.type === 'Label' && safeDiscogsLogoUrl(layer.logoUrl)) {
+      const width = Math.max(10, Math.min(85, Number(layer.logoWidth) || 50));
+      return `<img class="discogs-label-logo" src="${escapeHtml(safeDiscogsLogoUrl(layer.logoUrl))}" alt="" referrerpolicy="no-referrer" draggable="false" style="width:${width}%;left:${50-width/2}%;top:${layer.logoPosition === 'bottom' ? 61 : 16}%;">`;
+    }
+    return `<span class="discogs-label-effect" style="background-image:${getVinylSvgData({layers:[layer],labelArtwork:true})}"></span>`;
+  }).join('');
+  return `<span class="discogs-label-art${enlarged ? ' is-enlarged' : ''}" aria-hidden="true">${content}</span>`;
+}
+
 function safeLabelLogoData(value) {
   return typeof value === 'string' && value.length <= 180000 && /^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i.test(value) ? value : '';
 }
@@ -14263,7 +14289,7 @@ function getVinylLabelBackground(record) {
 
 function getVinylLiquidMarkup(record, discStyle = 'vinyl') {
   if (discStyle === 'picture-disc') return '';
-  return (record?.layers || []).filter(layer => layer.type === 'Liquid').map(layer => {
+  return getLabelLayerMarkup(record) + (record?.layers || []).filter(layer => layer.type === 'Liquid').map(layer => {
     const amount = Math.max(0, Math.min(100, Number(layer.amount ?? 50) || 0));
     if (amount === 0) return '';
     const boundary = 400 - amount * 4;
@@ -14407,7 +14433,7 @@ function renderVinylLayerDetailControls(layer) {
       <button type="button" data-load-labels>Labels laden</button>
       <label>Platzierung<select data-layer-field="logoPosition"><option value="top" ${layer.logoPosition !== 'bottom' ? 'selected' : ''}>Oben</option><option value="bottom" ${layer.logoPosition === 'bottom' ? 'selected' : ''}>Unten</option></select></label>
       <label>Breite %<input type="number" data-layer-field="logoWidth" min="10" max="85" value="${layer.logoWidth || 50}"></label>
-      <p class="settings-panel-hint" role="status">${escapeHtml(discogsLogoStatus.get(layer) || (layer.logoDataUrl ? 'Logo gespeichert.' : 'Wähle ein Label, um sein Logo zu laden.'))}</p>
+      <p class="settings-panel-hint" role="status">${escapeHtml(discogsLogoStatus.get(layer) || (layer.logoDataUrl || layer.logoUrl ? 'Logo gespeichert.' : 'Wähle ein Label, um sein Logo zu laden.'))}</p>
       ${layer.labelId ? `<a href="https://www.discogs.com/label/${layer.labelId}" target="_blank" rel="noopener noreferrer">Label auf Discogs</a>` : ''}`;
   }
 
@@ -14457,7 +14483,7 @@ function renderVinylEditor() {
   const previewDesign = vinylEditorOriginalPictureDataUrl
     ? { ...vinylEditorDesign, cdImagePreviewDataUrl: vinylEditorOriginalPictureDataUrl }
     : vinylEditorDesign;
-  preview.innerHTML = labelEditorDraft ? '' : `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
+  preview.innerHTML = labelEditorDraft ? getLabelLayerMarkup(record, true) : `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
   renderPictureColorMarker();
   const pictureImage = preview.querySelector('.cd-picture-art');
   if (pictureImage) pictureImage.addEventListener('error', () => {
@@ -14530,7 +14556,7 @@ function updateVinylEditorPreview() {
   const previewDesign = vinylEditorOriginalPictureDataUrl
     ? { ...vinylEditorDesign, cdImagePreviewDataUrl: vinylEditorOriginalPictureDataUrl }
     : vinylEditorDesign;
-  preview.innerHTML = labelEditorDraft ? '' : `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
+  preview.innerHTML = labelEditorDraft ? getLabelLayerMarkup(record, true) : `${vinylEditorDesign.discStyle === 'picture-disc' ? getDiscArtworkMarkup(currentDraft, vinylEditorDesign.discStyle, previewDesign) : isCd ? '' : getVinylLiquidMarkup(record, vinylEditorDesign.discStyle)}`;
   renderPictureColorMarker();
   updatePictureTransformControls();
   const pictureImage = preview.querySelector('.cd-picture-art');
@@ -24546,25 +24572,6 @@ async function loadDiscogsLabelChoices() {
     status(discogsLabelChoices.get(id).length ? 'Labels geladen. Wähle ein Label aus.' : 'Für diesen Release sind keine Labels hinterlegt.');
   } catch (error) { if (labelEditorDraft === draft) status(error.message || 'Labels konnten nicht geladen werden.'); }
 }
-async function embedDiscogsLabelLogo(url) {
-  const parsed = new URL(url);
-  if (parsed.protocol !== 'https:' || !/(^|\.)discogs\.com$/.test(parsed.hostname)) throw new Error('Ungültige Discogs-Bildadresse.');
-  const response = await fetch(parsed.href);
-  if (!response.ok) throw new Error('Das Logo konnte nicht geladen werden.');
-  const blob = await response.blob();
-  if (!/^image\/(png|jpeg|webp)$/.test(blob.type) || blob.size > 10000000) throw new Error('Dieses Logo-Bildformat wird nicht unterstützt.');
-  const bitmap = await createImageBitmap(blob);
-  try {
-    const scale = Math.min(1, 384 / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    let data = canvas.toDataURL('image/png');
-    if (!safeLabelLogoData(data)) data = canvas.toDataURL('image/webp', .85);
-    if (!safeLabelLogoData(data)) throw new Error('Das Logo ist zu groß zum Speichern.');
-    return data;
-  } finally { bitmap.close(); }
-}
 document.getElementById('vinylLayerList').addEventListener('click', event => {
   if (event.target.closest('[data-load-labels]')) loadDiscogsLabelChoices();
 });
@@ -24574,8 +24581,8 @@ document.getElementById('vinylLayerList').addEventListener('change', async event
   const layer = draft.layers[Number(event.target.closest('[data-layer-index]').dataset.layerIndex)];
   const label = (discogsLabelChoices.get(discogsLabelReleaseId()) || []).find(label => label.id === Number(event.target.value));
   const request = {}; discogsLogoRequests.set(layer, request);
-  if (!label) { layer.labelId = 0; layer.labelName = ''; layer.logoDataUrl = ''; discogsLogoStatus.delete(layer); renderVinylEditor(); return; }
-  layer.labelId = label.id; layer.labelName = label.name; layer.logoDataUrl = '';
+  if (!label) { layer.labelId = 0; layer.labelName = ''; layer.logoDataUrl = ''; layer.logoUrl = ''; discogsLogoStatus.delete(layer); renderVinylEditor(); return; }
+  layer.labelId = label.id; layer.labelName = label.name; layer.logoDataUrl = ''; layer.logoUrl = '';
   discogsLogoStatus.set(layer, 'Lade Label-Logo …'); renderVinylEditor();
   const active = () => labelEditorDraft === draft && draft.layers.includes(layer) && discogsLogoRequests.get(layer) === request;
   try {
@@ -24583,10 +24590,11 @@ document.getElementById('vinylLayerList').addEventListener('change', async event
     const images = Array.isArray(detail.images) ? detail.images : [];
     const image = images.find(image => image.type === 'primary') || images[0];
     if (!image) throw new Error('Für dieses Label ist bei Discogs kein Logo hinterlegt.');
-    const data = await embedDiscogsLabelLogo(image.uri || image.resource_url || image.uri150);
+    const url = safeDiscogsLogoUrl(image.uri || image.resource_url || image.uri150);
+    if (!url) throw new Error('Für dieses Label ist keine gültige Discogs-Bildadresse hinterlegt.');
     if (!active()) return;
-    layer.logoDataUrl = data;
-    discogsLogoStatus.set(layer, 'Logo gespeichert. Der Bildhintergrund wird wie von Discogs geliefert übernommen.');
+    layer.logoUrl = url;
+    discogsLogoStatus.set(layer, 'Logo verknüpft. Der Bildhintergrund wird wie von Discogs geliefert übernommen.');
   } catch (error) { if (active()) discogsLogoStatus.set(layer, error.message || 'Logo konnte nicht geladen werden (Netzwerk oder Bildfreigabe).'); }
   if (active()) renderVinylEditor();
 });
