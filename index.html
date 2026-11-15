@@ -1351,8 +1351,8 @@
   .storage-shelf {
     width: var(--shelf-width, 420px);
     flex: 0 0 var(--shelf-width, 420px);
-    min-width: 380px;
-    min-height: 390px;
+    min-width: 300px;
+    min-height: 260px;
   }
   .storage-shelf.display-mode { min-width:0; min-height:0; }
   .storage-shelf-header {
@@ -3513,11 +3513,12 @@
   .storage-collapsed-rail .storage-shelf-group-collapsed { max-height:calc(100% - 38px); overflow:auto; }
   .storage-shelf-group-collapsed { padding:10px; border:0.5px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.025); }
   .storage-shelf-group-expanded { flex:1; min-height:0; }
-  .storage-shelf-group-expanded .storage-shelf-group-list { align-items:stretch; height:100%; min-height:0; }
+  .storage-shelf-group-expanded .storage-shelf-group-list { align-items:flex-start; height:auto; min-height:0; }
+  .storage-shelf:not(.is-collapsed) .storage-records { max-height:240px; }
   .storage-shelves-toolbar { position:sticky; left:0; z-index:4; display:flex; justify-content:flex-end; gap:8px; width:100%; padding-bottom:8px; background:var(--surface-1); }
   .storage-shelves-toggle-all { min-height:32px; padding:5px 9px; font-size:12px; }
   .storage-placement-mode-toggle { min-height:32px; padding:5px 9px; font-size:12px; }
-  .storage-shelf-zoom-controls { display:none; }
+  .storage-shelf-zoom-controls { display:flex; align-items:center; gap:6px; }
   .storage-placement-mode-toggle[aria-pressed="true"] { color:var(--accent); border-color:var(--accent-border); background:var(--accent-bg); }
   .storage-layout.storage-item-dragging.storage-placement-mode .storage-shelf:not(.is-collapsed) {
     width:calc(var(--shelf-columns, 1) * 148px + 24px);
@@ -3680,7 +3681,7 @@
   .storage-page #formSection { display: none !important; }
   .storage-page #collectionSearchRow { margin: 0 !important; }
   .storage-page .storage-shelf {
-    height: 100%;
+    height: max-content;
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -6398,6 +6399,16 @@
 .storage-record .listen svg { display:block; width:12px; height:12px; flex:none; }
 .storage-display-card .album-listen-card-btn { display:inline-flex; align-items:center; justify-content:center; }
 .storage-shelf:not(.is-collapsed) .storage-compartment { min-height:84px; }
+@media (min-width:721px) {
+  .storage-page .storage-shelf:not(.display-mode):not(.is-collapsed) { min-height:0; padding:8px; }
+  .storage-page .storage-shelf:not(.display-mode) .storage-compartments {
+    grid-template-rows:repeat(var(--shelf-rows,2), minmax(84px, auto));
+    gap:6px;
+    flex:0 0 auto;
+  }
+  .storage-page .storage-shelf:not(.display-mode) .storage-records { max-height:160px; }
+}
+
 @media (pointer:coarse), (max-width:720px) {
   .storage-shelf:not(.is-collapsed) .storage-compartments { grid-template-columns:repeat(var(--shelf-columns,2),minmax(96px,1fr)); grid-template-rows:repeat(var(--shelf-rows,2),minmax(110px,1fr)); }
   .storage-shelf:not(.is-collapsed) .storage-compartment { min-height:110px; min-width:96px; }
@@ -7480,6 +7491,31 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     .fullscreen-player-menu { top:64px; }
   }
 
+
+  .storage-mobile.storage-layout { display:flex !important; flex-direction:column; gap:12px; overflow:auto; height:100%; padding:2px; }
+  .storage-mobile-nav { display:flex; align-items:center; gap:10px; flex-wrap:wrap; position:sticky; top:0; z-index:4; background:var(--surface-1); padding:6px 0; }
+  .storage-mobile-nav button, .storage-mobile button { min-height:44px; }
+  .storage-mobile-destinations { display:flex; flex-direction:column; gap:8px; }
+  .storage-mobile-row { display:flex; align-items:center; gap:10px; width:100%; padding:12px; text-align:left; white-space:normal; }
+  .storage-mobile-row strong { flex:1; overflow-wrap:anywhere; }
+  .storage-mobile-row span { font-size:12px; color:var(--text-secondary); }
+  .storage-mobile-shelf, .storage-mobile-pending { border:1px solid var(--border-strong); border-radius:8px; background:var(--surface-2); }
+  .storage-mobile-pending { padding:12px; margin-top:auto; }
+  .storage-mobile-pending h3 { margin:0 0 10px; font-size:14px; }
+  .storage-mobile-items, .storage-mobile-contents { display:flex; flex-direction:column; gap:6px; }
+  .storage-mobile-compartment { flex-shrink:0; }
+  .storage-mobile-compartment:not(.storage-mobile-open) .storage-mobile-contents { display:none; }
+  .storage-mobile .storage-record { display:flex; align-items:center; width:100%; min-width:0; height:auto; min-height:58px; padding:6px; gap:8px; white-space:normal; }
+  .storage-mobile .storage-record img { width:40px; height:40px; flex-shrink:0; object-fit:cover; }
+  .storage-mobile .storage-record-copy { display:flex; flex-direction:column; min-width:0; flex:1; white-space:normal; }
+  .storage-mobile .storage-record-copy strong, .storage-mobile .storage-record-copy span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .storage-mobile .storage-record-copy span::before { content:none; }
+  .storage-mobile .storage-record button { flex-shrink:0; padding:6px; font-size:11px; }
+  .storage-mobile .storage-record .listen { display:none; }
+  .storage-mobile-moving { padding:10px; background:var(--accent-bg); border-radius:8px; font-size:13px; }
+  .storage-mobile .drag-over { outline:2px solid var(--accent); background:var(--accent-bg); }
+  .storage-mobile.storage-item-dragging .storage-mobile-contents { display:none; }
+
 </style>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -8549,7 +8585,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
 <p>Einstellungen →︎ <b>Lagerorte</b>: Regale mit Reihen × Spalten anlegen, Fächer umbenennen oder entfernen. Fachnamen werden überall angezeigt (auch im Waschmodus).</p>
 <h4>Lageransicht</h4>
 <ul>
-<li>Alben per Drag &amp; Drop (am Handy gedrückt halten) in Fächer ziehen. „Unsortiert“ zeigt Alben ohne Fach.</li>
+<li>Alben per Drag &amp; Drop (am Handy gedrückt halten) in Fächer ziehen. Mobil zeigt die Startseite eine Regalliste und darunter unsortierte Alben. Ein Album kann zuerst einem Regal und danach einem Fach zugeordnet werden – durch Ziehen oder „Verschieben“. Im Regal stehen die noch nicht einsortierten Alben unten. Beim Einsortieren werden Fächer als kompakte Namensliste angezeigt; sonst mit Inhalt. Oben führt „Regale“ zurück.</li>
 <li>Regale lassen sich ein-/ausklappen, verschieben und zoomen (+/−, am Handy auch Pinch).</li>
 <li>Im Fach öffnet der Reihenfolge-Button die <b>Sortierung</b>: Alben per Drag nach oben/unten ziehen oder mit den Pfeilen verschieben.</li>
 <li>Neben der Fachnummer startet ein kleiner Wasch-Button den Waschmodus für dieses Fach.</li>
@@ -9226,7 +9262,7 @@ function restoreCollectionViewSettings(settings) {
   storageUnsortedCollapsed = false;
   storageUnsortedAutoCollapsed = false;
   storagePaneSplit = 0.67;
-  storageShelfZoom = 1;
+  storageShelfZoom = 0.8;
   storagePlacementMode = false;
   collapsedStorageShelfIds.clear();
   initializedStorageShelfIds.clear();
@@ -26364,7 +26400,7 @@ async function showRandomStoredVinyl() {
 let storageUnsortedCollapsed = false;
 let storageUnsortedAutoCollapsed = false;
 let storagePaneSplit = 0.67;
-let storageShelfZoom = 1;
+let storageShelfZoom = 0.8;
 let storagePinchState = null;
 const storagePinchPointers = new Map();
 let storagePaneResize = null;
@@ -26491,7 +26527,7 @@ document.addEventListener('pointerup', event => {
 window.addEventListener('resize', () => applyStoragePaneLayout(activeStorageLayout));
 
 function findStorageDropTargetAt(x, y) {
-  return document.elementFromPoint(x, y)?.closest('.storage-compartment, [data-drop-unsorted]') || null;
+  return document.elementFromPoint(x, y)?.closest('.storage-compartment, [data-drop-unsorted], [data-drop-shelf-pending]') || null;
 }
 
 function scrollStoragePanesNearPointer(x, y) {
@@ -26590,7 +26626,7 @@ function bindStorageItemPointerDrag(source, item) {
         if (activeStoragePointerDrag?.pointerId !== event.pointerId) return;
         activeStoragePointerDrag.dragging = true;
         source.classList.add('storage-pointer-source');
-        if (storagePlacementMode) activeStorageLayout?.classList.add('storage-item-dragging');
+        if (storagePlacementMode || mobileStorageMedia.matches) activeStorageLayout?.classList.add('storage-item-dragging');
         activeStoragePointerDrag.preview = document.createElement('img');
         activeStoragePointerDrag.preview.className = 'storage-pointer-preview';
         activeStoragePointerDrag.preview.src = item.coverUrl || '';
@@ -26622,7 +26658,7 @@ document.addEventListener('pointermove', event => {
   if (!drag.dragging) {
     drag.dragging = true;
     drag.source.classList.add('storage-pointer-source');
-    if (storagePlacementMode) activeStorageLayout?.classList.add('storage-item-dragging');
+    if (storagePlacementMode || mobileStorageMedia.matches) activeStorageLayout?.classList.add('storage-item-dragging');
     drag.preview = document.createElement('img');
     drag.preview.className = 'storage-pointer-preview';
     drag.preview.src = drag.item.coverUrl || '';
@@ -26642,7 +26678,10 @@ document.addEventListener('pointerup', event => {
     event.preventDefault();
     const target = findStorageDropTargetAt(event.clientX, event.clientY);
     if (target && drag.item.owned) {
-      if (target.hasAttribute('data-drop-unsorted')) {
+      if (target.hasAttribute('data-drop-shelf-pending')) {
+        drag.item.shelfId = target.dataset.dropShelfPending;
+        delete drag.item.shelfCompartment;
+      } else if (target.hasAttribute('data-drop-unsorted')) {
         delete drag.item.shelfId;
         delete drag.item.shelfCompartment;
       } else {
@@ -26921,8 +26960,103 @@ function updateStorageShelfCollapseControls(board) {
   }
 }
 
+let mobileStorageShelfId = null;
+let mobileStorageMovingItemId = null;
+const mobileStorageMedia = window.matchMedia('(max-width: 720px)');
+mobileStorageMedia.addEventListener('change', () => {
+  clearStoragePointerDrag();
+  if (document.getElementById('storageBoard')?.offsetParent) renderCollection();
+});
+
+function renderMobileStorageBoard(board, visibleItems) {
+  const shelf = shelfLocations.find(entry => entry.id === mobileStorageShelfId);
+  if (!shelf) mobileStorageShelfId = null;
+  const owned = visibleItems.filter(item => item.owned);
+  const isPending = item => !isValidShelfCompartment(shelfLocations.find(entry => entry.id === item.shelfId), item.shelfCompartment);
+  const pending = owned.filter(item => isPending(item) && (shelf ? item.shelfId === shelf.id : !shelfLocations.some(entry => entry.id === item.shelfId)));
+  const movingItem = collection.find(item => item.id === mobileStorageMovingItemId && item.owned);
+  const sorting = !!movingItem || pending.some(item => !collectionFilterQuery || matchesCollectionQuery(item, collectionFilterQuery));
+  const matches = item => !collectionFilterQuery || matchesCollectionQuery(item, collectionFilterQuery);
+  const count = items => items.filter(matches).length;
+  board.innerHTML = `<div class="storage-mobile storage-layout">
+    <nav class="storage-mobile-nav" aria-label="Lagernavigation"><button type="button" data-storage-back>Regale</button>${shelf ? `<span aria-hidden="true">›</span><strong>${escapeHtml(shelf.name)}</strong>` : ''}</nav>
+    ${movingItem ? `<div class="storage-mobile-moving">„${escapeHtml(movingItem.title)}“ verschieben: Ziel antippen.<button type="button" data-storage-cancel>Abbrechen</button></div>` : ''}
+    <div class="storage-mobile-destinations"></div>
+    <aside class="storage-mobile-pending" ${shelf ? `data-drop-shelf-pending="${escapeHtml(shelf.id)}"` : 'data-drop-unsorted'}><h3>${shelf ? 'Noch keinem Fach zugeordnet' : 'Unsortiert'} <span class="storage-count">${count(pending)}</span></h3><div class="storage-mobile-items"></div></aside>
+  </div>`;
+  activeStorageLayout = board.querySelector('.storage-layout');
+  board.querySelector('[data-storage-back]').addEventListener('click', () => { mobileStorageShelfId = null; renderMobileStorageBoard(board, visibleItems); });
+  board.querySelector('[data-storage-cancel]')?.addEventListener('click', () => { mobileStorageMovingItemId = null; renderMobileStorageBoard(board, visibleItems); });
+  const destinations = board.querySelector('.storage-mobile-destinations');
+  const move = (targetShelf, number) => {
+    if (!movingItem) return;
+    if (targetShelf) assignItemToStorageLocation(movingItem, targetShelf.id, number || '');
+    else { delete movingItem.shelfId; delete movingItem.shelfCompartment; }
+    mobileStorageMovingItemId = null;
+    saveShelfLayout();
+  };
+  const appendItem = (container, item) => {
+    const tile = createStoredVinylTile(item);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Verschieben';
+    button.setAttribute('aria-label', `${item.title || 'Album'} verschieben`);
+    button.addEventListener('click', () => { mobileStorageMovingItemId = item.id; renderMobileStorageBoard(board, visibleItems); });
+    tile.appendChild(button);
+    container.appendChild(tile);
+  };
+  if (!shelf) {
+    shelfLocations.forEach(entry => {
+      const items = owned.filter(item => item.shelfId === entry.id);
+      const section = document.createElement('section');
+      section.className = 'storage-mobile-shelf';
+      section.dataset.dropShelfPending = entry.id;
+      section.innerHTML = `<button type="button" class="storage-mobile-row"><strong>${escapeHtml(entry.name)}</strong><span>${count(items)} Platten · ${count(items.filter(isPending))} unsortiert</span><span aria-hidden="true">›</span></button>`;
+      section.querySelector('button').addEventListener('click', () => {
+        if (movingItem) move(entry);
+        mobileStorageShelfId = entry.id;
+        renderMobileStorageBoard(board, visibleItems);
+      });
+      destinations.appendChild(section);
+    });
+    if (!shelfLocations.length) destinations.innerHTML = '<p class="settings-panel-hint">Lege zuerst ein Regal unter Lagerorte an.</p>';
+  } else {
+    for (let number = 1; number <= getShelfCapacity(shelf); number++) {
+      if (!isValidShelfCompartment(shelf, number)) continue;
+      const items = getStorageItemsForCompartment(shelf, number).filter(item => owned.includes(item) && matches(item));
+      const section = document.createElement('section');
+      section.className = 'storage-compartment storage-mobile-compartment';
+      section.dataset.dropShelf = shelf.id;
+      section.dataset.dropCompartment = number;
+      section.innerHTML = `<button type="button" class="storage-mobile-row"><strong>${escapeHtml(getShelfCompartmentLabel(shelf, number))}</strong><span>${items.length}</span>${movingItem ? '<span>Hier ablegen</span>' : ''}</button><div class="storage-mobile-contents"></div>`;
+      section.querySelector('button').addEventListener('click', () => {
+        if (movingItem) { move(shelf, number); return; }
+        section.classList.toggle('storage-mobile-open');
+        section.querySelector('button').setAttribute('aria-expanded', String(section.classList.contains('storage-mobile-open')));
+      });
+      section.classList.toggle('storage-mobile-open', !sorting);
+      section.querySelector('button').setAttribute('aria-expanded', String(!sorting));
+      items.forEach(item => appendItem(section.querySelector('.storage-mobile-contents'), item));
+      destinations.appendChild(section);
+    }
+  }
+  pending.filter(matches).forEach(item => appendItem(board.querySelector('.storage-mobile-items'), item));
+  if (!count(pending)) board.querySelector('.storage-mobile-items').innerHTML = '<p class="settings-panel-hint">Keine unsortierten Platten.</p>';
+  if (movingItem) {
+    const unassign = document.createElement('button');
+    unassign.type = 'button';
+    unassign.textContent = shelf ? 'In diesem Regal unsortiert ablegen' : 'Ohne Regal ablegen';
+    unassign.addEventListener('click', () => move(shelf));
+    board.querySelector('.storage-mobile-pending').appendChild(unassign);
+  }
+}
+
 function renderStorageBoard(visibleItems) {
   const board = document.getElementById('storageBoard');
+  if (window.matchMedia('(max-width: 720px)').matches) {
+    renderMobileStorageBoard(board, visibleItems);
+    return;
+  }
   shelfLocations.forEach(shelf => {
     if (!initializedStorageShelfIds.has(shelf.id)) {
       initializedStorageShelfIds.add(shelf.id);
@@ -26955,7 +27089,7 @@ function renderStorageBoard(visibleItems) {
     const capacity = getShelfCapacity(shelf);
     const shelfWidth = shelf.mode === 'display'
       ? shelf.columns * 120 + Math.max(0, shelf.columns - 1) * 8 + 25
-      : Math.max(420, shelf.columns * 210 + 36);
+      : Math.max(300, shelf.columns * 165 + 28);
     const shelfItems = collection.filter(item => item.owned && item.shelfId === shelf.id
       && isValidShelfCompartment(shelf, item.shelfCompartment));
     const compartmentMarkup = Array.from({ length: capacity }, (_, index) => {
