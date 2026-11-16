@@ -7544,70 +7544,6 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .vinyl-reference-color-dialog input[type=file] { width:100%; }
 
 
-  /* Color controls show the swatch itself rather than a second button frame. */
-  input[type="color"]:not(#accentColorInput) {
-    --color-swatch-size:36px;
-    width:var(--color-swatch-size) !important;
-    height:var(--color-swatch-size) !important;
-    min-width:var(--color-swatch-size);
-    min-height:var(--color-swatch-size);
-    padding:0 !important;
-    border:0 !important;
-    border-radius:8px;
-    background:transparent !important;
-    box-shadow:none;
-    overflow:hidden;
-    cursor:pointer;
-  }
-  input[type="color"]::-webkit-color-swatch-wrapper { padding:0; }
-  input[type="color"]::-webkit-color-swatch { border:0; border-radius:8px; }
-  input[type="color"]::-moz-color-swatch { border:0; border-radius:8px; }
-  input[type="color"]:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-  .vinyl-color-picker-row input[type="color"] { flex:0 0 var(--color-swatch-size,36px); }
-  .vinyl-layer-main-row select[data-layer-field="type"] {
-    width:100%;
-    min-width:0;
-    padding:6px 22px 6px 8px;
-    font-size:11px;
-    text-overflow:ellipsis;
-  }
-  @media (pointer:coarse) {
-    input[type="color"]:not(#accentColorInput) { --color-swatch-size:44px; }
-  }
-
-
-  .vinyl-layer-main-row, .vinyl-layer-main-row.vinyl-layer-liquid-main {
-    display:grid;
-    grid-template-columns:minmax(80px,132px) max-content 54px;
-    align-items:end;
-    justify-content:start;
-    gap:8px;
-  }
-  .vinyl-layer-main-row > label:has(select) { grid-column:1; grid-row:1; width:100%; max-width:none; }
-  .vinyl-layer-main-row > .vinyl-layer-color-control { grid-column:2; grid-row:1; }
-  .vinyl-layer-main-row .vinyl-layer-count {
-    grid-column:3;
-    grid-row:1;
-    grid-template-columns:minmax(0,1fr);
-    gap:4px !important;
-    width:54px;
-    font-size:10px;
-    line-height:1.2;
-  }
-  .vinyl-layer-main-row .vinyl-layer-count input[type="number"] { width:100%; min-width:0; }
-  .vinyl-layer-main-row .vinyl-layer-actions { grid-column:1 / -1; grid-row:2; justify-self:end; margin-left:0; }
-  input[type="color"]::-webkit-color-swatch-wrapper { padding:0 !important; }
-  input[type="color"]::-webkit-color-swatch { border:0 !important; }
-  input[type="color"]::-moz-color-swatch { border:0 !important; }
-
-
-  .vinyl-layer-main-row select[data-layer-field="type"],
-  .vinyl-layer-main-row .vinyl-layer-count input[type="number"] { height:36px; min-height:36px; }
-  @media (pointer:coarse) {
-    .vinyl-layer-main-row select[data-layer-field="type"],
-    .vinyl-layer-main-row .vinyl-layer-count input[type="number"] { height:44px; min-height:44px; }
-  }
-
   header .header-actions { justify-content:flex-end; gap:6px; margin-left:auto; }
   header .header-actions .desktop-mode-shortcuts { display:contents; }
   header .header-actions #vordleLaunch {
@@ -7635,6 +7571,55 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
       flex:0 0 36px; width:36px; min-width:36px; height:36px; min-height:36px; padding:0;
     }
     header .header-actions > .settings-wrap { flex:0 0 36px; margin:0; }
+  }
+
+  .color-swatch-control {
+    position:relative; display:block; width:100%; min-width:28px; height:36px;
+    border-radius:8px; overflow:hidden; background:var(--swatch-color,#000); cursor:pointer;
+  }
+  .color-swatch-control > input[type="color"] {
+    position:absolute; inset:0; width:100% !important; height:100% !important;
+    min-width:0 !important; min-height:0 !important; padding:0 !important;
+    border:0 !important; opacity:0; cursor:pointer;
+  }
+  .color-swatch-control > svg, .settings-accent-button > svg {
+    position:absolute; top:5px; left:5px; width:12px; height:12px; pointer-events:none;
+    color:#fff; filter:drop-shadow(0 1px 2px #000) drop-shadow(0 0 1px #000);
+  }
+  .color-swatch-control:focus-within { outline:2px solid var(--accent); outline-offset:2px; }
+  .vinyl-color-picker-row { width:100%; gap:5px; }
+  .vinyl-color-picker-row > .color-swatch-control { flex:1 1 auto; width:auto; }
+  .vinyl-layer-main-row, .vinyl-layer-main-row.vinyl-layer-liquid-main {
+    display:grid; grid-template-columns:minmax(60px,1fr) max-content 38px max-content;
+    gap:5px; align-items:center; justify-content:stretch;
+  }
+  .vinyl-layer-main-row > label:has(select) { grid-column:1; grid-row:1; width:auto; max-width:none; min-width:0; }
+  .vinyl-layer-main-row > label.vinyl-layer-color-control:has(input[type="color"]) { grid-column:2; grid-row:1; min-width:0; width:auto; }
+  .vinyl-layer-color-control .color-swatch-control { width:32px; flex:0 0 32px; height:34px; }
+  .vinyl-layer-main-row .vinyl-layer-count {
+    grid-column:3; grid-row:1; display:block !important; width:38px; min-width:0;
+  }
+  .vinyl-layer-main-row .vinyl-layer-count input[type="number"] {
+    width:100%; min-width:0; height:34px; min-height:34px; padding:4px; font-size:11px;
+    appearance:textfield; -moz-appearance:textfield;
+  }
+  .vinyl-layer-count input::-webkit-inner-spin-button, .vinyl-layer-count input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+  .vinyl-layer-main-row select[data-layer-field="type"] {
+    width:100%; min-width:0; height:34px; min-height:34px; font-size:10px;
+    padding:4px 16px 4px 5px; text-overflow:ellipsis;
+  }
+  .vinyl-layer-main-row .vinyl-layer-actions { grid-column:4; grid-row:1; gap:3px; margin:0; justify-self:end; }
+  .vinyl-layer-main-row .vinyl-layer-actions button {
+    flex:0 0 26px; width:26px; min-width:26px; height:34px; min-height:34px; padding:0; justify-content:center;
+  }
+  .vinyl-layer-color-control .vinyl-reference-color-button {
+    flex:0 0 28px; width:28px; min-width:28px; height:34px; min-height:34px; padding:4px;
+  }
+  .vinyl-layer-actions svg { width:14px; height:14px; }
+  @media (min-width:700px) {
+    .vinyl-layer-main-row, .vinyl-layer-main-row.vinyl-layer-liquid-main { grid-template-columns:minmax(80px,132px) minmax(65px,1fr) 42px max-content; }
+    .vinyl-layer-color-control .color-swatch-control { width:auto; flex:1 1 auto; }
+    .vinyl-layer-main-row .vinyl-layer-count { width:42px; }
   }
 </style>
 <script src="layout-diagnostics.js" defer></script>
@@ -12359,6 +12344,29 @@ if (settingsBtn && settingsPanel) {
   });
 }
 
+// Keep native color picking while drawing a clean swatch with an edit hint.
+function refreshColorSwatches() {
+  document.querySelectorAll('input[type="color"]:not(#accentColorInput)').forEach(input => {
+    let control = input.parentElement;
+    if (!control.classList.contains('color-swatch-control')) {
+      control = document.createElement('span');
+      control.className = 'color-swatch-control';
+      const icon = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      icon.setAttribute('viewBox','0 0 24 24'); icon.setAttribute('aria-hidden','true');
+      icon.innerHTML = '<path d="m15 4 5 5M4 20l5-1L20 8a2.1 2.1 0 0 0-4-4L5 15l-1 5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>';
+      input.before(control); control.append(input,icon);
+    }
+    control.style.setProperty('--swatch-color', input.value);
+  });
+}
+document.addEventListener('input', event => {
+  if (event.target.matches?.('input[type="color"]') && event.target.parentElement.classList.contains('color-swatch-control')) {
+    event.target.parentElement.style.setProperty('--swatch-color',event.target.value);
+  }
+}, true);
+refreshColorSwatches();
+new MutationObserver(refreshColorSwatches).observe(document.body,{childList:true,subtree:true});
+
 const headerActions = document.querySelector('header .header-actions');
 const mobileShortcuts = document.getElementById('settingsMobileShortcutsItems');
 const desktopModeShortcuts=document.createElement('div');desktopModeShortcuts.className='desktop-mode-shortcuts';
@@ -14906,7 +14914,7 @@ function renderVinylEditor() {
         <div class="vinyl-layer-main-row ${layer.type === 'Liquid' ? 'vinyl-layer-liquid-main' : ''}">
           <label class="vinyl-layer-captionless"><select data-layer-field="type" aria-label="Effekt" title="Effekt">${VINYL_EFFECT_TYPES.filter(type => type !== 'Label' || labelEditorDraft).map(type => `<option value="${type}" ${type === layer.type ? 'selected' : ''}>${escapeHtml(getVinylEffectLabel(type))}</option>`).join('')}</select></label>
           ${layer.type === 'Label' ? '' : `<label class="vinyl-layer-captionless vinyl-layer-color-control"><span class="vinyl-color-picker-row"><input type="color" data-layer-field="color" aria-label="Effektfarbe" title="Effektfarbe" value="${layer.color}"><button type="button" class="vinyl-reference-color-button" data-reference-color="color" title="Effektfarbe aus Fotovorlage wählen" aria-label="Effektfarbe aus Fotovorlage wählen" ${vinylReference.url ? '' : 'hidden'}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M4 20l3-1 11-11a2.1 2.1 0 0 0-3-3L4 16l-1 5 5-1M12 7l5 5"/></svg></button></span></label>`}
-          ${['Liquid', 'VollFarbe', 'Farbe Innen', 'Label'].includes(layer.type) ? '' : `<label class="vinyl-layer-count">Anzahl<input type="number" data-layer-field="count" aria-label="Anzahl" min="1" max="100" value="${layer.count}"></label>`}
+          ${['Liquid', 'VollFarbe', 'Farbe Innen', 'Label'].includes(layer.type) ? '' : `<label class="vinyl-layer-count"><input type="number" data-layer-field="count" aria-label="Anzahl" min="1" max="100" value="${layer.count}"></label>`}
           <div class="vinyl-layer-actions">
             <button type="button" data-layer-action="up" aria-label="Effekt nach oben verschieben" title="Nach oben" ${index === 0 || record.layers.length === 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
             <button type="button" data-layer-action="down" aria-label="Effekt nach unten verschieben" title="Nach unten" ${index === record.layers.length - 1 || record.layers.length === 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>
