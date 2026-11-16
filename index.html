@@ -7626,7 +7626,22 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .is-label-editor .vinyl-editor-meta > label:has(#vinylBaseColor) { width:100%; min-width:0; grid-column:1 / -1; }
   .is-label-editor .vinyl-editor-meta .vinyl-color-picker-row { width:100%; }
   .is-label-editor .vinyl-editor-meta .color-swatch-control { min-width:80px; height:40px; flex:1 1 auto; }
+
+  #imageLinkWarningBtn { color:#edbe53; background:rgba(237,190,83,.12); border-color:rgba(237,190,83,.45); }
+  #imageLinkWarningBtn[hidden] { display:none !important; }
+  .image-link-health-dialog { width:min(600px,calc(100vw - 24px)); max-height:85dvh; overflow:auto; padding:16px; border:1px solid var(--border); border-radius:12px; color:var(--text-primary); background:var(--surface-1); }
+  .image-link-health-dialog::backdrop { background:rgba(0,0,0,.7); }
+  .image-link-health-dialog header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0; }
+  .image-link-health-dialog article { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .image-link-health-dialog article > div { flex:1; min-width:0; overflow-wrap:anywhere; }
+  .image-link-health-dialog article p { margin:4px 0; font-size:12px; color:var(--text-secondary); }
+  .image-link-health-dialog button { min-height:36px; }
+
+  .vinyl-label-photo-actions { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
+  .vinyl-label-photo-actions button { min-height:36px; font-size:12px; }
+  .vinyl-label-photo-actions button[hidden], .is-label-editor .vinyl-label-photo-actions { display:none; }
 </style>
+<script src="image-link-health.js"></script>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
 <script id="barcodeDecoderBundle" type="application/x-vinyl-barcode-decoder">
@@ -7739,6 +7754,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
       </button>
       
       <button type="button" id="vordleLaunch" class="vordle-launch" aria-label="Tägliches Vordle spielen" title="Tägliches Albumrätsel spielen"><span aria-hidden="true">◉</span><span>Vordle</span></button>
+<button type="button" id="imageLinkWarningBtn" class="icon-btn" hidden title="Bildlinks nicht erreichbar" aria-label="Nicht erreichbare Bildlinks anzeigen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18a4 4 0 0 1-.5-8 6.5 6.5 0 0 1 12.4-1.5A4.8 4.8 0 0 1 18 18"/><path d="M12 9v5m0 3h.01"/></svg></button>
       <div class="settings-wrap">
         <button id="settingsBtn" class="icon-btn" title="Einstellungen" aria-label="Einstellungen">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -8863,6 +8879,10 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
       <button type="button" id="editLabelBtn" title="Label bearbeiten"><span class="command-long">Label bearbeiten</span><span class="command-short">Label</span></button>
       <button type="button" id="copyVinylDesignBtn" title="Auf andere Vinyls kopieren"><span class="command-long">Auf andere Vinyls kopieren</span><span class="command-short">Kopieren</span></button>
       <button type="button" id="showVinylReferenceBtn" title="Discogs-Foto als Referenz auswählen"><span class="command-long">Foto als Referenz</span><span class="command-short">Vorlage</span></button>
+    </div>
+    <div class="vinyl-label-photo-actions">
+      <button type="button" id="chooseMainLabelPhotoBtn">Foto als Labelbild auswählen …</button>
+      <button type="button" id="useMainLabelReferenceBtn" hidden>Aktuelle Vorlage als Labelbild</button>
     </div>
     <div class="vinyl-editor-layout">
       <aside id="vinylReferencePanel" class="vinyl-reference-panel" hidden aria-label="Discogs-Fotovorlage">
@@ -14842,8 +14862,6 @@ function renderVinylLayerDetailControls(layer) {
     const stored = layer.labelId && !choices.some(label => label.id === Number(layer.labelId)) ? `<option value="${layer.labelId}" selected>${escapeHtml(layer.labelName || 'Gespeichertes Label')}</option>` : '';
     return `<label>Discogs-Label<select data-logo-label><option value="">Label auswählen …</option>${stored}${options}</select></label>
       <button type="button" data-load-labels>Labels laden</button>
-      <button type="button" data-choose-label-photo>Release-Foto als Labelbild …</button>
-      ${vinylReference.url ? '<button type="button" data-use-label-reference>Aktuelle Fotovorlage als Labelbild</button>' : ''}
       ${layer.labelId ? '<button type="button" data-open-label-images>Logo auswählen …</button>' : ''}
       <label>Bildhintergrund<select data-layer-field="logoBackground"><option value="original" ${!['light','dark'].includes(layer.logoBackground) ? 'selected' : ''}>Original</option><option value="light" ${layer.logoBackground === 'light' ? 'selected' : ''}>Weiß ausblenden</option><option value="dark" ${layer.logoBackground === 'dark' ? 'selected' : ''}>Schwarz ausblenden</option></select></label>
       <details class="editor-help vinyl-logo-help"><summary>Hintergrund · Hilfe</summary><p class="settings-panel-hint">Optische Überblendung: Weiß ausblenden eignet sich für dunkle Logos, Schwarz ausblenden für helle Logos. Andere Bildfarben können sich dabei mit der Label-Farbe mischen.</p></details>
@@ -25034,6 +25052,7 @@ function renderVinylReference() {
   if (vinylReference.releaseId && vinylReference.releaseId !== discogsLabelReleaseId()) vinylReference.url = '';
   const visible = !!vinylReference.url;
   panel.hidden = !visible;
+  document.getElementById('useMainLabelReferenceBtn').hidden = !visible || !!labelEditorDraft;
   panel.setAttribute('aria-label', labelEditorDraft ? 'Fotovorlage für das Label' : 'Fotovorlage für die Vinyl');
   panel.querySelector('strong').textContent = labelEditorDraft ? 'Fotovorlage · Label' : 'Fotovorlage · Vinyl';
   document.querySelectorAll('[data-reference-color]').forEach(button => { button.hidden = !visible; });
@@ -25187,6 +25206,21 @@ let releasePictureDialog = null;
 let releasePictureRequest = 0;
 let releasePicturePurpose = 'picture';
 let releasePictureLabelLayer = null;
+let releasePictureLabelRecord = null;
+function selectMainLabelPhoto(record, url) {
+  const safeUrl = safeDiscogsLogoUrl(url);
+  if (!safeUrl || labelEditorDraft || !vinylEditorDesign?.records.includes(record) || record !== editorRecord()) return false;
+  record.labelLayers ||= [];
+  let layer = record.labelLayers.find(entry => entry.type === 'Label' && entry.logoSource === 'reference');
+  if (!layer) {
+    layer = {id:Math.random().toString(36).slice(2),type:'Label'};
+    record.labelLayers.unshift(layer);
+  }
+  Object.assign(layer,{logoUrl:safeUrl,logoDataUrl:'',logoSource:'reference',logoBackground:'original',logoWidth:100,logoX:0,logoY:0,logoRotation:0});
+  renderVinylEditor(); scheduleVinylEditorPreview();
+  return true;
+}
+
 function selectReferencePhotoForLabel(layer, url) {
   const safeUrl = safeDiscogsLogoUrl(url);
   if (!safeUrl || !labelEditorDraft?.layers.includes(layer)) return false;
@@ -25206,8 +25240,9 @@ function selectDiscogsReleasePicture(url) {
   renderVinylEditor();
 }
 async function openDiscogsReleasePictures(purpose = 'picture', layer = null) {
-  releasePicturePurpose = ['reference','label'].includes(purpose) ? purpose : 'picture';
+  releasePicturePurpose = ['reference','label','label-main'].includes(purpose) ? purpose : 'picture';
   releasePictureLabelLayer = releasePicturePurpose === 'label' ? layer : null;
+  releasePictureLabelRecord = releasePicturePurpose === 'label-main' ? editorRecord() : null;
   if (!vinylEditorDesign) return;
   if (!releasePictureDialog) {
     releasePictureDialog = document.createElement('dialog');
@@ -25224,13 +25259,14 @@ async function openDiscogsReleasePictures(purpose = 'picture', layer = null) {
       const image = discogsReleasePictures.get(discogsLabelReleaseId())?.[Number(button.dataset.releasePicture)];
       if (!image) return;
       if (releasePicturePurpose === 'reference') selectVinylReference(Number(button.dataset.releasePicture));
+      else if (releasePicturePurpose === 'label-main') selectMainLabelPhoto(releasePictureLabelRecord, image.url);
       else if (releasePicturePurpose === 'label') selectReferencePhotoForLabel(releasePictureLabelLayer, image.url);
       else selectDiscogsReleasePicture(image.url);
       releasePictureDialog.close();
     });
     document.body.append(releasePictureDialog);
   }
-  releasePictureDialog.querySelector('h2').textContent = releasePicturePurpose === 'reference' ? 'Foto als Vorlage auswählen' : releasePicturePurpose === 'label' ? 'Release-Foto als Labelbild auswählen' : 'Discogs-Release-Fotos';
+  releasePictureDialog.querySelector('h2').textContent = releasePicturePurpose === 'reference' ? 'Foto als Vorlage auswählen' : releasePicturePurpose.startsWith('label') ? 'Release-Foto als Labelbild auswählen' : 'Discogs-Release-Fotos';
   if (!releasePictureDialog.open) releasePictureDialog.showModal();
   const id = discogsLabelReleaseId(), design = vinylEditorDesign, request = ++releasePictureRequest;
   const status = releasePictureDialog.querySelector('[data-release-status]'), grid = releasePictureDialog.querySelector('[data-release-grid]');
@@ -25244,10 +25280,13 @@ async function openDiscogsReleasePictures(purpose = 'picture', layer = null) {
     }
     if (request !== releasePictureRequest || vinylEditorDesign !== design || discogsLabelReleaseId() !== id || !releasePictureDialog.open) return;
     const images = discogsReleasePictures.get(id);
-    status.textContent = images.length ? (releasePicturePurpose === 'reference' ? 'Wähle ein Foto als Vorlage zum Nachbauen des Vinyl- oder Label-Designs.' : releasePicturePurpose === 'label' ? 'Wähle ein Foto als Labelbild. Position, Breite und Drehung kannst du danach anpassen.' : 'Wähle ein Foto der Platte. Danach kannst du es verschieben, drehen und zoomen.') : 'Für diesen Release sind keine Fotos verfügbar.';
-    grid.innerHTML = images.map((image,index) => `<button type="button" data-release-picture="${index}" aria-pressed="${(releasePicturePurpose === 'reference' ? vinylReference.url : releasePicturePurpose === 'label' ? releasePictureLabelLayer?.logoUrl : design.cdImageUrl) === image.url}"><img src="${escapeHtml(image.thumbnail)}" alt="Release-Foto ${index+1}" loading="lazy" referrerpolicy="no-referrer"><span>Foto ${index+1}${image.primary ? ' · Hauptbild' : ''}</span></button>`).join('');
+    status.textContent = images.length ? (releasePicturePurpose === 'reference' ? 'Wähle ein Foto als Vorlage zum Nachbauen des Vinyl- oder Label-Designs.' : releasePicturePurpose.startsWith('label') ? 'Wähle ein Foto als Labelbild. Position, Breite und Drehung kannst du danach anpassen.' : 'Wähle ein Foto der Platte. Danach kannst du es verschieben, drehen und zoomen.') : 'Für diesen Release sind keine Fotos verfügbar.';
+    grid.innerHTML = images.map((image,index) => `<button type="button" data-release-picture="${index}" aria-pressed="${(releasePicturePurpose === 'reference' ? vinylReference.url : releasePicturePurpose === 'label' ? releasePictureLabelLayer?.logoUrl : releasePicturePurpose === 'label-main' ? releasePictureLabelRecord?.labelLayers?.find(entry=>entry.logoSource === 'reference')?.logoUrl : design.cdImageUrl) === image.url}"><img src="${escapeHtml(image.thumbnail)}" alt="Release-Foto ${index+1}" loading="lazy" referrerpolicy="no-referrer"><span>Foto ${index+1}${image.primary ? ' · Hauptbild' : ''}</span></button>`).join('');
   } catch (error) { if (request === releasePictureRequest && releasePictureDialog.open) status.textContent = error.message || 'Release-Fotos konnten nicht geladen werden.'; }
 }
+document.getElementById('chooseMainLabelPhotoBtn').addEventListener('click',()=>openDiscogsReleasePictures('label-main'));
+document.getElementById('useMainLabelReferenceBtn').addEventListener('click',()=>selectMainLabelPhoto(editorRecord(),vinylReference.url));
+
 document.getElementById('chooseDiscogsPictureBtn').addEventListener('click',() => openDiscogsReleasePictures('picture'));
 
 let labelImageDialog = null;
@@ -27815,7 +27854,92 @@ function getArtistDominantGenres(items) {
   return dominantGenreByArtist;
 }
 
+const imageLinkResults = new Map();
+let imageLinkCheckTimer = 0;
+let imageLinkCheckRunning = false;
+let imageLinkRecheckPending = false;
+let imageLinkHealthDialog = null;
+const IMAGE_LINK_RECHECK_MS = 10 * 60 * 1000;
+function currentImageLinkReferences() {
+  return currentUid && viewingOwnCollection ? VinylImageLinks.getReferences(collection) : [];
+}
+function failedImageLinkReferences() {
+  return currentImageLinkReferences().filter(ref => imageLinkResults.get(ref.url)?.status === 'error');
+}
+function updateImageLinkWarning() {
+  const failed = failedImageLinkReferences();
+  const button = document.getElementById('imageLinkWarningBtn');
+  const count = new Set(failed.map(ref => String(ref.itemId))).size;
+  button.hidden = count === 0;
+  button.title = `${count} ${count === 1 ? 'Album' : 'Alben'} mit nicht erreichbaren Bildlinks`;
+  button.setAttribute('aria-label',button.title);
+  if (imageLinkHealthDialog?.open) renderImageLinkHealthDetails();
+}
+function scheduleImageLinkCheck() {
+  updateImageLinkWarning();
+  clearTimeout(imageLinkCheckTimer);
+  imageLinkCheckTimer = setTimeout(() => { void checkImageLinks(); },800);
+}
+async function checkImageLinks(force = false) {
+  if (navigator.onLine === false || !currentUid || !viewingOwnCollection) return;
+  if (imageLinkCheckRunning) { imageLinkRecheckPending ||= force; return; }
+  imageLinkCheckRunning = true;
+  const checkedUid = currentUid;
+  updateImageLinkWarning();
+  const urls = [...new Set(currentImageLinkReferences().map(ref => ref.url))].filter(url => force || !imageLinkResults.has(url) || Date.now()-imageLinkResults.get(url).checkedAt > IMAGE_LINK_RECHECK_MS);
+  try {
+    await Promise.all(Array.from({length:Math.min(3,urls.length)}, async () => {
+      while (urls.length && navigator.onLine !== false && currentUid === checkedUid && viewingOwnCollection) {
+        const url = urls.shift();
+        let status = await VinylImageLinks.probe(url);
+        if (status === 'error' && navigator.onLine !== false) status = await VinylImageLinks.probe(url);
+        if (navigator.onLine === false) break;
+        if (status !== 'unknown') imageLinkResults.set(url,{status,checkedAt:Date.now()});
+        updateImageLinkWarning();
+      }
+    }));
+  } finally {
+    imageLinkCheckRunning = false;
+    updateImageLinkWarning();
+    if (imageLinkRecheckPending) { imageLinkRecheckPending=false; void checkImageLinks(true); }
+  }
+}
+function renderImageLinkHealthDetails() {
+  const dialog = imageLinkHealthDialog;
+  const list = dialog.querySelector('[data-image-link-list]');
+  const refs = failedImageLinkReferences();
+  dialog.querySelector('[role="status"]').textContent = imageLinkCheckRunning ? 'Bildlinks werden geprüft …' : `${new Set(refs.map(ref=>String(ref.itemId))).size} ${new Set(refs.map(ref=>String(ref.itemId))).size === 1 ? 'Album betroffen' : 'Alben betroffen'}. Ein Link kann auch vorübergehend nicht erreichbar sein.`;
+  list.replaceChildren();
+  const grouped = new Map();
+  refs.forEach(ref => { const key=String(ref.itemId); if(!grouped.has(key))grouped.set(key,[]); grouped.get(key).push(ref); });
+  for (const group of grouped.values()) {
+    const ref = group[0];
+    const row = document.createElement('article');
+    row.innerHTML = `<div><strong>${escapeHtml(ref.title)}</strong><p>${escapeHtml(getArtistDisplayName(collection.find(item=>String(item.id)===String(ref.itemId)) || {artist:ref.artist}))}</p><p>${escapeHtml([...new Set(group.map(entry=>entry.kind))].join(', '))}</p></div><button type="button">Album bearbeiten</button>`;
+    row.querySelector('button').addEventListener('click',()=>{ dialog.close(); if(viewingOwnCollection)editEntry(ref.itemId); });
+    list.append(row);
+  }
+  if (!refs.length) list.textContent = 'Aktuell sind keine fehlerhaften Bildlinks bekannt.';
+}
+document.getElementById('imageLinkWarningBtn').addEventListener('click', () => {
+  if (!imageLinkHealthDialog) {
+    imageLinkHealthDialog = document.createElement('dialog');
+    imageLinkHealthDialog.className='image-link-health-dialog';
+    imageLinkHealthDialog.setAttribute('aria-label','Nicht erreichbare Bildlinks');
+    imageLinkHealthDialog.innerHTML='<header><strong>Nicht erreichbare Bildlinks</strong><button type="button" data-close aria-label="Schließen">×</button></header><p role="status" aria-live="polite"></p><div data-image-link-list></div><button type="button" data-recheck>Erneut prüfen</button>';
+    imageLinkHealthDialog.querySelector('[data-close]').addEventListener('click',()=>imageLinkHealthDialog.close());
+    imageLinkHealthDialog.querySelector('[data-recheck]').addEventListener('click',()=>{void checkImageLinks(true);});
+    document.body.append(imageLinkHealthDialog);
+  }
+  renderImageLinkHealthDetails();
+  imageLinkHealthDialog.showModal();
+});
+window.addEventListener('online',()=>{void checkImageLinks(true);});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleImageLinkCheck();});
+setInterval(()=>{if(!document.hidden)scheduleImageLinkCheck();},IMAGE_LINK_RECHECK_MS);
+
 function renderCollection() {
+  scheduleImageLinkCheck();
   fullscreenShelfDataRevision = (fullscreenShelfDataRevision || 0) + 1;
   const grid = document.getElementById('collectionGrid');
   const tableWrap = document.getElementById('collectionTableWrap');
