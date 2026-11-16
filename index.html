@@ -8869,7 +8869,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
         <div class="vinyl-editor-toolbar"><strong>Fotovorlage</strong><button type="button" id="hideVinylReferenceBtn" aria-label="Fotovorlage ausblenden">×</button></div>
         <img id="vinylReferenceImage" alt="Ausgewähltes Discogs-Release-Foto als Vorlage" referrerpolicy="no-referrer">
         <div class="vinyl-reference-navigation"><button type="button" id="previousVinylReferenceBtn" aria-label="Vorheriges Referenzfoto">←</button><span id="vinylReferenceCounter"></span><button type="button" id="nextVinylReferenceBtn" aria-label="Nächstes Referenzfoto">→</button><button type="button" id="chooseVinylReferenceBtn">Auswahl</button></div>
-        <label class="vinyl-reference-opacity">Überlagerung <output id="vinylReferenceOpacityValue">100%</output><input type="range" id="vinylReferenceOpacity" min="0" max="100" value="100" aria-label="Deckkraft der Fotovorlage"></label>
+        <label class="vinyl-reference-opacity">Überlagerung <output id="vinylReferenceOpacityValue">50%</output><input type="range" id="vinylReferenceOpacity" min="0" max="100" value="50" aria-label="Deckkraft der Fotovorlage"></label>
         <p class="settings-panel-hint" id="vinylReferenceStatus" role="status"></p>
       </aside>
       <section class="vinyl-editor-preview" aria-label="Vinyl-Vorschau">
@@ -14338,7 +14338,7 @@ function getVinylLayerLength(layer, random = createVinylRandom(layer.seed)) {
 let vinylEditorDesign = null;
 let labelEditorDraft = null;
 let selectedShapeIndex = 0;
-let vinylReference = {url:'', index:0, releaseId:'', opacity:100};
+let vinylReference = {url:'', index:0, releaseId:'', opacity:50};
 const VINYL_SHAPES = ['Kreis', 'Quadrat', 'Rechteck', 'Halbkreis', 'Dreieck'];
 function editorRecord() { return labelEditorDraft || vinylEditorDesign.records[activeVinylIndex]; }
 function finishLabelEditor(save = false) {
@@ -15122,7 +15122,7 @@ function openVinylEditor() {
   document.getElementById('suggestVinylFromDiscogsBtn').disabled=false;
   document.getElementById('vinylDiscogsSuggestionStatus').textContent='';
   vinylEditorOriginalPictureDataUrl = '';
-  vinylReference = {url:'', index:0, releaseId:'', opacity:100};
+  vinylReference = {url:'', index:0, releaseId:'', opacity:50};
   pictureColorMarker = null;
   pictureColorMarkerMode = false;
   const markerButton = document.getElementById('setPictureColorMarkerBtn');
@@ -24998,7 +24998,7 @@ function selectVinylReference(index) {
   const id = discogsLabelReleaseId(), images = discogsReleasePictures.get(id) || [];
   if (!images.length) return;
   const selected = ((index % images.length) + images.length) % images.length;
-  vinylReference = {...vinylReference, url:images[selected].url, index:selected, releaseId:id, opacity:100};
+  vinylReference = {...vinylReference, url:images[selected].url, index:selected, releaseId:id, opacity:50};
   renderVinylReference();
 }
 function renderVinylReference() {
@@ -25068,13 +25068,11 @@ function openReferenceColorPicker(field, layer = null) {
   activeReferenceColorDialog?.close();
   const record = editorRecord(), design = vinylEditorDesign;
   const colorName = layer ? 'Effektfarbe' : field === 'baseColor' ? 'Grundfarbe' : 'Label-Farbe';
-  vinylReference.opacity = 100;
-  renderVinylReference();
   const dialog = document.createElement('dialog');
   dialog.className = 'vinyl-reference-color-dialog';
   dialog.setAttribute('aria-label', `${colorName} aus Fotovorlage`);
   dialog.innerHTML = `<header><strong>${colorName} auswählen</strong><button type="button" data-close aria-label="Farbauswahl schließen">×</button></header>
-    <p>Tippe auf die gewünschte Farbe im Foto.</p><img alt="Fotovorlage zur Farbauswahl" referrerpolicy="no-referrer">
+    <p>Tippe auf das Foto, um die Farbe mit der Pipette auszuwählen.</p><img alt="Fotovorlage zur Farbauswahl" referrerpolicy="no-referrer">
     <p role="status" aria-live="polite"></p><button type="button" data-eyedropper hidden>Bildschirm-Pipette</button>
     <details><summary>Foto als Datei öffnen</summary><p>Falls der Bildserver die Farbauswahl sperrt, kannst du dasselbe Foto hier öffnen.</p><input type="file" accept="image/*" aria-label="Fotovorlage für Farbauswahl öffnen"></details>`;
   const image = dialog.querySelector('img'), status = dialog.querySelector('[role=status]');
@@ -25093,6 +25091,10 @@ function openReferenceColorPicker(field, layer = null) {
     dialog.close();
   };
   image.addEventListener('click', async event => {
+    if (typeof window.EyeDropper === 'function') {
+      await pickFromScreen();
+      return;
+    }
     const point = referencePhotoCoordinates(image, event.clientX, event.clientY);
     if (!point) { status.textContent = 'Bitte direkt auf das Foto tippen.'; return; }
     const token = ++request;
@@ -25104,11 +25106,15 @@ function openReferenceColorPicker(field, layer = null) {
   });
   const pipette = dialog.querySelector('[data-eyedropper]');
   pipette.hidden = typeof window.EyeDropper !== 'function';
-  pipette.addEventListener('click', async () => {
+  const pickFromScreen = async () => {
     ++request;
+    status.textContent = '';
     try { const result = await new window.EyeDropper().open(); apply(result.sRGBHex); }
-    catch (error) { if (error.name !== 'AbortError') status.textContent = 'Pipette konnte nicht gestartet werden. Tippe direkt auf das Foto.'; }
-  });
+    catch (error) {
+      if (error.name !== 'AbortError') status.textContent = 'Pipette konnte nicht gestartet werden. Öffne das Foto unten als Datei.';
+    }
+  };
+  pipette.addEventListener('click', pickFromScreen);
   dialog.querySelector('input').addEventListener('change', event => {
     const file = event.target.files?.[0];
     if (!file) return;
