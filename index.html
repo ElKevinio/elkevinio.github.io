@@ -7663,6 +7663,14 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
 
   .discogs-label-photo-fill { position:absolute; left:-25%; top:-25%; width:150%; height:150%; max-width:none; object-fit:cover; filter:blur(18px); pointer-events:none; z-index:0; }
   .discogs-label-logo, .discogs-label-effect { z-index:1; }
+
+  .album-queue-reorder-handle { width:28px; min-width:28px; height:36px; min-height:36px; padding:0; flex:0 0 28px; justify-content:center; cursor:grab; touch-action:none; user-select:none; font-size:22px; }
+  .album-queue-reorder-handle:active { cursor:grabbing; }
+  .album-queue-item.queue-is-dragging { opacity:.5; }
+  #fullscreenPlayerQueueList { overflow-y:auto; min-height:0; max-height:min(60dvh,520px); }
+  .album-queue-item.queue-drop-before { box-shadow:0 -2px 0 var(--accent); }
+  .album-queue-item.queue-drop-after { box-shadow:0 2px 0 var(--accent); }
+  #fullscreenPlayerMenu[hidden],#fullscreenPlayerQueuePanel[hidden],#fullscreenPlayerTracksPanel[hidden],#fullscreenPlayerPosterForm[hidden],#fullscreenPlayerMusicSettingsPanel[hidden],#roomQueueCrateMenu[hidden] { display:none !important; }
 </style>
 <script src="image-link-health.js?v=20261116"></script>
 <script src="layout-diagnostics.js" defer></script>
@@ -8419,7 +8427,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     <div id="albumListeningContent"></div>
   </div>
 </div>
-<aside id="albumListeningDock" class="album-listening-dock" aria-label="Mini-Player" hidden>
+<aside id="albumListeningDock" class="album-listening-dock is-collapsed" aria-label="Mini-Player" hidden>
   <div class="album-listening-dock-header">
     <strong id="albumListeningDockTitle" class="album-listening-dock-title"></strong>
     <button type="button" id="albumQueueHeaderToggle" class="album-queue-toggle" title="Album-Warteschlange öffnen" aria-label="Album-Warteschlange öffnen" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
@@ -11384,6 +11392,7 @@ const vordle = Vordle.create({db,canParticipate:()=>document.getElementById('vor
 
 let authInitializationPhase = 'Anmeldung';
 async function handleAuthStateChange(user) {
+  if ((user?.uid || null) !== currentUid) resetListeningPlayerForAccountChange();
   cloudCollectionUnsubscribe?.();
   cloudCollectionUnsubscribe=null;
   vordle.reset();
@@ -11414,6 +11423,7 @@ async function handleAuthStateChange(user) {
     setAuthLoading(false);
     authInitializationPhase = 'Sammlung laden';
     await loadCloudData(user.uid, userDocSnap);
+    if(currentUid!==user.uid)return;
     void vordle.prewarm();
     } finally {
       appLoadingCount = 0;
@@ -11428,6 +11438,7 @@ async function handleAuthStateChange(user) {
       ['Spotify-Rückmeldung', () => completeSpotifyAuthCallback()],
       ['Spotify-Verbindung', () => restoreSpotifyConnection()]
     ]) {
+      if(currentUid!==user.uid)return;
       try { await task(); }
       catch (error) {
         console.error(`${phase} konnte nicht geladen werden:`, error);
@@ -18384,13 +18395,16 @@ function releasePersistentSpotifySdk() {
 }
 window.addEventListener('pagehide', releasePersistentSpotifySdk);
 async function loadSpotifyWebPlaybackApi(onStatus) {
+  const accountEpoch=listeningAccountEpoch;
   const token = await getSpotifyAccessToken();
+  if(accountEpoch!==listeningAccountEpoch)throw new Error('Player-Aufruf nach Konto-Wechsel verworfen.');
   if (!token) throw new Error('Für Web Playback bitte Spotify mit einem Premium-Konto verbinden.');
   const session = JSON.parse(sessionStorage.getItem(SPOTIFY_TOKEN_KEY) || '{}');
   if (session.scope && !session.scope.split(' ').includes('streaming')) {
     throw new Error('Spotify bitte erneut verbinden, um Web Playback freizugeben.');
   }
   const Spotify = await loadSpotifyWebPlaybackScript();
+  if(accountEpoch!==listeningAccountEpoch)throw new Error('Player-Aufruf nach Konto-Wechsel verworfen.');
   return createSpotifyWebPlaybackApi(Spotify,onStatus);
 }
 function activateSpotifyPlaybackFromGesture() {
@@ -18776,6 +18790,8 @@ if (fullscreenTransport) wrapPlayerTransport(fullscreenTransport);
 const listeningAlbumQueue = [];
 let currentListeningAlbum = null;
 let restoredListeningSessionKey = '';
+let listeningAccountEpoch = 0;
+let listeningAccountResetting = false;
 const LISTENING_SESSION_KEY_PREFIX = 'albumListeningSessionV1:';
 let listeningPlaybackState = { trackUri: '', positionSeconds: 0 };
 let lastListeningPlaybackPersistAt = 0;
@@ -18903,6 +18919,7 @@ function listeningCloudSharedState(album, queue, playback = {}) {
 function listeningCloudSharedKey(state) { return stableCloudJson(state); }
 
 function queueListeningCloudSave(session) {
+  if(listeningAccountResetting)return;
   if (!currentUid || listeningSyncApplyingRemote || listeningQueueBulkDepth) return;
   // Positionsänderungen sind sehr häufig. Die Cloud erhält nur Änderungen
   // an Album, Warteschlange oder Pause, nicht jede Playback-Sekunde oder UI-Bewegung.
@@ -18980,7 +18997,7 @@ function applyCloudListeningSession(data, initial = false) {
     }
     updateAlbumQueueControls();
     const dock = document.getElementById('albumListeningDock');
-    if (dock && (currentListeningAlbum || listeningAlbumQueue.length)) dock.hidden = false;
+    if (dock && (currentListeningAlbum || listeningAlbumQueue.length)) {dock.hidden = false;if(initial)dock.classList.add('is-collapsed');}
     persistListeningSession();
   } finally { listeningSyncApplyingRemote = false; }
 }
@@ -19033,6 +19050,43 @@ function stopListeningCloudSync() {
 }
 
 
+function resetListeningPlayerForAccountChange() {
+  listeningAccountEpoch++;
+  listeningAccountResetting=true;
+  try {
+    stopListeningCloudSync();
+    albumListeningRequest?.abort();albumListeningRequest=null;
+    spotifyMiniTracklistRequest?.abort();spotifyMiniTracklistRequest=null;
+    try { const paused=spotifyMiniController?.pause?.();paused?.catch?.(()=>{}); } catch {}
+    try { spotifyMiniController?.destroy?.(); } catch {}
+    spotifyMiniController=null;
+    try { releasePersistentSpotifySdk(); } catch {}
+    try { youtubeMiniController?.destroy?.(); } catch {}
+    youtubeMiniController=null;
+    if(youtubeMiniProgressTimer)window.clearInterval(youtubeMiniProgressTimer);
+    youtubeMiniProgressTimer=null;
+    closeFullscreenPlayer();
+    clearAlbumQueueDrag();
+    albumListeningInlineTarget?.replaceChildren();albumListeningInlineTarget=null;
+    for(const id of ['albumListeningContent','albumListeningDockContent','albumQueueList','fullscreenPlayerQueueList'])document.getElementById(id)?.replaceChildren();
+    document.getElementById('albumListeningOverlay')?.classList.remove('open');
+    const dock=document.getElementById('albumListeningDock');
+    if(dock){dock.hidden=true;dock.classList.remove('is-hidden','is-expanded','has-custom-mini');dock.classList.add('is-collapsed');}
+    const queuePanel=document.getElementById('albumQueuePanel');if(queuePanel)queuePanel.hidden=true;
+    document.getElementById('albumListeningDockTitle').textContent='';
+    currentListeningAlbum=null;
+    listeningAlbumQueue.length=0;
+    listeningPlaybackState={trackUri:'',positionSeconds:0};
+    restoredListeningSessionKey='';
+    listeningCloudConfirmedAlbum=null;
+    listeningCloudConfirmedTrackUri='';listeningCloudConfirmedPaused=null;
+    listeningCloudLastRequestedPaused=null;listeningCloudCandidateKey='';
+    listeningCloudCandidateSeconds=0;listeningCloudLastPosition=null;
+    updateAlbumDockToggle();
+    updateAlbumMiniPlayerButton();
+  } finally { listeningAccountResetting=false; }
+}
+
 function persistListeningPlaybackProgress(force = false) {
   // Die laufende Position bleibt im Arbeitsspeicher. Nur Pause, manuelles
   // Springen und das Verlassen der Seite sichern den Fortschritt lokal.
@@ -19046,6 +19100,7 @@ function getListeningSessionStorageKey() {
 }
 
 function persistListeningSession() {
+  if(listeningAccountResetting)return;
   const key = getListeningSessionStorageKey();
   const session = buildListeningSession();
   try {
@@ -19061,6 +19116,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 async function restoreListeningSession() {
+  const epoch=listeningAccountEpoch;
   const key = getListeningSessionStorageKey();
   if (restoredListeningSessionKey === key) return;
   restoredListeningSessionKey = key;
@@ -19092,15 +19148,16 @@ async function restoreListeningSession() {
   if (dock && (currentListeningAlbum || listeningAlbumQueue.length)) {
     dock.hidden = false;
     dock.classList.toggle('is-hidden', saved.hidden === true);
-    dock.classList.toggle('is-collapsed', saved.minimized === true);
+    dock.classList.add('is-collapsed');
     updateAlbumDockToggle();
     updateAlbumMiniPlayerButton();
     updateAlbumQueueControls();
-    setAlbumQueuePanelOpen(saved.queueOpen === true && saved.hidden !== true && saved.minimized !== true);
+    setAlbumQueuePanelOpen(false);
     if (currentListeningAlbum) {
       await openAlbumListening(currentListeningAlbum, null, { restorePlayback: true });
+      if(epoch!==listeningAccountEpoch)return;
       dock.classList.toggle('is-hidden', saved.hidden === true);
-      dock.classList.toggle('is-collapsed', saved.minimized === true);
+      dock.classList.add('is-collapsed');
       updateAlbumDockToggle();
       updateAlbumMiniPlayerButton();
     }
@@ -19718,9 +19775,13 @@ function toggleFullscreenMusicSettings(open) {
   fullscreenMusicSettingsPanel.hidden = !open;
   fullscreenMusicSettingsButton.setAttribute('aria-expanded', String(open));
   if (open) {
+    setFullscreenPlayerMenuOpen(false);
+    setFullscreenPlayerQueueOpen(false);
+    setFullscreenPlayerTracksOpen(false);
+    setFullscreenRoomSettingsOpen(false);
+    document.getElementById('roomQueueCrateMenu').hidden=true;
     fullscreenMusicSettingsContent.append(originalPlayerSettings);
     originalPlayerSettings.open = true;
-    document.getElementById('fullscreenPlayerPosterForm').hidden = true;
   } else if (originalPlayerSettings.parentElement === fullscreenMusicSettingsContent) {
     originalPlayerSettingsParent.insertBefore(originalPlayerSettings, originalPlayerSettingsNext);
   }
@@ -20743,6 +20804,11 @@ function setFullscreenPlayerPoster(url) {
 }
 
 function setFullscreenRoomSettingsOpen(isOpen) {
+  if (isOpen) {
+    toggleFullscreenMusicSettings(false);
+    const crateMenu=document.getElementById('roomQueueCrateMenu');
+    if(crateMenu)crateMenu.hidden=true;
+  }
   const form = document.getElementById('fullscreenPlayerPosterForm');
   if (!isOpen && !form.hidden) commitFullscreenRoomSettings();
   form.hidden = !isOpen;
@@ -21010,6 +21076,11 @@ function isFullscreenPlayerMenuOpen() {
 }
 
 function setFullscreenPlayerMenuOpen(isOpen) {
+  if (isOpen) {
+    toggleFullscreenMusicSettings(false);
+    const crateMenu=document.getElementById('roomQueueCrateMenu');
+    if(crateMenu)crateMenu.hidden=true;
+  }
   if (isOpen) setFullscreenPlayerQueueOpen(false);
   if (isOpen) setFullscreenPlayerTracksOpen(false);
   if (isOpen) setFullscreenRoomSettingsOpen(false);
@@ -21324,6 +21395,11 @@ function isFullscreenPlayerQueueOpen() {
 }
 
 function setFullscreenPlayerQueueOpen(isOpen) {
+  if (isOpen) {
+    toggleFullscreenMusicSettings(false);
+    const crateMenu=document.getElementById('roomQueueCrateMenu');
+    if(crateMenu)crateMenu.hidden=true;
+  }
   if (isOpen) setFullscreenPlayerMenuOpen(false);
   if (isOpen) setFullscreenPlayerTracksOpen(false);
   if (isOpen) setFullscreenRoomSettingsOpen(false);
@@ -21335,6 +21411,78 @@ function setFullscreenPlayerQueueOpen(isOpen) {
   toggle.title = isOpen ? 'Warteschlange ausblenden' : 'Warteschlange einblenden';
   toggle.setAttribute('aria-label', toggle.title);
   if (isOpen) renderFullscreenPlayerQueue();
+}
+
+let albumQueuePointerDrag = null;
+function reorderQueuedAlbum(from, to, expectedQueue) {
+  if (expectedQueue && (expectedQueue.length!==listeningAlbumQueue.length || expectedQueue.some((item,index)=>item!==listeningAlbumQueue[index]))) return false;
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from<0 || to<0 || from>=listeningAlbumQueue.length || to>=listeningAlbumQueue.length || from===to) return false;
+  const [item]=listeningAlbumQueue.splice(from,1);
+  listeningAlbumQueue.splice(to,0,item);
+  updateAlbumQueueControls();
+  return true;
+}
+function clearAlbumQueueDrag() {
+  const drag=albumQueuePointerDrag;
+  if(!drag)return;
+  if(drag.frame)cancelAnimationFrame(drag.frame);
+  drag.row.classList.remove('queue-is-dragging');
+  drag.handle.setAttribute('aria-pressed','false');
+  drag.list.querySelectorAll('.queue-drop-before,.queue-drop-after').forEach(row=>row.classList.remove('queue-drop-before','queue-drop-after'));
+  albumQueuePointerDrag=null;
+}
+function updateAlbumQueueDragTarget(drag) {
+  drag.list.querySelectorAll('.queue-drop-before,.queue-drop-after').forEach(row=>row.classList.remove('queue-drop-before','queue-drop-after'));
+  const row=document.elementFromPoint(drag.x,drag.y)?.closest('[data-queue-index]');
+  drag.target=null;
+  if(!row || row.parentElement!==drag.list)return;
+  const bounds=row.getBoundingClientRect(),after=drag.y>bounds.top+bounds.height/2;
+  const insertion=Number(row.dataset.queueIndex)+(after?1:0);
+  drag.target=Math.max(0,Math.min(drag.snapshot.length-1,insertion-(insertion>drag.index?1:0)));
+  row.classList.add(after?'queue-drop-after':'queue-drop-before');
+}
+function scrollAlbumQueueDrag() {
+  const drag=albumQueuePointerDrag;if(!drag?.started)return;
+  const bounds=drag.list.getBoundingClientRect(),edge=44;
+  if(drag.y<bounds.top+edge)drag.list.scrollTop-=10;
+  else if(drag.y>bounds.bottom-edge)drag.list.scrollTop+=10;
+  updateAlbumQueueDragTarget(drag);
+  drag.frame=requestAnimationFrame(scrollAlbumQueueDrag);
+}
+function bindAlbumQueueReorder(row,main,item,index,list) {
+  row.dataset.queueIndex=String(index);
+  const handle=document.createElement('button');handle.type='button';handle.className='album-queue-reorder-handle';
+  handle.textContent='⠿';handle.title='Ziehen zum Umsortieren';
+  handle.setAttribute('aria-label',`${item.title || 'Album'} in der Warteschlange verschieben`);
+  handle.setAttribute('aria-pressed','false');
+  main.append(handle);
+  handle.addEventListener('pointerdown',event=>{
+    if(event.button!==0 || listeningAlbumQueue.length<2)return;
+    event.preventDefault();event.stopPropagation();clearAlbumQueueDrag();
+    albumQueuePointerDrag={pointer:event.pointerId,row,handle,list,index,x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,snapshot:[...listeningAlbumQueue],started:false,target:null,frame:0};
+    handle.setPointerCapture(event.pointerId);
+  });
+  handle.addEventListener('pointermove',event=>{
+    const drag=albumQueuePointerDrag;if(!drag || drag.pointer!==event.pointerId)return;
+    drag.x=event.clientX;drag.y=event.clientY;
+    if(!drag.started && Math.hypot(drag.x-drag.startX,drag.y-drag.startY)<4)return;
+    event.preventDefault();
+    if(!drag.started){drag.started=true;row.classList.add('queue-is-dragging');handle.setAttribute('aria-pressed','true');drag.frame=requestAnimationFrame(scrollAlbumQueueDrag);}
+    updateAlbumQueueDragTarget(drag);
+  });
+  handle.addEventListener('pointerup',event=>{
+    const drag=albumQueuePointerDrag;if(!drag || drag.pointer!==event.pointerId)return;
+    if(drag.started){event.preventDefault();drag.x=event.clientX;drag.y=event.clientY;updateAlbumQueueDragTarget(drag);}
+    const target=drag.target;clearAlbumQueueDrag();
+    if(drag.started && target!==null)reorderQueuedAlbum(drag.index,target,drag.snapshot);
+  });
+  handle.addEventListener('pointercancel',clearAlbumQueueDrag);
+  handle.addEventListener('lostpointercapture',()=>{if(albumQueuePointerDrag?.handle===handle)clearAlbumQueueDrag();});
+  handle.addEventListener('keydown',event=>{
+    if(!['ArrowUp','ArrowDown'].includes(event.key))return;
+    event.preventDefault();const target=index+(event.key==='ArrowUp'?-1:1);
+    if(reorderQueuedAlbum(index,target))list.querySelector(`[data-queue-index="${target}"] .album-queue-reorder-handle`)?.focus();
+  });
 }
 
 function renderFullscreenPlayerQueue() {
@@ -21353,6 +21501,7 @@ function renderFullscreenPlayerQueue() {
     row.className = 'album-queue-item';
     const main = document.createElement('div');
     main.className = 'album-queue-item-main';
+    bindAlbumQueueReorder(row,main,item,index,list);
     if (item.coverUrl) {
       const cover = document.createElement('img');
       cover.className = 'album-queue-cover';
@@ -21403,6 +21552,11 @@ function renderFullscreenPlayerQueue() {
 }
 
 function setFullscreenPlayerTracksOpen(isOpen) {
+  if (isOpen) {
+    toggleFullscreenMusicSettings(false);
+    const crateMenu=document.getElementById('roomQueueCrateMenu');
+    if(crateMenu)crateMenu.hidden=true;
+  }
   const panel = document.getElementById('fullscreenPlayerTracksPanel');
   const button = document.getElementById('fullscreenPlayerTracksToggle');
   if (isOpen) {
@@ -21573,6 +21727,7 @@ function renderListeningAlbumQueue() {
     row.className = 'album-queue-item';
     const main = document.createElement('div');
     main.className = 'album-queue-item-main';
+    bindAlbumQueueReorder(row,main,item,index,list);
     if (item.coverUrl) {
       const cover = document.createElement('img');
       cover.className = 'album-queue-cover';
@@ -21691,7 +21846,9 @@ const roomQueueCrate=document.getElementById('roomQueueCrate');
 const roomQueueCrateMenu=document.getElementById('roomQueueCrateMenu');
 roomQueueCrate.addEventListener('click',()=>setFullscreenPlayerQueueOpen(true));
 roomQueueCrate.addEventListener('contextmenu',event=>{
-  event.preventDefault();roomQueueCrateMenu.hidden=false;
+  event.preventDefault();
+  setFullscreenPlayerMenuOpen(false);setFullscreenPlayerQueueOpen(false);setFullscreenPlayerTracksOpen(false);setFullscreenRoomSettingsOpen(false);toggleFullscreenMusicSettings(false);
+  roomQueueCrateMenu.hidden=false;
   roomQueueCrateMenu.style.left=`${Math.max(8,Math.min(event.clientX,innerWidth-230))}px`;
   roomQueueCrateMenu.style.top=`${Math.max(8,Math.min(event.clientY,innerHeight-110))}px`;
   document.getElementById('roomCrateShuffle').disabled=listeningAlbumQueue.length<2;
@@ -23222,7 +23379,9 @@ function mountListeningEmbed(container, url, title, item = null, restorePlayback
     playerContainer.replaceChildren();
     const dock = document.getElementById('albumListeningDock');
     dock.classList.toggle('has-custom-mini', !!spotifyEmbed || !!youtubeEmbed);
-    dock.classList.remove('is-hidden', 'is-collapsed');
+    dock.classList.remove('is-hidden','is-expanded');
+    dock.classList.add('is-collapsed');
+    const queuePanel=document.getElementById('albumQueuePanel');if(queuePanel)queuePanel.hidden=true;
     document.getElementById('albumListeningDockTitle').textContent = title || 'Album anhören';
     dock.hidden = false;
     currentListeningAlbum = { ...(item || {}), title: title || item?.title || 'Album', listeningUrl: url, ...(spotifyEmbed ? {spotifyAlbumUrl:url} : {}) };
