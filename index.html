@@ -11423,6 +11423,7 @@ albumEditorModalContent.appendChild(albumEditorFormSection);
 let vinylMigrationQueue = [];
 let vinylMigrationIndex = -1;
 let vinylMigrationActive = false;
+let vinylMigrationSaving = false;
 let ownedAlbumReviewQueue = [];
 let ownedAlbumReviewIndex = -1;
 let ownedAlbumReviewActive = false;
@@ -15402,7 +15403,8 @@ function getLegacyVinylEntries() {
 function openVinylMigrationItem() {
   while (vinylMigrationIndex < vinylMigrationQueue.length) {
     const entry = collection.find(item => String(item.id) === vinylMigrationQueue[vinylMigrationIndex]);
-    if (entry && (!Array.isArray(entry.vinylDesign?.records) || entry.vinylDesign.records.length === 0)) {
+    // Queue membership is fixed when the review starts; saved entries remain navigable.
+    if (entry) {
       currentDraft = JSON.parse(JSON.stringify(entry));
       currentTracks = Array.isArray(entry.tracklist) ? entry.tracklist : [];
       document.getElementById('vinylMigrationProgress').textContent = `Album ${vinylMigrationIndex + 1} von ${vinylMigrationQueue.length}`;
@@ -15596,23 +15598,36 @@ async function applyVinylEditorDesignToDraft() {
   delete currentDraft.isAnimated;
 }
 
+function setVinylMigrationNavigationBusy(busy) {
+  for (const id of ['vinylMigrationGoBtn','vinylMigrationIndexInput']) document.getElementById(id).disabled = busy;
+  document.getElementById('vinylMigrationPrevBtn').disabled = busy || vinylMigrationIndex <= 0;
+  document.getElementById('vinylMigrationNextBtn').disabled = busy || vinylMigrationIndex >= vinylMigrationQueue.length - 1;
+}
 async function commitVinylMigrationItem(continueReview, targetIndex = null) {
-  if (!vinylMigrationActive || !currentDraft) return;
+  if (!vinylMigrationActive || !currentDraft || vinylMigrationSaving) return;
+  if (targetIndex != null && (!Number.isInteger(targetIndex) || targetIndex < 0 || targetIndex >= vinylMigrationQueue.length)) return;
+  const draft = currentDraft;
+  const queue = vinylMigrationQueue;
+  vinylMigrationSaving = true;
+  setVinylMigrationNavigationBusy(true);
   try {
-    await applyVinylEditorDesignToDraft();
-  } catch (error) {
-    await showAlert(error instanceof Error ? error.message : 'Das Picture-Disc-Bild konnte nicht gespeichert werden.');
-    return;
-  }
-  const existingIndex = collection.findIndex(item => String(item.id) === String(currentDraft.id));
-  if (existingIndex >= 0) collection[existingIndex] = currentDraft;
-  saveCollection();
-  vinylMigrationIndex = targetIndex == null ? vinylMigrationIndex + 1 : targetIndex;
-  saveEditReviewProgress('legacyVinyl', vinylMigrationQueue, Math.min(vinylMigrationIndex, vinylMigrationQueue.length - 1));
-  if (continueReview) {
-    openVinylMigrationItem();
-  } else {
-    finishVinylMigration();
+    try {
+      await applyVinylEditorDesignToDraft();
+    } catch (error) {
+      await showAlert(error instanceof Error ? error.message : 'Das Picture-Disc-Bild konnte nicht gespeichert werden.');
+      return;
+    }
+    if (!vinylMigrationActive || currentDraft !== draft || vinylMigrationQueue !== queue) return;
+    const existingIndex = collection.findIndex(item => String(item.id) === String(draft.id));
+    if (existingIndex >= 0) collection[existingIndex] = draft;
+    saveCollection();
+    vinylMigrationIndex = targetIndex == null ? vinylMigrationIndex + 1 : targetIndex;
+    saveEditReviewProgress('legacyVinyl', vinylMigrationQueue, Math.min(vinylMigrationIndex, vinylMigrationQueue.length - 1));
+    if (continueReview) openVinylMigrationItem();
+    else finishVinylMigration();
+  } finally {
+    vinylMigrationSaving = false;
+    setVinylMigrationNavigationBusy(false);
   }
 }
 
