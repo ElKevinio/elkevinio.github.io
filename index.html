@@ -7300,7 +7300,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
 
   .discogs-label-art { position:absolute; width:30%; height:30%; left:35%; top:35%; overflow:hidden; border-radius:50%; z-index:2; pointer-events:none; }
   .discogs-label-art.is-enlarged { inset:0; width:100%; height:100%; }
-  .discogs-label-logo { position:absolute; height:23%; object-fit:contain; }
+  .discogs-label-logo { position:absolute; object-fit:contain; transform-origin:center; }
   .discogs-label-effect { position:absolute; inset:0; background-size:100% 100%; }
   .vinyl-card-preview::before, .vinyl-editor-disc::before, .fullscreen-player-vinyl::before { z-index:3; }
 
@@ -7621,6 +7621,11 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     .vinyl-layer-color-control .color-swatch-control { width:32px; flex:0 0 32px; }
     .vinyl-layer-main-row .vinyl-layer-count { width:42px; }
   }
+
+  .is-label-editor .vinyl-editor-meta { width:100%; grid-template-columns:minmax(0,1fr); }
+  .is-label-editor .vinyl-editor-meta > label:has(#vinylBaseColor) { width:100%; min-width:0; grid-column:1 / -1; }
+  .is-label-editor .vinyl-editor-meta .vinyl-color-picker-row { width:100%; }
+  .is-label-editor .vinyl-editor-meta .color-swatch-control { min-width:80px; height:40px; flex:1 1 auto; }
 </style>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -14434,7 +14439,10 @@ function normalizeVinylDesign(item) {
             logoUrl: safeDiscogsLogoUrl(layer.logoUrl),
             logoBackground: ['light','dark'].includes(layer.logoBackground) ? layer.logoBackground : 'original',
             logoPosition: layer.logoPosition === 'bottom' ? 'bottom' : 'top',
-            logoWidth: Math.max(10, Math.min(85, Number(layer.logoWidth) || 50))
+            logoWidth: Math.max(10, Math.min(200, Number(layer.logoWidth) || 50)),
+            logoX: Math.max(-100, Math.min(100, Number(layer.logoX) || 0)),
+            logoY: Math.max(-100, Math.min(100, Number.isFinite(Number(layer.logoY)) && layer.logoY != null ? Number(layer.logoY) : layer.logoPosition === 'bottom' ? 61 : 16)),
+            logoRotation: Math.max(-180, Math.min(180, Number(layer.logoRotation) || 0))
           } : {}),
           x: Math.max(-100, Math.min(100, Number(layer.x) || 0)),
           y: Math.max(-100, Math.min(100, Number(layer.y) || 0)),
@@ -14557,8 +14565,8 @@ function getLabelLayerMarkup(record, enlarged = false) {
   if (!layers?.some(layer => layer.type === 'Label' && safeDiscogsLogoUrl(layer.logoUrl))) return '';
   const content = [...layers].reverse().map(layer => {
     if (layer.type === 'Label' && safeDiscogsLogoUrl(layer.logoUrl)) {
-      const width = Math.max(10, Math.min(85, Number(layer.logoWidth) || 50));
-      return `<img class="discogs-label-logo" src="${escapeHtml(safeDiscogsLogoUrl(layer.logoUrl))}" alt="" referrerpolicy="no-referrer" draggable="false" style="mix-blend-mode:${layer.logoBackground === 'light' ? 'multiply' : layer.logoBackground === 'dark' ? 'screen' : 'normal'};width:${width}%;left:${50-width/2}%;top:${layer.logoPosition === 'bottom' ? 61 : 16}%;">`;
+      const width = Math.max(10, Math.min(200, Number(layer.logoWidth) || 50));
+      return `<img class="discogs-label-logo" src="${escapeHtml(safeDiscogsLogoUrl(layer.logoUrl))}" alt="" referrerpolicy="no-referrer" draggable="false" style="mix-blend-mode:${layer.logoBackground === 'light' ? 'multiply' : layer.logoBackground === 'dark' ? 'screen' : 'normal'};width:${width}%;height:${width * 23 / 50}%;left:${50+(Number(layer.logoX)||0)-width/2}%;top:${layer.logoY ?? (layer.logoPosition === 'bottom' ? 61 : 16)}%;transform:rotate(${Number(layer.logoRotation)||0}deg);">`;
     }
     return `<span class="discogs-label-effect" style="background-image:${getVinylSvgData({layers:[layer],labelArtwork:true})}"></span>`;
   }).join('');
@@ -14582,9 +14590,11 @@ function getVinylSvgData(record) {
     const end = Number(layer.endAngle ?? 360);
     if (layer.type === 'Label' && record.labelArtwork) {
       const image = safeLabelLogoData(layer.logoDataUrl);
-      const width = Math.max(10, Math.min(85, Number(layer.logoWidth) || 50)) * 4;
-      const y = layer.logoPosition === 'bottom' ? 244 : 64;
-      if (image) parts.push(`<image href="${image}" x="${200-width/2}" y="${y}" width="${width}" height="92" preserveAspectRatio="xMidYMid meet"/>`);
+      const width = Math.max(10, Math.min(200, Number(layer.logoWidth) || 50)) * 4;
+      const y = (layer.logoY ?? (layer.logoPosition === 'bottom' ? 61 : 16)) * 4;
+      const x = 200 + (Number(layer.logoX) || 0) * 4 - width / 2;
+      const height = width * 92 / 200;
+      if (image) parts.push(`<image href="${image}" x="${x}" y="${y}" width="${width}" height="${height}" transform="rotate(${Number(layer.logoRotation)||0} ${x+width/2} ${y+height/2})" preserveAspectRatio="xMidYMid meet"/>`);
     } else if (VINYL_SHAPES.includes(layer.type)) {
       const x = 200 + (Number(layer.x) || 0) * 2, y = 200 + (Number(layer.y) || 0) * 2;
       const w = Math.max(1, Math.min(200, Number(layer.width) || 50)) * 4;
@@ -14820,7 +14830,11 @@ function renderVinylLayerDetailControls(layer) {
       <label>Bildhintergrund<select data-layer-field="logoBackground"><option value="original" ${!['light','dark'].includes(layer.logoBackground) ? 'selected' : ''}>Original</option><option value="light" ${layer.logoBackground === 'light' ? 'selected' : ''}>Weiß ausblenden</option><option value="dark" ${layer.logoBackground === 'dark' ? 'selected' : ''}>Schwarz ausblenden</option></select></label>
       <details class="editor-help vinyl-logo-help"><summary>Hintergrund · Hilfe</summary><p class="settings-panel-hint">Optische Überblendung: Weiß ausblenden eignet sich für dunkle Logos, Schwarz ausblenden für helle Logos. Andere Bildfarben können sich dabei mit der Label-Farbe mischen.</p></details>
       <label>Platzierung<select data-layer-field="logoPosition"><option value="top" ${layer.logoPosition !== 'bottom' ? 'selected' : ''}>Oben</option><option value="bottom" ${layer.logoPosition === 'bottom' ? 'selected' : ''}>Unten</option></select></label>
-      <label>Breite %<input type="number" data-layer-field="logoWidth" min="10" max="85" value="${layer.logoWidth || 50}"></label>
+      <label>Breite %<input type="number" data-layer-field="logoWidth" min="10" max="200" value="${layer.logoWidth || 50}"></label>
+      <label>Horizontal %<input type="number" data-layer-field="logoX" min="-100" max="100" value="${layer.logoX ?? 0}"></label>
+      <label>Vertikal %<input type="number" data-layer-field="logoY" min="-100" max="100" value="${layer.logoY ?? (layer.logoPosition === 'bottom' ? 61 : 16)}"></label>
+      <label>Drehung °<input type="number" data-layer-field="logoRotation" min="-180" max="180" value="${layer.logoRotation ?? 0}"></label>
+      <button type="button" data-reset-logo-transform>Position &amp; Größe zurücksetzen</button>
       <p class="settings-panel-hint" role="status">${escapeHtml(discogsLogoStatus.get(layer) || (layer.logoDataUrl || layer.logoUrl ? 'Logo gespeichert.' : 'Wähle ein Label, um sein Logo zu laden.'))}</p>
       ${layer.labelId ? `<a href="https://www.discogs.com/label/${layer.labelId}" target="_blank" rel="noopener noreferrer">Label auf Discogs</a>` : ''}`;
   }
@@ -25246,6 +25260,15 @@ async function loadDiscogsLabelImages(layer) {
   if (active()) { renderVinylEditor(); refreshLabelImageDialog(); }
 }
 document.getElementById('vinylLayerList').addEventListener('click', event => {
+  const reset = event.target.closest('[data-reset-logo-transform]');
+  if (reset) {
+    const layer = editorRecord().layers[Number(reset.closest('[data-layer-index]').dataset.layerIndex)];
+    if (layer?.type === 'Label') {
+      Object.assign(layer,{logoWidth:50,logoX:0,logoY:layer.logoPosition === 'bottom' ? 61 : 16,logoRotation:0});
+      renderVinylEditor(); scheduleVinylEditorPreview();
+    }
+    return;
+  }
   if (event.target.closest('[data-load-labels]')) loadDiscogsLabelChoices();
   const button = event.target.closest('[data-open-label-images]');
   if (!button || !labelEditorDraft) return;
@@ -25351,7 +25374,12 @@ document.getElementById('vinylLayerList').addEventListener('input', event => {
     if (layer.type === 'Liquid' && layer.amount == null) layer.amount = 50;
   }
   else if (field === 'logoBackground') layer.logoBackground = ['light','dark'].includes(event.target.value) ? event.target.value : 'original';
-  else if (field === 'logoPosition') layer.logoPosition = event.target.value === 'bottom' ? 'bottom' : 'top';
+  else if (field === 'logoPosition') {
+    layer.logoPosition = event.target.value === 'bottom' ? 'bottom' : 'top';
+    layer.logoY = layer.logoPosition === 'bottom' ? 61 : 16;
+    const input = row.querySelector('[data-layer-field="logoY"]');
+    if (input) input.value = layer.logoY;
+  }
   else if (field === 'amount') {
     const requestedAmount = Math.max(0, Math.min(100, Number(event.target.value) || 0));
     layer.amount = Math.abs(requestedAmount - 50) <= 2 ? 50 : requestedAmount;
@@ -25384,7 +25412,7 @@ document.getElementById('vinylLayerList').addEventListener('change', event => {
   if (event.target.type !== 'number') return;
   const row = event.target.closest('[data-layer-index]');
   const layer = editorRecord().layers[Number(row.dataset.layerIndex)];
-  const limits = field === 'logoWidth' ? [10,85] : ['x','y'].includes(field) ? [-100,100] : field === 'rotation' ? [-180,180] : ['width','height'].includes(field) ? [1,200] : field === 'startAngle' || field === 'endAngle' ? [0, 360]
+  const limits = field === 'logoWidth' ? [10,200] : ['x','y','logoX','logoY'].includes(field) ? [-100,100] : ['rotation','logoRotation'].includes(field) ? [-180,180] : ['width','height'].includes(field) ? [1,200] : field === 'startAngle' || field === 'endAngle' ? [0, 360]
     : field === 'size' ? [1, 20]
       : field === 'lengthMin' ? [0, 100] : [1, 100];
   const parsedValue = event.target.value === '' ? limits[0] : Number(event.target.value);
