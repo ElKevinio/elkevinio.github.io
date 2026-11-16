@@ -9933,8 +9933,8 @@ function mergeCloudFields(base, local, remote, label = 'Eintrag') {
   }
   return merged;
 }
-// Preferences must not block album synchronization. Merge nested options individually;
-// the last explicit local change wins for the same option. Shelf data stays guarded.
+// Settings and collection titles never produce synchronization conflicts.
+// Preserve untouched cloud options; explicit local changes use the latest save.
 function mergeCloudSettings(base, local, remote) {
   const object=value=>value && typeof value==='object' && !Array.isArray(value);
   if(stableCloudJson(local)===stableCloudJson(base))return remote;
@@ -9942,13 +9942,8 @@ function mergeCloudSettings(base, local, remote) {
   if(!object(local) || !object(remote))return local;
   const merged={};
   for(const key of new Set([...Object.keys(base || {}),...Object.keys(local),...Object.keys(remote)])) {
-    if(key==='shelves') {
-      const guarded=mergeCloudFields({shelves:base?.shelves},{shelves:local.shelves},{shelves:remote.shelves},'Regale');
-      if(guarded.shelves!==undefined)merged.shelves=guarded.shelves;
-    } else {
-      const value=mergeCloudSettings(base?.[key],local[key],remote[key]);
-      if(value!==undefined)merged[key]=value;
-    }
+    const value=mergeCloudSettings(base?.[key],local[key],remote[key]);
+    if(value!==undefined)merged[key]=value;
   }
   return merged;
 }
@@ -9979,7 +9974,7 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
   const baseImages=new Map(cloudCollectionSnapshotUid===uid?cloudImageSnapshot:[]);
   const localPlan=buildCloudCollectionPlan(localItems);
   const localSettings=mergeCloudSettings(cloudLocalSettingsSnapshot || previousRoot.settings || {},rootFields.data.settings || {},previousRoot.settings || {});
-  const localTitle=mergeCloudFields({title:cloudLocalTitleSnapshot ?? previousRoot.title},{title:rootFields.data.title},{title:previousRoot.title},'Sammlungsname').title;
+  const localTitle=mergeCloudSettings({title:cloudLocalTitleSnapshot ?? previousRoot.title},{title:rootFields.data.title},{title:previousRoot.title}).title;
   const userRef=db.collection('users').doc(uid);
   return trackFirebaseRequest(db.runTransaction(async transaction=>{
     const rootSnap=await transaction.get(userRef);
@@ -10007,7 +10002,7 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
     }
     const merged=mergeCloudCollectionVersions(baseItems,localItems,remoteItems);
     const settings=mergeCloudSettings(previousRoot.settings || {},localSettings,remoteRoot.settings || {});
-    const title=mergeCloudFields({title:previousRoot.title},{title:localTitle},{title:remoteRoot.title},'Sammlungsname').title;
+    const title=mergeCloudSettings({title:previousRoot.title},{title:localTitle},{title:remoteRoot.title}).title;
     const plan=buildCloudCollectionPlan(merged);
     const images=new Map(remoteImages);
     for(const [id,data]of localPlan.images) {
@@ -10504,7 +10499,7 @@ async function loadCloudData(uid, prefetchedSnap) {
       return image && item.vinylDesign && !item.vinylDesign.cdImageUrl ? {...item,vinylDesign:{...item.vinylDesign,cdImageDataUrl:image}} : item;
     });
     data.settings=mergeCloudSettings(localPending.baseSettings || {},localPending.settings || {},rawRootData?.settings || {});
-    data.title=mergeCloudFields({title:localPending.baseTitle},{title:localPending.title},{title:rawRootData?.title},'Sammlungsname').title;
+    data.title=mergeCloudSettings({title:localPending.baseTitle},{title:localPending.title},{title:rawRootData?.title}).title;
   }
   cloudBaseCollection = cloudItems.map(item=>splitCloudItem(item).base);
   ownCollection = pendingLocalItems || cloudItems;
