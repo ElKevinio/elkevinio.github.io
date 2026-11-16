@@ -9375,6 +9375,10 @@ let cloudSaveDebounceTimer = null;
 let cloudRetryTimer = null;
 let cloudBannerHideTimer = null;
 let cloudSaveInFlightPromise = null;
+let cloudBaseCollection = [];
+let cloudLocalSettingsSnapshot = null;
+let cloudLocalTitleSnapshot = null;
+let cloudCollectionUnsubscribe = null;
 let cloudChangeRevision = 0;
 let cloudRetryAttempt = 0;
 let cloudSyncUnavailableReason = null;
@@ -9913,126 +9917,136 @@ function buildCloudCollectionPlan(items) {
   return { chunks, images, docIds, itemCount: items.length };
 }
 
-// Schreibt geänderte Bilder, dann (atomar in EINEM Batch) geänderte Blöcke + Root-Dokument,
-// danach räumt es nicht mehr benötigte Dokumente auf.
+// Three-way merge: keep remote changes unless the same field was also changed locally.
+function mergeCloudFields(base, local, remote, label = 'Eintrag') {
+  const merged = {};
+  for (const key of new Set([...Object.keys(base || {}),...Object.keys(local || {}),...Object.keys(remote || {})])) {
+    const before=base?.[key], here=local?.[key], there=remote?.[key];
+    const changedHere=stableCloudJson(here)!==stableCloudJson(before);
+    const changedThere=stableCloudJson(there)!==stableCloudJson(before);
+    if(changedHere && changedThere && stableCloudJson(here)!==stableCloudJson(there)) {
+      const error=new Error(`„${label}“ wurde auf zwei Geräten unterschiedlich geändert (${key}). Beide Stände bleiben erhalten; es wurde nichts überschrieben.`);
+      error.code='collection/concurrent-edit'; throw error;
+    }
+    const value=changedHere?here:there;
+    if(value!==undefined)merged[key]=value;
+  }
+  return merged;
+}
+function mergeCloudCollectionVersions(base, local, remote) {
+  const map=items=>new Map(items.map(item=>[String(item.id),splitCloudItem(item).base]));
+  const before=map(base),here=map(local),there=map(remote),merged=[];
+  for(const id of new Set([...there.keys(),...here.keys(),...before.keys()])) {
+    const b=before.get(id),l=here.get(id),r=there.get(id);
+    if(b && (!l || !r)) {
+      const survivor=l || r;
+      if(survivor && stableCloudJson(survivor)!==stableCloudJson(b)) {
+        const error=new Error(`„${survivor.title || id}“ wurde auf einem Gerät gelöscht und auf dem anderen geändert. Es wurde nichts überschrieben.`);
+        error.code='collection/concurrent-edit';throw error;
+      }
+      continue;
+    }
+    if(!b && !l){merged.push(r);continue;}
+    if(!b && !r){merged.push(l);continue;}
+    merged.push(mergeCloudFields(b,l,r,l?.title || r?.title || id));
+  }
+  return merged;
+}
+
+// All shared chunks and their manifest are read/written in one retryable transaction.
 async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budget) {
-  const plan = buildCloudCollectionPlan(items);
-  const sameUid = cloudCollectionSnapshotUid === uid;
-  const chunkSnap = sameUid ? cloudChunkSnapshot : new Map();
-  const imageSnap = sameUid ? cloudImageSnapshot : new Map();
-  const pendingImages = sameUid ? cloudPendingImageIds : new Set();
-  const wasV2 = previousRoot.collectionStorageVersion === 2;
-  const prevChunkIds = wasV2 && Array.isArray(previousRoot.collectionChunkIds) ? previousRoot.collectionChunkIds : [];
-  const prevImageIds = wasV2 && Array.isArray(previousRoot.collectionImageIds) ? [...previousRoot.collectionImageIds].sort() : [];
-  const chunkIds = plan.chunks.map(chunk => chunk.id);
-  // Bilder, die noch nicht heruntergeladen wurden, existieren in der Cloud weiter und dürfen nicht gelöscht werden.
-  const imageIds = [...new Set([...plan.images.keys(), ...[...pendingImages].filter(id => plan.docIds.has(id))])].sort();
-  const sameList = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
-  const changedImages = [...plan.images].filter(([id, url]) => imageSnap.get(id) !== url);
-  const changedChunks = plan.chunks.filter(chunk => chunkSnap.get(chunk.id) !== chunk.json);
-  const structureChanged = !wasV2
-    || !sameList(prevChunkIds, chunkIds)
-    || !sameList(prevImageIds, imageIds)
-    || previousRoot.collectionItemCount !== plan.itemCount
-    || Object.prototype.hasOwnProperty.call(previousRoot, 'collection');
-
-  const userDocRef = db.collection('users').doc(uid);
-  const nextChunkSnapshot = new Map(chunkSnap);
-  const nextImageSnapshot = new Map(imageSnap);
-  const nextRoot = { ...previousRoot };
-  const result = { nextChunkSnapshot, nextImageSnapshot, nextRoot, rootWritten: false, complete: false, written: 0 };
-  let remaining = budget;
-
-  // 1. Bilder (je ein Dokument)
-  const queue = [...changedImages];
-  while (queue.length && remaining > 0) {
-    const batch = db.batch();
-    const taken = [];
-    let bytes = 0;
-    while (queue.length && taken.length < Math.min(remaining, 400)) {
-      const [id, url] = queue[0];
-      if (taken.length && bytes + url.length > CLOUD_BATCH_MAX_BYTES) break;
-      queue.shift();
-      batch.set(getCloudImagesRef(uid).doc(id), { dataUrl: url });
-      bytes += url.length;
-      taken.push([id, url]);
-    }
-    await trackFirebaseRequest(batch.commit());
-    taken.forEach(([id, url]) => nextImageSnapshot.set(id, url));
-    remaining -= taken.length;
-    result.written += taken.length;
-  }
-  const imagesComplete = queue.length === 0;
-
-  // 2. Blöcke + Root atomar
-  let collectionComplete = false;
-  if (imagesComplete) {
-    const needsRoot = structureChanged || rootFields.needsWrite;
-    const needed = changedChunks.length + (needsRoot ? 1 : 0);
-    const totalBytes = changedChunks.reduce((sum, chunk) => sum + chunk.bytes, 0);
-    if (totalBytes > CLOUD_BATCH_MAX_BYTES) throw new Error('Die Sammlung ist zu groß für einen gemeinsamen Schreibvorgang.');
-    if (needed === 0) {
-      collectionComplete = true;
-    } else if (needed <= remaining) {
-      const batch = db.batch();
-      changedChunks.forEach(chunk => batch.set(getCloudChunksRef(uid).doc(chunk.id), { json: chunk.json }));
-      if (needsRoot) {
-        batch.set(userDocRef, {
-          ...rootFields.data,
-          collection: firebase.firestore.FieldValue.delete(),
-          collectionStorageVersion: 2,
-          collectionChunkIds: chunkIds,
-          collectionImageIds: imageIds,
-          collectionItemCount: plan.itemCount
-        }, { merge: true });
+  const localItems=JSON.parse(JSON.stringify(items));
+  const baseItems=cloudCollectionSnapshotUid===uid?JSON.parse(JSON.stringify(cloudBaseCollection)):[];
+  const baseImages=new Map(cloudCollectionSnapshotUid===uid?cloudImageSnapshot:[]);
+  const localPlan=buildCloudCollectionPlan(localItems);
+  const localSettings=mergeCloudFields(cloudLocalSettingsSnapshot || previousRoot.settings || {},rootFields.data.settings || {},previousRoot.settings || {},'Einstellungen');
+  const localTitle=mergeCloudFields({title:cloudLocalTitleSnapshot ?? previousRoot.title},{title:rootFields.data.title},{title:previousRoot.title},'Sammlungsname').title;
+  const userRef=db.collection('users').doc(uid);
+  return trackFirebaseRequest(db.runTransaction(async transaction=>{
+    const rootSnap=await transaction.get(userRef);
+    const remoteRoot=rootSnap.exists?rootSnap.data():{};
+    const remoteChunks=new Map(),remoteImages=new Map();
+    let remoteItems=[];
+    if(remoteRoot.collectionStorageVersion===2) {
+      for(const id of remoteRoot.collectionChunkIds || []) {
+        const snap=await transaction.get(getCloudChunksRef(uid).doc(id));
+        if(!snap.exists)throw new Error(`Sammlungsblock ${id} fehlt in der Cloud. Es wurde nichts überschrieben.`);
+        const json=snap.data().json,parsed=JSON.parse(json);
+        if(!Array.isArray(parsed))throw new Error('Ungültiger Sammlungsblock.');
+        remoteChunks.set(id,json);remoteItems.push(...parsed);
       }
-      await trackFirebaseRequest(batch.commit());
-      changedChunks.forEach(chunk => nextChunkSnapshot.set(chunk.id, chunk.json));
-      remaining -= needed;
-      result.written += needed;
-      collectionComplete = true;
-      if (needsRoot) {
-        result.rootWritten = true;
-        const { updatedAt, ...plainRoot } = rootFields.data;
-        Object.assign(nextRoot, plainRoot, {
-          collectionStorageVersion: 2,
-          collectionChunkIds: chunkIds,
-          collectionImageIds: imageIds,
-          collectionItemCount: plan.itemCount
-        });
-        delete nextRoot.collection;
+      if(typeof remoteRoot.collectionItemCount==='number' && remoteRoot.collectionItemCount!==remoteItems.length)throw new Error('Die Cloud-Sammlung ist unvollständig. Es wurde nichts überschrieben.');
+    } else if(remoteRoot.collectionStorageVersion===1) {
+      for(const id of remoteRoot.collectionItemIds || []) {
+        const snap=await transaction.get(getCloudCollectionItemsRef(uid).doc(id));
+        if(!snap.exists)throw new Error('Ein Album fehlt in der Cloud.');remoteItems.push(snap.data());
+      }
+    } else remoteItems=Array.isArray(remoteRoot.collection)?remoteRoot.collection:[];
+    for(const id of new Set([...(remoteRoot.collectionImageIds || []),...baseImages.keys(),...localPlan.images.keys()])) {
+      const snap=await transaction.get(getCloudImagesRef(uid).doc(id));
+      if(snap.exists)remoteImages.set(id,snap.data().dataUrl);
+    }
+    const merged=mergeCloudCollectionVersions(baseItems,localItems,remoteItems);
+    const settings=mergeCloudFields(previousRoot.settings || {},localSettings,remoteRoot.settings || {},'Einstellungen');
+    const title=mergeCloudFields({title:previousRoot.title},{title:localTitle},{title:remoteRoot.title},'Sammlungsname').title;
+    const plan=buildCloudCollectionPlan(merged);
+    const images=new Map(remoteImages);
+    for(const [id,data]of localPlan.images) {
+      if(!plan.docIds.has(id))continue;
+      const before=baseImages.get(id),there=remoteImages.get(id);
+      if(data===before)continue;
+      if(there!==undefined && there!==before && there!==data) {
+        const error=new Error('Das Picture-Disc-Bild wurde gleichzeitig auf zwei Geräten geändert. Es wurde nichts überschrieben.');error.code='collection/concurrent-edit';throw error;
+      }
+      images.set(id,data);
+    }
+    // A newly linked picture replaces an old embedded image; unhydrated images remain intact.
+    const localById=new Map(localItems.map(item=>[getCloudItemDocId(item),item]));
+    const baseById=new Map(baseItems.map(item=>[getCloudItemDocId(item),item]));
+    for(const [id,item]of localById) {
+      const old=baseById.get(id);
+      if(old?.vinylDesign && !item.vinylDesign?.cdImageDataUrl && stableCloudJson(splitCloudItem(item).base.vinylDesign)!==stableCloudJson(splitCloudItem(old).base.vinylDesign)) {
+        if(item.vinylDesign?.cdImageUrl || item.vinylDesign?.discStyle!=='picture-disc')images.delete(id);
       }
     }
-  }
-  if (!collectionComplete && rootFields.needsWrite && remaining > 0) {
-    // Einstellungen/Titel trotzdem sichern, auch wenn die Sammlung noch nicht komplett übertragen ist.
-    await trackFirebaseRequest(userDocRef.set(rootFields.data, { merge: true }));
-    remaining -= 1;
-    result.written += 1;
-    result.rootWritten = true;
-    const { updatedAt, ...plainRoot } = rootFields.data;
-    Object.assign(nextRoot, plainRoot);
-  }
-
-  // 3. Aufräumen (nur nach erfolgreichem Root-Update; Fehler hier sind nicht kritisch)
-  if (collectionComplete) {
-    const staleRefs = [
-      ...prevChunkIds.filter(id => !chunkIds.includes(id)).map(id => getCloudChunksRef(uid).doc(id)),
-      ...prevImageIds.filter(id => !imageIds.includes(id)).map(id => getCloudImagesRef(uid).doc(id))
-    ];
-    prevChunkIds.filter(id => !chunkIds.includes(id)).forEach(id => nextChunkSnapshot.delete(id));
-    [...nextImageSnapshot.keys()].filter(id => !plan.images.has(id) && !pendingImages.has(id)).forEach(id => nextImageSnapshot.delete(id));
-    if (staleRefs.length && remaining > 0) {
-      try {
-        const { deleted } = await deleteCloudCollectionItems(staleRefs, remaining);
-        result.written += deleted;
-      } catch (error) {
-        console.warn('Alte Cloud-Dokumente konnten nicht entfernt werden (nicht kritisch):', error);
+    for(const id of [...images.keys()])if(!plan.docIds.has(id))images.delete(id);
+    const imageChanges=[...images].filter(([id,value])=>remoteImages.get(id)!==value);
+    const chunkChanges=plan.chunks.filter(chunk=>remoteChunks.get(chunk.id)!==chunk.json);
+    const staleChunks=[...remoteChunks.keys()].filter(id=>!plan.chunks.some(chunk=>chunk.id===id));
+    const staleImages=[...remoteImages.keys()].filter(id=>!images.has(id));
+    const imageIds=[...images.keys()].sort(),chunkIds=plan.chunks.map(chunk=>chunk.id);
+    const rootData={...rootFields.data,title,settings,cardStats:computeCardStatsSummary(merged),collectionStorageVersion:2,collectionChunkIds:chunkIds,collectionImageIds:imageIds,collectionItemCount:merged.length};
+    const rootChanged=!rootSnap.exists || ['username','title','settings','cardStats','collectionStorageVersion','collectionChunkIds','collectionImageIds','collectionItemCount'].some(key=>stableCloudJson(rootData[key])!==stableCloudJson(remoteRoot[key])) || Object.hasOwn(remoteRoot,'collection');
+    const needed=chunkChanges.length+imageChanges.length+staleChunks.length+staleImages.length+((rootChanged || chunkChanges.length || imageChanges.length || staleChunks.length || staleImages.length)?1:0);
+    const chunkBytes=chunkChanges.reduce((sum,chunk)=>sum+chunk.bytes,0);
+    if(chunkBytes>CLOUD_BATCH_MAX_BYTES)throw new Error('Die Sammlung ist zu groß für einen gemeinsamen Schreibvorgang.');
+    let written=0,complete=true,nextChunks=new Map(remoteChunks),nextImages=new Map(remoteImages),nextRoot={...remoteRoot};
+    if(needed>0) {
+      const bytes=chunkBytes+imageChanges.reduce((sum,[,value])=>sum+value.length,0);
+      if(needed>budget || bytes>CLOUD_BATCH_MAX_BYTES) {
+        // Stage large image imports in guarded transactions; never publish partial chunks.
+        if(!imageChanges.length || budget<2)throw new Error('Das Schreibpaket ist zu groß. Die Änderungen bleiben lokal erhalten.');
+        let stagedBytes=0;
+        for(const [id,value]of imageChanges) {
+          if(written>=Math.min(budget-1,400) || stagedBytes+value.length>CLOUD_BATCH_MAX_BYTES)break;
+          transaction.set(getCloudImagesRef(uid).doc(id),{dataUrl:value});nextImages.set(id,value);written++;stagedBytes+=value.length;
+        }
+        complete=false;
+        const revision=(Number(remoteRoot.collectionRevision)||0)+1;
+        transaction.set(userRef,{collectionRevision:revision,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+        nextRoot.collectionRevision=revision;written++;
+      } else {
+        for(const [id,value]of imageChanges){transaction.set(getCloudImagesRef(uid).doc(id),{dataUrl:value});nextImages.set(id,value);written++;}
+        for(const chunk of chunkChanges){transaction.set(getCloudChunksRef(uid).doc(chunk.id),{json:chunk.json});nextChunks.set(chunk.id,chunk.json);written++;}
+        for(const id of staleChunks){transaction.delete(getCloudChunksRef(uid).doc(id));nextChunks.delete(id);written++;}
+        for(const id of staleImages){transaction.delete(getCloudImagesRef(uid).doc(id));nextImages.delete(id);written++;}
+        const revision=(Number(remoteRoot.collectionRevision)||0)+1;
+        transaction.set(userRef,{...rootData,collection:firebase.firestore.FieldValue.delete(),collectionRevision:revision},{merge:true});
+        const {updatedAt,...plain}=rootData;nextRoot={...remoteRoot,...plain,collectionRevision:revision};delete nextRoot.collection;written++;
       }
     }
-  }
-  result.complete = collectionComplete;
-  return result;
+    return {nextChunkSnapshot:nextChunks,nextImageSnapshot:nextImages,nextRoot,rootWritten:written>0,complete,written,mergedItems:complete?merged:remoteItems,localItemsSnapshot:localItems};
+  }));
 }
 
 // Lädt Picture-Disc-Bilder der EIGENEN Sammlung im Hintergrund nach.
@@ -10139,6 +10153,9 @@ function persistPendingCloudSnapshot(settings = getCloudSettingsSnapshot(), clea
     localStorage.setItem(getPendingCloudStorageKey(), JSON.stringify({
       title: ownCollectionTitle,
       settings,
+      baseCollection: cloudBaseCollection,
+      baseSettings: cloudRootCache?.uid === currentUid ? cloudRootCache.data.settings || {} : {},
+      baseTitle: cloudRootCache?.uid === currentUid ? cloudRootCache.data.title : ownCollectionTitle,
       cleanupIds: Array.isArray(cleanupIds) ? cleanupIds : previous?.cleanupIds || [],
       lastError: lastError === undefined ? previous?.lastError || null : lastError
     }));
@@ -10456,6 +10473,21 @@ async function loadCloudData(uid, prefetchedSnap) {
       settings: { ...(data.settings || {}), ...(localPending.settings || {}) }
     };
   }
+  if (pendingLocalItems && !Array.isArray(localPending?.baseCollection)) {
+    // Older pending snapshots do not record a base: an absent album is not proof of deletion.
+    const localIds=new Set(pendingLocalItems.map(item=>String(item.id)));
+    pendingLocalItems.push(...cloudItems.filter(item=>!localIds.has(String(item.id))));
+  }
+  if (pendingLocalItems && Array.isArray(localPending?.baseCollection)) {
+    const inline=new Map(pendingLocalItems.filter(item=>item.vinylDesign?.cdImageDataUrl).map(item=>[getCloudItemDocId(item),item.vinylDesign.cdImageDataUrl]));
+    pendingLocalItems=mergeCloudCollectionVersions(localPending.baseCollection,pendingLocalItems,cloudItems).map(item=>{
+      const image=inline.get(getCloudItemDocId(item));
+      return image && item.vinylDesign && !item.vinylDesign.cdImageUrl ? {...item,vinylDesign:{...item.vinylDesign,cdImageDataUrl:image}} : item;
+    });
+    data.settings=mergeCloudFields(localPending.baseSettings || {},localPending.settings || {},rawRootData?.settings || {},'Einstellungen');
+    data.title=mergeCloudFields({title:localPending.baseTitle},{title:localPending.title},{title:rawRootData?.title},'Sammlungsname').title;
+  }
+  cloudBaseCollection = cloudItems.map(item=>splitCloudItem(item).base);
   ownCollection = pendingLocalItems || cloudItems;
   const keptImages = cloudCollectionSnapshotUid === uid
     ? cloudImageIds.filter(id => cloudImageSnapshot.has(id)).map(id => [id, cloudImageSnapshot.get(id)])
@@ -10587,6 +10619,9 @@ async function loadCloudData(uid, prefetchedSnap) {
   const banner = document.getElementById('cloudSyncBanner');
   if (banner) banner.hidden = true;
   updateCloudSyncIndicator();
+  cloudLocalSettingsSnapshot = JSON.parse(JSON.stringify(getCloudSettingsSnapshot()));
+  cloudLocalTitleSnapshot = ownCollectionTitle;
+  startCloudCollectionLiveSync(uid);
   if (localPending) {
     cloudSyncUnavailableReason = localPending.lastError || null;
     pendingCloudSave = true;
@@ -10602,6 +10637,17 @@ async function loadCloudData(uid, prefetchedSnap) {
     scheduleCloudSave(2000);
   }
   if (cloudCollectionIntegrityIssue) updateCloudSyncBanner(getCollectionIntegrityMessage(), 'error', false);
+}
+
+function startCloudCollectionLiveSync(uid) {
+  cloudCollectionUnsubscribe?.();
+  cloudCollectionUnsubscribe=db.collection('users').doc(uid).onSnapshot(snapshot=>{
+    if(!snapshot.exists || currentUid!==uid || !viewingOwnCollection)return;
+    if(Number(snapshot.data().collectionRevision || 0)===Number(cloudRootCache?.data?.collectionRevision || 0))return;
+    pendingCloudSave=true;
+    updateCloudSyncIndicator();
+    scheduleCloudSave(400);
+  },error=>console.warn('Live-Synchronisierung konnte nicht aktualisiert werden:',error));
 }
 
 async function performCloudDataSaveNow(allowRemoteView = false) {
@@ -10653,6 +10699,21 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }
     }, availableWrites);
+    if (currentUid !== uid) return false;
+    if (result.complete) {
+      const mergedNow = mergeCloudCollectionVersions(result.localItemsSnapshot,ownCollection,result.mergedItems);
+      const inlineNow = new Map(ownCollection.filter(item=>item.vinylDesign?.cdImageDataUrl).map(item=>[getCloudItemDocId(item),item.vinylDesign.cdImageDataUrl]));
+      const inlineAtStart = new Map(result.localItemsSnapshot.map(item=>[getCloudItemDocId(item),item.vinylDesign?.cdImageDataUrl]));
+      ownCollection = mergedNow.map(item=>{
+        const id=getCloudItemDocId(item),data=inlineNow.has(id) && inlineNow.get(id)!==inlineAtStart.get(id) ? inlineNow.get(id) : result.nextImageSnapshot.get(id);
+        return data && item.vinylDesign?.discStyle==='picture-disc' && !item.vinylDesign.cdImageUrl ? {...item,vinylDesign:{...item.vinylDesign,cdImageDataUrl:data}} : item;
+      });
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(ownCollection));
+      if(viewingOwnCollection){collection=ownCollection;renderCollection();}
+      cloudLocalSettingsSnapshot=JSON.parse(JSON.stringify(settingsObj));
+      cloudLocalTitleSnapshot=ownCollectionTitle;
+    }
+    cloudBaseCollection = result.mergedItems.map(item=>splitCloudItem(item).base);
     cloudCollectionSnapshotUid = uid;
     cloudChunkSnapshot = result.nextChunkSnapshot;
     cloudImageSnapshot = result.nextImageSnapshot;
@@ -10679,6 +10740,13 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
     console.error('Cloud-Speichern fehlgeschlagen:', err);
     pendingCloudSave = true;
     cloudRetryAttempt += 1;
+    if (err?.code === 'collection/concurrent-edit') {
+      cloudSyncUnavailableReason='conflict';
+      persistPendingCloudSnapshot(getCloudSettingsSnapshot(),undefined,'conflict');
+      updateCloudSyncIndicator();
+      updateCloudSyncBanner(err.message,'error',false);
+      return false;
+    }
     const quotaError = err?.code === 'resource-exhausted' || /quota|resource.?exhausted/i.test(String(err?.message || ''));
     cloudSyncUnavailableReason = quotaError ? 'quota' : 'offline';
     persistPendingCloudSnapshot(getCloudSettingsSnapshot(), undefined, cloudSyncUnavailableReason);
@@ -10700,6 +10768,7 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
 }
 
 function getPendingCloudStatusMessage() {
+  if (cloudSyncUnavailableReason === 'conflict') return 'Einträge wurden auf mehreren Geräten unterschiedlich geändert. Lokale Änderungen sind erhalten; der Cloud-Stand wurde nicht überschrieben.';
   if (cloudSyncUnavailableReason === 'quota') {
     return 'Firebase ist derzeit nicht verfügbar (Schreibkontingent erreicht). Änderungen sind lokal gespeichert und werden automatisch synchronisiert, sobald Firebase wieder Schreibvorgänge zulässt.';
   }
@@ -11298,6 +11367,8 @@ const vordle = Vordle.create({db,canParticipate:()=>document.getElementById('vor
 
 let authInitializationPhase = 'Anmeldung';
 async function handleAuthStateChange(user) {
+  cloudCollectionUnsubscribe?.();
+  cloudCollectionUnsubscribe=null;
   vordle.reset();
   authInitializationPhase = 'Anmeldung';
   if (user) {
