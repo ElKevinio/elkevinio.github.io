@@ -14339,6 +14339,21 @@ let vinylEditorDesign = null;
 let labelEditorDraft = null;
 let selectedShapeIndex = 0;
 let vinylReference = {url:'', index:0, releaseId:'', opacity:50};
+const vinylReferencesByContext = new Map();
+let activeVinylReferenceContext = 'vinyl:0';
+function activateVinylReferenceContext() {
+  const key = `${labelEditorDraft ? 'label' : 'vinyl'}:${activeVinylIndex}`;
+  if (key === activeVinylReferenceContext) return;
+  vinylReferencesByContext.set(activeVinylReferenceContext, {...vinylReference});
+  vinylReference = {...(vinylReferencesByContext.get(key) || {url:'',index:0,releaseId:'',opacity:50})};
+  activeVinylReferenceContext = key;
+}
+function resetVinylReferenceContexts() {
+  vinylReferencesByContext.clear();
+  activeVinylReferenceContext = 'vinyl:0';
+  vinylReference = {url:'',index:0,releaseId:'',opacity:50};
+}
+
 const VINYL_SHAPES = ['Kreis', 'Quadrat', 'Rechteck', 'Halbkreis', 'Dreieck'];
 function editorRecord() { return labelEditorDraft || vinylEditorDesign.records[activeVinylIndex]; }
 function finishLabelEditor(save = false) {
@@ -14867,6 +14882,7 @@ function renderVinylLayerDetailControls(layer) {
 }
 
 function renderVinylEditor() {
+  activateVinylReferenceContext();
   const record = editorRecord();
   document.querySelector('#vinylEditorOverlay .vinyl-editor-box').classList.toggle('is-label-editor', !!labelEditorDraft);
   document.getElementById('vinylEditorTitle').textContent = labelEditorDraft ? `Label gestalten · LP ${activeVinylIndex + 1}` : 'Vinyl gestalten';
@@ -15122,7 +15138,8 @@ function openVinylEditor() {
   document.getElementById('suggestVinylFromDiscogsBtn').disabled=false;
   document.getElementById('vinylDiscogsSuggestionStatus').textContent='';
   vinylEditorOriginalPictureDataUrl = '';
-  vinylReference = {url:'', index:0, releaseId:'', opacity:50};
+  labelEditorDraft = null;
+  resetVinylReferenceContexts();
   pictureColorMarker = null;
   pictureColorMarkerMode = false;
   const markerButton = document.getElementById('setPictureColorMarkerBtn');
@@ -24967,7 +24984,10 @@ const discogsLabelImages = new Map();
 const discogsLogoStatus = new WeakMap();
 const discogsLogoRequests = new WeakMap();
 function discogsLabelReleaseId() {
-  const value = document.getElementById('fDiscogsUrl')?.value.trim() || currentDraft?.discogsResourceUrl || currentDraft?.discogsUrl || '';
+  // The review opens drafts directly; the background form may still show another album.
+  const value = vinylMigrationActive
+    ? currentDraft?.discogsResourceUrl || currentDraft?.discogsUrl || ''
+    : document.getElementById('fDiscogsUrl')?.value.trim() || currentDraft?.discogsResourceUrl || currentDraft?.discogsUrl || '';
   const input = parseDiscogsInput(value);
   return input?.type === 'release' ? String(input.id) : '';
 }
@@ -24995,6 +25015,7 @@ async function loadDiscogsLabelChoices() {
   } catch (error) { if (labelEditorDraft === draft) status(error.message || 'Labels konnten nicht geladen werden.'); }
 }
 function selectVinylReference(index) {
+  activateVinylReferenceContext();
   const id = discogsLabelReleaseId(), images = discogsReleasePictures.get(id) || [];
   if (!images.length) return;
   const selected = ((index % images.length) + images.length) % images.length;
@@ -25002,11 +25023,16 @@ function selectVinylReference(index) {
   renderVinylReference();
 }
 function renderVinylReference() {
+  activateVinylReferenceContext();
+  const opacity = Number(vinylReference.opacity);
+  vinylReference.opacity = Number.isFinite(opacity) ? Math.max(0,Math.min(100,opacity)) : 50;
   const panel = document.getElementById('vinylReferencePanel');
   const disc = document.getElementById('vinylEditorDisc');
   if (vinylReference.releaseId && vinylReference.releaseId !== discogsLabelReleaseId()) vinylReference.url = '';
   const visible = !!vinylReference.url;
   panel.hidden = !visible;
+  panel.setAttribute('aria-label', labelEditorDraft ? 'Fotovorlage für das Label' : 'Fotovorlage für die Vinyl');
+  panel.querySelector('strong').textContent = labelEditorDraft ? 'Fotovorlage · Label' : 'Fotovorlage · Vinyl';
   document.querySelectorAll('[data-reference-color]').forEach(button => { button.hidden = !visible; });
   document.querySelector('#vinylEditorOverlay .vinyl-editor-box').classList.toggle('has-photo-reference',visible);
   disc.querySelector('.vinyl-reference-overlay')?.remove();
