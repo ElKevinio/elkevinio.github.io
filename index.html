@@ -14453,6 +14453,7 @@ function normalizeVinylDesign(item) {
             logoDataUrl: safeLabelLogoData(layer.logoDataUrl),
             logoUrl: safeDiscogsLogoUrl(layer.logoUrl),
             logoBackground: ['light','dark'].includes(layer.logoBackground) ? layer.logoBackground : 'original',
+            logoSource: layer.logoSource === 'reference' ? 'reference' : 'logo',
             logoPosition: layer.logoPosition === 'bottom' ? 'bottom' : 'top',
             logoWidth: Math.max(10, Math.min(200, Number(layer.logoWidth) || 50)),
             logoX: Math.max(-100, Math.min(100, Number(layer.logoX) || 0)),
@@ -14581,7 +14582,7 @@ function getLabelLayerMarkup(record, enlarged = false) {
   const content = [...layers].reverse().map(layer => {
     if (layer.type === 'Label' && safeDiscogsLogoUrl(layer.logoUrl)) {
       const width = Math.max(10, Math.min(200, Number(layer.logoWidth) || 50));
-      return `<img class="discogs-label-logo" src="${escapeHtml(safeDiscogsLogoUrl(layer.logoUrl))}" alt="" referrerpolicy="no-referrer" draggable="false" style="mix-blend-mode:${layer.logoBackground === 'light' ? 'multiply' : layer.logoBackground === 'dark' ? 'screen' : 'normal'};width:${width}%;height:${width * 23 / 50}%;left:${50+(Number(layer.logoX)||0)-width/2}%;top:${layer.logoY ?? (layer.logoPosition === 'bottom' ? 61 : 16)}%;transform:rotate(${Number(layer.logoRotation)||0}deg);">`;
+      return `<img class="discogs-label-logo" src="${escapeHtml(safeDiscogsLogoUrl(layer.logoUrl))}" alt="" referrerpolicy="no-referrer" draggable="false" style="mix-blend-mode:${layer.logoBackground === 'light' ? 'multiply' : layer.logoBackground === 'dark' ? 'screen' : 'normal'};width:${width}%;height:${layer.logoSource === 'reference' ? width : width * 23 / 50}%;left:${50+(Number(layer.logoX)||0)-width/2}%;top:${layer.logoY ?? (layer.logoPosition === 'bottom' ? 61 : 16)}%;transform:rotate(${Number(layer.logoRotation)||0}deg);">`;
     }
     return `<span class="discogs-label-effect" style="background-image:${getVinylSvgData({layers:[layer],labelArtwork:true})}"></span>`;
   }).join('');
@@ -14608,7 +14609,7 @@ function getVinylSvgData(record) {
       const width = Math.max(10, Math.min(200, Number(layer.logoWidth) || 50)) * 4;
       const y = (layer.logoY ?? (layer.logoPosition === 'bottom' ? 61 : 16)) * 4;
       const x = 200 + (Number(layer.logoX) || 0) * 4 - width / 2;
-      const height = width * 92 / 200;
+      const height = layer.logoSource === 'reference' ? width : width * 92 / 200;
       if (image) parts.push(`<image href="${image}" x="${x}" y="${y}" width="${width}" height="${height}" transform="rotate(${Number(layer.logoRotation)||0} ${x+width/2} ${y+height/2})" preserveAspectRatio="xMidYMid meet"/>`);
     } else if (VINYL_SHAPES.includes(layer.type)) {
       const x = 200 + (Number(layer.x) || 0) * 2, y = 200 + (Number(layer.y) || 0) * 2;
@@ -14841,6 +14842,8 @@ function renderVinylLayerDetailControls(layer) {
     const stored = layer.labelId && !choices.some(label => label.id === Number(layer.labelId)) ? `<option value="${layer.labelId}" selected>${escapeHtml(layer.labelName || 'Gespeichertes Label')}</option>` : '';
     return `<label>Discogs-Label<select data-logo-label><option value="">Label auswählen …</option>${stored}${options}</select></label>
       <button type="button" data-load-labels>Labels laden</button>
+      <button type="button" data-choose-label-photo>Release-Foto als Labelbild …</button>
+      ${vinylReference.url ? '<button type="button" data-use-label-reference>Aktuelle Fotovorlage als Labelbild</button>' : ''}
       ${layer.labelId ? '<button type="button" data-open-label-images>Logo auswählen …</button>' : ''}
       <label>Bildhintergrund<select data-layer-field="logoBackground"><option value="original" ${!['light','dark'].includes(layer.logoBackground) ? 'selected' : ''}>Original</option><option value="light" ${layer.logoBackground === 'light' ? 'selected' : ''}>Weiß ausblenden</option><option value="dark" ${layer.logoBackground === 'dark' ? 'selected' : ''}>Schwarz ausblenden</option></select></label>
       <details class="editor-help vinyl-logo-help"><summary>Hintergrund · Hilfe</summary><p class="settings-panel-hint">Optische Überblendung: Weiß ausblenden eignet sich für dunkle Logos, Schwarz ausblenden für helle Logos. Andere Bildfarben können sich dabei mit der Label-Farbe mischen.</p></details>
@@ -25183,6 +25186,15 @@ const discogsReleasePictures = new Map();
 let releasePictureDialog = null;
 let releasePictureRequest = 0;
 let releasePicturePurpose = 'picture';
+let releasePictureLabelLayer = null;
+function selectReferencePhotoForLabel(layer, url) {
+  const safeUrl = safeDiscogsLogoUrl(url);
+  if (!safeUrl || !labelEditorDraft?.layers.includes(layer)) return false;
+  Object.assign(layer,{logoUrl:safeUrl,logoDataUrl:'',logoSource:'reference',logoBackground:'original',logoWidth:100,logoX:0,logoY:0,logoRotation:0});
+  discogsLogoStatus.set(layer,'Release-Foto als Labelbild übernommen.');
+  renderVinylEditor(); scheduleVinylEditorPreview();
+  return true;
+}
 function selectDiscogsReleasePicture(url) {
   const safeUrl = safeDiscogsLogoUrl(url);
   if (!safeUrl || !vinylEditorDesign) return;
@@ -25193,8 +25205,9 @@ function selectDiscogsReleasePicture(url) {
   pictureColorMarker = null; pictureColorMarkerMode = false;
   renderVinylEditor();
 }
-async function openDiscogsReleasePictures(purpose = 'picture') {
-  releasePicturePurpose = purpose === 'reference' ? 'reference' : 'picture';
+async function openDiscogsReleasePictures(purpose = 'picture', layer = null) {
+  releasePicturePurpose = ['reference','label'].includes(purpose) ? purpose : 'picture';
+  releasePictureLabelLayer = releasePicturePurpose === 'label' ? layer : null;
   if (!vinylEditorDesign) return;
   if (!releasePictureDialog) {
     releasePictureDialog = document.createElement('dialog');
@@ -25205,18 +25218,19 @@ async function openDiscogsReleasePictures(purpose = 'picture') {
     releasePictureDialog.addEventListener('close', () => { releasePictureRequest++; });
     releasePictureDialog.addEventListener('click', event => {
       if (event.target === releasePictureDialog || event.target.closest('[data-close-release-pictures]')) { releasePictureDialog.close(); return; }
-      if (event.target.closest('[data-retry-release-pictures]')) { discogsReleasePictures.delete(discogsLabelReleaseId()); openDiscogsReleasePictures(releasePicturePurpose); return; }
+      if (event.target.closest('[data-retry-release-pictures]')) { discogsReleasePictures.delete(discogsLabelReleaseId()); openDiscogsReleasePictures(releasePicturePurpose, releasePictureLabelLayer); return; }
       const button = event.target.closest('[data-release-picture]');
       if (!button) return;
       const image = discogsReleasePictures.get(discogsLabelReleaseId())?.[Number(button.dataset.releasePicture)];
       if (!image) return;
       if (releasePicturePurpose === 'reference') selectVinylReference(Number(button.dataset.releasePicture));
+      else if (releasePicturePurpose === 'label') selectReferencePhotoForLabel(releasePictureLabelLayer, image.url);
       else selectDiscogsReleasePicture(image.url);
       releasePictureDialog.close();
     });
     document.body.append(releasePictureDialog);
   }
-  releasePictureDialog.querySelector('h2').textContent = releasePicturePurpose === 'reference' ? 'Foto als Vorlage auswählen' : 'Discogs-Release-Fotos';
+  releasePictureDialog.querySelector('h2').textContent = releasePicturePurpose === 'reference' ? 'Foto als Vorlage auswählen' : releasePicturePurpose === 'label' ? 'Release-Foto als Labelbild auswählen' : 'Discogs-Release-Fotos';
   if (!releasePictureDialog.open) releasePictureDialog.showModal();
   const id = discogsLabelReleaseId(), design = vinylEditorDesign, request = ++releasePictureRequest;
   const status = releasePictureDialog.querySelector('[data-release-status]'), grid = releasePictureDialog.querySelector('[data-release-grid]');
@@ -25230,8 +25244,8 @@ async function openDiscogsReleasePictures(purpose = 'picture') {
     }
     if (request !== releasePictureRequest || vinylEditorDesign !== design || discogsLabelReleaseId() !== id || !releasePictureDialog.open) return;
     const images = discogsReleasePictures.get(id);
-    status.textContent = images.length ? (releasePicturePurpose === 'reference' ? 'Wähle ein Foto als Vorlage zum Nachbauen des Vinyl- oder Label-Designs.' : 'Wähle ein Foto der Platte. Danach kannst du es verschieben, drehen und zoomen.') : 'Für diesen Release sind keine Fotos verfügbar.';
-    grid.innerHTML = images.map((image,index) => `<button type="button" data-release-picture="${index}" aria-pressed="${(releasePicturePurpose === 'reference' ? vinylReference.url : design.cdImageUrl) === image.url}"><img src="${escapeHtml(image.thumbnail)}" alt="Release-Foto ${index+1}" loading="lazy" referrerpolicy="no-referrer"><span>Foto ${index+1}${image.primary ? ' · Hauptbild' : ''}</span></button>`).join('');
+    status.textContent = images.length ? (releasePicturePurpose === 'reference' ? 'Wähle ein Foto als Vorlage zum Nachbauen des Vinyl- oder Label-Designs.' : releasePicturePurpose === 'label' ? 'Wähle ein Foto als Labelbild. Position, Breite und Drehung kannst du danach anpassen.' : 'Wähle ein Foto der Platte. Danach kannst du es verschieben, drehen und zoomen.') : 'Für diesen Release sind keine Fotos verfügbar.';
+    grid.innerHTML = images.map((image,index) => `<button type="button" data-release-picture="${index}" aria-pressed="${(releasePicturePurpose === 'reference' ? vinylReference.url : releasePicturePurpose === 'label' ? releasePictureLabelLayer?.logoUrl : design.cdImageUrl) === image.url}"><img src="${escapeHtml(image.thumbnail)}" alt="Release-Foto ${index+1}" loading="lazy" referrerpolicy="no-referrer"><span>Foto ${index+1}${image.primary ? ' · Hauptbild' : ''}</span></button>`).join('');
   } catch (error) { if (request === releasePictureRequest && releasePictureDialog.open) status.textContent = error.message || 'Release-Fotos konnten nicht geladen werden.'; }
 }
 document.getElementById('chooseDiscogsPictureBtn').addEventListener('click',() => openDiscogsReleasePictures('picture'));
@@ -25262,6 +25276,7 @@ function openLabelImageDialog(layer) {
       const image = discogsLabelImages.get(Number(layer.labelId))?.[Number(button.dataset.labelImage)];
       if (!image) return;
       layer.logoUrl = image.url; layer.logoDataUrl = '';
+      if (layer.logoSource === 'reference') Object.assign(layer,{logoSource:'logo',logoWidth:50,logoX:0,logoY:16,logoRotation:0});
       discogsLogoStatus.set(layer, 'Bild ausgewählt.');
       renderVinylEditor();
       labelImageDialog.close();
@@ -25292,6 +25307,14 @@ async function loadDiscogsLabelImages(layer) {
   if (active()) { renderVinylEditor(); refreshLabelImageDialog(); }
 }
 document.getElementById('vinylLayerList').addEventListener('click', event => {
+  const photoButton = event.target.closest('[data-choose-label-photo], [data-use-label-reference]');
+  if (photoButton && labelEditorDraft) {
+    const layer = labelEditorDraft.layers[Number(photoButton.closest('[data-layer-index]').dataset.layerIndex)];
+    if (layer?.type !== 'Label') return;
+    if (photoButton.hasAttribute('data-use-label-reference')) selectReferencePhotoForLabel(layer, vinylReference.url);
+    else openDiscogsReleasePictures('label', layer);
+    return;
+  }
   const reset = event.target.closest('[data-reset-logo-transform]');
   if (reset) {
     const layer = editorRecord().layers[Number(reset.closest('[data-layer-index]').dataset.layerIndex)];
