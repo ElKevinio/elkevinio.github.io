@@ -7660,6 +7660,9 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .account-settings-toggle:hover { background:transparent; color:var(--accent); }
   #accountVordleSettings[hidden] { display:none !important; }
   body.viewing-remote-collection #accountVordleSettings { display:none; }
+
+  .discogs-label-photo-fill { position:absolute; left:-25%; top:-25%; width:150%; height:150%; max-width:none; object-fit:cover; filter:blur(18px); pointer-events:none; z-index:0; }
+  .discogs-label-logo, .discogs-label-effect { z-index:1; }
 </style>
 <script src="image-link-health.js?v=20261116"></script>
 <script src="layout-diagnostics.js" defer></script>
@@ -14628,6 +14631,7 @@ function normalizeVinylDesign(item) {
             logoUrl: safeDiscogsLogoUrl(layer.logoUrl),
             logoBackground: ['light','dark'].includes(layer.logoBackground) ? layer.logoBackground : 'original',
             logoSource: layer.logoSource === 'reference' ? 'reference' : 'logo',
+            logoAutoBackground: layer.logoAutoBackground === true,
             logoPosition: layer.logoPosition === 'bottom' ? 'bottom' : 'top',
             logoWidth: Math.max(10, Math.min(200, Number(layer.logoWidth) || 50)),
             logoX: Math.max(-100, Math.min(100, Number(layer.logoX) || 0)),
@@ -14753,6 +14757,8 @@ function safeDiscogsLogoUrl(value) {
 function getLabelLayerMarkup(record, enlarged = false) {
   const layers = enlarged ? record.layers : record?.labelLayers;
   if (!layers?.some(layer => layer.type === 'Label' && safeDiscogsLogoUrl(layer.logoUrl))) return '';
+  const backgroundPhoto=layers.find(layer=>layer.type==='Label' && layer.logoAutoBackground && safeDiscogsLogoUrl(layer.logoUrl));
+  const background=backgroundPhoto ? `<img class="discogs-label-photo-fill" src="${escapeHtml(safeDiscogsLogoUrl(backgroundPhoto.logoUrl))}" alt="" referrerpolicy="no-referrer" draggable="false">` : '';
   const content = [...layers].reverse().map(layer => {
     if (layer.type === 'Label' && safeDiscogsLogoUrl(layer.logoUrl)) {
       const width = Math.max(10, Math.min(200, Number(layer.logoWidth) || 50));
@@ -14760,7 +14766,7 @@ function getLabelLayerMarkup(record, enlarged = false) {
     }
     return `<span class="discogs-label-effect" style="background-image:${getVinylSvgData({layers:[layer],labelArtwork:true})}"></span>`;
   }).join('');
-  return `<span class="discogs-label-art${enlarged ? ' is-enlarged' : ''}" style="background-color:${safeVinylColor(enlarged ? record.baseColor : record.labelColor, '#ffffff')}" aria-hidden="true">${content}</span>`;
+  return `<span class="discogs-label-art${enlarged ? ' is-enlarged' : ''}" style="background-color:${safeVinylColor(enlarged ? record.baseColor : record.labelColor, '#ffffff')}" aria-hidden="true">${background}${content}</span>`;
 }
 
 function safeLabelLogoData(value) {
@@ -15719,6 +15725,9 @@ function navigateOwnedAlbumReview(targetIndex) {
 
 async function applyVinylEditorDesignToDraft() {
   if (!currentDraft || !vinylEditorDesign) return;
+  const draft=currentDraft,design=vinylEditorDesign;
+  await Promise.all([...labelPhotoColorTasks]);
+  if(currentDraft!==draft || vinylEditorDesign!==design)return;
   const designToApply = JSON.parse(JSON.stringify(vinylEditorDesign));
   if (designToApply.discStyle === 'picture-disc') {
     const pictureSource = vinylEditorOriginalPictureDataUrl
@@ -25323,6 +25332,8 @@ function openReferenceColorPicker(field, layer = null) {
     const target = referenceColorTarget(record, field, layer);
     if (!target) return;
     target[field] = color;
+    if (!layer && field === 'baseColor' && labelEditorDraft)record.layers.forEach(entry=>{if(entry.type==='Label')entry.logoAutoBackground=false;});
+    if (!layer && field === 'labelColor')record.labelLayers?.forEach(entry=>{if(entry.type==='Label')entry.logoAutoBackground=false;});
     const input = layer
       ? document.querySelector(`#vinylLayerList [data-layer-index="${record.layers.indexOf(layer)}"] [data-layer-field="color"]`)
       : document.getElementById(field === 'baseColor' ? 'vinylBaseColor' : 'vinylLabelColor');
@@ -25396,6 +25407,40 @@ document.getElementById('vinylReferenceOpacity').addEventListener('input',event 
 const discogsReleasePictures = new Map();
 let releasePictureDialog = null;
 let releasePictureRequest = 0;
+function meanLabelPhotoColor(pixels) {
+  let red=0,green=0,blue=0,weight=0;
+  for(let i=0;i<pixels.length;i+=4){const alpha=pixels[i+3]/255;red+=pixels[i]*alpha;green+=pixels[i+1]*alpha;blue+=pixels[i+2]*alpha;weight+=alpha;}
+  if(!weight)return null;
+  return '#'+[red,green,blue].map(value=>Math.round(value/weight).toString(16).padStart(2,'0')).join('');
+}
+async function readLabelPhotoMean(url) {
+  const image=await new Promise((resolve,reject)=>{
+    const image=new Image();
+    const timer=setTimeout(()=>{image.onload=image.onerror=null;reject(new Error('Bildfarben nicht verfügbar'));},8000);
+    image.onload=()=>{clearTimeout(timer);resolve(image);};
+    image.onerror=()=>{clearTimeout(timer);reject(new Error('Bildfarben vom Server gesperrt'));};
+    image.crossOrigin='anonymous';image.referrerPolicy='no-referrer';image.src=url;
+  });
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=32;
+  const ctx=canvas.getContext('2d');if(!ctx)return null;
+  ctx.drawImage(image,0,0,32,32);
+  return meanLabelPhotoColor(ctx.getImageData(0,0,32,32).data);
+}
+const labelPhotoColorTasks=new Set();
+function queueLabelPhotoColor(owner,layer) {
+  const design=vinylEditorDesign,url=layer.logoUrl,initial=owner===labelEditorDraft?owner.baseColor:owner.labelColor;
+  const task=readLabelPhotoMean(url).then(color=>{
+    if(!color || !layer.logoAutoBackground || vinylEditorDesign!==design || layer.logoUrl!==url)return;
+    const record=design.records.find(entry=>entry.labelLayers?.includes(layer));
+    if(record && record.labelColor===initial)record.labelColor=color;
+    if(owner===labelEditorDraft && owner.layers.includes(layer) && owner.baseColor===initial)owner.baseColor=color;
+    // The user may have opened fine editing while the picture was loading.
+    if(record===design.records[activeVinylIndex] && labelEditorDraft?.baseColor===initial && labelEditorDraft.layers.some(entry=>entry.logoUrl===url))labelEditorDraft.baseColor=color;
+    if(record || owner===labelEditorDraft){renderVinylEditor();scheduleVinylEditorPreview();}
+  }).catch(()=>{}).finally(()=>labelPhotoColorTasks.delete(task));
+  labelPhotoColorTasks.add(task);
+  return task;
+}
 let releasePicturePurpose = 'picture';
 let releasePictureLabelLayer = null;
 let releasePictureLabelRecord = null;
@@ -25408,7 +25453,8 @@ function selectMainLabelPhoto(record, url) {
     layer = {id:Math.random().toString(36).slice(2),type:'Label'};
     record.labelLayers.unshift(layer);
   }
-  Object.assign(layer,{logoUrl:safeUrl,logoDataUrl:'',logoSource:'reference',logoBackground:'original',logoWidth:100,logoX:0,logoY:0,logoRotation:0});
+  Object.assign(layer,{logoUrl:safeUrl,logoDataUrl:'',logoSource:'reference',logoAutoBackground:true,logoBackground:'original',logoWidth:100,logoX:0,logoY:0,logoRotation:0});
+  queueLabelPhotoColor(record,layer);
   renderVinylEditor(); scheduleVinylEditorPreview();
   return true;
 }
@@ -25416,7 +25462,8 @@ function selectMainLabelPhoto(record, url) {
 function selectReferencePhotoForLabel(layer, url) {
   const safeUrl = safeDiscogsLogoUrl(url);
   if (!safeUrl || !labelEditorDraft?.layers.includes(layer)) return false;
-  Object.assign(layer,{logoUrl:safeUrl,logoDataUrl:'',logoSource:'reference',logoBackground:'original',logoWidth:100,logoX:0,logoY:0,logoRotation:0});
+  Object.assign(layer,{logoUrl:safeUrl,logoDataUrl:'',logoSource:'reference',logoAutoBackground:true,logoBackground:'original',logoWidth:100,logoX:0,logoY:0,logoRotation:0});
+  queueLabelPhotoColor(labelEditorDraft,layer);
   discogsLogoStatus.set(layer,'Release-Foto als Labelbild übernommen.');
   renderVinylEditor(); scheduleVinylEditorPreview();
   return true;
@@ -25607,10 +25654,12 @@ document.getElementById('vinylEditorDisc').addEventListener('pointermove', event
 for (const type of ['pointerup','pointercancel']) document.getElementById('vinylEditorDisc').addEventListener(type, () => { shapeDrag = null; });
 document.getElementById('vinylBaseColor').addEventListener('input', event => {
   editorRecord().baseColor = event.target.value;
+  if(labelEditorDraft)editorRecord().layers.forEach(layer=>{if(layer.type==='Label')layer.logoAutoBackground=false;});
   scheduleVinylEditorPreview();
 });
 document.getElementById('vinylLabelColor').addEventListener('input', event => {
   editorRecord().labelColor = event.target.value;
+  editorRecord().labelLayers?.forEach(layer=>{if(layer.type==='Label')layer.logoAutoBackground=false;});
   scheduleVinylEditorPreview();
 });
 document.getElementById('vinylTransparencyInput').addEventListener('input', event => {
