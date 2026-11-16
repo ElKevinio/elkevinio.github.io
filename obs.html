@@ -33,11 +33,10 @@ function time(seconds) {
   const value = Math.max(0, Math.floor(Number(seconds) || 0));
   return `${Math.floor(value/60)}:${String(value%60).padStart(2,'0')}`;
 }
-window.addEventListener('message', event => {
-  if (event.source !== window.opener || event.origin !== location.origin || !['vinyl-obs-state','vinyl-obs-style'].includes(event.data?.type)) return;
-  if (event.data.type === 'vinyl-obs-style') { sharedStyles.textContent = event.data.css; return; }
+function applyObsData(data) {
+  if (data.type === 'vinyl-obs-style') { sharedStyles.textContent = data.css; return; }
   lastUpdate = Date.now();
-  const state = event.data;
+  const state = data;
   el('title').textContent = state.title;
   el('artist').textContent = state.artist;
   el('status').textContent = '';
@@ -62,14 +61,59 @@ window.addEventListener('message', event => {
   el('position').textContent = time(position);
   el('duration').textContent = time(duration);
   el('placeholder').hidden = !el('cover').hidden;
+}
+window.addEventListener('message', event => {
+  if (event.source !== window.opener || event.origin !== location.origin || !['vinyl-obs-state','vinyl-obs-style'].includes(event.data?.type)) return;
+  applyObsData(event.data);
 });
 el('cover').addEventListener('error', () => { el('cover').hidden = true; el('placeholder').hidden = false; });
+const obsViewerId=typeof crypto.randomUUID==='function'?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
+let obsChannel=null,obsActiveSource=null,obsSourcePlaying=false;
+const obsSourceStyles=new Map();
+function requestObsState() {
+  obsChannel?.postMessage({type:obsActiveSource && Date.now()-lastUpdate<15000?'vinyl-obs-ping':'vinyl-obs-subscribe',viewerId:obsViewerId});
+}
+try {
+  if(typeof BroadcastChannel==='function') {
+    obsChannel=new BroadcastChannel('vinyl-obs-live-v1');
+    obsChannel.onmessage=event=>{
+      const data=event.data;
+      if(!data || typeof data.sourceId!=='string' || (data.target && data.target!==obsViewerId))return;
+      if(data.type==='vinyl-obs-style') {
+        if(typeof data.css!=='string')return;
+        obsSourceStyles.set(data.sourceId,data.css);
+        if(data.sourceId===obsActiveSource)applyObsData(data);
+      } else if(data.type==='vinyl-obs-state') {
+        if(obsActiveSource && data.sourceId!==obsActiveSource && Date.now()-lastUpdate<15000 && (obsSourcePlaying || !data.playing))return;
+        if(obsActiveSource!==data.sourceId) {
+          obsActiveSource=data.sourceId;lastTurntable='';
+          if(obsSourceStyles.has(data.sourceId))sharedStyles.textContent=obsSourceStyles.get(data.sourceId);
+        }
+        obsSourcePlaying=!!data.playing;
+        applyObsData(data);
+      }
+    };
+    requestObsState();
+  }
+} catch(error) {console.debug('Automatische OBS-Verbindung nicht verfügbar:',error);}
 setInterval(() => {
-  if (!window.opener || window.opener.closed || Date.now() - lastUpdate > 15000) {
+  requestObsState();
+  if (Date.now() - lastUpdate > 15000) {
     player.classList.remove('is-playing');
-    el('status').textContent = 'Musikseite öffnen und OBS-Export erneut starten.';
+    el('status').textContent = window.VINYL_OBS_RELAY?.token?'Warte auf den Musikplayer am lokalen OBS-Server …':'Warte auf die Musikseite im selben Browser und auf derselben Domain …';
   }
 }, 3000);
+// The local relay also reaches OBS Browser Source and other devices on the LAN.
+let obsRelayEvents=null;
+if(window.VINYL_OBS_RELAY?.token) {
+  const endpoint=new URL('/api/obs/events',location.href);
+  endpoint.searchParams.set('room',window.VINYL_OBS_RELAY.token);
+  obsRelayEvents=new EventSource(endpoint);
+  obsRelayEvents.onmessage=event=>{try{const data=JSON.parse(event.data);if(['vinyl-obs-state','vinyl-obs-style'].includes(data.type))applyObsData(data);}catch(error){console.debug('OBS-Netzwerkdaten:',error);}};
+  obsRelayEvents.onerror=()=>{el('status').textContent='Verbindung zum lokalen OBS-Server wird wiederhergestellt …';};
+}
+window.addEventListener('pagehide',()=>obsChannel?.postMessage({type:'vinyl-obs-unsubscribe',viewerId:obsViewerId}));
+window.addEventListener('pageshow',requestObsState);
 if (window.opener) window.opener.postMessage({type:'vinyl-obs-ready'}, location.origin);
 </script>
 </html>

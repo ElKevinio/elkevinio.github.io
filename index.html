@@ -7918,7 +7918,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
           <div id="listeningSettingsBlock">
           <p class="settings-panel-title">OBS-Export</p>
           <button type="button" id="startObsExport">OBS-Export starten</button>
-          <details class="editor-help"><summary>OBS einrichten</summary><p class="settings-panel-hint">In OBS eine Fensteraufnahme hinzufügen und „Vinyl · OBS Export“ auswählen. Empfohlen: 1200 × 320. Zeigt Plattenspieler, Cover, Titel und Interpret live. Musikseite und Exportfenster geöffnet lassen. Die Audioquelle richtest du separat in OBS ein.</p></details>
+          <details class="editor-help"><summary>OBS einrichten</summary><p class="settings-panel-hint">Die Seite obs.html kann direkt im selben Browser geöffnet werden und verbindet sich automatisch mit dem laufenden Player. In OBS eine Fensteraufnahme hinzufügen und „Vinyl · OBS Export“ auswählen. Empfohlen: 1200 × 320. Beide Seiten müssen dieselbe Domain verwenden und geöffnet bleiben. Eine separate OBS-Browserquelle benötigt eine eigene Verbindung. Die Audioquelle richtest du separat in OBS ein.</p></details>
           <p id="obsExportStatus" class="settings-panel-hint" role="status"></p>
           <p class="settings-panel-title">Album anhören</p>
           <div class="listening-provider-list" id="listeningProviderList">
@@ -19487,47 +19487,87 @@ let fullscreenPlayerSyncFrame = null;
 
 let obsExportWindow = null;
 let obsExportTimer = null;
-function sendObsExportState() {
-  if (!obsExportWindow || obsExportWindow.closed) {
-    clearInterval(obsExportTimer);
-    obsExportTimer = null;
-    return;
+const obsSourceId = typeof crypto.randomUUID==='function'?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
+const obsSubscribers = new Map();
+let obsBroadcastChannel = null;
+let obsLastCss = '';
+let obsLastStyleCheck = 0;
+let obsRelayBusy=false;
+let obsRelayLastStyle='';
+function sendObsRelayState(state) {
+  const token=window.VINYL_OBS_RELAY?.token;
+  if(!token || obsRelayBusy)return;
+  obsRelayBusy=true;
+  void (async()=>{
+    const post=async message=>{const response=await fetch('/api/obs/state',{method:'POST',headers:{'Content-Type':'application/json','X-Obs-Token':token},body:JSON.stringify(message)});if(!response.ok)throw new Error('OBS-Relay nicht erreichbar');};
+    if(obsLastCss!==obsRelayLastStyle){await post({type:'vinyl-obs-style',sourceId:obsSourceId,css:obsLastCss});obsRelayLastStyle=obsLastCss;}
+    await post(state);
+  })().catch(error=>console.debug('OBS-Netzwerkverbindung:',error.message)).finally(()=>{obsRelayBusy=false;});
+}
+function currentObsStyles() {
+  const variables=['--accent','--accent-bg','--accent-border','--surface-1','--surface-2','--text-primary','--text-secondary'];
+  const computed=getComputedStyle(document.documentElement);
+  return [...document.querySelectorAll('style')].map(style=>style.textContent).join('\n')+'\n:host{'+variables.map(name=>name+':'+computed.getPropertyValue(name)).join(';')+'}';
+}
+function sendObsStyles(target = null) {
+  const css=currentObsStyles();obsLastCss=css;obsLastStyleCheck=Date.now();
+  const message={type:'vinyl-obs-style',sourceId:obsSourceId,css};
+  if(target)message.target=target;
+  if(obsSubscribers.size)obsBroadcastChannel?.postMessage(message);
+  if(obsExportWindow && !obsExportWindow.closed)obsExportWindow.postMessage(message,location.origin);
+}
+try {
+  if(typeof BroadcastChannel==='function') {
+    obsBroadcastChannel=new BroadcastChannel('vinyl-obs-live-v1');
+    obsBroadcastChannel.onmessage=event=>{
+      const data=event.data;
+      if(!data || typeof data.viewerId!=='string' || data.viewerId.length>100)return;
+      if(data.type==='vinyl-obs-unsubscribe'){obsSubscribers.delete(data.viewerId);return;}
+      if(!['vinyl-obs-subscribe','vinyl-obs-ping'].includes(data.type))return;
+      const fresh=!obsSubscribers.has(data.viewerId);
+      obsSubscribers.set(data.viewerId,Date.now());
+      if(fresh || data.type==='vinyl-obs-subscribe')sendObsStyles(data.viewerId);
+      sendObsExportState();
+    };
   }
+} catch(error) {console.debug('Automatische OBS-Verbindung nicht verfügbar:',error);}
+function sendObsExportState() {
+  for(const [id,last]of obsSubscribers)if(Date.now()-last>15000)obsSubscribers.delete(id);
+  if((!obsExportWindow || obsExportWindow.closed) && !obsSubscribers.size && !window.VINYL_OBS_RELAY?.token)return;
+  if(Date.now()-obsLastStyleCheck>5000){obsLastStyleCheck=Date.now();if(currentObsStyles()!==obsLastCss)sendObsStyles();}
   const content = document.getElementById('albumListeningDockContent');
   const item = currentListeningAlbum;
   const seek = content?.querySelector('.album-mini-seek');
   const scale = seek?.dataset.seekUnit === 'milliseconds' ? 1000 : 1;
   const duration = Math.max(0, Number(seek?.max) / scale || 0);
   const position = Math.min(duration, Math.max(0, Number(seek?.value) / scale || 0));
-  const turntable = document.querySelector('.fullscreen-player-turntable').cloneNode(true);
+  const turntable = document.querySelector('.fullscreen-player-turntable')?.cloneNode(true);
+  if(!turntable)return;
   turntable.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
   applyListeningVinylAppearance(turntable.querySelector('.fullscreen-player-vinyl'), item || {});
   const timeline = getListeningAlbumTimeline(content?.querySelector('.album-mini-player'), position, duration);
   turntable.querySelector('.fullscreen-player-tonearm-rod').style.setProperty('--album-progress', timeline.progress.toFixed(5));
-  obsExportWindow.postMessage({type:'vinyl-obs-state',
+  const state={type:'vinyl-obs-state',sourceId:obsSourceId,sentAt:Date.now(),
     title:content?.querySelector('.album-mini-track-title')?.textContent?.trim() || item?.title || 'Nichts wird abgespielt',
     artist:content?.querySelector('.album-mini-artist')?.textContent?.trim() || item?.artist || '',
     cover:item?.coverUrl || '',
     turntable:turntable.outerHTML, position, duration,
     playing:getListeningPrimaryToggle()?.getAttribute('aria-label') === 'Wiedergabe pausieren'
-  }, location.origin);
+  };
+  if(obsExportWindow && !obsExportWindow.closed)obsExportWindow.postMessage(state,location.origin);
+  if(obsSubscribers.size)obsBroadcastChannel?.postMessage(state);
+  sendObsRelayState(state);
 }
+
 window.addEventListener('message', event => {
-  if (event.source !== obsExportWindow || event.origin !== location.origin || event.data?.type !== 'vinyl-obs-ready') return;
-  obsExportWindow.postMessage({type:'vinyl-obs-style', css:[...document.querySelectorAll('style')].map(style => style.textContent).join('\n')}, location.origin);
-  sendObsExportState();
+  if (!obsExportWindow || event.source !== obsExportWindow || event.origin !== location.origin || event.data?.type !== 'vinyl-obs-ready') return;
+  sendObsStyles();sendObsExportState();
 });
+obsExportTimer=setInterval(sendObsExportState,500);
 document.getElementById('startObsExport').addEventListener('click', () => {
-  obsExportWindow = window.open(new URL('obs.html', location.href).href, 'vinyl-obs-export', 'popup,width=1200,height=320');
-  document.getElementById('obsExportStatus').textContent = obsExportWindow
-    ? 'Export gestartet. In OBS als Fensteraufnahme auswählen.'
-    : 'Bitte Pop-ups für diese Seite erlauben und erneut starten.';
-  clearInterval(obsExportTimer);
-  if (obsExportWindow) {
-    obsExportWindow.focus();
-    sendObsExportState();
-    obsExportTimer = setInterval(sendObsExportState, 500);
-  }
+  obsExportWindow=window.open(new URL('obs.html',location.href).href,'vinyl-obs-export','popup,width=1200,height=320');
+  document.getElementById('obsExportStatus').textContent=obsExportWindow?'OBS-Fenster geöffnet. Der laufende Player wird automatisch verbunden.':'Bitte Pop-ups für diese Seite erlauben oder obs.html direkt im selben Browser öffnen.';
+  if(obsExportWindow){obsExportWindow.focus();sendObsStyles();sendObsExportState();}
 });
 
 function syncFullscreenPlayer() {
