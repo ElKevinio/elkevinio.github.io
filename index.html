@@ -7640,8 +7640,28 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .vinyl-label-photo-actions { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
   .vinyl-label-photo-actions button { min-height:36px; font-size:12px; }
   .vinyl-label-photo-actions button[hidden], .is-label-editor .vinyl-label-photo-actions { display:none; }
+
+  .vinyl-editor-command-row { flex-wrap:nowrap; overflow-x:auto; align-items:center; padding-bottom:4px; }
+  .vinyl-editor-command-row button { flex:1 0 auto; white-space:nowrap; }
+  .vinyl-editor-command-row button[hidden], .is-label-editor .vinyl-main-label-photo { display:none !important; }
+  .is-single-vinyl #vinylIndexControl, .is-single-vinyl #copyVinylDesignBtn { display:none !important; }
+  .vinyl-editor-preview > .vinyl-count-control { grid-column:1 / -1; justify-self:center; align-items:center; margin-bottom:8px; }
+  .is-label-editor .vinyl-layer-detail-row input[type="range"] { width:100%; min-width:0; height:28px; padding:0; accent-color:var(--accent); }
+  .vinyl-label-slider-value { font-size:11px; text-align:right; font-variant-numeric:tabular-nums; color:var(--text-secondary); }
+  .is-label-editor .vinyl-layer-detail-row { grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); }
+
+  .settings-vordle-participation { padding:6px 0; margin:0; }
+  .settings-vordle-participation label { display:flex; align-items:center; gap:6px; font-size:11px; min-height:24px; }
+  #vordleExcludeCollection { width:14px; height:14px; min-width:14px; min-height:14px; flex:0 0 14px; padding:0; margin:0; accent-color:var(--accent); }
+  .settings-vordle-help summary { cursor:pointer; font-size:11px; color:var(--text-secondary); padding:3px 0; }
+  .settings-vordle-participation .settings-panel-hint { margin:6px 0 0; line-height:1.5; }
+
+  .account-settings-toggle { display:inline; padding:0; border:0; border-radius:3px; background:transparent; font:inherit; font-weight:600; text-align:left; }
+  .account-settings-toggle:hover { background:transparent; color:var(--accent); }
+  #accountVordleSettings[hidden] { display:none !important; }
+  body.viewing-remote-collection #accountVordleSettings { display:none; }
 </style>
-<script src="image-link-health.js"></script>
+<script src="image-link-health.js?v=20261116"></script>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
 <script id="barcodeDecoderBundle" type="application/x-vinyl-barcode-decoder">
@@ -7776,7 +7796,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
 <button id="openDocsHeaderBtn" class="icon-btn" type="button" title="Hilfe &amp; Doku" aria-label="Hilfe und Doku"><span class="settings-shortcut-help" aria-hidden="true">?</span><span class="settings-shortcut-label">Hilfe & Doku</span></button>
           </div>
           <div class="user-pill settings-user-pill">
-            <span><strong id="currentUsernameLabel">–</strong></span>
+            <span><button type="button" id="currentUsernameLabel" class="account-settings-toggle" aria-expanded="false" aria-controls="accountVordleSettings" title="Kontoeinstellungen">–</button></span>
             <button type="button" id="logoutBtn" class="account-action-icon" title="Abmelden" aria-label="Abmelden">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M14 16l4-4-4-4M18 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -7784,7 +7804,14 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 18H6a4 4 0 0 1-.5-7.97A6.5 6.5 0 0 1 18 8.5a4.75 4.75 0 0 1 0 9.5h-1.5M12 12v8m-3-3 3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
           </div>
+          <div id="accountVordleSettings" hidden>
+          <div class="settings-vordle-participation">
+            <label><input type="checkbox" id="vordleExcludeCollection"> Konto von Vordle ausschließen</label>
+            <details class="settings-vordle-help"><summary>Hilfe</summary><p class="settings-panel-hint">Dieses Konto kann nicht bei Vordle mitraten. Seine Sammlung wird für neue Tagesrätsel ausgelassen. Bereits angelegte Tagesrätsel und frühere Ergebnisse bleiben unverändert.</p></details>
+          </div>
+          </div>
           <div id="collectionSettingsContent">
+
           <div class="settings-primary-actions">
       <button id="copyWishlistBtn" class="icon-btn tooltip-btn" data-tooltip="Wunschliste kopieren" title="Wunschliste in Zwischenablage kopieren" aria-label="Wunschliste kopieren">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -7936,6 +7963,8 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
           </details>
 
           <hr class="settings-divider">
+
+
 
           <input type="file" id="importFile" accept="application/json">
           </div>
@@ -8879,10 +8908,8 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
       <button type="button" id="editLabelBtn" title="Label bearbeiten"><span class="command-long">Label bearbeiten</span><span class="command-short">Label</span></button>
       <button type="button" id="copyVinylDesignBtn" title="Auf andere Vinyls kopieren"><span class="command-long">Auf andere Vinyls kopieren</span><span class="command-short">Kopieren</span></button>
       <button type="button" id="showVinylReferenceBtn" title="Discogs-Foto als Referenz auswählen"><span class="command-long">Foto als Referenz</span><span class="command-short">Vorlage</span></button>
-    </div>
-    <div class="vinyl-label-photo-actions">
-      <button type="button" id="chooseMainLabelPhotoBtn">Foto als Labelbild auswählen …</button>
-      <button type="button" id="useMainLabelReferenceBtn" hidden>Aktuelle Vorlage als Labelbild</button>
+      <button type="button" id="chooseMainLabelPhotoBtn" class="vinyl-main-label-photo" title="Foto als Labelbild auswählen"><span class="command-long">Foto als Labelbild …</span><span class="command-short">Labelfoto</span></button>
+      <button type="button" id="useMainLabelReferenceBtn" class="vinyl-main-label-photo" hidden title="Aktuelle Fotovorlage als Labelbild übernehmen"><span class="command-long">Vorlage als Labelbild</span><span class="command-short">Vorlage nutzen</span></button>
     </div>
     <div class="vinyl-editor-layout">
       <aside id="vinylReferencePanel" class="vinyl-reference-panel" hidden aria-label="Discogs-Fotovorlage">
@@ -8893,6 +8920,10 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
         <p class="settings-panel-hint" id="vinylReferenceStatus" role="status"></p>
       </aside>
       <section class="vinyl-editor-preview" aria-label="Vinyl-Vorschau">
+          <div class="vinyl-count-control">
+            <label for="vinylCountInput">Anzahl Vinyls</label>
+            <input type="number" id="vinylCountInput" min="1" max="8" value="1">
+          </div>
         <div id="vinylEditorDisc" class="vinyl-editor-disc"></div>
         <div class="vinyl-editor-meta">
           <label class="cd-design-control" id="cdDesignControl">Disc-Design
@@ -8912,11 +8943,8 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
           <p id="vinylDiscogsSuggestionStatus" class="settings-panel-hint" role="status" aria-live="polite"></p>
         </div>
         <div class="vinyl-editor-toolbar">
-          <div class="vinyl-count-control">
-            <label for="vinylCountInput">Anzahl Vinyls</label>
-            <input type="number" id="vinylCountInput" min="1" max="8" value="1">
-          </div>
-          <label style="display:flex; align-items:center; gap:8px; font-size:13px;">Aktuelle Vinyl
+
+          <label id="vinylIndexControl" style="display:flex; align-items:center; gap:8px; font-size:13px;">Aktuelle Vinyl
             <select id="vinylIndexSelect" style="min-width:90px;"></select>
           </label>
         </div>
@@ -9204,7 +9232,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
 
 <!-- Firebase SDK (kostenlos, "compat"-Version für einfache Einbindung ohne Build-Tool) -->
 <link rel="stylesheet" href="vordle.css?v=20261112-albumlinks">
-<script src="vordle.js?v=20261112-albumlinks"></script>
+<script src="vordle.js?v=20261116-account-exclusion"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -9599,6 +9627,7 @@ const userList = document.getElementById('userList');
 const userListHint = document.getElementById('userListHint');
 
 let authMode = 'login'; // 'login' | 'register'
+let authRegistrationBarrier = null;
 
 function setAuthMode(mode) {
   authMode = mode;
@@ -9646,6 +9675,12 @@ function friendlyAuthError(err) {
       return 'Dieser Benutzername ist bereits vergeben.';
     case 'auth/weak-password':
       return 'Das Passwort muss mindestens 6 Zeichen lang sein.';
+    case 'permission-denied':
+    case 'firestore/permission-denied':
+      return 'Das Benutzerprofil konnte nicht gespeichert werden: Firebase hat den Zugriff verweigert. Bitte prüfe die Firestore-Regeln für die Registrierung.';
+    case 'unavailable':
+    case 'firestore/unavailable':
+      return 'Die Datenbank ist nicht erreichbar. Bitte Internetverbindung und Inhaltsblocker für diese Seite prüfen.';
     case 'auth/network-request-failed':
       return 'Der Login-Dienst ist nicht erreichbar. Bitte Internetverbindung und Inhaltsblocker für diese Seite prüfen.';
     case 'auth/web-storage-unsupported':
@@ -9674,6 +9709,8 @@ async function handleAuthSubmit() {
 
   setAuthLoading(true);
   const email = usernameToEmail(username);
+  let finishRegistration = null;
+  if (authMode === 'register') authRegistrationBarrier = new Promise(resolve => { finishRegistration = resolve; });
   try {
     if (authMode === 'register') {
       const cred = await trackFirebaseRequest(auth.createUserWithEmailAndPassword(email, password));
@@ -9687,14 +9724,16 @@ async function handleAuthSubmit() {
           setAuthLoading(false);
           return;
         }
-        await trackFirebaseRequest(db.collection('usernames').doc(usernameKey).set({ uid: uid, username: username }));
-        await trackFirebaseRequest(db.collection('users').doc(uid).set({
+        const profileBatch = db.batch();
+        profileBatch.set(db.collection('usernames').doc(usernameKey), { uid: uid, username: usernameKey });
+        profileBatch.set(db.collection('users').doc(uid), {
           username: username,
           title: 'Vinyl-Sammlung',
           collection: [],
           settings: {},
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }));
+        });
+        await trackFirebaseRequest(profileBatch.commit());
       } catch (innerErr) {
         await trackFirebaseRequest(cred.user.delete()).catch(() => {});
         throw innerErr;
@@ -9706,6 +9745,11 @@ async function handleAuthSubmit() {
   } catch (err) {
     showAuthError(friendlyAuthError(err));
     setAuthLoading(false);
+  } finally {
+    if (finishRegistration) {
+      finishRegistration();
+      authRegistrationBarrier = null;
+    }
   }
 }
 
@@ -10125,6 +10169,7 @@ function getCloudSettingsSnapshot() {
     storageRandomFormats,
     storageRandomAnimation: document.getElementById('storageRandomAnimationCheckbox')?.checked !== false,
     vinylEffects: document.getElementById('vinylEffectsCheckbox')?.checked !== false,
+    vordleExcludeCollection: document.getElementById('vordleExcludeCollection')?.checked === true,
     albumListeningProviders,
     albumListeningOrder,
     spotifyPlaybackEngine:document.getElementById('spotifyPlaybackEngine')?.value || 'auto',
@@ -10518,6 +10563,8 @@ async function loadCloudData(uid, prefetchedSnap) {
     window.refreshStorageRandomFilterControls();
   }
   shelfLocations = normalizeShelfLocations(data.settings?.shelves);
+  document.getElementById('vordleExcludeCollection').checked = data.settings?.vordleExcludeCollection === true;
+  updateVordleAccountAvailability();
   restoreCollectionViewSettings(data.settings?.collectionViewSettings);
   if (Array.isArray(data.settings?.favoriteUsers)) {
     favoriteUserIds = new Set(data.settings.favoriteUsers.map(String));
@@ -11247,7 +11294,7 @@ async function importUserCollection(uid, username) {
   }
 }
 
-const vordle = Vordle.create({db,getUser:()=>({uid:currentUid,username:currentUsername}),timestamp:milliseconds=>firebase.firestore.Timestamp.fromMillis(milliseconds),serverTimestamp:()=>firebase.firestore.FieldValue.serverTimestamp(),track:trackFirebaseRequest});
+const vordle = Vordle.create({db,canParticipate:()=>document.getElementById('vordleExcludeCollection')?.checked !== true,getUser:()=>({uid:currentUid,username:currentUsername}),timestamp:milliseconds=>firebase.firestore.Timestamp.fromMillis(milliseconds),serverTimestamp:()=>firebase.firestore.FieldValue.serverTimestamp(),track:trackFirebaseRequest});
 
 let authInitializationPhase = 'Anmeldung';
 async function handleAuthStateChange(user) {
@@ -11323,7 +11370,11 @@ async function handleAuthStateChange(user) {
   }
  }
 auth.onAuthStateChanged(user => {
-  void handleAuthStateChange(user).catch(error => {
+  void (async () => {
+    await authRegistrationBarrier;
+    if ((auth.currentUser?.uid || null) !== (user?.uid || null)) return;
+    await handleAuthStateChange(user);
+  })().catch(error => {
     console.error(`Anmeldung fehlgeschlagen bei: ${authInitializationPhase}`, error);
     appLoadingCount = 0;
     hideAppLoading(true);
@@ -13950,6 +14001,23 @@ document.getElementById('manageShelvesBtn').addEventListener('click', () => {
   settingsPanel.classList.remove('open');
   openShelfLocationsManager();
 });
+function updateVordleAccountAvailability() {
+  const excluded = document.getElementById('vordleExcludeCollection').checked;
+  const launch = document.getElementById('vordleLaunch');
+  launch.disabled = excluded;
+  launch.title = excluded ? 'Dieses Konto ist von Vordle ausgeschlossen' : 'Tägliches Albumrätsel spielen';
+}
+document.getElementById('currentUsernameLabel').addEventListener('click', () => {
+  const panel = document.getElementById('accountVordleSettings');
+  panel.hidden = !panel.hidden;
+  document.getElementById('currentUsernameLabel').setAttribute('aria-expanded',String(!panel.hidden));
+});
+document.getElementById('vordleExcludeCollection').addEventListener('change', () => {
+  if (!currentUid || !viewingOwnCollection) return;
+  updateVordleAccountAvailability();
+  vordle.reset();
+  saveCloudDataDebounced();
+});
 document.getElementById('reviewLegacyVinylBtn').addEventListener('click', () => {
   settingsPanel.classList.remove('open');
   startLegacyVinylReview();
@@ -14379,7 +14447,7 @@ const VINYL_SHAPES = ['Kreis', 'Quadrat', 'Rechteck', 'Halbkreis', 'Dreieck'];
 function editorRecord() { return labelEditorDraft || vinylEditorDesign.records[activeVinylIndex]; }
 function finishLabelEditor(save = false) {
   if (!labelEditorDraft) return false;
-  if (save) {
+  if (save && currentDraft && vinylEditorDesign?.records[activeVinylIndex]) {
     const record = vinylEditorDesign.records[activeVinylIndex];
     record.labelColor = labelEditorDraft.baseColor;
     record.labelLayers = labelEditorDraft.layers;
@@ -14904,11 +14972,14 @@ function renderVinylLayerDetailControls(layer) {
 }
 
 function renderVinylEditor() {
+  if (!currentDraft || !vinylEditorDesign) return;
   activateVinylReferenceContext();
   const record = editorRecord();
   document.querySelector('#vinylEditorOverlay .vinyl-editor-box').classList.toggle('is-label-editor', !!labelEditorDraft);
   document.getElementById('vinylEditorTitle').textContent = labelEditorDraft ? `Label gestalten · LP ${activeVinylIndex + 1}` : 'Vinyl gestalten';
-  document.getElementById('saveVinylEditorBtn').textContent = labelEditorDraft ? 'Label übernehmen' : 'Übernehmen';
+  document.getElementById('saveVinylEditorBtn').textContent = labelEditorDraft ? 'Label speichern' : 'Übernehmen';
+  setVinylMigrationControls(vinylMigrationActive);
+  document.querySelector('#vinylEditorOverlay .vinyl-editor-box').classList.toggle('is-single-vinyl',vinylEditorDesign.records.length <= 1);
   const preview = document.getElementById('vinylEditorDisc');
   const isCd = !labelEditorDraft && isCdItem(currentDraft);
   const editorBox = document.querySelector('#vinylEditorOverlay .vinyl-editor-box');
@@ -14979,10 +15050,21 @@ function renderVinylEditor() {
       </div>
     </div>
   `).join('') || '<p class="settings-panel-hint">Noch keine Effekt-Ebenen. Die Platte bleibt einfarbig.</p>';
+  if (labelEditorDraft) {
+    layerList.querySelectorAll('.vinyl-layer-detail-row input[type="number"]').forEach(input => {
+      input.type = 'range';
+      input.step ||= '1';
+      const output = document.createElement('output');
+      output.className = 'vinyl-label-slider-value';
+      output.value = input.value;
+      input.after(output);
+    });
+  }
   renderPictureColorMarker();
 }
 
 function updateVinylEditorPreview() {
+  if (!currentDraft || !vinylEditorDesign) return;
   const record = editorRecord();
   const preview = document.getElementById('vinylEditorDisc');
   const isCd = !labelEditorDraft && isCdItem(currentDraft);
@@ -15376,7 +15458,13 @@ document.getElementById('fReleaseType').addEventListener('change', () => {
 });
 
 function closeVinylEditor() {
-  if (finishLabelEditor(false)) return;
+  // Closing must not render the label editor again after its album draft was cleared.
+  labelEditorDraft = null;
+  if (vinylPreviewFrame) cancelAnimationFrame(vinylPreviewFrame);
+  vinylPreviewFrame = 0;
+  activeReferenceColorDialog?.close();
+  releasePictureDialog?.close();
+  labelImageDialog?.close();
   pictureColorMarker = null;
   pictureColorMarkerMode = false;
   const markerButton = document.getElementById('setPictureColorMarkerBtn');
@@ -15390,10 +15478,10 @@ function closeVinylEditor() {
 function setVinylMigrationControls(active) {
   document.getElementById('vinylMigrationProgress').style.display = active ? 'block' : 'none';
   document.getElementById('cancelVinylEditorBtn').style.display = active ? 'inline-flex' : '';
-  document.getElementById('saveVinylEditorBtn').style.display = active ? 'none' : '';
-  document.getElementById('vinylMigrationNextBtn').style.display = active ? 'inline-flex' : 'none';
-  document.getElementById('vinylMigrationNavigation').style.display = active ? 'flex' : 'none';
-  document.getElementById('closeVinylEditorBtn').title = active ? 'Speichern und schließen' : 'Schließen';
+  document.getElementById('saveVinylEditorBtn').style.display = active && !labelEditorDraft ? 'none' : '';
+  document.getElementById('vinylMigrationNextBtn').style.display = active && !labelEditorDraft ? 'inline-flex' : 'none';
+  document.getElementById('vinylMigrationNavigation').style.display = active && !labelEditorDraft ? 'flex' : 'none';
+  document.getElementById('closeVinylEditorBtn').title = labelEditorDraft ? 'Zurück zu Vinyl gestalten' : active ? 'Speichern und schließen' : 'Schließen';
 }
 
 function getLegacyVinylEntries() {
@@ -15958,7 +16046,7 @@ function normalizeReleaseTypeValue(type) {
 }
 
 function getReleaseType(item) {
-  return normalizeReleaseTypeValue(item.releaseType || 'Album');
+  return normalizeReleaseTypeValue(item?.releaseType || 'Album');
 }
 
 function isWashableItem(item) {
@@ -24988,10 +25076,14 @@ document.getElementById('closeVinylEditorBtn').addEventListener('click', () => {
   else closeVinylEditor();
 });
 document.getElementById('cancelVinylEditorBtn').addEventListener('click', () => {
+  if (finishLabelEditor(false)) return;
   if (vinylMigrationActive) abortVinylMigration();
   else closeVinylEditor();
 });
-document.getElementById('vinylMigrationNextBtn').addEventListener('click', () => commitVinylMigrationItem(true));
+document.getElementById('vinylMigrationNextBtn').addEventListener('click', () => {
+  if (finishLabelEditor(true)) return;
+  return commitVinylMigrationItem(true);
+});
 document.getElementById('vinylMigrationPrevBtn').addEventListener('click', () => {
   if (vinylMigrationIndex > 0) commitVinylMigrationItem(true, vinylMigrationIndex - 1);
 });
@@ -25267,6 +25359,7 @@ async function openDiscogsReleasePictures(purpose = 'picture', layer = null) {
     releasePictureDialog.addEventListener('keydown', event => event.stopPropagation());
     releasePictureDialog.addEventListener('close', () => { releasePictureRequest++; });
     releasePictureDialog.addEventListener('click', event => {
+      event.stopPropagation();
       if (event.target === releasePictureDialog || event.target.closest('[data-close-release-pictures]')) { releasePictureDialog.close(); return; }
       if (event.target.closest('[data-retry-release-pictures]')) { discogsReleasePictures.delete(discogsLabelReleaseId()); openDiscogsReleasePictures(releasePicturePurpose, releasePictureLabelLayer); return; }
       const button = event.target.closest('[data-release-picture]');
@@ -25321,6 +25414,7 @@ function openLabelImageDialog(layer) {
     labelImageDialog.innerHTML = `<div class="vinyl-editor-toolbar"><h2 id="labelImageDialogTitle">Logo auswählen</h2><button type="button" data-close-image-dialog aria-label="Bildauswahl schließen">×</button></div><p class="settings-panel-hint" data-image-status role="status"></p><div data-image-grid></div><div class="vinyl-editor-footer"><button type="button" data-close-image-dialog>Schließen</button></div>`;
     labelImageDialog.addEventListener('keydown', event => event.stopPropagation());
     labelImageDialog.addEventListener('click', event => {
+      event.stopPropagation();
       if (event.target === labelImageDialog || event.target.closest('[data-close-image-dialog]')) { labelImageDialog.close(); return; }
       const layer = labelImageDialogLayer;
       if (!layer || !labelEditorDraft?.layers.includes(layer)) { labelImageDialog.close(); return; }
@@ -25395,6 +25489,7 @@ document.getElementById('vinylLayerList').addEventListener('change', event => {
   if (label) openLabelImageDialog(layer);
 });
 document.getElementById('editLabelBtn').addEventListener('click', () => {
+  if (!currentDraft || !vinylEditorDesign || !vinylEditorDesign.records[activeVinylIndex]) return;
   const record = editorRecord();
   labelEditorDraft = {baseColor:record.labelColor, labelColor:record.labelColor, transparency:0, layers:JSON.parse(JSON.stringify(record.labelLayers || []))};
   renderVinylEditor();
@@ -25498,10 +25593,12 @@ document.getElementById('vinylLayerList').addEventListener('input', event => {
   }
   else if (field === 'sizeMode') layer.sizeMode = event.target.value === 'fixed' ? 'fixed' : 'random';
   else if (field === 'lengthMode') layer.lengthMode = event.target.value === 'fixed' ? 'fixed' : 'random';
-  else if (event.target.type === 'number') {
+  else if (['number','range'].includes(event.target.type)) {
     if (event.target.value === '') return;
     const parsedValue = Number(event.target.value);
     if (Number.isFinite(parsedValue)) layer[field] = Math.max(Number(event.target.min), Math.min(Number(event.target.max), parsedValue));
+    const output = event.target.parentElement.querySelector('output');
+    if (output) output.value = event.target.value;
     scheduleVinylEditorPreview();
     return;
   }
@@ -25518,7 +25615,7 @@ document.getElementById('vinylLayerList').addEventListener('change', event => {
     if (field === 'type' && labelEditorDraft && editorRecord().layers.some(layer => layer.type === 'Label')) loadDiscogsLabelChoices();
     return;
   }
-  if (event.target.type !== 'number') return;
+  if (!['number','range'].includes(event.target.type)) return;
   const row = event.target.closest('[data-layer-index]');
   const layer = editorRecord().layers[Number(row.dataset.layerIndex)];
   const limits = field === 'logoWidth' ? [10,200] : ['x','y','logoX','logoY'].includes(field) ? [-100,100] : ['rotation','logoRotation'].includes(field) ? [-180,180] : ['width','height'].includes(field) ? [1,200] : field === 'startAngle' || field === 'endAngle' ? [0, 360]

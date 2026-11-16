@@ -117,7 +117,7 @@
   }
   function scoreRank(scores, score) { return score?.solved ? 1+scores.filter(other=>other.solved && other.uid!==score.uid && other.attempts<score.attempts).length : null; }
   function create(options) {
-    const {db,getUser,timestamp,serverTimestamp,track=promise=>promise}=options;
+    const {db,getUser,timestamp,serverTimestamp,track=promise=>promise,canParticipate=()=>true}=options;
     const state={day:null,catalogue:[],parts:new Map(),score:null,scores:[],loading:false,busy:false,selected:null,open:false,epoch:0,timer:null,dayPromise:null,cataloguePromise:null,rankingPromise:null,activeTab:'game',history:[],historyUid:null,historyLoading:false,historyEpoch:0,historySelection:0,historyReady:false,historyCatalogues:new Map(),practiceResults:new Map(),practice:{guesses:[],active:false,revealed:false}};
     const el=(tag,className,content)=>{const node=document.createElement(tag);if(className)node.className=className;if(content!=null)node.textContent=content;return node;};
     const dialog=el('dialog','vordle-dialog');dialog.setAttribute('aria-labelledby','vordleTitle');
@@ -184,8 +184,8 @@
     dialog.append(hero,tabs,gamePanel,ranking,historyPanel);document.body.append(dialog);showTab('game');
     let matches=[],active=-1;
     const dayRef=key=>db.collection('vordleDays').doc(key);
-    const liveUser=()=>{const user=getUser();if(!user?.uid)throw new Error('Bitte melde dich an, um Vordle zu spielen.');return user;};
-    const sameUser=(uid,epoch)=>getUser()?.uid===uid && epoch===state.epoch;
+    const liveUser=()=>{if(!canParticipate())throw new Error('Dieses Konto ist von Vordle ausgeschlossen.');const user=getUser();if(!user?.uid)throw new Error('Bitte melde dich an, um Vordle zu spielen.');return user;};
+    const sameUser=(uid,epoch)=>canParticipate() && getUser()?.uid===uid && epoch===state.epoch;
     const errorMessage=error=>error?.code==='permission-denied'?'Firebase hat den Vordle-Zugriff abgelehnt. Bitte prüfen, ob die aktuellen Vordle-Regeln veröffentlicht sind und die Gerätezeit stimmt.':error?.message || 'Vordle konnte nicht geladen werden. Bitte erneut versuchen.';
     const progress=()=>gameProgress(state.score,state.practice,state.day?.answer.id);
     const practiceKey=()=>`vordlePracticeV1:${getUser()?.uid || ''}`;
@@ -202,7 +202,7 @@
     }
     function savePractice(){try {const saved={...state.practice,day:state.day.day,stamp:puzzleStamp(state.day),answerId:state.day.answer.id};localStorage.setItem(practiceKey(),JSON.stringify(saved));localStorage.setItem(`${practiceKey()}:${state.day.day}`,JSON.stringify(saved));}catch{}}
     function clearPractice(){state.practice={guesses:[],active:false,revealed:false};}
-    function canGuess(){return progress().canGuess;}
+    function canGuess(){return canParticipate() && progress().canGuess;}
     function setStatus(message,error=false){status.textContent=message;status.classList.toggle('is-error',error);}
     function scheduleMidnight(){
       clearTimeout(state.timer);const end=dayBounds(dayKey()).end;
@@ -217,6 +217,7 @@
       const roots=await track(db.collection('users').get({source:'server'}));const items=[];
       const jobs=[];
       for(const root of roots.docs){const data=root.data(),uid=root.id;
+        if(data.settings?.vordleExcludeCollection===true)continue;
         const collectionName=text(data.username || data.displayName || data.title || 'Unbekannte Sammlung').slice(0,80);
         const addItems=entries=>items.push(...entries.filter(item=>item && typeof item==='object' && item.owned===true).map(item=>({...item,vordleCollections:[collectionName]})));
         if(data.collectionStorageVersion===2){for(const id of data.collectionChunkIds || [])jobs.push({ref:db.collection('users').doc(uid).collection('collectionChunks').doc(id),json:true,collectionName});}
@@ -485,8 +486,9 @@
       }finally{if(sameUser(user.uid,epoch)){state.busy=false;input.disabled=state.loading || !canGuess();submit.disabled=input.disabled || !state.selected;}}
     }
     form.addEventListener('submit',submitGuess);refresh.onclick=async()=>{await syncPracticeResult();await loadScores();};
-    async function prewarm(){try{await ensureDay();}catch(error){if(state.open)throw error;console.warn('Vordle:',error.code || error.message);} }
+    async function prewarm(){if(!canParticipate())return;try{await ensureDay();}catch(error){if(state.open)throw error;console.warn('Vordle:',error.code || error.message);} }
     async function open(){
+      if(!canParticipate())return;
       if(state.loading || state.busy)return;state.open=true;showTab('game');if(!dialog.open)dialog.showModal();state.loading=true;retry.hidden=true;setStatus('Vordle wird geladen …');render();
       const uid=getUser()?.uid,epoch=state.epoch;
       try{
