@@ -7396,9 +7396,9 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .vinyl-layer-detail-row { grid-template-columns:repeat(auto-fit,minmax(76px,1fr)); }
   .vinyl-layer-detail-row input[type="number"], .vinyl-layer-detail-row select { min-height:36px; }
   .vinyl-layer-main-row { display:flex; flex-wrap:wrap; gap:8px; }
-  .vinyl-layer-main-row > label:has(select) { flex:1 1 140px; }
+  .vinyl-layer-main-row > label:has(select) { flex:0 1 132px; width:132px; max-width:100%; }
   .vinyl-layer-main-row > label:has(input[type="color"]) { flex:0 0 44px; }
-  .vinyl-layer-main-row .vinyl-layer-count { flex:0 0 68px; }
+  .vinyl-layer-main-row .vinyl-layer-count { flex:0 0 96px; }
   .vinyl-layer-actions { display:flex; align-items:center; gap:4px; margin-left:auto; }
   .vinyl-layer-main-row select, .vinyl-layer-main-row input { min-height:36px; }
   .vinyl-editor-footer { flex-wrap:wrap; gap:8px; }
@@ -7432,7 +7432,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     .album-queue-item-actions { gap:4px; }
     .album-queue-item-actions button { width:44px; height:44px; }
     .vinyl-layer-detail-row { grid-template-columns:repeat(auto-fit,minmax(94px,1fr)); gap:8px; }
-    .vinyl-layer-main-row > label:has(select) { flex-basis:160px; }
+    .vinyl-layer-main-row > label:has(select) { flex-basis:132px; }
     .vinyl-layer-actions button { width:44px; height:44px; }
     .vinyl-editor-command-row button { min-height:44px; }
     .settings-panel button:not(.icon-btn), .docs-panel button { min-height:44px; }
@@ -7526,7 +7526,15 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .storage-mobile.storage-item-dragging .storage-mobile-contents { display:none; }
 
 
-  .vinyl-reference-color-button { margin-top:6px; min-height:36px; padding:6px 8px; font-size:12px; white-space:normal; }
+  .vinyl-color-picker-row { display:flex; align-items:center; gap:6px; min-width:0; }
+  .vinyl-color-picker-row input[type="color"] { flex:1; min-width:0; }
+  .vinyl-color-picker-row .vinyl-reference-color-button { display:inline-flex; align-items:center; justify-content:center; flex:0 0 36px; width:36px; height:36px; min-height:36px; padding:6px; margin:0; }
+  .vinyl-reference-color-button svg { display:block; width:18px; height:18px; pointer-events:none; }
+  .vinyl-layer-main-row > label.vinyl-layer-color-control:has(input[type="color"]) { flex:0 0 auto; min-width:max-content; }
+  .vinyl-layer-color-control input[type="color"] { flex:0 0 36px; width:36px; }
+  @media (pointer:coarse) {
+    .vinyl-color-picker-row .vinyl-reference-color-button { flex-basis:44px; width:44px; height:44px; min-height:44px; }
+  }
   .vinyl-reference-color-button[hidden] { display:none; }
   .vinyl-reference-color-dialog { width:min(560px, calc(100vw - 24px)); max-height:90dvh; overflow:auto; padding:16px; border:1px solid var(--border-strong); border-radius:12px; color:var(--text-primary); background:var(--surface-1); }
   .vinyl-reference-color-dialog::backdrop { background:rgba(0,0,0,.75); }
@@ -7535,6 +7543,99 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .vinyl-reference-color-dialog button { min-height:44px; }
   .vinyl-reference-color-dialog input[type=file] { width:100%; }
 
+
+  /* Color controls show the swatch itself rather than a second button frame. */
+  input[type="color"]:not(#accentColorInput) {
+    --color-swatch-size:36px;
+    width:var(--color-swatch-size) !important;
+    height:var(--color-swatch-size) !important;
+    min-width:var(--color-swatch-size);
+    min-height:var(--color-swatch-size);
+    padding:0 !important;
+    border:0 !important;
+    border-radius:8px;
+    background:transparent !important;
+    box-shadow:none;
+    overflow:hidden;
+    cursor:pointer;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding:0; }
+  input[type="color"]::-webkit-color-swatch { border:0; border-radius:8px; }
+  input[type="color"]::-moz-color-swatch { border:0; border-radius:8px; }
+  input[type="color"]:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+  .vinyl-color-picker-row input[type="color"] { flex:0 0 var(--color-swatch-size,36px); }
+  .vinyl-layer-main-row select[data-layer-field="type"] {
+    width:100%;
+    min-width:0;
+    padding:6px 22px 6px 8px;
+    font-size:11px;
+    text-overflow:ellipsis;
+  }
+  @media (pointer:coarse) {
+    input[type="color"]:not(#accentColorInput) { --color-swatch-size:44px; }
+  }
+
+
+  .vinyl-layer-main-row, .vinyl-layer-main-row.vinyl-layer-liquid-main {
+    display:grid;
+    grid-template-columns:minmax(80px,132px) max-content 54px;
+    align-items:end;
+    justify-content:start;
+    gap:8px;
+  }
+  .vinyl-layer-main-row > label:has(select) { grid-column:1; grid-row:1; width:100%; max-width:none; }
+  .vinyl-layer-main-row > .vinyl-layer-color-control { grid-column:2; grid-row:1; }
+  .vinyl-layer-main-row .vinyl-layer-count {
+    grid-column:3;
+    grid-row:1;
+    grid-template-columns:minmax(0,1fr);
+    gap:4px !important;
+    width:54px;
+    font-size:10px;
+    line-height:1.2;
+  }
+  .vinyl-layer-main-row .vinyl-layer-count input[type="number"] { width:100%; min-width:0; }
+  .vinyl-layer-main-row .vinyl-layer-actions { grid-column:1 / -1; grid-row:2; justify-self:end; margin-left:0; }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding:0 !important; }
+  input[type="color"]::-webkit-color-swatch { border:0 !important; }
+  input[type="color"]::-moz-color-swatch { border:0 !important; }
+
+
+  .vinyl-layer-main-row select[data-layer-field="type"],
+  .vinyl-layer-main-row .vinyl-layer-count input[type="number"] { height:36px; min-height:36px; }
+  @media (pointer:coarse) {
+    .vinyl-layer-main-row select[data-layer-field="type"],
+    .vinyl-layer-main-row .vinyl-layer-count input[type="number"] { height:44px; min-height:44px; }
+  }
+
+  header .header-actions { justify-content:flex-end; gap:6px; margin-left:auto; }
+  header .header-actions .desktop-mode-shortcuts { display:contents; }
+  header .header-actions #vordleLaunch {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 36px;
+    width:36px;
+    min-width:36px;
+    height:36px;
+    min-height:36px;
+    padding:0;
+    gap:0;
+    margin:0;
+  }
+  header .header-actions #vordleLaunch span:last-child { display:none; }
+  header .header-actions #vordleLaunch span:first-child { font-size:18px; line-height:1; }
+  @media (min-width:1000px) {
+    header .header-actions { width:auto; flex-wrap:nowrap; }
+    header .header-actions > .icon-btn,
+    header .header-actions .desktop-mode-shortcuts > .icon-btn,
+    header .header-actions > .settings-wrap > .icon-btn,
+    header .header-actions > .storage-random-filter-wrap,
+    header .header-actions .storage-random-filter-btn {
+      flex:0 0 36px; width:36px; min-width:36px; height:36px; min-height:36px; padding:0;
+    }
+    header .header-actions > .settings-wrap { flex:0 0 36px; margin:0; }
+  }
 </style>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -8791,8 +8892,8 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
               <option value="picture-disc">Picture Disc</option>
             </select>
           </label>
-          <label>Grundfarbe<input type="color" id="vinylBaseColor" value="#000000"><button type="button" class="vinyl-reference-color-button" data-reference-color="baseColor" hidden>Aus Fotovorlage wählen</button></label>
-          <label>Label-Farbe<input type="color" id="vinylLabelColor" value="#ffffff"><button type="button" class="vinyl-reference-color-button" data-reference-color="labelColor" hidden>Aus Fotovorlage wählen</button></label>
+          <label>Grundfarbe<span class="vinyl-color-picker-row"><input type="color" id="vinylBaseColor" value="#000000"><button type="button" class="vinyl-reference-color-button" data-reference-color="baseColor" title="Grundfarbe aus Fotovorlage wählen" aria-label="Grundfarbe aus Fotovorlage wählen" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M4 20l3-1 11-11a2.1 2.1 0 0 0-3-3L4 16l-1 5 5-1M12 7l5 5"/></svg></button></span></label>
+          <label>Label-Farbe<span class="vinyl-color-picker-row"><input type="color" id="vinylLabelColor" value="#ffffff"><button type="button" class="vinyl-reference-color-button" data-reference-color="labelColor" title="Label-Farbe aus Fotovorlage wählen" aria-label="Label-Farbe aus Fotovorlage wählen" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M4 20l3-1 11-11a2.1 2.1 0 0 0-3-3L4 16l-1 5 5-1M12 7l5 5"/></svg></button></span></label>
           <label class="vinyl-transparency-label">Transparenz <span id="vinylTransparencyValue">0%</span><input type="range" id="vinylTransparencyInput" min="0" max="100" value="0" aria-label="Transparenz"></label>
         </div>
       </section>
@@ -12264,7 +12365,7 @@ const desktopModeShortcuts=document.createElement('div');desktopModeShortcuts.cl
 headerActions?.insertBefore(desktopModeShortcuts,headerActions.querySelector('.settings-wrap'));
 const modeShortcutIds=['viewStorageBtn','washModeHeaderBtn','spotifyPlaylistImportBtn','spotifyPlaylistPlayBtn','openDocsHeaderBtn'];
 function updateDesktopModeShortcuts() {
-  const desktop=window.matchMedia('(min-width:1200px) and (min-height:650px) and (hover:hover) and (pointer:fine)').matches;
+  const desktop=window.matchMedia('(min-width:1000px)').matches;
   const destination=desktop?desktopModeShortcuts:document.getElementById('settingsTopShortcuts');
   for(const id of modeShortcutIds){const button=document.getElementById(id);if(button&&button.parentElement!==destination)destination.append(button);}
   document.getElementById('settingsTopShortcuts').hidden=desktop;
@@ -14804,7 +14905,7 @@ function renderVinylEditor() {
       <div class="vinyl-layer-fields">
         <div class="vinyl-layer-main-row ${layer.type === 'Liquid' ? 'vinyl-layer-liquid-main' : ''}">
           <label class="vinyl-layer-captionless"><select data-layer-field="type" aria-label="Effekt" title="Effekt">${VINYL_EFFECT_TYPES.filter(type => type !== 'Label' || labelEditorDraft).map(type => `<option value="${type}" ${type === layer.type ? 'selected' : ''}>${escapeHtml(getVinylEffectLabel(type))}</option>`).join('')}</select></label>
-          ${layer.type === 'Label' ? '' : `<label class="vinyl-layer-captionless"><input type="color" data-layer-field="color" aria-label="Effektfarbe" title="Effektfarbe" value="${layer.color}"></label>`}
+          ${layer.type === 'Label' ? '' : `<label class="vinyl-layer-captionless vinyl-layer-color-control"><span class="vinyl-color-picker-row"><input type="color" data-layer-field="color" aria-label="Effektfarbe" title="Effektfarbe" value="${layer.color}"><button type="button" class="vinyl-reference-color-button" data-reference-color="color" title="Effektfarbe aus Fotovorlage wählen" aria-label="Effektfarbe aus Fotovorlage wählen" ${vinylReference.url ? '' : 'hidden'}><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M4 20l3-1 11-11a2.1 2.1 0 0 0-3-3L4 16l-1 5 5-1M12 7l5 5"/></svg></button></span></label>`}
           ${['Liquid', 'VollFarbe', 'Farbe Innen', 'Label'].includes(layer.type) ? '' : `<label class="vinyl-layer-count">Anzahl<input type="number" data-layer-field="count" aria-label="Anzahl" min="1" max="100" value="${layer.count}"></label>`}
           <div class="vinyl-layer-actions">
             <button type="button" data-layer-action="up" aria-label="Effekt nach oben verschieben" title="Nach oben" ${index === 0 || record.layers.length === 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
@@ -24935,16 +25036,22 @@ async function sampleReferencePhotoColor(source, point) {
   return '#' + [...pixel].slice(0, 3).map(value => value.toString(16).padStart(2, '0')).join('');
 }
 let activeReferenceColorDialog = null;
-function openReferenceColorPicker(field) {
-  if (!vinylReference.url || !vinylEditorDesign || !['baseColor', 'labelColor'].includes(field)) return;
+function referenceColorTarget(record, field, layer = null) {
+  if (!record) return null;
+  if (layer) return field === 'color' && record.layers.includes(layer) && layer.type !== 'Label' ? layer : null;
+  return ['baseColor', 'labelColor'].includes(field) ? record : null;
+}
+function openReferenceColorPicker(field, layer = null) {
+  if (!vinylReference.url || !vinylEditorDesign || !referenceColorTarget(editorRecord(), field, layer)) return;
   activeReferenceColorDialog?.close();
   const record = editorRecord(), design = vinylEditorDesign;
+  const colorName = layer ? 'Effektfarbe' : field === 'baseColor' ? 'Grundfarbe' : 'Label-Farbe';
   vinylReference.opacity = 100;
   renderVinylReference();
   const dialog = document.createElement('dialog');
   dialog.className = 'vinyl-reference-color-dialog';
-  dialog.setAttribute('aria-label', `${field === 'baseColor' ? 'Grundfarbe' : 'Label-Farbe'} aus Fotovorlage`);
-  dialog.innerHTML = `<header><strong>${field === 'baseColor' ? 'Grundfarbe' : 'Label-Farbe'} auswählen</strong><button type="button" data-close aria-label="Farbauswahl schließen">×</button></header>
+  dialog.setAttribute('aria-label', `${colorName} aus Fotovorlage`);
+  dialog.innerHTML = `<header><strong>${colorName} auswählen</strong><button type="button" data-close aria-label="Farbauswahl schließen">×</button></header>
     <p>Tippe auf die gewünschte Farbe im Foto.</p><img alt="Fotovorlage zur Farbauswahl" referrerpolicy="no-referrer">
     <p role="status" aria-live="polite"></p><button type="button" data-eyedropper hidden>Bildschirm-Pipette</button>
     <details><summary>Foto als Datei öffnen</summary><p>Falls der Bildserver die Farbauswahl sperrt, kannst du dasselbe Foto hier öffnen.</p><input type="file" accept="image/*" aria-label="Fotovorlage für Farbauswahl öffnen"></details>`;
@@ -24953,8 +25060,13 @@ function openReferenceColorPicker(field) {
   image.src = source;
   const apply = color => {
     if (!dialog.open || design !== vinylEditorDesign || record !== editorRecord()) return;
-    record[field] = color;
-    document.getElementById(field === 'baseColor' ? 'vinylBaseColor' : 'vinylLabelColor').value = color;
+    const target = referenceColorTarget(record, field, layer);
+    if (!target) return;
+    target[field] = color;
+    const input = layer
+      ? document.querySelector(`#vinylLayerList [data-layer-index="${record.layers.indexOf(layer)}"] [data-layer-field="color"]`)
+      : document.getElementById(field === 'baseColor' ? 'vinylBaseColor' : 'vinylLabelColor');
+    if (input) input.value = color;
     scheduleVinylEditorPreview();
     dialog.close();
   };
@@ -24995,8 +25107,13 @@ function openReferenceColorPicker(field) {
   activeReferenceColorDialog = dialog;
   dialog.showModal();
 }
-document.querySelectorAll('[data-reference-color]').forEach(button => {
-  button.addEventListener('click', () => openReferenceColorPicker(button.dataset.referenceColor));
+document.getElementById('vinylEditorOverlay').addEventListener('click', event => {
+  const button = event.target.closest('[data-reference-color]');
+  if (!button) return;
+  const row = button.closest('[data-layer-index]');
+  const layer = row ? editorRecord().layers[Number(row.dataset.layerIndex)] : null;
+  if (row && !layer) return;
+  openReferenceColorPicker(button.dataset.referenceColor, layer);
 });
 
 document.getElementById('showVinylReferenceBtn').addEventListener('click',() => openDiscogsReleasePictures('reference'));
