@@ -18263,7 +18263,7 @@ function preloadSpotifyPlayer(item) {
   void (shouldUseSpotifyWebPlayback()?loadSpotifyWebPlaybackScript():loadSpotifyIframeApi()).catch(()=>{});
   if(isSpotifyIntegrationAvailable())void loadSpotifyContextTracks(url).catch(()=>{});
 }
-// One Media Session writer for metadata and position. Spotify inputs are milliseconds.
+// SDK owns native metadata; the page supplies corrected positions in seconds.
 const trustedMediaSession = (() => {
   const run = fn => fn();
   let cur = null, curKey = '', keepTimer = null, burstTimers = [];
@@ -18276,7 +18276,7 @@ const trustedMediaSession = (() => {
     const session = navigator.mediaSession;
     if (!session || !cur) return;
     // An unsupported artwork URL must not prevent the time/state update.
-    if (withMeta && cur.meta && typeof MediaMetadata === 'function') {
+    if (withMeta && !cur.nativeMetadata && cur.meta && typeof MediaMetadata === 'function') {
       try { session.metadata = new MediaMetadata(cur.meta); }
       catch { try { session.metadata = new MediaMetadata({...cur.meta, artwork: []}); } catch {} }
     }
@@ -18298,12 +18298,12 @@ const trustedMediaSession = (() => {
   window.addEventListener('focus', () => apply(true));
   return {
     run,
-    publish({key, meta, duration, position, playing}) {
+    publish({key, meta, duration, position, playing, nativeMetadata = false}) {
       const changed = key !== curKey || !!playing !== !!cur?.playing;
       curKey = key;
       duration = Number.isFinite(duration) && duration > 0 ? duration : 0;
       position = Number.isFinite(position) && position >= 0 ? position : 0;
-      cur = {meta, duration, position: Math.min(position, duration), playing: !!playing, at: Date.now()};
+      cur = {meta, nativeMetadata, duration, position: Math.min(position, duration), playing: !!playing, at: Date.now()};
       apply(true);
       if (!playing) { stopTimers(); return; }
       if (changed) {
@@ -18418,9 +18418,10 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
     let activeStatus=onStatus;
     const emit=(name,data={}) => { if (!destroyed) for(const fn of listeners.get(name)||[]) fn({data}); };
     const report=(text,fatal=false) => { if(!destroyed) activeStatus?.(text,fatal); };
-    // Disable the SDK writer; publish metadata and seconds together from SDK state.
+    // Keep Spotify native metadata attached to the actual SDK audio session.
+    // Our position updates below convert SDK milliseconds to browser seconds.
     const restoreSpotifyPositionState = () => {};
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
@@ -18446,7 +18447,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       const position = Number.isFinite(positionMs) && positionMs >= 0 ? positionMs / 1000 : 0;
       const signature = JSON.stringify([uri, title, artist, album, artwork.map(a => a.src)]);
       mediaTrackUri = uri; mediaTrackSignature = signature;
-      trustedMediaSession.publish({key: signature, meta: {title, artist, album, artwork}, duration, position: Math.min(position, duration || position), playing: !next.paused});
+      trustedMediaSession.publish({key: signature, meta: {title, artist, album, artwork}, duration, position: Math.min(position, duration || position), playing: !next.paused, nativeMetadata: true});
     };
     if (navigator.mediaSession?.setActionHandler) {
       for (const [action, handler] of [
