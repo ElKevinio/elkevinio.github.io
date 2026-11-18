@@ -7671,7 +7671,14 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .album-queue-item.queue-drop-before { box-shadow:0 -2px 0 var(--accent); }
   .album-queue-item.queue-drop-after { box-shadow:0 2px 0 var(--accent); }
   #fullscreenPlayerMenu[hidden],#fullscreenPlayerQueuePanel[hidden],#fullscreenPlayerTracksPanel[hidden],#fullscreenPlayerPosterForm[hidden],#fullscreenPlayerMusicSettingsPanel[hidden],#roomQueueCrateMenu[hidden] { display:none !important; }
+
+  .storage-shelf-pending { margin-bottom:8px; padding:6px; border:1px dashed var(--accent-border); border-radius:8px; background:var(--accent-bg); }
+  .storage-shelf-pending > header { display:flex; align-items:center; gap:6px; padding:0 0 6px; font-size:11px; }
+  .storage-shelf-pending-records { max-height:150px; overflow:auto; }
+  .storage-shelf.is-collapsed .storage-shelf-pending { display:none; }
+  .storage-shelf-pending-badge { flex:0 0 auto; color:var(--accent); font-size:10px; white-space:nowrap; }
 </style>
+<script src="discogs-client.js?v=20261118"></script>
 <script src="image-link-health.js?v=20261116"></script>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -11314,8 +11321,11 @@ function updateViewingInfo() {
 
 let remoteAccentColor = null;
 
-function viewRemoteCollection(uid, username) {
-  return withAppLoading(() => viewRemoteCollectionInner(uid, username), `Besuche ${username} …`, null, sanitizeAccent(userDocCache.get(uid)?.accent), getDisplayName(userDocCache.get(uid)?.title || `${username} - Sammlung`));
+async function viewRemoteCollection(uid, username) {
+  if (!uid) return;
+  if (!getUserCardInfo(uid)) await fetchUserSummary({ uid, username });
+  const target = getUserCardInfo(uid);
+  return withAppLoading(() => viewRemoteCollectionInner(uid, username), `Besuche ${username} …`, null, sanitizeAccent(target?.accent), getDisplayName(target?.title || `${username} - Sammlung`));
 }
 
 async function viewRemoteCollectionInner(uid, username) {
@@ -11616,7 +11626,7 @@ async function enrichDiscogsPriceForItem(item) {
 
   try {
     const url = item.discogsResourceUrl + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : '');
-    const res = await fetch(url);
+    const res = await fetchDiscogsApi(url);
     const detailData = await res.json();
     item.discogsPriceCheckedAt = new Date().toISOString();
     let updated = true;
@@ -11767,7 +11777,7 @@ async function refreshDiscogsPrices() {
       if (token) url.searchParams.set('token', token);
 
       try {
-        let response = await fetch(url.href);
+        let response = await fetchDiscogsApi(url.href, {refresh:true});
         if (response.status === 429) {
           const retryAfter = response.headers.get('Retry-After');
           const retryDelay = retryAfter && Number.isFinite(Number(retryAfter))
@@ -11778,7 +11788,7 @@ async function refreshDiscogsPrices() {
           message.textContent = `Discogs-Limit erreicht. Warte ${Math.ceil(retryDelay / 1000)} Sekunden und versuche es erneut …`;
           await waitForDiscogsRefresh(Math.min(Math.max(retryDelay, 1000), 120000));
           if (cancelDiscogsPriceRefresh) break;
-          response = await fetch(url.href);
+          response = await fetchDiscogsApi(url.href, {refresh:true});
         }
         if (!response.ok) {
           failedRequests++;
@@ -11933,7 +11943,7 @@ async function refreshDiscogsGenresAndStyles() {
       if (token) url.searchParams.set('token', token);
 
       try {
-        let response = await fetch(url.href);
+        let response = await fetchDiscogsApi(url.href, {refresh:true});
         if (response.status === 429) {
           const retryAfter = response.headers.get('Retry-After');
           const retryDelay = retryAfter && Number.isFinite(Number(retryAfter))
@@ -11944,7 +11954,7 @@ async function refreshDiscogsGenresAndStyles() {
           message.textContent = `Discogs-Limit erreicht. Warte ${Math.ceil(retryDelay / 1000)} Sekunden und versuche es erneut …`;
           await waitForDiscogsRefresh(Math.min(Math.max(retryDelay, 1000), 120000));
           if (cancelDiscogsGenreRefresh) break;
-          response = await fetch(url.href);
+          response = await fetchDiscogsApi(url.href, {refresh:true});
         }
         if (!response.ok) {
           failedRequests++;
@@ -12908,9 +12918,14 @@ function assignItemToStorageLocation(item, shelfId, compartmentNumber) {
   item.shelfCompartment = compartmentNumber;
 }
 
+function getStoragePlacement(item) {
+  const shelf=shelfLocations.find(entry=>entry.id===item?.shelfId);
+  return {shelf,state:!shelf?'unsorted':isValidShelfCompartment(shelf,item.shelfCompartment)?'stored':'pending'};
+}
 function getStorageLabel(item) {
   if (!viewingOwnCollection || !item?.owned || !item?.shelfId) return '';
   const shelf = shelfLocations.find(entry => entry.id === item.shelfId);
+  if (shelf && !isValidShelfCompartment(shelf,item.shelfCompartment)) return `${shelf.name} · Noch keinem Fach zugeordnet`;
   return shelf && isValidShelfCompartment(shelf, item.shelfCompartment)
     ? isSingleCompartmentShelf(shelf)
       ? shelf.name
@@ -13600,7 +13615,7 @@ function closeShopMode() {
 
 async function searchShopCards(query, barcode) {
   if (!barcode) return searchBulkImportCandidates(query);
-  const res = await fetch('https://api.discogs.com/database/search?barcode=' + encodeURIComponent(barcode) + '&type=release&per_page=12' + discogsAuthParam());
+  const res = await fetchDiscogsApi('https://api.discogs.com/database/search?barcode=' + encodeURIComponent(barcode) + '&type=release&per_page=12' + discogsAuthParam());
   const data = await res.json();
   return (data.results || []).map(result => {
     const parsed = splitDiscogsSearchResult(result);
@@ -13686,7 +13701,7 @@ function showShopDetail(entry) {
     </div>
     <p class="shop-detail-status shop-detail-feedback" id="shopAddStatus" aria-live="polite"></p>`;
   if (!price && entry.discogsResourceUrl) {
-    fetch(entry.discogsResourceUrl + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''))
+    fetchDiscogsApi(entry.discogsResourceUrl + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''))
       .then(res => res.json())
       .then(data => {
         const lowest = Number(data?.lowest_price);
@@ -16314,7 +16329,7 @@ function splitDiscogsSearchResult(result) {
 async function getCoverFromDiscogs(query) {
   if (!query) return '';
   try {
-    const res = await fetch('https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=5' + discogsAuthParam());
+    const res = await fetchDiscogsApi('https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=5' + discogsAuthParam());
     const data = await res.json();
     const results = data?.results || [];
     if (results.length === 0) return '';
@@ -16325,8 +16340,9 @@ async function getCoverFromDiscogs(query) {
     for (const result of results) {
       if (!result?.resource_url) continue;
       try {
-        const detailRes = await fetch(result.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
-        const detailData = await detailRes.json();
+        const detailRes = await fetchDiscogsApi(result.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
+        if (!detailRes.ok) throw new Error(`Discogs-Fehler ${detailRes.status}`);
+              const detailData = await detailRes.json();
         const cover = getDiscogsCoverUrl(detailData);
         if (cover) return cover;
       } catch (e) {
@@ -16423,7 +16439,7 @@ function loadSearchDiscogsDetails(entry) {
     if (url.origin !== 'https://api.discogs.com' || !/^\/(releases|masters)\/\d+$/.test(url.pathname)) throw new Error('Ungültiger Discogs-Link.');
     const token = getDiscogsToken();
     if (token) url.searchParams.set('token', token);
-    const response = await fetch(url.href);
+    const response = await fetchDiscogsApi(url.href);
     if (!response.ok) throw new Error(`Discogs-Daten konnten nicht geladen werden (HTTP ${response.status}).`);
     const detail = normalizeDiscogsReleaseDetail(await response.json());
     if (!detail) throw new Error('Discogs hat keine Albumdaten geliefert.');
@@ -16691,7 +16707,7 @@ async function searchAlbums() {
     }
 
     if (sources.includes('discogs')) {
-      const res = await fetch('https://api.discogs.com/database/search?' + (barcode ? 'barcode=' : 'q=') + encodeURIComponent(q) + '&type=release&per_page=12' + discogsAuthParam());
+      const res = await fetchDiscogsApi('https://api.discogs.com/database/search?' + (barcode ? 'barcode=' : 'q=') + encodeURIComponent(q) + '&type=release&per_page=12' + discogsAuthParam());
       const data = await res.json();
       if (data.results) {
         const discogsCards = await Promise.all(data.results.map(async result => {
@@ -16704,26 +16720,6 @@ async function searchAlbums() {
           }
           if (result.average_price != null) {
             averagePrice = Number(result.average_price) || null;
-          }
-          if ((!cover || lowestPrice == null || averagePrice == null) && result.resource_url) {
-            try {
-              const detailRes = await fetch(result.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
-              const detailData = await detailRes.json();
-              cover = getDiscogsCoverUrl(detailData, false) || cover;
-              if (lowestPrice == null && detailData?.lowest_price != null) {
-                lowestPrice = Number(detailData.lowest_price) || null;
-              }
-              if (averagePrice == null && detailData?.average_price != null) {
-                averagePrice = Number(detailData.average_price) || null;
-              }
-              if (!priceCurrency) {
-                priceCurrency = detailData?.currency || detailData?.community?.currency || priceCurrency;
-              }
-              if (lowestPrice == null && detailData?.community?.price != null) {
-                lowestPrice = Number(detailData.community.price) || null;
-              }
-            } catch (e) {
-            }
           }
           return { result, cover, lowestPrice, averagePrice, priceCurrency };
         }));
@@ -16823,7 +16819,7 @@ async function searchBulkImportCandidates(query) {
 
   if (sources.includes('discogs')) {
     try {
-      const res = await fetch('https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=8' + discogsAuthParam());
+      const res = await fetchDiscogsApi('https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=8' + discogsAuthParam());
       const data = await res.json();
       (data.results || []).forEach(result => {
         const parsedResult = splitDiscogsSearchResult(result);
@@ -16865,7 +16861,7 @@ async function addBulkImportEntry(entry) {
     try {
       const token = getDiscogsToken();
       const url = entry.discogsResourceUrl + (token ? '?token=' + encodeURIComponent(token) : '');
-      const detailRes = await fetch(url);
+      const detailRes = await fetchDiscogsApi(url);
       if (detailRes.ok) {
         const detail = normalizeDiscogsReleaseDetail(await detailRes.json());
         if (detail) {
@@ -16997,7 +16993,7 @@ async function searchDiscogsReleases(query, limit = 8) {
   if (!query) return [];
   const searchUrl = 'https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=' + limit + discogsAuthParam();
   try {
-    const res = await fetch(searchUrl);
+    const res = await fetchDiscogsApi(searchUrl);
     if (!res.ok) {
       let bodyText = '';
       try { bodyText = await res.text(); } catch (e2) {}
@@ -17019,8 +17015,9 @@ async function searchDiscogsReleases(query, limit = 8) {
       let metadata = null;
       if (result.resource_url) {
         try {
-          const detailRes = await fetch(result.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
-          const detailData = await detailRes.json();
+          const detailRes = await fetchDiscogsApi(result.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
+          if (!detailRes.ok) throw new Error(`Discogs-Fehler ${detailRes.status}`);
+              const detailData = await detailRes.json();
           metadata = normalizeDiscogsReleaseDetail(detailData);
           cover = getDiscogsCoverUrl(detailData, false) || cover;
           if (lowestPrice == null && detailData?.lowest_price != null) {
@@ -17234,7 +17231,7 @@ async function fetchDiscogsReleaseById(releaseId) {
   try {
     const token = getDiscogsToken();
     const url = 'https://api.discogs.com/releases/' + encodeURIComponent(releaseId) + (token ? '?token=' + encodeURIComponent(token) : '');
-    const res = await fetch(url);
+    const res = await fetchDiscogsApi(url);
     if (!res.ok) {
       let bodyText = '';
       try { bodyText = await res.text(); } catch (e2) {}
@@ -17255,7 +17252,7 @@ async function fetchDiscogsMasterById(masterId) {
   try {
     const token = getDiscogsToken();
     const url = 'https://api.discogs.com/masters/' + encodeURIComponent(masterId) + (token ? '?token=' + encodeURIComponent(token) : '');
-    const res = await fetch(url);
+    const res = await fetchDiscogsApi(url);
     if (!res.ok) {
       let bodyText = '';
       try { bodyText = await res.text(); } catch (e) {}
@@ -17667,8 +17664,8 @@ async function selectAlbum(album, cover, source = 'itunes') {
   document.getElementById('fTracklist').innerHTML = '<p style="font-size:12px; color:var(--text-muted); margin:0;">Lade Tracklist...</p>';
 
   const discogsDetailPromise = source === 'discogs' && album.discogsResourceUrl
-    ? fetch(album.discogsResourceUrl + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''))
-      .then(res => res.json())
+    ? fetchDiscogsApi(album.discogsResourceUrl + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''))
+      .then(res => { if (!res.ok) throw new Error(`Discogs-Fehler ${res.status}`); return res.json(); })
       .then(normalizeDiscogsReleaseDetail)
       .catch(() => null)
     : Promise.resolve(null);
@@ -19492,18 +19489,6 @@ const obsSubscribers = new Map();
 let obsBroadcastChannel = null;
 let obsLastCss = '';
 let obsLastStyleCheck = 0;
-let obsRelayBusy=false;
-let obsRelayLastStyle='';
-function sendObsRelayState(state) {
-  const token=window.VINYL_OBS_RELAY?.token;
-  if(!token || obsRelayBusy)return;
-  obsRelayBusy=true;
-  void (async()=>{
-    const post=async message=>{const response=await fetch('/api/obs/state',{method:'POST',headers:{'Content-Type':'application/json','X-Obs-Token':token},body:JSON.stringify(message)});if(!response.ok)throw new Error('OBS-Relay nicht erreichbar');};
-    if(obsLastCss!==obsRelayLastStyle){await post({type:'vinyl-obs-style',sourceId:obsSourceId,css:obsLastCss});obsRelayLastStyle=obsLastCss;}
-    await post(state);
-  })().catch(error=>console.debug('OBS-Netzwerkverbindung:',error.message)).finally(()=>{obsRelayBusy=false;});
-}
 function currentObsStyles() {
   const variables=['--accent','--accent-bg','--accent-border','--surface-1','--surface-2','--text-primary','--text-secondary'];
   const computed=getComputedStyle(document.documentElement);
@@ -19533,7 +19518,7 @@ try {
 } catch(error) {console.debug('Automatische OBS-Verbindung nicht verfügbar:',error);}
 function sendObsExportState() {
   for(const [id,last]of obsSubscribers)if(Date.now()-last>15000)obsSubscribers.delete(id);
-  if((!obsExportWindow || obsExportWindow.closed) && !obsSubscribers.size && !window.VINYL_OBS_RELAY?.token)return;
+  if((!obsExportWindow || obsExportWindow.closed) && !obsSubscribers.size)return;
   if(Date.now()-obsLastStyleCheck>5000){obsLastStyleCheck=Date.now();if(currentObsStyles()!==obsLastCss)sendObsStyles();}
   const content = document.getElementById('albumListeningDockContent');
   const item = currentListeningAlbum;
@@ -19556,7 +19541,6 @@ function sendObsExportState() {
   };
   if(obsExportWindow && !obsExportWindow.closed)obsExportWindow.postMessage(state,location.origin);
   if(obsSubscribers.size)obsBroadcastChannel?.postMessage(state);
-  sendObsRelayState(state);
 }
 
 window.addEventListener('message', event => {
@@ -25225,15 +25209,16 @@ async function searchCoverCandidates(query) {
 
   async function addDiscogs() {
     try {
-      const res = await fetch('https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=6' + discogsAuthParam());
+      const res = await fetchDiscogsApi('https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=6' + discogsAuthParam());
       const data = await res.json();
       const results = data.results || [];
       for (const r of results) {
         let cover = normalizeDiscogsImageUrl(r.cover_image || r.thumb);
         if (!cover && r.resource_url) {
           try {
-            const detailRes = await fetch(r.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
-            const detailData = await detailRes.json();
+            const detailRes = await fetchDiscogsApi(r.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
+            if (!detailRes.ok) throw new Error(`Discogs-Fehler ${detailRes.status}`);
+              const detailData = await detailRes.json();
             cover = getDiscogsCoverUrl(detailData);
           } catch (e) {
           }
@@ -25414,7 +25399,7 @@ function discogsLabelReleaseId() {
 }
 async function fetchDiscogsLogoJson(path) {
   const token = getDiscogsToken();
-  const response = await fetch(`https://api.discogs.com/${path}${token ? '?token=' + encodeURIComponent(token) : ''}`);
+  const response = await fetchDiscogsApi(`https://api.discogs.com/${path}${token ? '?token=' + encodeURIComponent(token) : ''}`);
   if (!response.ok) throw new Error(`Discogs-Fehler ${response.status}. Bitte Verbindung und Discogs-Token prüfen.`);
   return response.json();
 }
@@ -27781,8 +27766,8 @@ function renderMobileStorageBoard(board, visibleItems) {
   const shelf = shelfLocations.find(entry => entry.id === mobileStorageShelfId);
   if (!shelf) mobileStorageShelfId = null;
   const owned = visibleItems.filter(item => item.owned);
-  const isPending = item => !isValidShelfCompartment(shelfLocations.find(entry => entry.id === item.shelfId), item.shelfCompartment);
-  const pending = owned.filter(item => isPending(item) && (shelf ? item.shelfId === shelf.id : !shelfLocations.some(entry => entry.id === item.shelfId)));
+  const isPending = item => getStoragePlacement(item).state !== 'stored';
+  const pending = owned.filter(item => shelf ? getStoragePlacement(item).state === 'pending' && item.shelfId === shelf.id : getStoragePlacement(item).state === 'unsorted');
   const movingItem = collection.find(item => item.id === mobileStorageMovingItemId && item.owned);
   const sorting = !!movingItem || pending.some(item => !collectionFilterQuery || matchesCollectionQuery(item, collectionFilterQuery));
   const matches = item => !collectionFilterQuery || matchesCollectionQuery(item, collectionFilterQuery);
@@ -27876,10 +27861,7 @@ function renderStorageBoard(visibleItems) {
   const randomSelectedItem = ownedItems.find(item => item.id === randomHighlightedItemId);
   const randomSelectedShelf = randomSelectedItem ? shelfLocations.find(entry => entry.id === randomSelectedItem.shelfId) : null;
   if (randomSelectedItem && !isValidShelfCompartment(randomSelectedShelf, randomSelectedItem.shelfCompartment)) randomHighlightedItemId = null;
-  const allUnsorted = ownedItems.filter(item => {
-    const shelf = shelfLocations.find(entry => entry.id === item.shelfId);
-    return !isValidShelfCompartment(shelf, item.shelfCompartment);
-  });
+  const allUnsorted = ownedItems.filter(item => getStoragePlacement(item).state === 'unsorted');
   const unsorted = collectionFilterQuery
     ? allUnsorted.filter(item => matchesCollectionQuery(item, collectionFilterQuery))
     : allUnsorted;
@@ -27899,8 +27881,8 @@ function renderStorageBoard(visibleItems) {
     const shelfWidth = shelf.mode === 'display'
       ? shelf.columns * 120 + Math.max(0, shelf.columns - 1) * 8 + 25
       : Math.max(300, shelf.columns * 165 + 28);
-    const shelfItems = collection.filter(item => item.owned && item.shelfId === shelf.id
-      && isValidShelfCompartment(shelf, item.shelfCompartment));
+    const shelfItems = collection.filter(item => item.owned && item.shelfId === shelf.id);
+    const shelfPending = ownedItems.filter(item => item.shelfId === shelf.id && getStoragePlacement(item).state === 'pending' && (!collectionFilterQuery || matchesCollectionQuery(item,collectionFilterQuery)));
     const compartmentMarkup = Array.from({ length: capacity }, (_, index) => {
       const number = index + 1;
       if (!isValidShelfCompartment(shelf, number)) return '';
@@ -27930,6 +27912,7 @@ function renderStorageBoard(visibleItems) {
           </button>
           <input type="text" class="storage-shelf-name" data-shelf-id="${escapeHtml(shelf.id)}" value="${escapeHtml(shelf.name)}" aria-label="Regalname ${escapeHtml(shelf.name)}">
           <span class="storage-count storage-shelf-count" title="${shelfItems.length} Album${shelfItems.length === 1 ? '' : 'e'} im Regal">${shelfItems.length}</span>
+          ${shelfPending.length ? `<span class="storage-shelf-pending-badge" title="${shelfPending.length} Platten noch keinem Fach zugeordnet">${shelfPending.length} ohne Fach</span>` : ''}
           <button type="button" class="storage-shelf-toggle" aria-expanded="${!isCollapsed}" title="${isCollapsed ? 'Regal ausklappen' : 'Regal einklappen'}" aria-label="${isCollapsed ? 'Regal ausklappen' : 'Regal einklappen'}: ${escapeHtml(shelf.name)}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -27944,6 +27927,7 @@ function renderStorageBoard(visibleItems) {
           <label class="storage-dimension-control">Spalten <input type="number" class="storage-shelf-columns" min="1" max="10" value="${shelf.columns}" aria-label="Spalten ${escapeHtml(shelf.name)}"></label>
         </div>
       </header>
+      ${shelfPending.length ? `<section class="storage-shelf-pending" data-drop-shelf-pending="${escapeHtml(shelf.id)}"><header>Noch keinem Fach zugeordnet <span class="storage-count">${shelfPending.length}</span></header><div class="storage-shelf-pending-records" data-pending-list="${escapeHtml(shelf.id)}"></div></section>` : ''}
       <div class="storage-compartments">${compartmentMarkup}</div>
     </section>`;
   };
@@ -28051,6 +28035,10 @@ function renderStorageBoard(visibleItems) {
   unsortedList.innerHTML = '';
   if (unsorted.length === 0) unsortedList.innerHTML = `<p class="settings-panel-hint">${collectionFilterQuery && allUnsorted.length ? 'Keine passenden unsortierten Vinyls.' : 'Keine unsortierten Vinyls.'}</p>`;
   unsorted.forEach(item => unsortedList.appendChild(createUnsortedStorageCard(item)));
+  board.querySelectorAll('[data-pending-list]').forEach(list => {
+    ownedItems.filter(item=>item.shelfId===list.dataset.pendingList && getStoragePlacement(item).state==='pending' && (!collectionFilterQuery || matchesCollectionQuery(item,collectionFilterQuery)))
+      .forEach(item=>list.appendChild(createStoredVinylTile(item)));
+  });
   shelfLocations.forEach(shelf => {
     Array.from({ length: getShelfCapacity(shelf) }, (_, index) => index + 1)
       .filter(number => isValidShelfCompartment(shelf, number))

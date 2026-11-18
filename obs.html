@@ -100,18 +100,9 @@ setInterval(() => {
   requestObsState();
   if (Date.now() - lastUpdate > 15000) {
     player.classList.remove('is-playing');
-    el('status').textContent = window.VINYL_OBS_RELAY?.token?'Warte auf den Musikplayer am lokalen OBS-Server …':'Warte auf die Musikseite im selben Browser und auf derselben Domain …';
+    el('status').textContent = 'Warte auf die Musikseite im selben Browser und auf derselben Domain …';
   }
 }, 3000);
-// The local relay also reaches OBS Browser Source and other devices on the LAN.
-let obsRelayEvents=null;
-if(window.VINYL_OBS_RELAY?.token) {
-  const endpoint=new URL('/api/obs/events',location.href);
-  endpoint.searchParams.set('room',window.VINYL_OBS_RELAY.token);
-  obsRelayEvents=new EventSource(endpoint);
-  obsRelayEvents.onmessage=event=>{try{const data=JSON.parse(event.data);if(['vinyl-obs-state','vinyl-obs-style'].includes(data.type))applyObsData(data);}catch(error){console.debug('OBS-Netzwerkdaten:',error);}};
-  obsRelayEvents.onerror=()=>{el('status').textContent='Verbindung zum lokalen OBS-Server wird wiederhergestellt …';};
-}
 window.addEventListener('pagehide',()=>obsChannel?.postMessage({type:'vinyl-obs-unsubscribe',viewerId:obsViewerId}));
 window.addEventListener('pageshow',requestObsState);
 if (window.opener) window.opener.postMessage({type:'vinyl-obs-ready'}, location.origin);
