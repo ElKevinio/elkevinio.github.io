@@ -1846,7 +1846,9 @@
   .album-listening-dock.is-collapsed .album-mini-controls .album-mini-control[aria-label="Zu deinen Spotify-Lieblingssongs hinzufügen"],
   .album-listening-dock.is-collapsed .album-mini-controls .album-mini-control[aria-label="Zu deinen Spotify-Lieblingssongs hinzugefügt"] { display:none; }
   .album-listening-dock.is-collapsed .album-mini-main { display:block; }
-  .album-listening-dock.is-collapsed .album-mini-controls { justify-content:flex-end; gap:4px; margin-top:0; white-space:nowrap; }
+  .album-listening-dock.is-collapsed .album-mini-controls { display:flex; flex-wrap:nowrap; width:100%; min-width:0; justify-content:flex-end; gap:4px; margin-top:0; white-space:nowrap; }
+  .album-listening-dock.is-collapsed .album-mini-controls > button { flex-shrink:0; }
+  .album-listening-dock.is-collapsed .album-mini-collapsed-close { flex:0 0 24px; width:24px; min-width:24px; height:24px; padding:0; }
   .album-listening-dock.is-collapsed .album-mini-controls .album-dock-toggle,
   .album-listening-dock.is-collapsed .album-mini-controls .album-mini-collapsed-close { display:inline-flex; }
   .album-listening-dock.is-collapsed .album-mini-control {
@@ -18786,6 +18788,7 @@ if (fullscreenTransport) wrapPlayerTransport(fullscreenTransport);
 
 const listeningAlbumQueue = [];
 let currentListeningAlbum = null;
+let listeningVinylAppearance = null;
 let restoredListeningSessionKey = '';
 let listeningAccountEpoch = 0;
 let listeningAccountResetting = false;
@@ -19383,7 +19386,19 @@ function renderFullscreenPlayerVinyl() {
   if (currentListeningAlbum?.isListeningPlaylist) void updateListeningPlaylistVinylColor(currentListeningAlbum.coverUrl);
 }
 
+function chooseListeningVinylAppearance(item, random = Math.random) {
+  if (!item || item.isListeningPlaylist || isCdItem(item)) return null;
+  const matches = findMatchingCollectionItems(item).filter(candidate => candidate.owned !== false && !isCdItem(candidate));
+  const candidates = matches.length ? matches : [item];
+  const copies = candidates.flatMap(candidate => {
+    const design = normalizeVinylDesign(candidate);
+    return design.records.map(record => ({ ...candidate, vinylDesign: { ...design, records: [record] } }));
+  });
+  return copies[Math.min(copies.length - 1, Math.floor(random() * copies.length))] || null;
+}
+
 function applyListeningVinylAppearance(vinyl, item) {
+  if (item === currentListeningAlbum && listeningVinylAppearance) item = listeningVinylAppearance;
   const design = normalizeVinylDesign(item);
   const record = getVinylRecordForItem(item);
   vinyl.className = `fullscreen-player-vinyl ${record.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${getDiscMediaClasses(item)}`.replace(/\s+/g, ' ').trim();
@@ -19465,6 +19480,10 @@ function setPlayerHtml(element, html) {
 }
 function setPlayerText(element, text) {
   if (element.textContent !== text) element.textContent = text;
+  if (element.classList?.contains('album-mini-track-title')) {
+    const compact = element.closest('.album-mini-player')?.querySelector('.album-mini-collapsed-title');
+    if (compact && compact.textContent !== text) compact.textContent = text;
+  }
 }
 function setPlayerAttribute(element, name, value) {
   if (element.getAttribute(name) !== value) element.setAttribute(name, value);
@@ -22047,7 +22066,8 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   toggle.setAttribute('aria-label', 'Wiedergabe starten');
   toggle.disabled = true;
   const expandedClose = createExpandedDockCloseButton();
-  controls.append(collapsedTitle, toggle, expandedClose, createAlbumDockToggle(), createCollapsedDockCloseButton());
+  topbar.append(expandedClose);
+  controls.append(collapsedTitle, toggle, createAlbumDockToggle(), createCollapsedDockCloseButton());
   meta.append(currentTrack, artist, controls);
 
   main.append(cover, meta);
@@ -22510,6 +22530,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   message.className = 'album-mini-message';
   message.textContent = 'Die Titelliste wird geladen …';
   const expandedClose = createExpandedDockCloseButton();
+  topbar.append(expandedClose);
   controls.append(
     collapsedTitle,
     shuffle,
@@ -22518,7 +22539,6 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     next,
     favorite,
     nextQueued,
-    expandedClose,
     createAlbumDockToggle(),
     createCollapsedDockCloseButton()
   );
@@ -22657,7 +22677,8 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   };
   const finishAlbumPlayback = () => {
     if(advanceAlbumQueueAtEnd())return true;
-    if(!discogsOrder || lastTrackEndTriggered)return false;
+    if(lastTrackEndTriggered)return true;
+    if(!discogsOrder && !normalizeSpotifyAlbumLink(originalUrl))return false;
     lastTrackEndTriggered=true;
     spotifyMiniController?.pause();
     pendingRestoredTrackUri=tracks[0]?.uri || '';
@@ -23276,7 +23297,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       });
       controller.addListener('playback_started', event => {
         if (!host.isConnected || spotifyMiniController !== controller || !discogsSequenceReady) return;
-        if (controller.isWebPlaybackSdk && spotifyLeftAlbumAfterLastTrack(event.data || {}, tracks, currentIndex, pendingAutoAdvancedTrackUri) && finishAlbumPlayback()) return;
+        if (spotifyLeftAlbumAfterLastTrack(event.data || {}, tracks, currentIndex, pendingAutoAdvancedTrackUri) && finishAlbumPlayback()) return;
         if (pendingPlaybackPaused === true && Date.now()-pendingPlaybackAt < 8000) { retryPendingEmbedPlayback(); return; }
         if (!acceptsSpotifyTrackState(event.data || {}, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) return;
         if (albumId && currentIndex < 0 && !event.data?.playbackContextPosition) currentIndex = 0;
@@ -23290,7 +23311,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       controller.addListener('playback_update', event => {
         if (!host.isConnected || spotifyMiniController !== controller || !discogsSequenceReady) return;
         const state = event.data || {};
-        if (controller.isWebPlaybackSdk && spotifyLeftAlbumAfterLastTrack(state, tracks, currentIndex, pendingAutoAdvancedTrackUri) && finishAlbumPlayback()) return;
+        if (spotifyLeftAlbumAfterLastTrack(state, tracks, currentIndex, pendingAutoAdvancedTrackUri) && finishAlbumPlayback()) return;
         // Spotify Web Playback can start another context track instead of emitting a
         // reliable 'ended' event. Detect the transition after the final album track.
         if (controller.isWebPlaybackSdk && currentIndex === tracks.length - 1 && tracks.length && !lastTrackEndTriggered) {
@@ -23358,7 +23379,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
             }
           } else if (listeningAlbumQueue.length) {
             playNextQueuedAlbum();
-          } else if(discogsOrder) {
+          } else if(discogsOrder || normalizeSpotifyAlbumLink(originalUrl)) {
             controller.pause();pendingRestoredTrackUri=tracks[0]?.uri || '';showPlaybackState(true);
           }
         }
@@ -23409,6 +23430,7 @@ function mountListeningEmbed(container, url, title, item = null, restorePlayback
     document.getElementById('albumListeningDockTitle').textContent = title || 'Album anhören';
     dock.hidden = false;
     currentListeningAlbum = { ...(item || {}), title: title || item?.title || 'Album', listeningUrl: url, ...(spotifyEmbed ? {spotifyAlbumUrl:url} : {}) };
+    listeningVinylAppearance = chooseListeningVinylAppearance(currentListeningAlbum);
     updateAlbumDockToggle();
     updateAlbumMiniPlayerButton();
     persistListeningSession();
