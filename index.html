@@ -18263,85 +18263,69 @@ function preloadSpotifyPlayer(item) {
   void (shouldUseSpotifyWebPlayback()?loadSpotifyWebPlaybackScript():loadSpotifyIframeApi()).catch(()=>{});
   if(isSpotifyIntegrationAvailable())void loadSpotifyContextTracks(url).catch(()=>{});
 }
-// Media Session: Spotify state is in milliseconds; the browser API expects seconds.
-// The local metadata/position writer is guarded against competing same-context writes.
+// One Media Session writer for metadata and position. Spotify inputs are milliseconds.
 const trustedMediaSession = (() => {
-  let trusted = false;
-  const proto = window.MediaSession && window.MediaSession.prototype;
-  if (proto && typeof proto.setPositionState === 'function' && !proto.__vinylGuard) {
-    proto.__vinylGuard = true;
-    const nativePosition = proto.setPositionState;
-    proto.setPositionState = function (state) { if (!trusted) return; return nativePosition.call(this, state); };
-    const desc = Object.getOwnPropertyDescriptor(proto, 'metadata');
-    if (desc && desc.set && desc.configurable) {
-      Object.defineProperty(proto, 'metadata', {
-        configurable: true, enumerable: desc.enumerable, get: desc.get,
-        set(value) { if (!trusted) return; desc.set.call(this, value); }
-      });
-    }
-  }
-  // No silent audio element: it can steal iOS Now Playing ownership from Spotify.
-  const run = fn => { trusted = true; try { return fn(); } finally { trusted = false; } };
-  // iOS: Keep our silent audio anchor running across SDK track transitions.
-  // Restarting it on every track change can relinquish the active Now Playing session.
-  // Metadata is republished separately; iOS may still prefer the SDK iframe.
-  let cur = null, curKey = '', keepTimer = null, burstTimers = [], anchor = null;
+  const run = fn => fn();
+  let cur = null, curKey = '', keepTimer = null, burstTimers = [];
   const posNow = () => {
     if (!cur || !(cur.duration > 0)) return null;
-    const elapsed = cur.playing ? (Date.now() - cur.at) / 1000 : 0;
+    const elapsed = cur.playing ? Math.max(0, (Date.now() - cur.at) / 1000) : 0;
     return {duration: cur.duration, position: Math.max(0, Math.min(cur.position + elapsed, cur.duration)), playbackRate: 1};
   };
   const apply = withMeta => {
     const session = navigator.mediaSession;
     if (!session || !cur) return;
-    run(() => {
-      try {
-        if (withMeta && cur.meta && typeof MediaMetadata === 'function') session.metadata = new MediaMetadata(cur.meta);
-        session.playbackState = cur.playing ? 'playing' : 'paused';
-        const p = posNow();
-        if (p && typeof session.setPositionState === 'function') session.setPositionState(p);
-      } catch {}
-    });
+    // An unsupported artwork URL must not prevent the time/state update.
+    if (withMeta && cur.meta && typeof MediaMetadata === 'function') {
+      try { session.metadata = new MediaMetadata(cur.meta); }
+      catch { try { session.metadata = new MediaMetadata({...cur.meta, artwork: []}); } catch {} }
+    }
+    try { session.playbackState = cur.playing ? 'playing' : 'paused'; } catch {}
+    try {
+      if (typeof session.setPositionState === 'function') {
+        const position = posNow();
+        if (position) session.setPositionState(position);
+        else session.setPositionState();
+      }
+    } catch {}
   };
   const stopTimers = () => {
     burstTimers.forEach(clearTimeout); burstTimers = [];
     if (keepTimer) { clearInterval(keepTimer); keepTimer = null; }
   };
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) apply(true); });
+  document.addEventListener('visibilitychange', () => apply(true));
   window.addEventListener('pageshow', () => apply(true));
   window.addEventListener('focus', () => apply(true));
   return {
     run,
     publish({key, meta, duration, position, playing}) {
-      // Auch nach kurzer Pause (Ladezustand beim Titelwechsel) wieder neu ansetzen.
-      const changed = key !== curKey || (playing && !(cur && cur.playing));
+      const changed = key !== curKey || !!playing !== !!cur?.playing;
       curKey = key;
-      cur = {meta, duration, position, playing, at: Date.now()};
-      if (changed) apply(true);
+      duration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+      position = Number.isFinite(position) && position >= 0 ? position : 0;
+      cur = {meta, duration, position: Math.min(position, duration), playing: !!playing, at: Date.now()};
+      apply(true);
       if (!playing) { stopTimers(); return; }
       if (changed) {
-        console.debug('[Vinyl MediaSession] Track/Playback aktiv:', meta?.title || key);
-        // Never pause/restart the anchor merely because Spotify switched tracks.
         burstTimers.forEach(clearTimeout);
         const expectedKey = key;
-        burstTimers = [250, 750, 1500, 3000, 5000, 8000].map(ms => setTimeout(() => {
-          if (!cur?.playing || curKey !== expectedKey) return;
-          apply(true);
+        burstTimers = [250, 750, 1500].map(ms => setTimeout(() => {
+          if (cur?.playing && curKey === expectedKey) apply(true);
         }, ms));
       }
-      // iOS: re-apply our metadata periodically to overwrite SDK writes.
-      if (keepTimer) clearInterval(keepTimer);
-      keepTimer = setInterval(function(){ if (!cur||!cur.playing){clearInterval(keepTimer);keepTimer=null;return;} apply(true); }, 3000);
+      if (!keepTimer) keepTimer = setInterval(() => apply(true), 3000);
     },
-    anchorPlay() {
-      if (!anchor) {
-        anchor = document.createElement('audio');
-        anchor.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7';
-        anchor.loop = true; anchor.volume = 0.001;
-      }
-      try { anchor.play().catch(() => {}); } catch {}
-    },
-    anchorPause() { if (anchor) try { anchor.pause(); } catch {} }
+    // Compatibility hooks: no second audio source competes with the real player.
+    anchorPlay() {},
+    anchorPause() { stopTimers(); },
+    reset() {
+      stopTimers(); cur = null; curKey = '';
+      const session = navigator.mediaSession;
+      if (!session) return;
+      try { session.metadata = null; } catch {}
+      try { session.playbackState = 'none'; } catch {}
+      try { session.setPositionState?.(); } catch {}
+    }
   };
 })();
 let spotifyIframeApiPromise = null;
@@ -18434,11 +18418,9 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
     let activeStatus=onStatus;
     const emit=(name,data={}) => { if (!destroyed) for(const fn of listeners.get(name)||[]) fn({data}); };
     const report=(text,fatal=false) => { if(!destroyed) activeStatus?.(text,fatal); };
-    // Own the browser Media Session: the Spotify SDK may publish millisecond
-    // durations to iOS as seconds. Our SDK state stays in milliseconds;
-    // only Media Session metadata and position are converted to seconds.
+    // Disable the SDK writer; publish metadata and seconds together from SDK state.
     const restoreSpotifyPositionState = () => {};
-    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:true,
+    const sdk=new Spotify.Player({name:'Vinyl · Mobiler Musikplayer',volume:playerVolume/100,enableMediaSession:false,
       getOAuthToken: cb => { getSpotifyAccessToken().then(value=>{ if(value&&!destroyed)cb(value); else report('Spotify-Sitzung abgelaufen. Bitte erneut verbinden.',true); }).catch(()=>report('Spotify-Anmeldung konnte nicht erneuert werden.',true)); }
     });
     let mediaTrackUri = '';
@@ -18488,7 +18470,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       const previous=state;state=next;
       // Own iOS Now Playing metadata and convert Spotify milliseconds to seconds.
       syncSpotifyMediaSession(next);
-      // Only actual Spotify pause/resume transitions affect the audio anchor.
+      // Pause periodic Media Session updates when playback stops.
       // A new song while playing must not stop/restart it.
       if (next.paused) {
         if (!previous || !previous.paused) trustedMediaSession.anchorPause();
@@ -18641,7 +18623,7 @@ function createSpotifyWebPlaybackApi(Spotify,onStatus) {
       resume(){return this.play();},pause(){const version=++commandVersion;desiredPaused=true;desiredUntil=Date.now()+8000;return run(()=>version===commandVersion?sdk.pause():undefined,version);},
       // Closing an album view must not disconnect the Spotify Connect device.
       destroy(){listeners.clear();activeStatus=null;},
-      hardDestroy(){trustedMediaSession.anchorPause();restoreSpotifyPositionState();destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
+      hardDestroy(){trustedMediaSession.reset?.();trustedMediaSession.anchorPause();restoreSpotifyPositionState();destroyed=true;deviceId='';settleDeviceWaiters('',new Error('Spotify-Player wurde geschlossen.'));lifetime.abort();clearTimeout(readyTimeout);clearTimeout(reconnectTimer);clearInterval(poll);listeners.clear();if(navigator.mediaSession){try{navigator.mediaSession.playbackState='none';}catch{}}sdk.disconnect();}
     };
     // Register native iOS lock-screen track controls for this playback engine.
     if (navigator.mediaSession?.setActionHandler) {
