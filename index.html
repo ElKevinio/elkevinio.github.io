@@ -7680,7 +7680,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .storage-shelf.is-collapsed .storage-shelf-pending { display:none; }
   .storage-shelf-pending-badge { flex:0 0 auto; color:var(--accent); font-size:10px; white-space:nowrap; }
 </style>
-<script src="discogs-client.js?v=20261118"></script>
+<script src="discogs-client.js?v=20261119"></script>
 <script src="image-link-health.js?v=20261116"></script>
 <script src="layout-diagnostics.js" defer></script>
 <!-- @zxing/library 0.21.3, Apache-2.0. License: assets/vendor/zxing/LICENSE. Loaded only when scanning. -->
@@ -7855,6 +7855,10 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
             <div class="settings-mobile-shortcuts-items" id="settingsMobileShortcutsItems"></div>
           </div>
           <div class="settings-panel-actions">
+            <button type="button" id="vinylBackupsBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Lokale Sammlungs-Backups und JSON-Abgleich">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h13l3 3v13H4zM8 4v6h8V4M8 20v-6h8v6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+              <span>Backups</span>
+            </button>
             <button type="button" id="startShopModeBtn" class="settings-fix-btn tooltip-btn" data-tooltip="Alben suchen, anhören und auf die Wunschliste setzen">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 9l1.5-5h13L20 9M4 9v11h16V9M4 9h16M9 20v-6h6v6" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg>
               <span>Plattenladen</span>
@@ -9362,9 +9366,11 @@ const ACCOUNT_COLLECTION_PREFIX = 'vinylCollectionByUidV2:';
 const ACCOUNT_TITLE_PREFIX = 'vinylTitleByUidV2:';
 let cloudAccountReadyUid = null;
 let cloudAccountEpoch = 0;
+function isCloudSession(uid, epoch) {
+  return !!uid && currentUid === uid && auth.currentUser?.uid === uid && epoch === cloudAccountEpoch;
+}
 function assertCloudAccount(uid, epoch = cloudAccountEpoch) {
-  if (!uid || currentUid !== uid || auth.currentUser?.uid !== uid ||
-      cloudAccountReadyUid !== uid || epoch !== cloudAccountEpoch) {
+  if (!isCloudSession(uid, epoch) || cloudAccountReadyUid !== uid) {
     const error = new Error('Sicherheitsstopp: Account-Wechsel oder ungeprüfte Account-Zuordnung. Keine Cloud-Änderung.');
     error.code = 'collection/account-mismatch';
     throw error;
@@ -9374,9 +9380,13 @@ function saveAccountCollectionLocally(uid = currentUid) {
   if (!uid || uid !== currentUid || auth.currentUser?.uid !== uid || cloudAccountReadyUid !== uid) return;
   // Snapshot the previous account-scoped value before it can be replaced.
   const previousJson = localStorage.getItem(ACCOUNT_COLLECTION_PREFIX + uid);
-  if (previousJson) queueVinylBackup(uid, previousJson, localStorage.getItem(ACCOUNT_TITLE_PREFIX + uid) || '', 'before-local-overwrite');
-  localStorage.setItem(ACCOUNT_COLLECTION_PREFIX + uid, JSON.stringify(ownCollection));
-  queueVinylBackup(uid, JSON.stringify(ownCollection), ownCollectionTitle, 'local-save');
+  const json = JSON.stringify(ownCollection);
+  const previousTitle = localStorage.getItem(ACCOUNT_TITLE_PREFIX + uid) || '';
+  if (previousJson && (previousJson !== json || previousTitle !== ownCollectionTitle)) {
+    queueVinylBackup(uid, previousJson, previousTitle, 'before-local-overwrite');
+  }
+  localStorage.setItem(ACCOUNT_COLLECTION_PREFIX + uid, json);
+  queueVinylBackup(uid, json, ownCollectionTitle, 'local-save');
   localStorage.setItem(ACCOUNT_TITLE_PREFIX + uid, ownCollectionTitle);
 }
 
@@ -9991,7 +10001,11 @@ function mergeCloudSettings(base, local, remote) {
   return merged;
 }
 function mergeCloudCollectionVersions(base, local, remote) {
-  const map=items=>new Map(items.map(item=>[String(item.id),splitCloudItem(item).base]));
+  // Compare older color values consistently with the normalized collection loader.
+  const map = items => new Map(items.map(item => [
+    String(item.id),
+    {...splitCloudItem(item).base, color: normalizeColor(item.color)}
+  ]));
   const before=map(base),here=map(local),there=map(remote),merged=[];
   for(const id of new Set([...there.keys(),...here.keys(),...before.keys()])) {
     const b=before.get(id),l=here.get(id),r=there.get(id);
@@ -10115,6 +10129,7 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
 let cloudHydrationToken = 0;
 async function hydrateOwnCloudImages(uid) {
   const token = ++cloudHydrationToken;
+  const epoch = cloudAccountEpoch;
   const byId = new Map(ownCollection.map(item => [getCloudItemDocId(item), item]));
   const hasImage = item => !!(item.vinylDesign && item.vinylDesign.cdImageDataUrl);
   const todo = [];
@@ -10138,11 +10153,11 @@ async function hydrateOwnCloudImages(uid) {
   };
   rerender();
   for (let offset = 0; offset < todo.length; offset += 10) {
-    if (token !== cloudHydrationToken || cloudCollectionSnapshotUid !== uid) return;
+    if (token !== cloudHydrationToken || !isCloudSession(uid, epoch) || cloudCollectionSnapshotUid !== uid) return;
     await Promise.all(todo.slice(offset, offset + 10).map(async id => {
       try {
         const snapshot = await trackFirebaseRequest(getCloudImagesRef(uid).doc(id).get());
-        if (token !== cloudHydrationToken) return;
+        if (token !== cloudHydrationToken || !isCloudSession(uid, epoch)) return;
         const item = byId.get(id);
         const url = snapshot.exists && typeof snapshot.data().dataUrl === 'string' ? snapshot.data().dataUrl : '';
         if (url && item && item.vinylDesign && typeof item.vinylDesign === 'object') {
@@ -10313,13 +10328,13 @@ let cloudManualRetryRunning = false;
 async function retryCloudSynchronization() {
   if (!currentUid || cloudAccountReadyUid !== currentUid || auth.currentUser?.uid !== currentUid || !viewingOwnCollection || cloudManualRetryRunning) return;
   cloudManualRetryRunning = true;
-  const uid = currentUid;
+  const uid = currentUid, epoch = cloudAccountEpoch;
   try {
     if (pendingCloudSave) persistPendingCloudSnapshot(getCloudSettingsSnapshot());
     const snapshot = await trackFirebaseRequest(db.collection('users').doc(uid).get({source:'server'}));
-    if (currentUid !== uid) return;
+    if (!isCloudSession(uid, epoch)) return;
     await loadCloudData(uid, snapshot);
-    if (currentUid !== uid) return;
+    if (!isCloudSession(uid, epoch)) return;
     if (cloudCollectionIntegrityIssue?.uid === uid) {
       await showCloudSyncDetails();
       return;
@@ -10327,6 +10342,7 @@ async function retryCloudSynchronization() {
     if (pendingCloudSave) await saveCloudDataNow();
     else showCloudSyncStatus('Sammlung erneut mit Firebase geprüft. Keine ausstehenden Änderungen.');
   } catch (error) {
+    if (!isCloudSession(uid, epoch)) return;
     console.error('Manuelle Cloud-Synchronisierung fehlgeschlagen:', error);
     updateCloudSyncBanner(`Firebase konnte nicht erneut geprüft werden: ${error?.message || 'Verbindung fehlgeschlagen'}`, 'error', true);
   } finally {cloudManualRetryRunning = false;}
@@ -10512,6 +10528,10 @@ async function loadCloudData(uid, prefetchedSnap) {
   const docSnap = prefetchedSnap || await trackFirebaseRequest(docRef.get());
   if (loadEpoch !== cloudAccountEpoch || uid !== currentUid || auth.currentUser?.uid !== uid) return;
   let data = docSnap.exists ? docSnap.data() : { collection: [], title: 'Vinyl-Sammlung', settings: {} };
+  let rawRootData = docSnap.exists ? data : null;
+  const loaded = await loadCloudCollectionDetailed(uid, data);
+  if (loaded.rootData) { data = loaded.rootData; rawRootData = data; }
+  if (loadEpoch !== cloudAccountEpoch || uid !== currentUid || auth.currentUser?.uid !== uid) return;
   let localPending = null;
   try {
     localPending = JSON.parse(localStorage.getItem(getPendingCloudStorageKey(uid)) || 'null');
@@ -10524,10 +10544,6 @@ async function loadCloudData(uid, prefetchedSnap) {
   }
   cloudSyncUnavailableReason = localPending?.lastError || null;
   suppressNextCloudSave = true;
-  let rawRootData = docSnap.exists ? data : null;
-  const loaded = await loadCloudCollectionDetailed(uid, data);
-  if (loaded.rootData) { data = loaded.rootData; rawRootData = data; }
-  if (loadEpoch !== cloudAccountEpoch || uid !== currentUid || auth.currentUser?.uid !== uid) return;
   cloudCollectionIntegrityIssue = loaded.integrityIssue || null;
   const cloudItems = loaded.items
     .map(item => { item.color = normalizeColor(item.color); return item; });
@@ -10562,8 +10578,6 @@ async function loadCloudData(uid, prefetchedSnap) {
   }
   cloudBaseCollection = cloudItems.map(item=>splitCloudItem(item).base);
   ownCollection = pendingLocalItems || cloudItems;
-  cloudAccountReadyUid = uid;
-  saveAccountCollectionLocally(uid);
   const keptImages = cloudCollectionSnapshotUid === uid
     ? cloudImageIds.filter(id => cloudImageSnapshot.has(id)).map(id => [id, cloudImageSnapshot.get(id)])
     : [];
@@ -10590,31 +10604,29 @@ async function loadCloudData(uid, prefetchedSnap) {
       settings: {},
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true })).catch(err => console.error('Neues Benutzer-Dokument konnte nicht erstellt werden:', err));
+    if (!isCloudSession(uid, loadEpoch)) return;
   }
-    if (data.settings) {
-    localStorage.setItem(COVER_SOURCE_KEY, 'all');
-    if (typeof data.settings.allowWishlistPrice !== 'undefined') {
-      localStorage.setItem(PRICE_WISHLIST_KEY, data.settings.allowWishlistPrice ? 'true' : 'false');
-      try { if (typeof priceWishlistCheckbox !== 'undefined' && priceWishlistCheckbox) priceWishlistCheckbox.checked = !!data.settings.allowWishlistPrice; } catch (e) {}
-    }
-    if (typeof data.settings.refreshDiscogsPrice !== 'undefined') {
-      localStorage.setItem(PRICE_REFRESH_KEY, data.settings.refreshDiscogsPrice ? 'true' : 'false');
-      try { if (typeof refreshDiscogsPriceCheckbox !== 'undefined' && refreshDiscogsPriceCheckbox) refreshDiscogsPriceCheckbox.checked = !!data.settings.refreshDiscogsPrice; } catch (e) {}
-    }
-    if (data.settings.discogsToken) {
-      localStorage.setItem(DISCOGS_TOKEN_KEY, data.settings.discogsToken);
-      try { if (typeof discogsTokenInput !== 'undefined' && discogsTokenInput) discogsTokenInput.value = data.settings.discogsToken; } catch (e) {}
-    }
-    localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, 'auto');
-    setAccentColor(data.settings.accentColor || '#d4537e');
-    // Load table view settings (visible columns, sort column/direction)
-    if (typeof loadTableSettingsFromUser === 'function') {
-      loadTableSettingsFromUser(data.settings);
-    } else {
-      // If the table-settings code hasn't been parsed yet (different <script> tag),
-      // stash them for the later initializer to pick up.
-      window._pendingTableSettings = data.settings.tableSettings || null;
-    }
+  cloudAccountReadyUid = uid;
+  saveAccountCollectionLocally(uid);
+  const settings = data.settings || {};
+  localStorage.setItem(COVER_SOURCE_KEY, 'all');
+  const allowWishlistPrice = settings.allowWishlistPrice === true;
+  localStorage.setItem(PRICE_WISHLIST_KEY, String(allowWishlistPrice));
+  const wishlistPriceInput = document.getElementById('priceWishlistCheckbox');
+  if (wishlistPriceInput) wishlistPriceInput.checked = allowWishlistPrice;
+  const refreshPrice = settings.refreshDiscogsPrice === true;
+  localStorage.setItem(PRICE_REFRESH_KEY, String(refreshPrice));
+  const refreshPriceInput = document.getElementById('refreshDiscogsPriceCheckbox');
+  if (refreshPriceInput) refreshPriceInput.checked = refreshPrice;
+  const discogsToken = typeof settings.discogsToken === 'string' ? settings.discogsToken : '';
+  localStorage.setItem(DISCOGS_TOKEN_KEY, discogsToken);
+  document.getElementById('discogsTokenInput').value = discogsToken;
+  localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, 'auto');
+  setAccentColor(settings.accentColor || '#d4537e');
+  if (typeof loadTableSettingsFromUser === 'function') {
+    loadTableSettingsFromUser(settings);
+  } else {
+    window._pendingTableSettings = settings.tableSettings || null;
   }
   const defaultStorageRandomFormats = ['Album', 'Maxi Single', 'Single', 'EP', '10 Inch', 'CD'];
   const storageRandomFormats = Array.isArray(data.settings?.storageRandomFormats)
@@ -10629,19 +10641,14 @@ async function loadCloudData(uid, prefetchedSnap) {
   const storageRandomAnimationCheckbox = document.getElementById('storageRandomAnimationCheckbox');
   if (storageRandomAnimationCheckbox) storageRandomAnimationCheckbox.checked = storageRandomAnimation;
   const legacyVinylEffects = data.settings?.washDirtEffect !== false
-    && data.settings?.collectionVinylEffects !== false
-    && localStorage.getItem('washDirtEffectV1') !== 'false'
-    && localStorage.getItem('collectionVinylEffectsV1') !== 'false';
+    && data.settings?.collectionVinylEffects !== false;
   const vinylEffects = typeof data.settings?.vinylEffects === 'boolean' ? data.settings.vinylEffects : legacyVinylEffects;
   localStorage.setItem('vinylEffectsV1', vinylEffects ? 'true' : 'false');
   document.getElementById('vinylEffectsCheckbox').checked = vinylEffects;
   const storedListeningProviders = data.settings?.albumListeningProviders;
-  const localListeningProviders = (() => {
-    try { return JSON.parse(localStorage.getItem('albumListeningProvidersV1') || 'null'); } catch (error) { return null; }
-  })();
   const listeningProviders = storedListeningProviders && typeof storedListeningProviders === 'object'
     ? storedListeningProviders
-    : localListeningProviders || { apple: true, spotify: true, youtube: true };
+    : { apple: true, spotify: true, youtube: true };
   localStorage.setItem('albumListeningProvidersV1', JSON.stringify(listeningProviders));
   document.getElementById('listeningProviderApple').checked = listeningProviders.apple !== false;
   document.getElementById('listeningProviderSpotify').checked = listeningProviders.spotify !== false;
@@ -10651,7 +10658,7 @@ async function loadCloudData(uid, prefetchedSnap) {
   const legacyOrder = legacyListeningMode === 'spotify' ? 'spotify,apple,youtube'
     : legacyListeningMode === 'youtube' ? 'youtube,apple,spotify'
       : 'apple,spotify,youtube';
-  const storedOrder = data.settings?.albumListeningOrder || localStorage.getItem('albumListeningOrderV1') || legacyOrder;
+  const storedOrder = data.settings?.albumListeningOrder || legacyOrder;
   const parsedOrder = String(storedOrder).split(',').filter((id, index, all) => providerOrderIds.includes(id) && all.indexOf(id) === index);
   const listeningSearchOrder = [...parsedOrder, ...providerOrderIds.filter(id => !parsedOrder.includes(id))].join(',');
   localStorage.setItem('albumListeningOrderV1', listeningSearchOrder);
@@ -10673,10 +10680,8 @@ async function loadCloudData(uid, prefetchedSnap) {
   document.getElementById('vordleExcludeCollection').checked = data.settings?.vordleExcludeCollection === true;
   updateVordleAccountAvailability();
   restoreCollectionViewSettings(data.settings?.collectionViewSettings);
-  if (Array.isArray(data.settings?.favoriteUsers)) {
-    favoriteUserIds = new Set(data.settings.favoriteUsers.map(String));
-    localStorage.setItem('favoriteUsersV1', JSON.stringify([...favoriteUserIds]));
-  }
+  favoriteUserIds = new Set(Array.isArray(settings.favoriteUsers) ? settings.favoriteUsers.map(String) : []);
+  localStorage.setItem('favoriteUsersV1', JSON.stringify([...favoriteUserIds]));
   const titleDisplay = document.getElementById('collectionTitleDisplay');
   if (titleDisplay) titleDisplay.textContent = collectionTitle;
   try { if (typeof updateSortButtons === 'function') updateSortButtons(); } catch (e) {}
@@ -10715,9 +10720,10 @@ async function loadCloudData(uid, prefetchedSnap) {
 }
 
 function startCloudCollectionLiveSync(uid) {
+  const epoch = cloudAccountEpoch;
   cloudCollectionUnsubscribe?.();
   cloudCollectionUnsubscribe=db.collection('users').doc(uid).onSnapshot(snapshot=>{
-    if(!snapshot.exists || currentUid!==uid || !viewingOwnCollection)return;
+    if(!snapshot.exists || !isCloudSession(uid, epoch) || !viewingOwnCollection)return;
     if(Number(snapshot.data().collectionRevision || 0)===Number(cloudRootCache?.data?.collectionRevision || 0))return;
     pendingCloudSave=true;
     updateCloudSyncIndicator();
@@ -10739,7 +10745,8 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
   try {
     const uid = saveUid;
     assertCloudAccount(uid, saveEpoch);
-    const settingsObj = getCloudSettingsSnapshot();
+    const settingsObj = JSON.parse(JSON.stringify(getCloudSettingsSnapshot()));
+    const rootTitleAtStart = ownCollectionTitle;
     persistPendingCloudSnapshot(settingsObj);
 
     const userDocRef = db.collection('users').doc(uid);
@@ -10752,6 +10759,7 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
       rootExists = previousUserSnapshot.exists;
       previousUserData = previousUserSnapshot.exists ? previousUserSnapshot.data() : {};
     }
+    assertCloudAccount(uid, saveEpoch);
     resetCloudWriteWindow();
     const availableWrites = Math.max(0, 60 - cloudWritesInWindow);
     if (availableWrites === 0) {
@@ -10773,13 +10781,13 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
       needsWrite: rootNeedsWrite,
       data: {
         username: currentUsername,
-        title: ownCollectionTitle,
+        title: rootTitleAtStart,
         settings: settingsObj,
         cardStats,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }
     }, availableWrites);
-    if (currentUid !== uid || saveEpoch !== cloudAccountEpoch) return false;
+    if (!isCloudSession(uid, saveEpoch)) return false;
     if (result.complete) {
       const mergedNow = mergeCloudCollectionVersions(result.localItemsSnapshot,ownCollection,result.mergedItems);
       const inlineNow = new Map(ownCollection.filter(item=>item.vinylDesign?.cdImageDataUrl).map(item=>[getCloudItemDocId(item),item.vinylDesign.cdImageDataUrl]));
@@ -10791,7 +10799,7 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
       saveAccountCollectionLocally(uid);
       if(viewingOwnCollection){collection=ownCollection;renderCollection();}
       cloudLocalSettingsSnapshot=JSON.parse(JSON.stringify(settingsObj));
-      cloudLocalTitleSnapshot=ownCollectionTitle;
+      cloudLocalTitleSnapshot=rootTitleAtStart;
     }
     cloudBaseCollection = result.mergedItems.map(item=>splitCloudItem(item).base);
     cloudCollectionSnapshotUid = uid;
@@ -10802,7 +10810,7 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
     pendingCloudSave = !result.complete || cloudChangeRevision !== revisionAtStart;
     cloudSyncUnavailableReason = null;
     if (!pendingCloudSave) localStorage.removeItem(getPendingCloudStorageKey(uid));
-    else persistPendingCloudSnapshot(settingsObj, [], null);
+    else persistPendingCloudSnapshot(getCloudSettingsSnapshot(), [], null);
     updateCloudSyncIndicator();
     cloudRetryAttempt = 0;
     if (pendingCloudSave) {
@@ -10817,6 +10825,7 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
     }
     return true;
   } catch (err) {
+    if (!isCloudSession(saveUid, saveEpoch)) return false;
     console.error('Cloud-Speichern fehlgeschlagen:', err);
     pendingCloudSave = true;
     cloudRetryAttempt += 1;
@@ -10863,14 +10872,16 @@ function saveCloudDataNow(allowRemoteView = false) {
   clearTimeout(cloudSaveDebounceTimer);
   cloudSaveDebounceTimer = null;
   if (cloudSaveInFlightPromise) {
+    const uid = currentUid, epoch = cloudAccountEpoch;
     return allowRemoteView
-      ? cloudSaveInFlightPromise.then(() => saveCloudDataNow(true))
+      ? cloudSaveInFlightPromise.then(() => isCloudSession(uid, epoch) && saveCloudDataNow(true))
       : cloudSaveInFlightPromise;
   }
-  cloudSaveInFlightPromise = performCloudDataSaveNow(allowRemoteView).finally(() => {
-    cloudSaveInFlightPromise = null;
+  const flight = performCloudDataSaveNow(allowRemoteView).finally(() => {
+    if (cloudSaveInFlightPromise === flight) cloudSaveInFlightPromise = null;
   });
-  return cloudSaveInFlightPromise;
+  cloudSaveInFlightPromise = flight;
+  return flight;
 }
 
 let collectionCloudBulkDepth = 0;
@@ -11403,9 +11414,10 @@ async function viewRemoteCollectionInner(uid, username) {
 }
 
 async function importUserCollection(uid, username) {
-  if (!uid) return;
+  const destination = currentUid, epoch = cloudAccountEpoch;
+  if (!uid || !isCloudSession(destination, epoch) || cloudAccountReadyUid !== destination) return;
   const ok = await showConfirm(`Möchtest du die Sammlung von ${username} in deine eigene Sammlung importieren? Du kannst doppelte Einträge behalten oder sie später selbst bereinigen.`, { confirmLabel: 'Importieren', cancelLabel: 'Abbrechen' });
-  if (!ok) return;
+  if (!ok || !isCloudSession(destination, epoch)) return;
 
   try {
     const docSnap = await trackFirebaseRequest(db.collection('users').doc(uid).get());
@@ -11421,6 +11433,7 @@ async function importUserCollection(uid, username) {
       imageIds: data.collectionStorageVersion === 2 && Array.isArray(data.collectionImageIds) ? data.collectionImageIds : []
     });
 
+    if (!isCloudSession(destination, epoch) || cloudAccountReadyUid !== destination) return;
     const seen = new Set(ownCollection.map(item => `${(item.title||'').trim().toLowerCase()}___${(item.artist||'').trim().toLowerCase()}`));
     let importedCount = 0;
     remoteCollection.forEach(item => {
@@ -11449,9 +11462,10 @@ async function importUserCollection(uid, username) {
 const vordle = Vordle.create({db,canParticipate:()=>document.getElementById('vordleExcludeCollection')?.checked !== true,getUser:()=>({uid:currentUid,username:currentUsername}),timestamp:milliseconds=>firebase.firestore.Timestamp.fromMillis(milliseconds),serverTimestamp:()=>firebase.firestore.FieldValue.serverTimestamp(),track:trackFirebaseRequest});
 
 let authInitializationPhase = 'Anmeldung';
-async function handleAuthStateChange(user) {
-  cloudAccountEpoch++;
+async function handleAuthStateChange(user, epoch) {
+  const active = () => epoch === cloudAccountEpoch && (auth.currentUser?.uid || null) === (user?.uid || null);
   cloudAccountReadyUid = null;
+  document.getElementById('vinylBackupDialog')?.close();
   clearTimeout(cloudSaveDebounceTimer);
   clearTimeout(cloudRetryTimer);
   cloudSaveDebounceTimer = null;
@@ -11478,9 +11492,11 @@ async function handleAuthStateChange(user) {
     let userDocSnap = null;
     try {
       const docSnap = await trackFirebaseRequest(db.collection('users').doc(user.uid).get());
+      if (!active()) return;
       userDocSnap = docSnap;
       currentUsername = (docSnap.exists && docSnap.data().username) || (user.email || '').split('@')[0];
     } catch (e) {
+      if (!active()) return;
       currentUsername = (user.email || '').split('@')[0];
     }
     currentUsernameLabel.textContent = currentUsername;
@@ -11489,11 +11505,13 @@ async function handleAuthStateChange(user) {
     setAuthLoading(false);
     authInitializationPhase = 'Sammlung laden';
     await loadCloudData(user.uid, userDocSnap);
-    if(currentUid!==user.uid)return;
+    if (!active()) return;
     void vordle.prewarm();
     } finally {
-      appLoadingCount = 0;
-      hideAppLoading(true);
+      if (active()) {
+        appLoadingCount = 0;
+        hideAppLoading(true);
+      }
     }
     // Optionale Integrationen dürfen eine erfolgreiche Anmeldung nicht abbrechen.
     for (const [phase, task] of [
@@ -11504,14 +11522,16 @@ async function handleAuthStateChange(user) {
       ['Spotify-Rückmeldung', () => completeSpotifyAuthCallback()],
       ['Spotify-Verbindung', () => restoreSpotifyConnection()]
     ]) {
-      if(currentUid!==user.uid)return;
+      if (!active()) return;
       try { await task(); }
       catch (error) {
+        if (!active()) return;
         console.error(`${phase} konnte nicht geladen werden:`, error);
         const detail = error?.code || error?.message || 'unbekannter Fehler';
         updateSpotifyConnectionStatus(`${phase} konnte nicht geladen werden (${detail}). Bitte erneut verbinden.`);
       }
     }
+    if (!active()) return;
     if (userMenuPanel) userMenuPanel.classList.remove('open');
     document.body.classList.remove('user-menu-open');
   } else {
@@ -11535,11 +11555,14 @@ async function handleAuthStateChange(user) {
   }
  }
 auth.onAuthStateChanged(user => {
+  if ((auth.currentUser?.uid || null) !== (user?.uid || null)) return;
+  const epoch = ++cloudAccountEpoch;
   void (async () => {
     await authRegistrationBarrier;
-    if ((auth.currentUser?.uid || null) !== (user?.uid || null)) return;
-    await handleAuthStateChange(user);
+    if (epoch !== cloudAccountEpoch || (auth.currentUser?.uid || null) !== (user?.uid || null)) return;
+    await handleAuthStateChange(user, epoch);
   })().catch(error => {
+    if (epoch !== cloudAccountEpoch || (auth.currentUser?.uid || null) !== (user?.uid || null)) return;
     console.error(`Anmeldung fehlgeschlagen bei: ${authInitializationPhase}`, error);
     appLoadingCount = 0;
     hideAppLoading(true);
@@ -12298,6 +12321,8 @@ function storeSpotifyRefreshCredential(refreshToken) {
 }
 
 async function loadListeningCredentials(uid) {
+  const epoch = cloudAccountEpoch;
+  if (!isCloudSession(uid, epoch)) return;
   spotifyClientId = '';
   youtubeApiKey = '';
   savedListeningCredentials = { spotifyClientId: '', youtubeApiKey: '' };
@@ -12306,6 +12331,7 @@ async function loadListeningCredentials(uid) {
   try {
     const credentialsRef = db.collection('users').doc(uid).collection('privateSettings').doc('integrations');
     const snapshot = await trackFirebaseRequest(credentialsRef.get());
+    if (!isCloudSession(uid, epoch)) return;
     if (snapshot.exists) {
       const credentials = snapshot.data() || {};
       spotifyClientId = typeof credentials.spotifyClientId === 'string' ? credentials.spotifyClientId : '';
@@ -12323,6 +12349,7 @@ async function loadListeningCredentials(uid) {
         ? 'Lokale Wiedergabe-Einstellungen geladen; drücke Speichern, um sie privat in Firebase zu sichern.'
         : 'Wiedergabe-Einstellungen werden nur nach explizitem Speichern privat in Firebase gesichert.'));
   } catch (error) {
+    if (!isCloudSession(uid, epoch)) return;
     spotifyClientId = legacySpotifyClientId;
     youtubeApiKey = legacyYoutubeApiKey;
     console.error('Private Wiedergabe-Einstellungen konnten nicht geladen werden:', error);
@@ -16487,19 +16514,23 @@ const searchDiscogsDetails = new WeakMap();
 let hideActiveSearchDiscogsInfo = null;
 window.addEventListener('scroll', () => hideActiveSearchDiscogsInfo?.(), {capture:true, passive:true});
 window.addEventListener('resize', () => hideActiveSearchDiscogsInfo?.());
-function loadSearchDiscogsDetails(entry) {
-  if (entry.source !== 'discogs' || !entry.discogsResourceUrl) return Promise.resolve(null);
+function discogsWaitMessage(delay) {
+  return `Discogs-Limit erreicht. Neuer Versuch in ${Math.ceil(delay / 1000)} Sekunden …`;
+}
+function loadSearchDiscogsDetails(entry, onWait) {
+  if (entry.source !== 'discogs') return Promise.resolve(null);
+  if (!entry.discogsResourceUrl) return Promise.reject(new Error('Für diesen Treffer fehlt der Discogs-Link.'));
   if (searchDiscogsDetails.has(entry)) return searchDiscogsDetails.get(entry);
   const request = (async () => {
     const url = new URL(entry.discogsResourceUrl);
     if (url.origin !== 'https://api.discogs.com' || !/^\/(releases|masters)\/\d+$/.test(url.pathname)) throw new Error('Ungültiger Discogs-Link.');
     const token = getDiscogsToken();
     if (token) url.searchParams.set('token', token);
-    const response = await fetchDiscogsApi(url.href);
+    const response = await fetchDiscogsApi(url.href, {retryRateLimit:true, onWait});
     if (!response.ok) throw new Error(`Discogs-Daten konnten nicht geladen werden (HTTP ${response.status}).`);
     const detail = normalizeDiscogsReleaseDetail(await response.json());
     if (!detail) throw new Error('Discogs hat keine Albumdaten geliefert.');
-    Object.assign(entry, detail);
+    Object.assign(entry, {...detail, cover:detail.cover || entry.cover, discogsResourceUrl:detail.discogsResourceUrl || entry.discogsResourceUrl});
     entry.album = {...entry.album, title:entry.title, artist:entry.artist, year:entry.year, genre:getGenreValues(detail.genre), discogsFormats:detail.discogsFormats};
     return detail;
   })();
@@ -16530,7 +16561,7 @@ function attachSearchDiscogsInfo(card, entry) {
     info.textContent = 'Discogs-Details werden geladen …'; document.body.append(info); position();
     const active = info;
     try {
-      await loadSearchDiscogsDetails(entry);
+      await loadSearchDiscogsDetails(entry, delay => { if (info === active) info.textContent = discogsWaitMessage(delay); });
       if (info !== active || !card.isConnected) return;
       const price = value => value != null ? `${Number(value).toFixed(2)} ${entry.discogsCurrency || '€'}` : 'nicht verfügbar';
       info.replaceChildren();
@@ -16647,22 +16678,41 @@ function renderSearchResultsPage() {
       <p class="artist">${escapeHtml(getDisplayName(entry.artist))}</p>
       ${findMatchingCollectionItems(entry).length ? '<span class="existing-match-badge">Bereits in Sammlung</span>' : ''}
     `;
-    card.querySelector('.quick-add-btn').addEventListener('click', async e => {
-      e.stopPropagation();
+    const loadSelection = async quickAdd => {
+      if (card.getAttribute('aria-busy') === 'true') return;
       hideActiveSearchDiscogsInfo?.();
-      const button = e.currentTarget;
-      if (button.disabled) return;
+      const hint = document.getElementById('searchHint');
+      const button = card.querySelector('.quick-add-btn');
+      const uid = currentUid, epoch = cloudAccountEpoch;
+      const active = () => card.isConnected && isCloudSession(uid, epoch);
+      card.setAttribute('aria-busy', 'true');
       button.disabled = true;
       button.textContent = '…';
+      if (entry.source === 'discogs') hint.textContent = 'Discogs-Details werden geladen …';
       try {
-        await loadSearchDiscogsDetails(entry);
-        quickAddFromSearch(entry);
+        const detail = await loadSearchDiscogsDetails(entry, delay => {
+          if (active()) hint.textContent = discogsWaitMessage(delay);
+        });
+        if (!active()) return;
+        if (detail) hint.textContent = 'Album auswählen:';
+        if (quickAdd) quickAddFromSearch(entry);
+        else await selectAlbum(entry.album, entry.cover, entry.source, detail);
       } catch (error) {
-        document.getElementById('searchHint').textContent = `${error.message} Bitte erneut versuchen.`;
-      } finally { button.disabled = false; button.textContent = '+'; }
+        if (active()) hint.textContent = `${error.message} Bitte erneut versuchen.`;
+      } finally {
+        card.removeAttribute('aria-busy');
+        button.disabled = false;
+        button.textContent = '+';
+      }
+    };
+    card.querySelector('.quick-add-btn').addEventListener('click', event => {
+      event.stopPropagation();
+      void loadSelection(true);
     });
     attachSearchDiscogsInfo(card, entry);
-    card.addEventListener('click', () => selectAlbum(entry.album, entry.cover, entry.source));
+    card.addEventListener('click', event => {
+      if (!event.target.closest('a')) void loadSelection(false);
+    });
     results.appendChild(card);
   });
 
@@ -16690,8 +16740,12 @@ function renderSearchResultsPage() {
 }
 
 let pendingBarcodeSearch = '';
+let searchRequestId = 0;
 
 async function searchAlbums() {
+  const requestId = ++searchRequestId;
+  const uid = currentUid, epoch = cloudAccountEpoch;
+  const active = () => requestId === searchRequestId && isCloudSession(uid, epoch);
   const barcode = pendingBarcodeSearch;
   pendingBarcodeSearch = '';
   const rawQuery = barcode || document.getElementById('searchInput').value.trim();
@@ -16720,7 +16774,10 @@ async function searchAlbums() {
 
   const directDiscogsInput = barcode ? null : parseDiscogsInput(q);
   if (directDiscogsInput?.type === 'release' || directDiscogsInput?.type === 'master') {
-    const release = await fetchDiscogsInput(directDiscogsInput);
+    const release = await fetchDiscogsInput(directDiscogsInput, {
+      retryRateLimit:true, onWait: delay => { if (active()) hint.textContent = discogsWaitMessage(delay); }
+    });
+    if (!active()) return;
     if (!release) {
       hint.textContent = fetchDiscogsReleaseById.lastError || 'Der Discogs-Link konnte nicht geladen werden.';
       return;
@@ -16736,6 +16793,7 @@ async function searchAlbums() {
       },
       source: 'discogs'
     };
+    searchDiscogsDetails.set(entry, Promise.resolve(release));
     searchResultCards = [entry];
     hint.textContent = 'Discogs-Release gefunden:';
     renderSearchResultsPage();
@@ -16746,61 +16804,69 @@ async function searchAlbums() {
   const cards = [];
 
   try {
-    if (sources.includes('itunes')) {
-      const res = await fetch('https://itunes.apple.com/search?term=' + encodeURIComponent(q) + '&entity=album&limit=15');
-      const data = await res.json();
-      if (data.results) {
-        data.results.forEach(album => {
-          cards.push({
-            source: 'itunes',
-            album,
-            title: album.collectionName || '',
-            artist: album.artistName || '',
-            cover: getAlbumCoverUrl(album)
-          });
+    const [itunesData, discogsData] = await Promise.all([
+      sources.includes('itunes') ? fetch('https://itunes.apple.com/search?term=' + encodeURIComponent(q) + '&entity=album&limit=15')
+        .then(response => {
+          if (!response.ok) throw new Error('Apple-Suche derzeit nicht verfügbar.');
+          return response.json();
+        }) : null,
+      sources.includes('discogs') ? fetchDiscogsApi(
+        'https://api.discogs.com/database/search?' + (barcode ? 'barcode=' : 'q=') + encodeURIComponent(q) + '&type=release&per_page=12' + discogsAuthParam(),
+        {retryRateLimit:true, onWait: delay => { if (active()) hint.textContent = discogsWaitMessage(delay); }}
+      ).then(async response => {
+        if (!response.ok) throw new Error(response.status === 429 ? 'Discogs-Limit weiterhin erreicht. Bitte später erneut suchen.' : `Discogs-Suche fehlgeschlagen (HTTP ${response.status}).`);
+        const data = await response.json();
+        if (!Array.isArray(data.results)) throw new Error('Discogs lieferte keine gültige Trefferliste.');
+        return data;
+      }) : null
+    ]);
+    if (!active()) return;
+    if (itunesData?.results) {
+      itunesData.results.forEach(album => {
+        cards.push({
+          source: 'itunes',
+          album,
+          title: album.collectionName || '',
+          artist: album.artistName || '',
+          cover: getAlbumCoverUrl(album)
         });
-      }
+      });
     }
-
-    if (sources.includes('discogs')) {
-      const res = await fetchDiscogsApi('https://api.discogs.com/database/search?' + (barcode ? 'barcode=' : 'q=') + encodeURIComponent(q) + '&type=release&per_page=12' + discogsAuthParam());
-      const data = await res.json();
-      if (data.results) {
-        const discogsCards = await Promise.all(data.results.map(async result => {
-          let cover = normalizeDiscogsImageUrl(result.cover_image || result.thumb) || '';
-          let lowestPrice = null;
-          let averagePrice = null;
-          let priceCurrency = result.currency || result.price_currency || '€';
-          if (result.lowest_price != null) {
-            lowestPrice = Number(result.lowest_price) || null;
-          }
-          if (result.average_price != null) {
-            averagePrice = Number(result.average_price) || null;
-          }
-          return { result, cover, lowestPrice, averagePrice, priceCurrency };
-        }));
-        discogsCards.forEach(({ result, cover, lowestPrice, averagePrice, priceCurrency }) => {
-          const parsedResult = splitDiscogsSearchResult(result);
-          cards.push({
-            source: 'discogs',
-            album: {
-              title: parsedResult.title,
-              artist: parsedResult.artist,
-              cover_image: cover,
-              year: result.year || '',
-              genre: mergeDiscogsGenres(result.genre, result.style),
-              discogsResourceUrl: result.resource_url || ''
-            },
+    if (discogsData) {
+      const discogsCards = discogsData.results.map(result => {
+        let cover = normalizeDiscogsImageUrl(result.cover_image || result.thumb) || '';
+        let lowestPrice = null;
+        let averagePrice = null;
+        let priceCurrency = result.currency || result.price_currency || '€';
+        if (result.lowest_price != null) {
+          lowestPrice = Number(result.lowest_price) || null;
+        }
+        if (result.average_price != null) {
+          averagePrice = Number(result.average_price) || null;
+        }
+        return { result, cover, lowestPrice, averagePrice, priceCurrency };
+      });
+      discogsCards.forEach(({ result, cover, lowestPrice, averagePrice, priceCurrency }) => {
+        const parsedResult = splitDiscogsSearchResult(result);
+        cards.push({
+          source: 'discogs',
+          album: {
             title: parsedResult.title,
             artist: parsedResult.artist,
-            cover,
-            discogsResourceUrl: result.resource_url || '',
-            discogsLowestPrice: lowestPrice,
-            discogsAveragePrice: averagePrice,
-            discogsCurrency: priceCurrency || '€'
-          });
+            cover_image: cover,
+            year: result.year || '',
+            genre: mergeDiscogsGenres(result.genre, result.style),
+            discogsResourceUrl: result.resource_url || ''
+          },
+          title: parsedResult.title,
+          artist: parsedResult.artist,
+          cover,
+          discogsResourceUrl: result.resource_url || '',
+          discogsLowestPrice: lowestPrice,
+          discogsAveragePrice: averagePrice,
+          discogsCurrency: priceCurrency || '€'
         });
-      }
+      });
     }
 
     if (cards.length === 0) {
@@ -16816,7 +16882,8 @@ async function searchAlbums() {
     searchPage = 1;
     renderSearchResultsPage();
   } catch (e) {
-    hint.textContent = 'Suche fehlgeschlagen. Album kann manuell angelegt werden.';
+    if (!active()) return;
+    hint.textContent = e.message || 'Suche fehlgeschlagen. Bitte erneut versuchen.';
     if (manualBtn) manualBtn.style.display = 'inline-flex';
   }
 }
@@ -16824,17 +16891,18 @@ async function searchAlbums() {
 let bulkImportLines = [];
 let bulkImportIndex = 0;
 
-async function searchBulkImportCandidates(query) {
+async function searchBulkImportCandidates(query, onWait) {
+  const discogsOptions = {retryRateLimit:true, onWait};
   const directDiscogsInput = parseDiscogsInput(query);
   if (directDiscogsInput?.type === 'release' || directDiscogsInput?.type === 'master') {
-    const release = await fetchDiscogsInput(directDiscogsInput);
+    const release = await fetchDiscogsInput(directDiscogsInput, discogsOptions);
     if (!release) {
       searchBulkImportCandidates.lastError =
         fetchDiscogsReleaseById.lastError || 'Der Discogs-Link konnte nicht geladen werden.';
       return [];
     }
     searchBulkImportCandidates.lastError = '';
-    return [{
+    const entry = {
       source: 'discogs',
       album: {
         title: release.title,
@@ -16852,7 +16920,9 @@ async function searchBulkImportCandidates(query) {
       discogsAveragePrice: release.discogsAveragePrice,
       discogsCurrency: release.discogsCurrency || '€',
       tracklist: release.tracklist || []
-    }];
+    };
+    searchDiscogsDetails.set(entry, Promise.resolve(release));
+    return [entry];
   }
   searchBulkImportCandidates.lastError = '';
   const cards = [];
@@ -16875,7 +16945,8 @@ async function searchBulkImportCandidates(query) {
 
   if (sources.includes('discogs')) {
     try {
-      const res = await fetchDiscogsApi('https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=8' + discogsAuthParam());
+      const res = await fetchDiscogsApi('https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=8' + discogsAuthParam(), discogsOptions);
+      if (!res.ok) throw new Error(`Discogs-Suche fehlgeschlagen (HTTP ${res.status}). Bitte erneut versuchen.`);
       const data = await res.json();
       (data.results || []).forEach(result => {
         const parsedResult = splitDiscogsSearchResult(result);
@@ -16898,7 +16969,10 @@ async function searchBulkImportCandidates(query) {
         discogsCurrency: result.currency || result.price_currency || '€'
         });
       });
-    } catch (e) {}
+    } catch (error) {
+      searchBulkImportCandidates.lastError = error.message;
+      return [];
+    }
   }
   return cards;
 }
@@ -16912,32 +16986,14 @@ function getBulkImportLineLabel(query) {
   return query;
 }
 
-async function addBulkImportEntry(entry) {
-  if (entry.source === 'discogs' && entry.discogsResourceUrl) {
-    try {
-      const token = getDiscogsToken();
-      const url = entry.discogsResourceUrl + (token ? '?token=' + encodeURIComponent(token) : '');
-      const detailRes = await fetchDiscogsApi(url);
-      if (detailRes.ok) {
-        const detail = normalizeDiscogsReleaseDetail(await detailRes.json());
-        if (detail) {
-          entry.title = detail.title || entry.title;
-          entry.artist = detail.artist || entry.artist;
-          entry.cover = detail.cover || entry.cover;
-          entry.year = detail.year || entry.year;
-          entry.discogsLowestPrice = detail.discogsLowestPrice;
-          entry.discogsAveragePrice = detail.discogsAveragePrice;
-          entry.discogsCurrency = detail.discogsCurrency || entry.discogsCurrency;
-          entry.tracklist = detail.tracklist || [];
-          entry.album = Object.assign({}, entry.album, { title: entry.title, artist: entry.artist, year: entry.year, genre: getGenreValues(detail.genre) });
-        }
-      }
-    } catch (e) {}
-  }
-  if (!Array.isArray(entry.tracklist) || entry.tracklist.length === 0) {
+async function addBulkImportEntry(entry, onWait, active) {
+  const detail = await loadSearchDiscogsDetails(entry, onWait);
+  if (!detail && (!Array.isArray(entry.tracklist) || entry.tracklist.length === 0)) {
     entry.tracklist = await fetchTracklistForAlbum(entry.album, entry.title, entry.artist);
   }
-  return quickAddFromSearch(entry);
+  if (!active()) return false;
+  quickAddFromSearch(entry);
+  return true;
 }
 
 function closeBulkImport() {
@@ -16980,7 +17036,7 @@ async function showBulkImportLine() {
     : 'Titel, Interpret oder Suchbegriff eingeben';
   status.textContent = 'Suche läuft...';
   results.innerHTML = '<p class="hint">Suche läuft...</p>';
-  const candidates = await searchBulkImportCandidates(query);
+  const candidates = await searchBulkImportCandidates(query, delay => { status.textContent = discogsWaitMessage(delay); });
   if (candidates.length === 0) {
     status.textContent = searchBulkImportCandidates.lastError
       || 'Keine Treffer gefunden. Ändere den Suchbegriff oben und suche erneut.';
@@ -17012,9 +17068,22 @@ async function showBulkImportLine() {
     button.addEventListener('click', async () => {
       button.disabled = true;
       button.textContent = 'Lade...';
-      await addBulkImportEntry(candidates[Number(button.dataset.idx)]);
-      bulkImportIndex++;
-      await showBulkImportLine();
+      const uid = currentUid, epoch = cloudAccountEpoch;
+      const active = () => isCloudSession(uid, epoch) && button.isConnected &&
+        document.getElementById('bulkImportOverlay').classList.contains('open');
+      try {
+        const added = await addBulkImportEntry(candidates[Number(button.dataset.idx)], delay => {
+          if (active()) status.textContent = discogsWaitMessage(delay);
+        }, active);
+        if (!added) return;
+        bulkImportIndex++;
+        await showBulkImportLine();
+      } catch (error) {
+        if (active()) status.textContent = error.message;
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Importieren';
+      }
     });
   });
 }
@@ -17049,7 +17118,7 @@ async function searchDiscogsReleases(query, limit = 8) {
   if (!query) return [];
   const searchUrl = 'https://api.discogs.com/database/search?q=' + encodeURIComponent(query) + '&type=release&per_page=' + limit + discogsAuthParam();
   try {
-    const res = await fetchDiscogsApi(searchUrl);
+    const res = await fetchDiscogsApi(searchUrl, {retryRateLimit:true, onWait: delay => setDiscogsMatchStatus(discogsWaitMessage(delay))});
     if (!res.ok) {
       let bodyText = '';
       try { bodyText = await res.text(); } catch (e2) {}
@@ -17064,57 +17133,26 @@ async function searchDiscogsReleases(query, limit = 8) {
       return [];
     }
     return await Promise.all(data.results.map(async result => {
-      let cover = normalizeDiscogsImageUrl(result.cover_image || result.thumb) || '';
-      let lowestPrice = result.lowest_price != null ? Number(result.lowest_price) || null : null;
-      let averagePrice = result.average_price != null ? Number(result.average_price) || null : null;
-      let priceCurrency = result.currency || result.price_currency || '€';
-      let metadata = null;
-      if (result.resource_url) {
-        try {
-          const detailRes = await fetchDiscogsApi(result.resource_url + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''));
-          if (!detailRes.ok) throw new Error(`Discogs-Fehler ${detailRes.status}`);
-              const detailData = await detailRes.json();
-          metadata = normalizeDiscogsReleaseDetail(detailData);
-          cover = getDiscogsCoverUrl(detailData, false) || cover;
-          if (lowestPrice == null && detailData?.lowest_price != null) {
-            lowestPrice = Number(detailData.lowest_price) || null;
-          }
-          if (averagePrice == null && detailData?.average_price != null) {
-            averagePrice = Number(detailData.average_price) || null;
-          }
-          if (!priceCurrency) {
-            priceCurrency = detailData?.currency || detailData?.community?.currency || priceCurrency;
-          }
-          if (lowestPrice == null && detailData?.community?.price != null) {
-            lowestPrice = Number(detailData.community.price) || null;
-          }
-        } catch (e) {
-          // ignore detailed lookup errors
-        }
-      }
-      const parsedResult = splitDiscogsSearchResult(result);
+      const parsed = splitDiscogsSearchResult(result);
+      const entry = {source:'discogs', album:{}, discogsResourceUrl:result.resource_url || ''};
+      const detail = await loadSearchDiscogsDetails(entry, delay => setDiscogsMatchStatus(discogsWaitMessage(delay)));
       return {
-        title: metadata?.title || parsedResult.title,
-        artist: metadata?.artist || parsedResult.artist,
-        year: result.year || '',
-        genre: mergeDiscogsGenres(result.genre, result.style).join(', '),
-        cover,
+        ...detail,
+        title: detail.title || parsed.title,
+        artist: detail.artist || parsed.artist,
+        year: detail.year || result.year || '',
+        genre: detail.genre || mergeDiscogsGenres(result.genre, result.style).join(', '),
+        cover: detail.cover || normalizeDiscogsImageUrl(result.cover_image || result.thumb) || '',
         source: 'discogs',
-        discogsResourceUrl: result.resource_url || '',
-        discogsLowestPrice: lowestPrice,
-        discogsAveragePrice: averagePrice,
-        discogsCurrency: priceCurrency || '€',
-        discogsReleased: metadata?.discogsReleased || '',
-        discogsCountry: metadata?.discogsCountry || '',
-        artistLatin: metadata?.artistLatin || '',
-        discogsLabels: metadata?.discogsLabels || [],
-        discogsFormats: metadata?.discogsFormats || [],
-        tracklist: metadata?.tracklist || []
+        discogsResourceUrl: entry.discogsResourceUrl,
+        discogsLowestPrice: result.lowest_price != null ? Number(result.lowest_price) : detail.discogsLowestPrice,
+        discogsAveragePrice: result.average_price != null ? Number(result.average_price) : detail.discogsAveragePrice,
+        discogsCurrency: result.currency || result.price_currency || detail.discogsCurrency || '€'
       };
     }));
   } catch (e) {
     console.warn('Discogs-Suche Netzwerkfehler:', e);
-    searchDiscogsReleases.lastError = 'Netzwerkfehler: ' + (e?.message || e);
+    searchDiscogsReleases.lastError = e?.message || String(e);
     return [];
   }
 }
@@ -17282,12 +17320,12 @@ function normalizeDiscogsReleaseDetail(detail) {
   };
 }
 
-async function fetchDiscogsReleaseById(releaseId) {
+async function fetchDiscogsReleaseById(releaseId, options) {
   if (!releaseId) return null;
   try {
     const token = getDiscogsToken();
     const url = 'https://api.discogs.com/releases/' + encodeURIComponent(releaseId) + (token ? '?token=' + encodeURIComponent(token) : '');
-    const res = await fetchDiscogsApi(url);
+    const res = await fetchDiscogsApi(url, options);
     if (!res.ok) {
       let bodyText = '';
       try { bodyText = await res.text(); } catch (e2) {}
@@ -17303,12 +17341,12 @@ async function fetchDiscogsReleaseById(releaseId) {
   }
 }
 
-async function fetchDiscogsMasterById(masterId) {
+async function fetchDiscogsMasterById(masterId, options) {
   if (!masterId) return null;
   try {
     const token = getDiscogsToken();
     const url = 'https://api.discogs.com/masters/' + encodeURIComponent(masterId) + (token ? '?token=' + encodeURIComponent(token) : '');
-    const res = await fetchDiscogsApi(url);
+    const res = await fetchDiscogsApi(url, options);
     if (!res.ok) {
       let bodyText = '';
       try { bodyText = await res.text(); } catch (e) {}
@@ -17323,15 +17361,15 @@ async function fetchDiscogsMasterById(masterId) {
   }
 }
 
-async function fetchDiscogsInput(input) {
-  if (input?.type === 'release') return fetchDiscogsReleaseById(input.id);
+async function fetchDiscogsInput(input, options) {
+  if (input?.type === 'release') return fetchDiscogsReleaseById(input.id, options);
   if (input?.type !== 'master') return null;
-  const master = await fetchDiscogsMasterById(input.id);
+  const master = await fetchDiscogsMasterById(input.id, options);
   if (!master) return null;
   const mainReleaseId = master.main_release || String(master.main_release_url || '').match(/\/releases\/(\d+)/i)?.[1];
   if (mainReleaseId) {
-    const mainRelease = await fetchDiscogsReleaseById(mainReleaseId);
-    if (mainRelease) return mainRelease;
+    const mainRelease = await fetchDiscogsReleaseById(mainReleaseId, options);
+    if (mainRelease || options?.retryRateLimit) return mainRelease;
   }
   const normalizedMaster = normalizeDiscogsReleaseDetail(master);
   if (normalizedMaster) normalizedMaster.discogsResourceUrl = master.resource_url || `https://api.discogs.com/masters/${encodeURIComponent(input.id)}`;
@@ -17686,7 +17724,7 @@ async function fetchTracklistForAlbum(album, title, artist) {
   }
 }
 
-async function selectAlbum(album, cover, source = 'itunes') {
+async function selectAlbum(album, cover, source = 'itunes', discogsDetail = null) {
   const provider = getCoverProvider();
   let finalCover = cover || getAlbumCoverUrl(album);
   const title = album.collectionName || album.title || '';
@@ -17719,23 +17757,14 @@ async function selectAlbum(album, cover, source = 'itunes') {
   openForm();
   document.getElementById('fTracklist').innerHTML = '<p style="font-size:12px; color:var(--text-muted); margin:0;">Lade Tracklist...</p>';
 
-  const discogsDetailPromise = source === 'discogs' && album.discogsResourceUrl
-    ? fetchDiscogsApi(album.discogsResourceUrl + (discogsAuthParam() ? '?token=' + encodeURIComponent(getDiscogsToken()) : ''))
-      .then(res => { if (!res.ok) throw new Error(`Discogs-Fehler ${res.status}`); return res.json(); })
-      .then(normalizeDiscogsReleaseDetail)
-      .catch(() => null)
-    : Promise.resolve(null);
-  const [itunesTracks, resolvedCover, discogsDetail] = await Promise.all([
+  const draft = currentDraft;
+  const [itunesTracks, resolvedCover] = discogsDetail ? [[], discogsDetail.cover || finalCover] : await Promise.all([
     fetchTracklistForAlbum(album, title, artist),
-    resolveCoverForAlbum(album, provider, finalCover),
-    discogsDetailPromise
+    resolveCoverForAlbum(album, provider, finalCover)
   ]);
-  if (discogsDetail) {
-    applyDiscogsMetadata(currentDraft, discogsDetail);
-    currentTracks = discogsDetail.tracklist || [];
-  } else {
-    currentTracks = itunesTracks;
-  }
+  if (currentDraft !== draft) return;
+  if (discogsDetail) applyDiscogsMetadata(draft, discogsDetail);
+  currentTracks = discogsDetail ? discogsDetail.tracklist || [] : itunesTracks;
   currentDraft.releaseType = resolveReleaseType(album, currentTracks);
 
   if (resolvedCover) {
@@ -28966,10 +28995,9 @@ const DEFAULT_TABLE_SETTINGS = {
 let tableSettings = Object.assign({}, DEFAULT_TABLE_SETTINGS);
 
 function loadTableSettingsFromUser(settings) {
-  if (!settings || !settings.tableSettings) return;
   tableSettings = {
     ...DEFAULT_TABLE_SETTINGS,
-    visible: Object.assign({}, DEFAULT_TABLE_SETTINGS.visible, settings.tableSettings.visible || {})
+    visible: Object.assign({}, DEFAULT_TABLE_SETTINGS.visible, settings?.tableSettings?.visible || {})
   };
 }
 
@@ -29554,29 +29582,45 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   downloadAnchor.remove();
 });
 
+let collectionImportSession;
 document.getElementById('importBtn').addEventListener('click', () => {
+  if (!isCloudSession(currentUid, cloudAccountEpoch) || cloudAccountReadyUid !== currentUid) return;
+  collectionImportSession = { uid: currentUid, epoch: cloudAccountEpoch };
   document.getElementById('importFile').click();
 });
 
 document.getElementById('importFile').addEventListener('change', e => {
   const file = e.target.files[0];
-  if (!file) return;
+  const session = collectionImportSession;
+  collectionImportSession = null;
+  e.target.value = '';
+  if (!file || !session || !isCloudSession(session.uid, session.epoch)) return;
   const reader = new FileReader();
   reader.onload = async event => {
+    if (!isCloudSession(session.uid, session.epoch) || cloudAccountReadyUid !== session.uid) return;
     try {
+      const parsed = JSON.parse(event.target.result);
+      const imported = getVinylImportItems(parsed, session.uid);
+      const before = JSON.stringify(ownCollection);
+      const beforeTitle = ownCollectionTitle;
+      const saved = await queueVinylBackup(session.uid, before, beforeTitle, 'before-import');
+      if (!isCloudSession(session.uid, session.epoch) || cloudAccountReadyUid !== session.uid) return;
+      if (!saved) {
+        await showAlert('Import pausiert. Die vorherige Sammlung konnte nicht gesichert werden.');
+        return;
+      }
+      if (JSON.stringify(ownCollection) !== before || ownCollectionTitle !== beforeTitle) {
+        await showAlert('Deine Sammlung wurde während des Imports geändert. Bitte starte den Import erneut.');
+        return;
+      }
       if (!viewingOwnCollection) {
         viewingOwnCollection = true;
         collection = ownCollection;
         collectionTitle = ownCollectionTitle;
         updateViewingInfo();
       }
-      const parsed = JSON.parse(event.target.result);
-      if (Array.isArray(parsed)) {
-        collection = parsed.map(item => { item.color = normalizeColor(item.color); return item; });
-      } else if (parsed && typeof parsed === 'object') {
-        if (Array.isArray(parsed.collection)) {
-          collection = parsed.collection.map(item => { item.color = normalizeColor(item.color); return item; });
-        }
+      collection = imported.map(item => ({...item, color: normalizeColor(item.color)}));
+      if (!Array.isArray(parsed)) {
         if (parsed.title) {
           collectionTitle = parsed.title;
           ownCollectionTitle = parsed.title;
@@ -29605,16 +29649,12 @@ document.getElementById('importFile').addEventListener('change', e => {
           }
           if (Array.isArray(parsed.settings.shelves)) shelfLocations = normalizeShelfLocations(parsed.settings.shelves);
         }
-      } else {
-        await showAlert('Ungültiges Format der Import-Datei.');
-        return;
       }
       saveCollection();
-      saveOwnCollectionData();
       await showAlert('Sammlung lokal importiert. Die Änderungen werden automatisch mit Firebase synchronisiert.');
     } catch (err) {
       console.error('Import-Fehler:', err);
-      await showAlert('Fehler beim Lesen der JSON-Datei.');
+      await showAlert(err.message || 'Fehler beim Lesen der JSON-Datei.');
     }
   };
   reader.readAsText(file);
@@ -29808,7 +29848,7 @@ window.addEventListener('unhandledrejection', (ev) => {
 <script>
 /* Local recovery vault. Independent of Firebase and never reads another account's backup. */
 const VINYL_BACKUP_DB = 'vinylRecoveryVaultV1';
-let vinylBackupLast = new Map();
+const vinylBackupLast = new Map();
 let vinylBackupQueue = Promise.resolve();
 function openVinylBackupDB() {
   return new Promise((resolve,reject)=>{
@@ -29833,13 +29873,13 @@ async function vaultTransaction(mode,callback) {
   }); } finally {db.close();}
 }
 function queueVinylBackup(uid,json,title,reason='automatic') {
-  if (!uid || uid!==currentUid || auth.currentUser?.uid!==uid || cloudAccountReadyUid!==uid) return vinylBackupQueue;
+  if (!uid || uid!==currentUid || auth.currentUser?.uid!==uid || cloudAccountReadyUid!==uid) return Promise.resolve(false);
   let items;
-  try {items=JSON.parse(json);if(!Array.isArray(items))return vinylBackupQueue;}catch{return vinylBackupQueue;}
+  try {items=JSON.parse(json);if(!Array.isArray(items))return Promise.resolve(false);}catch{return Promise.resolve(false);}
   const now=Date.now();
   // Keep pre-overwrite states even when they are similar; debounce routine saves.
   if(reason==='local-save' && now-(vinylBackupLast.get(uid)||0)<120000)return vinylBackupQueue;
-  vinylBackupLast.set(uid,now);
+  if(reason==='local-save')vinylBackupLast.set(uid,now);
   const record={key:uid+':'+now+':'+Math.random().toString(36).slice(2),uid,time:now,title,reason,items};
   vinylBackupQueue=vinylBackupQueue.catch(()=>{}).then(async()=>{
     await vaultTransaction('readwrite',(store)=>store.put(record));
@@ -29847,7 +29887,8 @@ function queueVinylBackup(uid,json,title,reason='automatic') {
     const all=await listVinylBackups(uid);
     const excess=all.slice(40);
     if(excess.length)await vaultTransaction('readwrite',store=>excess.forEach(r=>store.delete(r.key)));
-  }).catch(err=>console.error('Lokales Backup fehlgeschlagen (nicht gesichert):',err));
+    return true;
+  }).catch(err=>{console.error('Lokales Backup fehlgeschlagen:',err);return false;});
   return vinylBackupQueue;
 }
 async function listVinylBackups(uid){
@@ -29868,35 +29909,76 @@ function vinylBackupIdentity(item){
   if(item?.id!==undefined&&item?.id!==null&&String(item.id))return 'id:'+String(item.id);
   return 'meta:'+String(item?.artist||'').trim().toLowerCase()+'|'+String(item?.title||'').trim().toLowerCase()+'|'+String(item?.year||'');
 }
-function vinylBackupMerge(existing,incoming,mode){
+function getVinylImportItems(data, uid) {
+  if (data && Object.hasOwn(data, 'ownerUid') && data.ownerUid !== uid) {
+    throw new Error('Backup gehört zu einer anderen Account-ID. Import gesperrt.');
+  }
+  const items = Array.isArray(data) ? data : data?.collection;
+  if (!Array.isArray(items) || items.some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
+    throw new Error('Keine gültige Sammlung gefunden.');
+  }
+  return items;
+}
+function vinylBackupMerge(existing,incoming){
   const result=existing.map(x=>structuredClone(x));
   const ids=new Map(result.map((x,i)=>[vinylBackupIdentity(x),i]));
   let added=0,identical=0,conflicts=[];
   for(const item of incoming){
     const key=vinylBackupIdentity(item),idx=ids.get(key);
     if(idx===undefined){ids.set(key,result.length);result.push(structuredClone(item));added++;continue;}
-    if(JSON.stringify(result[idx])===JSON.stringify(item)){identical++;continue;}
+    if(stableCloudJson(result[idx])===stableCloudJson(item)){identical++;continue;}
     conflicts.push({key,local:result[idx],incoming:item});
-    // In 'add-only' and 'merge' modes, the existing entry always wins. Conflicts remain explicit.
   }
   return {result,added,identical,conflicts};
 }
 async function showVinylBackupManager(){
   if(!currentUid||auth.currentUser?.uid!==currentUid||cloudAccountReadyUid!==currentUid||!viewingOwnCollection){alert('Bitte zuerst deine eigene Sammlung öffnen.');return;}
   const uid=currentUid,epoch=cloudAccountEpoch;
-  const safe=()=>uid===currentUid&&auth.currentUser?.uid===uid&&epoch===cloudAccountEpoch&&cloudAccountReadyUid===uid&&viewingOwnCollection;
-  const dialog=document.createElement('dialog');dialog.style.cssText='max-width:min(650px,95vw);width:95vw;max-height:85vh;overflow:auto;background:#1e1e23;color:#f1f1ef;border:1px solid #555;border-radius:14px;padding:22px;z-index:2147483647';
+  const previousDialog = document.getElementById('vinylBackupDialog');
+  if (previousDialog?.open) return;
+  previousDialog?.remove();
+  const dialog=document.createElement('dialog');
+  dialog.id='vinylBackupDialog';
+  const safe=()=>dialog.open&&isCloudSession(uid,epoch)&&cloudAccountReadyUid===uid&&viewingOwnCollection;
+  dialog.style.cssText='max-width:min(650px,95vw);width:95vw;max-height:85vh;overflow:auto;background:#1e1e23;color:#f1f1ef;border:1px solid #555;border-radius:14px;padding:22px;z-index:2147483647';
   dialog.innerHTML='<h2>Lokale Sammlungs-Backups</h2><p>Nur für den aktuell angemeldeten Account. Browserdaten können gelöscht werden – wichtige Sicherungen zusätzlich herunterladen.</p>';
   const status=document.createElement('p');dialog.append(status);
   const controls=document.createElement('div');controls.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';dialog.append(controls);
   const button=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=fn;controls.append(b);return b;};
-  button('Jetzt sichern',async()=>{if(!safe())return;await queueVinylBackup(uid,JSON.stringify(ownCollection),ownCollectionTitle,'manual');await refresh();});
+  button('Jetzt sichern', async () => {
+    if (!safe()) return;
+    const saved = await queueVinylBackup(uid, JSON.stringify(ownCollection), ownCollectionTitle, 'manual');
+    if (!safe()) return;
+    if (saved) await refresh();
+    else status.textContent = 'Lokale Sicherung fehlgeschlagen.';
+  });
   button('Aktuelle Sammlung herunterladen',()=>{if(safe())vinylBackupDownload({format:'vinyl-collection-backup',version:1,ownerUid:uid,title:ownCollectionTitle,collection:ownCollection},'vinyl-sammlung-'+new Date().toISOString().slice(0,10)+'.json');});
-  button('JSON importieren / abgleichen',()=>{if(!safe())return;const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{const f=input.files?.[0];if(!f||!safe())return;try{const data=JSON.parse(await f.text());const items=Array.isArray(data)?data:(Array.isArray(data.collection)?data.collection:null);if(!items)throw Error('Keine gültige Sammlung gefunden');if(data.ownerUid&&data.ownerUid!==uid)throw Error('Backup gehört zu einer anderen Account-ID. Import gesperrt.');await preview(items,data.title||'Import');}catch(err){alert('Import abgebrochen: '+err.message);}};input.click();});
+  button('JSON importieren / abgleichen', () => {
+    if (!safe()) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file || !safe()) return;
+      try {
+        const data = JSON.parse(await file.text());
+        if (safe()) await preview(getVinylImportItems(data, uid), data.title || 'Import');
+      } catch (error) {
+        if (safe()) status.textContent = 'Import abgebrochen. ' + error.message;
+      }
+    };
+    input.click();
+  });
   button('Schließen',()=>dialog.close());
   const list=document.createElement('div');dialog.append(list);
+  function previewImportAgain(items, title) {
+    status.textContent = 'Deine Sammlung wurde geändert. Bitte prüfe den aktualisierten Abgleich.';
+    return preview(items, title);
+  }
   async function preview(items,title){
     if(!safe())return;
+    const originalJson = JSON.stringify(ownCollection);
     const {result,added,identical,conflicts}=vinylBackupMerge(ownCollection,items);
     const preview=document.createElement('div');preview.style.cssText='padding:12px;border:1px solid #777;border-radius:10px;margin:12px 0';
     const h=document.createElement('p');h.textContent=`${title}: ${items.length} Einträge. Neu: ${added}, identisch: ${identical}, Konflikte: ${conflicts.length}. Bestehende Einträge werden NICHT überschrieben.`;preview.append(h);
@@ -29905,8 +29987,22 @@ async function showVinylBackupManager(){
     apply.onclick=async()=>{
       if(!safe())return;
       if(!confirm(`${added} neue Einträge zu deinem Account hinzufügen? Vorher wird ein lokales Backup angelegt. Konflikte werden nicht überschrieben.`))return;
-      await queueVinylBackup(uid,JSON.stringify(ownCollection),ownCollectionTitle,'before-import');
-      if(!safe())return;
+      apply.disabled = true;
+      if (JSON.stringify(ownCollection) !== originalJson) {
+        preview.remove();
+        return previewImportAgain(items, title);
+      }
+      const saved = await queueVinylBackup(uid,originalJson,ownCollectionTitle,'before-import');
+      if(!safe() || !preview.isConnected)return;
+      if (!saved) {
+        status.textContent = 'Import pausiert. Die vorherige Sammlung konnte nicht gesichert werden.';
+        apply.disabled = false;
+        return;
+      }
+      if (JSON.stringify(ownCollection) !== originalJson) {
+        preview.remove();
+        return previewImportAgain(items, title);
+      }
       ownCollection=result;collection=ownCollection;collectionTitle=ownCollectionTitle;
       saveOwnCollectionData();renderCollection();await queueVinylBackup(uid,JSON.stringify(ownCollection),ownCollectionTitle,'after-import');
       preview.remove();await refresh();
@@ -29918,6 +30014,7 @@ async function showVinylBackupManager(){
     if(!safe()){dialog.close();return;}
     await vinylBackupQueue.catch(()=>{});
     const backups=await listVinylBackups(uid);
+    if(!safe())return;
     status.textContent=`${backups.length} lokale Sicherungen für diesen Account`;
     list.replaceChildren();
     for(const backup of backups){
@@ -29931,11 +30028,7 @@ async function showVinylBackupManager(){
   dialog.addEventListener('close',()=>dialog.remove());document.body.append(dialog);dialog.showModal();
   try{await refresh();}catch(e){status.textContent='Backup-Speicher nicht verfügbar: '+e.message;}
 }
-(function addVinylBackupButton(){
-  const button=document.createElement('button');button.type='button';button.textContent='Backups';button.title='Lokale Sammlungs-Backups und JSON-Abgleich';
-  button.style.cssText='position:fixed;bottom:18px;right:18px;z-index:99999;background:#d4537e;color:#1b1015;border:0;border-radius:12px;padding:11px 16px;font-weight:700;box-shadow:0 2px 12px #0009';
-  button.onclick=showVinylBackupManager;document.body.append(button);
-})();
+document.getElementById('vinylBackupsBtn').addEventListener('click', showVinylBackupManager);
 </script>
 </body>
 </html>
