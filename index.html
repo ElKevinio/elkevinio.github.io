@@ -9357,6 +9357,29 @@ function showFirebaseDiagnostics() {
 }
 
 const STORAGE_KEY = 'vinylCollectionV1';
+// ACCOUNT ISOLATION: legacy shared keys are kept untouched for recovery.
+const ACCOUNT_COLLECTION_PREFIX = 'vinylCollectionByUidV2:';
+const ACCOUNT_TITLE_PREFIX = 'vinylTitleByUidV2:';
+let cloudAccountReadyUid = null;
+let cloudAccountEpoch = 0;
+function assertCloudAccount(uid, epoch = cloudAccountEpoch) {
+  if (!uid || currentUid !== uid || auth.currentUser?.uid !== uid ||
+      cloudAccountReadyUid !== uid || epoch !== cloudAccountEpoch) {
+    const error = new Error('Sicherheitsstopp: Account-Wechsel oder ungeprüfte Account-Zuordnung. Keine Cloud-Änderung.');
+    error.code = 'collection/account-mismatch';
+    throw error;
+  }
+}
+function saveAccountCollectionLocally(uid = currentUid) {
+  if (!uid || uid !== currentUid || auth.currentUser?.uid !== uid || cloudAccountReadyUid !== uid) return;
+  // Snapshot the previous account-scoped value before it can be replaced.
+  const previousJson = localStorage.getItem(ACCOUNT_COLLECTION_PREFIX + uid);
+  if (previousJson) queueVinylBackup(uid, previousJson, localStorage.getItem(ACCOUNT_TITLE_PREFIX + uid) || '', 'before-local-overwrite');
+  localStorage.setItem(ACCOUNT_COLLECTION_PREFIX + uid, JSON.stringify(ownCollection));
+  queueVinylBackup(uid, JSON.stringify(ownCollection), ownCollectionTitle, 'local-save');
+  localStorage.setItem(ACCOUNT_TITLE_PREFIX + uid, ownCollectionTitle);
+}
+
 const TITLE_STORAGE_KEY = 'vinylCollectionTitleV1';
 const DISCOGS_TOKEN_KEY = 'discogsTokenV1';
 const COVER_SOURCE_KEY = 'coverSourceV1';
@@ -9996,7 +10019,10 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
   const localSettings=mergeCloudSettings(cloudLocalSettingsSnapshot || previousRoot.settings || {},rootFields.data.settings || {},previousRoot.settings || {});
   const localTitle=mergeCloudSettings({title:cloudLocalTitleSnapshot ?? previousRoot.title},{title:rootFields.data.title},{title:previousRoot.title}).title;
   const userRef=db.collection('users').doc(uid);
+  const transactionEpoch = cloudAccountEpoch;
+  assertCloudAccount(uid, transactionEpoch);
   return trackFirebaseRequest(db.runTransaction(async transaction=>{
+    assertCloudAccount(uid, transactionEpoch);
     const rootSnap=await transaction.get(userRef);
     const remoteRoot=rootSnap.exists?rootSnap.data():{};
     const remoteChunks=new Map(),remoteImages=new Map();
@@ -10020,6 +10046,7 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
       const snap=await transaction.get(getCloudImagesRef(uid).doc(id));
       if(snap.exists)remoteImages.set(id,snap.data().dataUrl);
     }
+    assertCloudAccount(uid, transactionEpoch);
     const merged=mergeCloudCollectionVersions(baseItems,localItems,remoteItems);
     const settings=mergeCloudSettings(previousRoot.settings || {},localSettings,remoteRoot.settings || {});
     const title=mergeCloudSettings({title:previousRoot.title},{title:localTitle},{title:remoteRoot.title}).title;
@@ -10055,6 +10082,7 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
     const chunkBytes=chunkChanges.reduce((sum,chunk)=>sum+chunk.bytes,0);
     if(chunkBytes>CLOUD_BATCH_MAX_BYTES)throw new Error('Die Sammlung ist zu groß für einen gemeinsamen Schreibvorgang.');
     let written=0,complete=true,nextChunks=new Map(remoteChunks),nextImages=new Map(remoteImages),nextRoot={...remoteRoot};
+    assertCloudAccount(uid, transactionEpoch);
     if(needed>0) {
       const bytes=chunkBytes+imageChanges.reduce((sum,[,value])=>sum+value.length,0);
       if(needed>budget || bytes>CLOUD_BATCH_MAX_BYTES) {
@@ -10184,7 +10212,10 @@ function persistPendingCloudSnapshot(settings = getCloudSettingsSnapshot(), clea
     } catch (error) {
       console.warn('Lokale Cleanup-Warteschlange konnte nicht gelesen werden:', error);
     }
+    if (!currentUid || cloudAccountReadyUid !== currentUid || auth.currentUser?.uid !== currentUid) return;
+    saveAccountCollectionLocally();
     localStorage.setItem(getPendingCloudStorageKey(), JSON.stringify({
+      ownerUid: currentUid,
       title: ownCollectionTitle,
       settings,
       baseCollection: cloudBaseCollection,
@@ -10280,7 +10311,7 @@ async function showCloudSyncDetails() {
 }
 let cloudManualRetryRunning = false;
 async function retryCloudSynchronization() {
-  if (!currentUid || !viewingOwnCollection || cloudManualRetryRunning) return;
+  if (!currentUid || cloudAccountReadyUid !== currentUid || auth.currentUser?.uid !== currentUid || !viewingOwnCollection || cloudManualRetryRunning) return;
   cloudManualRetryRunning = true;
   const uid = currentUid;
   try {
@@ -10475,8 +10506,11 @@ function resetCloudWriteWindow() {
 }
 
 async function loadCloudData(uid, prefetchedSnap) {
+  const loadEpoch = cloudAccountEpoch;
+  if (uid !== currentUid || auth.currentUser?.uid !== uid) return;
   const docRef = db.collection('users').doc(uid);
   const docSnap = prefetchedSnap || await trackFirebaseRequest(docRef.get());
+  if (loadEpoch !== cloudAccountEpoch || uid !== currentUid || auth.currentUser?.uid !== uid) return;
   let data = docSnap.exists ? docSnap.data() : { collection: [], title: 'Vinyl-Sammlung', settings: {} };
   let localPending = null;
   try {
@@ -10484,11 +10518,16 @@ async function loadCloudData(uid, prefetchedSnap) {
   } catch (error) {
     console.warn('Lokale, noch nicht synchronisierte Änderungen konnten nicht gelesen werden:', error);
   }
+  if (localPending && (localPending.ownerUid !== uid || !localStorage.getItem(ACCOUNT_COLLECTION_PREFIX + uid))) {
+    console.warn('Nicht zuordenbare ältere Änderungen bleiben unangetastet; automatischer Upload blockiert.', uid);
+    localPending = null;
+  }
   cloudSyncUnavailableReason = localPending?.lastError || null;
   suppressNextCloudSave = true;
   let rawRootData = docSnap.exists ? data : null;
   const loaded = await loadCloudCollectionDetailed(uid, data);
   if (loaded.rootData) { data = loaded.rootData; rawRootData = data; }
+  if (loadEpoch !== cloudAccountEpoch || uid !== currentUid || auth.currentUser?.uid !== uid) return;
   cloudCollectionIntegrityIssue = loaded.integrityIssue || null;
   const cloudItems = loaded.items
     .map(item => { item.color = normalizeColor(item.color); return item; });
@@ -10496,7 +10535,7 @@ async function loadCloudData(uid, prefetchedSnap) {
   let pendingLocalItems = null;
   if (localPending) {
     try {
-      const localItems = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      const localItems = JSON.parse(localStorage.getItem(ACCOUNT_COLLECTION_PREFIX + uid) || 'null');
       if (Array.isArray(localItems)) pendingLocalItems = localItems;
     } catch (error) {
       console.warn('Lokale Sammlung mit ausstehenden Änderungen konnte nicht gelesen werden:', error);
@@ -10523,6 +10562,8 @@ async function loadCloudData(uid, prefetchedSnap) {
   }
   cloudBaseCollection = cloudItems.map(item=>splitCloudItem(item).base);
   ownCollection = pendingLocalItems || cloudItems;
+  cloudAccountReadyUid = uid;
+  saveAccountCollectionLocally(uid);
   const keptImages = cloudCollectionSnapshotUid === uid
     ? cloudImageIds.filter(id => cloudImageSnapshot.has(id)).map(id => [id, cloudImageSnapshot.get(id)])
     : [];
@@ -10691,9 +10732,13 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
     return false;
   }
   if (!currentUid || (!viewingOwnCollection && !allowRemoteView)) return false;
+  const saveUid = currentUid;
+  const saveEpoch = cloudAccountEpoch;
+  try { assertCloudAccount(saveUid, saveEpoch); } catch(error) { console.error(error); return false; }
   const revisionAtStart = cloudChangeRevision;
   try {
-    const uid = currentUid;
+    const uid = saveUid;
+    assertCloudAccount(uid, saveEpoch);
     const settingsObj = getCloudSettingsSnapshot();
     persistPendingCloudSnapshot(settingsObj);
 
@@ -10723,6 +10768,7 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
       || previousUserData.title !== ownCollectionTitle
       || stableCloudJson(previousUserData.settings || {}) !== stableCloudJson(settingsObj)
       || stableCloudJson(previousUserData.cardStats || {}) !== stableCloudJson(cardStats);
+    assertCloudAccount(uid, saveEpoch);
     const result = await saveCloudCollectionV2(uid, ownCollection, previousUserData, {
       needsWrite: rootNeedsWrite,
       data: {
@@ -10733,7 +10779,7 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }
     }, availableWrites);
-    if (currentUid !== uid) return false;
+    if (currentUid !== uid || saveEpoch !== cloudAccountEpoch) return false;
     if (result.complete) {
       const mergedNow = mergeCloudCollectionVersions(result.localItemsSnapshot,ownCollection,result.mergedItems);
       const inlineNow = new Map(ownCollection.filter(item=>item.vinylDesign?.cdImageDataUrl).map(item=>[getCloudItemDocId(item),item.vinylDesign.cdImageDataUrl]));
@@ -10742,7 +10788,7 @@ async function performCloudDataSaveNow(allowRemoteView = false) {
         const id=getCloudItemDocId(item),data=inlineNow.has(id) && inlineNow.get(id)!==inlineAtStart.get(id) ? inlineNow.get(id) : result.nextImageSnapshot.get(id);
         return data && item.vinylDesign?.discStyle==='picture-disc' && !item.vinylDesign.cdImageUrl ? {...item,vinylDesign:{...item.vinylDesign,cdImageDataUrl:data}} : item;
       });
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(ownCollection));
+      saveAccountCollectionLocally(uid);
       if(viewingOwnCollection){collection=ownCollection;renderCollection();}
       cloudLocalSettingsSnapshot=JSON.parse(JSON.stringify(settingsObj));
       cloudLocalTitleSnapshot=ownCollectionTitle;
@@ -10867,7 +10913,7 @@ function scheduleCloudRetry(delay, allowRemoteView = false) {
 }
 
 function saveCloudDataDebounced(allowRemoteView = false) {
-  if (!currentUid || (!viewingOwnCollection && !allowRemoteView)) return;
+  if (!currentUid || cloudAccountReadyUid !== currentUid || auth.currentUser?.uid !== currentUid || (!viewingOwnCollection && !allowRemoteView)) return;
   if (suppressNextCloudSave) { suppressNextCloudSave = false; return; }
   pendingCloudSave = true;
   cloudChangeRevision += 1;
@@ -11404,6 +11450,14 @@ const vordle = Vordle.create({db,canParticipate:()=>document.getElementById('vor
 
 let authInitializationPhase = 'Anmeldung';
 async function handleAuthStateChange(user) {
+  cloudAccountEpoch++;
+  cloudAccountReadyUid = null;
+  clearTimeout(cloudSaveDebounceTimer);
+  clearTimeout(cloudRetryTimer);
+  cloudSaveDebounceTimer = null;
+  cloudRetryTimer = null;
+  pendingCloudSave = false;
+  cloudSaveInFlightPromise = null;
   if ((user?.uid || null) !== currentUid) resetListeningPlayerForAccountChange();
   cloudCollectionUnsubscribe?.();
   cloudCollectionUnsubscribe=null;
@@ -11500,7 +11554,7 @@ auth.onAuthStateChanged(user => {
 function saveOwnCollectionData(syncWhileViewingRemote = false) {
   ownCollectionTitle = ownCollectionTitle || 'Vinyl-Sammlung';
   localStorage.setItem(TITLE_STORAGE_KEY, ownCollectionTitle);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ownCollection));
+  saveAccountCollectionLocally();
   if (collectionTitle === ownCollectionTitle || viewingOwnCollection) {
     const titleDisplay = document.getElementById('collectionTitleDisplay');
     if (titleDisplay) titleDisplay.textContent = ownCollectionTitle;
@@ -29751,5 +29805,137 @@ window.addEventListener('unhandledrejection', (ev) => {
     <button onclick="saveBulkChanges()" style="padding:8px 16px; border:0.5px solid var(--accent); border-radius:6px; background:var(--accent-bg); color:var(--accent); font-weight:600; cursor:pointer;">Speichern</button>
   </div>
 </div>
+<script>
+/* Local recovery vault. Independent of Firebase and never reads another account's backup. */
+const VINYL_BACKUP_DB = 'vinylRecoveryVaultV1';
+let vinylBackupLast = new Map();
+let vinylBackupQueue = Promise.resolve();
+function openVinylBackupDB() {
+  return new Promise((resolve,reject)=>{
+    const request=indexedDB.open(VINYL_BACKUP_DB,1);
+    request.onupgradeneeded=()=>{
+      const store=request.result.createObjectStore('snapshots',{keyPath:'key'});
+      store.createIndex('uidTime',['uid','time']);
+    };
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error);
+  });
+}
+async function vaultTransaction(mode,callback) {
+  const db=await openVinylBackupDB();
+  try { return await new Promise((resolve,reject)=>{
+    const tx=db.transaction('snapshots',mode),store=tx.objectStore('snapshots');
+    let result;
+    tx.oncomplete=()=>resolve(result);
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=()=>reject(tx.error||new Error('Backup-Transaktion abgebrochen'));
+    try {callback(store,value=>{result=value;});}catch(e){tx.abort();reject(e);}
+  }); } finally {db.close();}
+}
+function queueVinylBackup(uid,json,title,reason='automatic') {
+  if (!uid || uid!==currentUid || auth.currentUser?.uid!==uid || cloudAccountReadyUid!==uid) return vinylBackupQueue;
+  let items;
+  try {items=JSON.parse(json);if(!Array.isArray(items))return vinylBackupQueue;}catch{return vinylBackupQueue;}
+  const now=Date.now();
+  // Keep pre-overwrite states even when they are similar; debounce routine saves.
+  if(reason==='local-save' && now-(vinylBackupLast.get(uid)||0)<120000)return vinylBackupQueue;
+  vinylBackupLast.set(uid,now);
+  const record={key:uid+':'+now+':'+Math.random().toString(36).slice(2),uid,time:now,title,reason,items};
+  vinylBackupQueue=vinylBackupQueue.catch(()=>{}).then(async()=>{
+    await vaultTransaction('readwrite',(store)=>store.put(record));
+    // Retain the latest 40 snapshots per UID; never delete another account's data.
+    const all=await listVinylBackups(uid);
+    const excess=all.slice(40);
+    if(excess.length)await vaultTransaction('readwrite',store=>excess.forEach(r=>store.delete(r.key)));
+  }).catch(err=>console.error('Lokales Backup fehlgeschlagen (nicht gesichert):',err));
+  return vinylBackupQueue;
+}
+async function listVinylBackups(uid){
+  const db=await openVinylBackupDB();
+  try{return await new Promise((resolve,reject)=>{
+    const tx=db.transaction('snapshots','readonly');
+    const req=tx.objectStore('snapshots').index('uidTime').getAll(IDBKeyRange.bound([uid,0],[uid,Number.MAX_SAFE_INTEGER]));
+    req.onsuccess=()=>resolve(req.result.sort((a,b)=>b.time-a.time));
+    req.onerror=()=>reject(req.error);
+  });}finally{db.close();}
+}
+function vinylBackupDownload(data,name){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+function vinylBackupIdentity(item){
+  if(item?.id!==undefined&&item?.id!==null&&String(item.id))return 'id:'+String(item.id);
+  return 'meta:'+String(item?.artist||'').trim().toLowerCase()+'|'+String(item?.title||'').trim().toLowerCase()+'|'+String(item?.year||'');
+}
+function vinylBackupMerge(existing,incoming,mode){
+  const result=existing.map(x=>structuredClone(x));
+  const ids=new Map(result.map((x,i)=>[vinylBackupIdentity(x),i]));
+  let added=0,identical=0,conflicts=[];
+  for(const item of incoming){
+    const key=vinylBackupIdentity(item),idx=ids.get(key);
+    if(idx===undefined){ids.set(key,result.length);result.push(structuredClone(item));added++;continue;}
+    if(JSON.stringify(result[idx])===JSON.stringify(item)){identical++;continue;}
+    conflicts.push({key,local:result[idx],incoming:item});
+    // In 'add-only' and 'merge' modes, the existing entry always wins. Conflicts remain explicit.
+  }
+  return {result,added,identical,conflicts};
+}
+async function showVinylBackupManager(){
+  if(!currentUid||auth.currentUser?.uid!==currentUid||cloudAccountReadyUid!==currentUid||!viewingOwnCollection){alert('Bitte zuerst deine eigene Sammlung öffnen.');return;}
+  const uid=currentUid,epoch=cloudAccountEpoch;
+  const safe=()=>uid===currentUid&&auth.currentUser?.uid===uid&&epoch===cloudAccountEpoch&&cloudAccountReadyUid===uid&&viewingOwnCollection;
+  const dialog=document.createElement('dialog');dialog.style.cssText='max-width:min(650px,95vw);width:95vw;max-height:85vh;overflow:auto;background:#1e1e23;color:#f1f1ef;border:1px solid #555;border-radius:14px;padding:22px;z-index:2147483647';
+  dialog.innerHTML='<h2>Lokale Sammlungs-Backups</h2><p>Nur für den aktuell angemeldeten Account. Browserdaten können gelöscht werden – wichtige Sicherungen zusätzlich herunterladen.</p>';
+  const status=document.createElement('p');dialog.append(status);
+  const controls=document.createElement('div');controls.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px';dialog.append(controls);
+  const button=(label,fn)=>{const b=document.createElement('button');b.textContent=label;b.onclick=fn;controls.append(b);return b;};
+  button('Jetzt sichern',async()=>{if(!safe())return;await queueVinylBackup(uid,JSON.stringify(ownCollection),ownCollectionTitle,'manual');await refresh();});
+  button('Aktuelle Sammlung herunterladen',()=>{if(safe())vinylBackupDownload({format:'vinyl-collection-backup',version:1,ownerUid:uid,title:ownCollectionTitle,collection:ownCollection},'vinyl-sammlung-'+new Date().toISOString().slice(0,10)+'.json');});
+  button('JSON importieren / abgleichen',()=>{if(!safe())return;const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=async()=>{const f=input.files?.[0];if(!f||!safe())return;try{const data=JSON.parse(await f.text());const items=Array.isArray(data)?data:(Array.isArray(data.collection)?data.collection:null);if(!items)throw Error('Keine gültige Sammlung gefunden');if(data.ownerUid&&data.ownerUid!==uid)throw Error('Backup gehört zu einer anderen Account-ID. Import gesperrt.');await preview(items,data.title||'Import');}catch(err){alert('Import abgebrochen: '+err.message);}};input.click();});
+  button('Schließen',()=>dialog.close());
+  const list=document.createElement('div');dialog.append(list);
+  async function preview(items,title){
+    if(!safe())return;
+    const {result,added,identical,conflicts}=vinylBackupMerge(ownCollection,items);
+    const preview=document.createElement('div');preview.style.cssText='padding:12px;border:1px solid #777;border-radius:10px;margin:12px 0';
+    const h=document.createElement('p');h.textContent=`${title}: ${items.length} Einträge. Neu: ${added}, identisch: ${identical}, Konflikte: ${conflicts.length}. Bestehende Einträge werden NICHT überschrieben.`;preview.append(h);
+    if(conflicts.length){const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Konflikte anzeigen (bestehende Werte bleiben erhalten)';details.append(summary);const ul=document.createElement('ul');for(const c of conflicts.slice(0,100)){const li=document.createElement('li');li.textContent=String(c.local.artist||'')+' – '+String(c.local.title||c.key);ul.append(li);}details.append(ul);preview.append(details);}
+    const apply=document.createElement('button');apply.textContent='Nur neue Einträge übernehmen ('+added+')';apply.disabled=!added;
+    apply.onclick=async()=>{
+      if(!safe())return;
+      if(!confirm(`${added} neue Einträge zu deinem Account hinzufügen? Vorher wird ein lokales Backup angelegt. Konflikte werden nicht überschrieben.`))return;
+      await queueVinylBackup(uid,JSON.stringify(ownCollection),ownCollectionTitle,'before-import');
+      if(!safe())return;
+      ownCollection=result;collection=ownCollection;collectionTitle=ownCollectionTitle;
+      saveOwnCollectionData();renderCollection();await queueVinylBackup(uid,JSON.stringify(ownCollection),ownCollectionTitle,'after-import');
+      preview.remove();await refresh();
+    };preview.append(apply);
+    const cancel=document.createElement('button');cancel.textContent='Abbrechen';cancel.onclick=()=>preview.remove();preview.append(cancel);
+    list.prepend(preview);
+  }
+  async function refresh(){
+    if(!safe()){dialog.close();return;}
+    await vinylBackupQueue.catch(()=>{});
+    const backups=await listVinylBackups(uid);
+    status.textContent=`${backups.length} lokale Sicherungen für diesen Account`;
+    list.replaceChildren();
+    for(const backup of backups){
+      const line=document.createElement('div');line.style.cssText='border-top:1px solid #555;padding:10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+      const label=document.createElement('span');label.style.flex='1';label.textContent=`${new Date(backup.time).toLocaleString('de-DE')} · ${backup.items.length} Alben · ${backup.reason}`;line.append(label);
+      const dl=document.createElement('button');dl.textContent='Download';dl.onclick=()=>{if(safe())vinylBackupDownload({format:'vinyl-collection-backup',version:1,ownerUid:uid,title:backup.title,collection:backup.items},'vinyl-backup-'+backup.time+'.json');};line.append(dl);
+      const compare=document.createElement('button');compare.textContent='Abgleichen';compare.onclick=()=>preview(backup.items,'Backup vom '+new Date(backup.time).toLocaleString('de-DE'));line.append(compare);
+      list.append(line);
+    }
+  }
+  dialog.addEventListener('close',()=>dialog.remove());document.body.append(dialog);dialog.showModal();
+  try{await refresh();}catch(e){status.textContent='Backup-Speicher nicht verfügbar: '+e.message;}
+}
+(function addVinylBackupButton(){
+  const button=document.createElement('button');button.type='button';button.textContent='Backups';button.title='Lokale Sammlungs-Backups und JSON-Abgleich';
+  button.style.cssText='position:fixed;bottom:18px;right:18px;z-index:99999;background:#d4537e;color:#1b1015;border:0;border-radius:12px;padding:11px 16px;font-weight:700;box-shadow:0 2px 12px #0009';
+  button.onclick=showVinylBackupManager;document.body.append(button);
+})();
+</script>
 </body>
 </html>
