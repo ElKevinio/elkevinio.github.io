@@ -2919,6 +2919,23 @@
   .fullscreen-player-tracks-list .album-mini-track { min-height:42px; text-align:left; }
   .fullscreen-player-tracks-list .album-mini-track:disabled { opacity:.5; cursor:default; }
   .fullscreen-track-readonly { padding:9px 7px; font-size:13px; border-bottom:1px solid var(--border); }
+  /* Smaller records start farther in and end at the same run-out radius near the label. */
+  .fullscreen-player-turntable:has([data-vinyl-size="7"]) {
+    --tonearm-start:23deg;
+    --tonearm-sweep:9deg;
+  }
+  .fullscreen-player-turntable:has([data-vinyl-size="10"]) {
+    --tonearm-start:13deg;
+    --tonearm-sweep:19deg;
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-turntable:has([data-vinyl-size="7"]) {
+    --tonearm-start:41deg;
+    --tonearm-sweep:7deg;
+  }
+  .fullscreen-player-overlay.is-angled-view .fullscreen-player-turntable:has([data-vinyl-size="10"]) {
+    --tonearm-start:31deg;
+    --tonearm-sweep:17deg;
+  }
   .fullscreen-player-overlay:not(.is-changing-album) .fullscreen-player-tonearm-rod { transform:rotate(calc(var(--tonearm-start, 6deg) + var(--album-progress, 0) * var(--tonearm-sweep, 26deg))); }
   .fullscreen-player-album-progress { color:var(--text-secondary); font-size:11px; font-variant-numeric:tabular-nums; }
   #fullscreenPlayerAlbumProgress[hidden] { display:none; }
@@ -3982,11 +3999,17 @@
     box-shadow: 0 2px 8px var(--bar-color, rgba(255,255,255,0.2));
   }
 
+  [data-vinyl-size="7"] { --vinyl-size: .583333; }
+  [data-vinyl-size="10"] { --vinyl-size: .833333; }
+  .vinyl-editor-disc:not(.wash-current-disc), .fullscreen-player-vinyl {
+    scale: var(--vinyl-size, 1);
+  }
+
   .vinyl-card-preview {
     position: absolute;
     left: 50%;
     top: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(var(--vinyl-size, 1));
     width: clamp(128px, 18vw, 176px);
     aspect-ratio: 1;
     border-radius: 50%;
@@ -4061,8 +4084,8 @@
   .vinyl-card-preview::after, .vinyl-editor-disc::after, .fullscreen-player-vinyl::after {
     content: '';
     position: absolute;
-    width: 30%;
-    height: 30%;
+    width: calc(30% / var(--vinyl-size, 1));
+    height: calc(30% / var(--vinyl-size, 1));
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -5047,13 +5070,14 @@
     isolation:isolate;
   }
   .wash-current-disc {
+    --wash-disc-size: calc(236px * var(--vinyl-size, 1));
     position:absolute;
-    top:calc(64% - var(--wash-label-offset, 143px));
+    top:calc(64% - var(--wash-disc-size) * .65);
     left:50%;
     z-index:0;
-    width:var(--wash-disc-size, 220px);
-    height:var(--wash-disc-size, 220px);
-    margin-left:calc(var(--wash-disc-size, 220px) / -2);
+    width:var(--wash-disc-size);
+    height:var(--wash-disc-size);
+    margin-left:calc(var(--wash-disc-size) / -2);
     max-width:none;
     max-height:none;
     animation:none;
@@ -7300,8 +7324,8 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .is-label-editor #editLabelBtn, .is-label-editor #cdPictureControls { display:none !important; }
   #vinylEditorDisc { touch-action:none; }
 
-  .discogs-label-art { position:absolute; width:30%; height:30%; left:35%; top:35%; overflow:hidden; border-radius:50%; z-index:2; pointer-events:none; }
-  .discogs-label-art.is-enlarged { inset:0; width:100%; height:100%; }
+  .discogs-label-art { position:absolute; width:calc(30% / var(--vinyl-size, 1)); height:calc(30% / var(--vinyl-size, 1)); left:50%; top:50%; transform:translate(-50%, -50%); overflow:hidden; border-radius:50%; z-index:2; pointer-events:none; }
+  .discogs-label-art.is-enlarged { inset:0; width:100%; height:100%; transform:none; }
   .discogs-label-logo { position:absolute; object-fit:contain; transform-origin:center; }
   .discogs-label-effect { position:absolute; inset:0; background-size:100% 100%; }
   .vinyl-card-preview::before, .vinyl-editor-disc::before, .fullscreen-player-vinyl::before { z-index:3; }
@@ -9820,6 +9844,7 @@ logoutBtn.addEventListener('click', async () => {
     danger: true
   });
   if (!confirmed) return;
+  closeSettingsPanel();
   try {
     await trackFirebaseRequest(auth.signOut());
   } catch (error) {
@@ -11472,7 +11497,10 @@ async function handleAuthStateChange(user, epoch) {
   cloudRetryTimer = null;
   pendingCloudSave = false;
   cloudSaveInFlightPromise = null;
-  if ((user?.uid || null) !== currentUid) resetListeningPlayerForAccountChange();
+  if ((user?.uid || null) !== currentUid) {
+    if (currentUid) closeSettingsPanel();
+    resetListeningPlayerForAccountChange();
+  }
   cloudCollectionUnsubscribe?.();
   cloudCollectionUnsubscribe=null;
   vordle.reset();
@@ -12566,6 +12594,10 @@ document.getElementById('settingsTopShortcuts').addEventListener('click', event 
 });
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
+function closeSettingsPanel() {
+  settingsPanel.classList.remove('open');
+  dismissDiscogsRefreshStatus();
+}
 if (settingsBtn && settingsPanel) {
   const positionSettingsPanel = () => {
     const viewport = window.visualViewport;
@@ -12584,10 +12616,6 @@ if (settingsBtn && settingsPanel) {
   window.addEventListener('resize', repositionOpenSettings);
   window.visualViewport?.addEventListener('resize', repositionOpenSettings);
   window.visualViewport?.addEventListener('scroll', repositionOpenSettings);
-  const closeSettingsPanel = () => {
-    settingsPanel.classList.remove('open');
-    dismissDiscogsRefreshStatus();
-  };
   settingsBtn.addEventListener('click', e => {
     e.stopPropagation();
     const shouldOpen = !settingsPanel.classList.contains('open');
@@ -13238,6 +13266,7 @@ function renderWashCurrentVinyl({ entering = false } = {}) {
   const design = normalizeVinylDesign(item);
   const record = design.records[0] || makeDefaultVinylRecord(item.color, item.colorSecondary);
   const disc = document.getElementById('washCurrentDisc');
+  disc.dataset.vinylSize = getVinylDisplaySize(item);
   disc.classList.toggle('is-cd', isCdItem(item));
   disc.classList.toggle('is-picture-disc', design.discStyle === 'picture-disc');
   disc.style.setProperty('--picture-background', design.pictureBackgroundColor);
@@ -13254,10 +13283,6 @@ function renderWashCurrentVinyl({ entering = false } = {}) {
   };
   sleeveCover.src = item.coverUrl || '';
   sleeveCopy.textContent = item.coverUrl ? '' : item.title || 'Album';
-  const formatSizes = { Single: 148, 'Maxi Single': 196, EP: 178, '10 Inch': 196, Album: 236 };
-  const discSize = formatSizes[getReleaseType(item)] || formatSizes.Album;
-  disc.style.setProperty('--wash-disc-size', `${discSize}px`);
-  disc.style.setProperty('--wash-label-offset', `${discSize * 0.65}px`);
   disc.style.setProperty('--vinyl-base', hexToRgba(record.baseColor, 1 - record.transparency / 100));
   disc.style.setProperty('--vinyl-label', getVinylLabelBackground(record));
   disc.style.setProperty('--vinyl-art', getVinylSvgData(record));
@@ -15185,6 +15210,7 @@ function renderVinylEditor() {
   const editorBox = document.querySelector('#vinylEditorOverlay .vinyl-editor-box');
   editorBox.classList.toggle('is-cd', isCd);
   editorBox.classList.toggle('is-picture-disc', !labelEditorDraft && vinylEditorDesign.discStyle === 'picture-disc');
+  preview.dataset.vinylSize = labelEditorDraft ? '' : getVinylDisplaySize(currentDraft);
   preview.classList.toggle('is-cd', isCd);
   preview.classList.toggle('is-picture-disc', !labelEditorDraft && vinylEditorDesign.discStyle === 'picture-disc');
   preview.style.setProperty('--picture-background', vinylEditorDesign.pictureBackgroundColor);
@@ -15270,6 +15296,7 @@ function updateVinylEditorPreview() {
   const isCd = !labelEditorDraft && isCdItem(currentDraft);
   const editorBox = document.querySelector('#vinylEditorOverlay .vinyl-editor-box');
   editorBox.classList.toggle('is-picture-disc', !labelEditorDraft && vinylEditorDesign.discStyle === 'picture-disc');
+  preview.dataset.vinylSize = labelEditorDraft ? '' : getVinylDisplaySize(currentDraft);
   preview.classList.toggle('is-cd', isCd);
   preview.classList.toggle('is-picture-disc', !labelEditorDraft && vinylEditorDesign.discStyle === 'picture-disc');
   preview.style.setProperty('--picture-background', vinylEditorDesign.pictureBackgroundColor);
@@ -16250,6 +16277,11 @@ function normalizeReleaseTypeValue(type) {
 
 function getReleaseType(item) {
   return normalizeReleaseTypeValue(item?.releaseType || 'Album');
+}
+
+function getVinylDisplaySize(item) {
+  const format = getReleaseType(item);
+  return format === 'Single' ? '7' : format === '10 Inch' ? '10' : '';
 }
 
 function isWashableItem(item) {
@@ -19468,6 +19500,7 @@ function applyListeningVinylAppearance(vinyl, item) {
   const design = normalizeVinylDesign(item);
   const record = getVinylRecordForItem(item);
   vinyl.className = `fullscreen-player-vinyl ${record.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${getDiscMediaClasses(item)}`.replace(/\s+/g, ' ').trim();
+  vinyl.dataset.vinylSize = getVinylDisplaySize(item);
   vinyl.style.cssText = `--picture-background:${design.pictureBackgroundColor};--vinyl-base:${hexToRgba(record.baseColor, 1 - record.transparency / 100)};--vinyl-label:${getVinylLabelBackground(record)};--vinyl-art:${getVinylSvgData(record)}`;
   vinyl.innerHTML = `${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(record, design.discStyle)}`;
 }
@@ -27016,6 +27049,7 @@ function renderStorageRandomResult(item) {
   cover.alt = item.coverUrl ? `Cover: ${item.title || 'Unbekanntes Album'}` : '';
   cover.onerror = () => { cover.hidden = true; };
   const disc = document.getElementById('storageResultDisc');
+  disc.dataset.vinylSize = getVinylDisplaySize(item);
   disc.classList.toggle('is-cd', isCdItem(item));
   disc.classList.toggle('is-picture-disc', design.discStyle === 'picture-disc');
   disc.style.setProperty('--picture-background', design.pictureBackgroundColor);
@@ -28776,7 +28810,7 @@ function renderCollection() {
           ` : '';
 
       card.innerHTML = `
-        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${isCollectionVinylDirty && !isCdItem(item) ? 'is-dirty' : ''} ${getDiscMediaClasses(item)}" style="--picture-background:${vinylDesignPreview.pictureBackgroundColor};--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${getVinylLabelBackground(vinylRecordPreview)};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="${isCdItem(item) ? 'CD-Design' : 'Vinyl-Design'}">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : `${getVinylLiquidMarkup(vinylRecordPreview, vinylDesignPreview.discStyle)}${collectionVinylEffectsMarkup}`}</div></div>
+        <div class="album-color-bar ${barStyle.isAnimated ? 'animated' : ''}" style="--bar-color: ${barStyle.barColor}; --bar-pattern: ${barStyle.barPattern}; --bar-bg-size: ${barStyle.barBgSize};" title="Farbe: ${escapeHtml(getVisibleLabel(item))}"><div class="vinyl-card-preview ${vinylRecordPreview.transparency > 0 && !isCdItem(item) ? 'is-clear' : ''} ${isCollectionVinylDirty && !isCdItem(item) ? 'is-dirty' : ''} ${getDiscMediaClasses(item)}" data-vinyl-size="${getVinylDisplaySize(item)}" style="--picture-background:${vinylDesignPreview.pictureBackgroundColor};--vinyl-base:${hexToRgba(vinylRecordPreview.baseColor, 1 - vinylRecordPreview.transparency / 100)};--vinyl-label:${getVinylLabelBackground(vinylRecordPreview)};--vinyl-art:${getVinylSvgData(vinylRecordPreview)}" aria-label="${isCdItem(item) ? 'CD-Design' : 'Vinyl-Design'}">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : `${getVinylLiquidMarkup(vinylRecordPreview, vinylDesignPreview.discStyle)}${collectionVinylEffectsMarkup}`}</div></div>
         ${selectModeActive && allowEdit ? `<span class="multi-select-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m5 12 5 5L20 7" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>` : ''}
         <div class="media">
           <img src="${item.coverUrl || ''}" alt="" loading="lazy" decoding="async">
@@ -28968,7 +29002,7 @@ ${actionButtons}
             td.textContent = pVal > 0 ? (pVal.toFixed(2).replace(/\.00$/, '') + ' ' + escapeHtml(item.discogsCurrency || '€')) : '';
           } else if (col.key === 'color') {
             const discRecord = getVinylRecordForItem(item);
-            td.innerHTML = `<div class="vinyl-editor-disc table-vinyl-disc ${getDiscMediaClasses(item)}" title="${escapeHtml(getVisibleLabel(item))}" style="${getDiscPictureBackgroundStyle(item)} --vinyl-base: ${hexToRgba(discRecord.baseColor, 1 - discRecord.transparency / 100)}; --vinyl-label: ${getVinylLabelBackground(discRecord)}; --vinyl-art: ${getVinylSvgData(discRecord)};">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(discRecord, normalizeVinylDesign(item).discStyle)}</div>`;
+            td.innerHTML = `<div class="vinyl-editor-disc table-vinyl-disc ${getDiscMediaClasses(item)}" data-vinyl-size="${getVinylDisplaySize(item)}" title="${escapeHtml(getVisibleLabel(item))}" style="${getDiscPictureBackgroundStyle(item)} --vinyl-base: ${hexToRgba(discRecord.baseColor, 1 - discRecord.transparency / 100)}; --vinyl-label: ${getVinylLabelBackground(discRecord)}; --vinyl-art: ${getVinylSvgData(discRecord)};">${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(discRecord, normalizeVinylDesign(item).discStyle)}</div>`;
           } else if (col.key === 'status') {
             td.innerHTML = `<span class="state-pill">${item.owned ? 'Besitze ich' : 'Wunschliste'}</span>`;
           } else if (col.key === 'actions') {
