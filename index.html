@@ -1256,6 +1256,16 @@
     border: 0.5px solid var(--border); border-radius: 8px;
     padding: 8px 12px; margin-bottom: 14px;
   }
+  .rating-control { display:grid; grid-template-columns:minmax(85px,1fr) minmax(70px,2fr) 4.5ch auto; align-items:center; gap:8px; font-size:12px; }
+  .rating-control input[type="range"] { width:100%; min-width:0; padding:0; accent-color:var(--accent); }
+  .rating-control output { text-align:right; font-variant-numeric:tabular-nums; }
+  .rating-control button { padding:3px 6px; }
+  .rating-album { display:grid; gap:4px; }
+  .rating-track { break-inside:avoid; padding:4px 0; }
+  @media (max-width:600px) { #fTracklist { column-count:1; } }
+  .rating-track .rating-control { grid-template-columns:minmax(0,1fr) 4.5ch auto; }
+  .rating-track .rating-control label { position:absolute; clip-path:inset(50%); width:1px; height:1px; overflow:hidden; }
+  .collection-rating { color:var(--accent); font-size:11px; white-space:nowrap; }
   .track-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
   .track-row span:last-child { color: var(--text-secondary); }
   .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -6354,7 +6364,7 @@
   .cover-search-box { max-height: calc(100dvh - 16px); padding: 10px 14px; }
   .cover-search-grid { max-height: calc(100dvh - 90px); grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
   /* Tracklist */
-  .album-editor-form .tracklist-box { max-height: 120px; column-count: 2; column-gap: 20px; margin-bottom: 6px; padding: 6px 10px; }
+  .album-editor-form .tracklist-box { max-height: min(34dvh, 250px); column-count: 2; column-gap: 20px; margin-bottom: 6px; padding: 6px 10px; }
   .album-editor-form .track-row { break-inside: avoid; font-size: 12px; padding: 2px 0; }
   .match-tracklist-preview { column-count: 2; column-gap: 16px; }
   /* Vinyl gestalten */
@@ -8271,6 +8281,8 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock.is-expande
         </div>
       </details>
 
+      <div class="rating-album" id="albumRatingEditor"></div>
+
       <details id="tracklistSection" class="editor-collapsible">
         <summary>Tracklist</summary>
         <div class="editor-collapsible-content"><div class="tracklist-box" id="fTracklist"></div></div>
@@ -8335,6 +8347,7 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock.is-expande
             <option value="location">Lagerort</option>
             <option value="lastWashed">Waschdatum</option>
             <option value="price">Preis</option>
+            <option value="rating">Bewertung</option>
             <option value="color">Farbe</option>
             <option value="releaseType">Format</option>
           </select>
@@ -17918,18 +17931,106 @@ async function selectAlbum(album, cover, source = 'itunes', discogsDetail = null
   renderTracklist();
 }
 
+function validAlbumRating(value) {
+  return Number.isFinite(value) && value >= 1 && value <= 10 ? value : null;
+}
+
+function getRatingTrackRows(tracks, parent = []) {
+  if (!Array.isArray(tracks)) return [];
+  return tracks.flatMap((track, index) => {
+    if (!track || typeof track !== 'object') return [];
+    const title = typeof track.title === 'string' ? track.title.trim().toLowerCase() : '';
+    const path = [...parent, [String(track.position || track.number || index + 1), title]];
+    const children = getRatingTrackRows(track.sub_tracks, path);
+    const key = title && track.type_ !== 'heading' && children.length === 0 ? JSON.stringify(path) : null;
+    return [{track, key}, ...children];
+  });
+}
+
+function averageTrackRating(tracks, ratings) {
+  if (!ratings || !Object.keys(ratings).length) return null;
+  const scores = getRatingTrackRows(tracks).filter(row => row.key)
+    .map(row => validAlbumRating(ratings[row.key]));
+  return scores.length && scores.every(score => score !== null)
+    ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null;
+}
+
+function getAlbumRating(item) {
+  return averageTrackRating(item.tracklist || [], item.trackRatings) ?? validAlbumRating(item.rating);
+}
+
+const albumRatingFormat = new Intl.NumberFormat('de-DE', {maximumFractionDigits:2});
+
+function renderRatingControl(container, id, label, getScore, setScore) {
+  container.innerHTML = `<label for="${id}">${escapeHtml(label)}</label><input id="${id}" type="range" min="1" max="10" step="0.1"><output for="${id}"></output><button type="button" title="Bewertung entfernen" aria-label="${escapeHtml(label)} entfernen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>`;
+  const input = container.querySelector('input');
+  const output = container.querySelector('output');
+  const clear = container.querySelector('button');
+  const refresh = (score = getScore(), automatic = false) => {
+    input.value = score ?? 5;
+    input.disabled = automatic;
+    input.setAttribute('aria-valuetext', score == null ? 'Unbewertet' : `${albumRatingFormat.format(score)} von 10`);
+    clear.disabled = automatic || score == null;
+    output.value = score == null ? '–' : albumRatingFormat.format(score);
+  };
+  const apply = () => {
+    setScore(Number(input.value));
+    refresh();
+  };
+  input.addEventListener('input', apply);
+  input.addEventListener('click', () => { if (getScore() == null) apply(); });
+  clear.addEventListener('click', () => { setScore(null); refresh(); });
+  refresh();
+  return refresh;
+}
+
+function renderAlbumRatingEditor() {
+  const editor = document.getElementById('albumRatingEditor');
+  editor.replaceChildren();
+  if (!currentDraft) return;
+  const control = document.createElement('div');
+  control.className = 'rating-control';
+  const hint = document.createElement('small');
+  hint.className = 'settings-panel-hint';
+  editor.append(control, hint);
+  const refresh = renderRatingControl(control, 'albumRatingInput', 'Albumwertung',
+    () => validAlbumRating(currentDraft.rating), score => {
+      if (score == null) delete currentDraft.rating;
+      else currentDraft.rating = score;
+    });
+  const average = averageTrackRating(currentTracks, currentDraft.trackRatings);
+  if (average !== null) {
+    refresh(average, true);
+    hint.textContent = 'Durchschnitt aller Titelwertungen.';
+  }
+}
+
 function renderTracklist() {
   const box = document.getElementById('fTracklist');
-  const section = document.getElementById('tracklistSection');
-  section.style.display = 'block';
-
+  document.getElementById('tracklistSection').style.display = 'block';
+  renderAlbumRatingEditor();
   if (currentTracks.length === 0) {
     box.innerHTML = '<p style="font-size:12px; color:var(--text-muted); margin:0;">Keine Tracklist gefunden. Kann später manuell ergänzt werden.</p>';
     return;
   }
-  box.innerHTML = currentTracks.map(t =>
-    `<div class="track-row"><span>${escapeHtml(t.position || (t.number ? t.number + '.' : ''))} ${escapeHtml(t.title || '')}</span><span>${escapeHtml(t.duration || '')}</span></div>`
-  ).join('');
+  box.replaceChildren(...getRatingTrackRows(currentTracks).map(({track, key}, index) => {
+    const row = document.createElement('div');
+    row.className = 'rating-track';
+    row.innerHTML = `<div class="track-row"><span>${escapeHtml(track.position || (track.number ? track.number + '.' : ''))} ${escapeHtml(track.title || '')}</span><span>${escapeHtml(track.duration || '')}</span></div>`;
+    if (!currentDraft || !key) return row;
+    const control = document.createElement('div');
+    control.className = 'rating-control';
+    row.append(control);
+    renderRatingControl(control, `trackRating-${index}`, `Bewertung für ${track.title}`,
+      () => validAlbumRating(currentDraft.trackRatings?.[key]), score => {
+        const ratings = {...currentDraft.trackRatings};
+        if (score == null) delete ratings[key];
+        else ratings[key] = score;
+        currentDraft.trackRatings = ratings;
+        renderAlbumRatingEditor();
+      });
+    return row;
+  }));
 }
 
 function mergeDiscogsGenres(genres, styles) {
@@ -18308,6 +18409,7 @@ function openForm() {
   albumEditorOverlay.classList.add('open');
   document.getElementById('fStorageFields').open = false;
   document.getElementById('tracklistSection').open = false;
+  renderAlbumRatingEditor();
   document.getElementById('fTitle').value = currentDraft.title;
   document.getElementById('fArtist').value = currentDraft.artist;
   document.getElementById('fTitleLatin').value = '';
@@ -26586,10 +26688,11 @@ function setFilter(filter) {
 
 function setSort(sortValue) {
   activeSort = sortValue;
-  if (activeSort === 'newest') {
-    activeSortDirection = 'desc';
-  } else {
-    activeSortDirection = 'asc';
+  activeSortDirection = ['newest', 'rating'].includes(activeSort) ? 'desc' : 'asc';
+  if (activeView === 'table') {
+    const table = getTableSettings();
+    table.activeSortColumn = activeSort;
+    table.activeSortDir = activeSortDirection;
   }
   updateSortButtons();
   saveLocalSortSettings();
@@ -26598,6 +26701,7 @@ function setSort(sortValue) {
 
 function setSortDirection(direction) {
   activeSortDirection = direction;
+  if (activeView === 'table') getTableSettings().activeSortDir = direction;
   updateSortButtons();
   saveLocalSortSettings();
   renderCollection();
@@ -26606,7 +26710,7 @@ function setSortDirection(direction) {
 function updateSortButtons() {
   const dirBtn = document.getElementById('sortDirBtn');
   if (!dirBtn) return;
-  const useDirectionalSorting = ['newest', 'title', 'artist', 'year', 'genre', 'releaseType', 'price', 'status', 'condition', 'color', 'location', 'lastWashed'].includes(activeSort);
+  const useDirectionalSorting = ['newest', 'title', 'artist', 'year', 'genre', 'releaseType', 'price', 'rating', 'status', 'condition', 'color', 'location', 'lastWashed'].includes(activeSort);
   dirBtn.innerHTML = activeSortDirection === 'asc' ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg>` : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg>`;
   dirBtn.title = activeSort === 'newest'
     ? (activeSortDirection === 'asc' ? 'Älteste zuerst (klicken für neueste zuerst)' : 'Neueste zuerst (klicken für älteste zuerst)')
@@ -28941,6 +29045,12 @@ function renderCollection() {
         if (artistDiff !== 0) return directionMultiplier * artistDiff;
         return directionMultiplier * (a.title || '').localeCompare(b.title || '', 'de');
       }
+      case 'rating': {
+        const left = getAlbumRating(a), right = getAlbumRating(b);
+        if (left === null) return right === null ? 0 : 1;
+        if (right === null) return -1;
+        return directionMultiplier * (left - right);
+      }
       case 'price': {
         const pa = Number(a.discogsLowestPrice != null ? a.discogsLowestPrice : (a.discogsAveragePrice != null ? a.discogsAveragePrice : 0)) || 0;
         const pb = Number(b.discogsLowestPrice != null ? b.discogsLowestPrice : (b.discogsAveragePrice != null ? b.discogsAveragePrice : 0)) || 0;
@@ -29049,6 +29159,7 @@ function renderCollection() {
       card.style.setProperty('--hover-filter', getHoverFilter(item));
       card.style.setProperty('--frame-color', getFrameColor(item));
       const badge = getReleaseBadge(item);
+      const rating = getAlbumRating(item);
       const isGenreSort = activeSort === 'genre';
       const showCollectionExtra = ['location', 'lastWashed', 'genre', 'condition', 'releaseType'].includes(activeSort);
       const genreLabel = item.genre ? escapeHtml(item.genre) : '';
@@ -29102,6 +29213,7 @@ ${actionButtons}
               <p class="artist" style="margin:4px 0 0;">${escapeHtml(getArtistDisplayName(item))}</p>
             </div>
             <div style="flex-shrink:0; display:flex; align-items:center; gap:8px;">
+              ${rating === null ? '' : `<span class="collection-rating" title="Albumwertung">★ ${albumRatingFormat.format(rating)}</span>`}
               <span class="release-badge ${badge.className}">${escapeHtml(badge.label)}</span>
             </div>
           </div>
@@ -29174,6 +29286,7 @@ ${actionButtons}
       { key: 'location', label: 'Lagerort' },
       { key: 'lastWashed', label: 'Gewaschen' },
       { key: 'price', label: 'Preis' },
+      { key: 'rating', label: 'Bewertung' },
       { key: 'color', label: 'Farbe' },
       { key: 'status', label: 'Status' }
     ];
@@ -29275,6 +29388,9 @@ ${actionButtons}
             td.textContent = item.owned ? getStorageLabel(item) : '';
           } else if (col.key === 'lastWashed') {
             td.textContent = item.owned ? getWashedDateLabel(item) : '';
+          } else if (col.key === 'rating') {
+            const rating = getAlbumRating(item);
+            td.textContent = rating === null ? '–' : albumRatingFormat.format(rating);
           } else if (col.key === 'price') {
             const pVal = Number(item.discogsLowestPrice != null ? item.discogsLowestPrice : (item.discogsAveragePrice != null ? item.discogsAveragePrice : 0)) || 0;
             td.textContent = pVal > 0 ? (pVal.toFixed(2).replace(/\.00$/, '') + ' ' + escapeHtml(item.discogsCurrency || '€')) : '';
@@ -29299,7 +29415,7 @@ ${actionButtons}
 
 /* --- Tabellen-Spalten- und Spalten-Sortierung (persistent pro Account) --- */
 const DEFAULT_TABLE_SETTINGS = {
-  visible: { cover: true, title: true, type: true, year: true, genre: true, location: true, lastWashed: true, price: true, color: true, status: true, actions: true, common: false },
+  visible: { cover: true, title: true, type: true, year: true, genre: true, location: true, lastWashed: true, price: true, rating: true, color: true, status: true, actions: true, common: false },
   // activeSort: column name or 'newest'
   activeSortColumn: 'newest',
   activeSortDir: 'desc'
@@ -29350,7 +29466,7 @@ function renderColumnsPanel() {
   if (!panel) return;
   const ts = getTableSettings();
   const cols = [
-    ['cover', 'Cover'], ['title', 'Titel & Interpret'], ['type', 'Typ'], ['year', 'Jahr'], ['genre', 'Genre'], ['location', 'Lagerort'], ['lastWashed', 'Gewaschen'], ['price', 'Preis'], ['color', 'Farbe'], ['status', 'Status'], ['actions', 'Aktionen']
+    ['cover', 'Cover'], ['title', 'Titel & Interpret'], ['type', 'Typ'], ['year', 'Jahr'], ['genre', 'Genre'], ['location', 'Lagerort'], ['lastWashed', 'Gewaschen'], ['price', 'Preis'], ['rating', 'Bewertung'], ['color', 'Farbe'], ['status', 'Status'], ['actions', 'Aktionen']
   ];
   panel.innerHTML = cols.map(c => {
     const k = c[0];
