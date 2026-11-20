@@ -210,6 +210,7 @@
     justify-content: center;
   }
 
+  button > .close-icon { display:block; width:16px; height:16px; flex:none; margin:auto; pointer-events:none; }
   .settings-wrap { position: relative; }
   #cloudSyncStrip {
     position:absolute;
@@ -1394,6 +1395,7 @@
     justify-content: center;
   }
   .storage-compartments {
+    position:relative;
     display: grid;
     grid-template-columns: repeat(var(--shelf-columns, 2), minmax(0, 1fr));
     grid-template-rows: repeat(var(--shelf-rows, 2), minmax(112px, 1fr));
@@ -1491,6 +1493,11 @@
   .storage-record.random-highlight {
     background:var(--accent-bg);
     box-shadow:inset 0 0 0 1px var(--accent-border);
+  }
+  .storage-compartment-reel-marker {
+    position:absolute; top:0; left:0; z-index:4; box-sizing:border-box;
+    pointer-events:none; border:2px solid var(--accent); border-radius:8px;
+    box-shadow:0 0 14px var(--accent-border), inset 0 0 12px var(--accent-border);
   }
   .storage-compartment.random-pick-compartment {
     outline:2px solid var(--accent);
@@ -3514,30 +3521,51 @@
     min-height:0;
   }
   .storage-shelves-pane, .storage-unsorted-pane { min-width:0; min-height:0; background:var(--surface-1); }
-  .storage-shelves-pane { overflow:auto; padding-right:8px; touch-action:pan-x pan-y; }
-  .storage-shelf-groups { display:flex; flex-direction:column; gap:12px; width:max-content; min-width:100%; height:calc(100% - 40px); min-height:calc(100% - 40px); }
-  .storage-shelf-group { display:flex; flex-direction:column; align-items:flex-start; gap:8px; width:max-content; }
-  .storage-shelf-group-heading { display:flex; align-items:center; gap:6px; color:var(--text-secondary); font-size:11px; font-weight:600; }
-  .storage-shelf-group-count { color:var(--text-muted); font-weight:400; }
-  .storage-shelf-group-list { display:flex; align-items:flex-start; gap:10px; width:max-content; min-width:100%; }
-  .storage-shelf-group-list { zoom:var(--storage-shelf-zoom, 1); }
-  .storage-shelves-body { display:flex; align-items:stretch; gap:8px; width:max-content; min-width:100%; height:calc(100% - 40px); min-height:calc(100% - 40px); }
-  .storage-shelves-body .storage-shelf-groups { height:auto; min-height:0; flex:1; min-width:0; }
-  .storage-collapsed-rail { position:sticky; left:0; z-index:3; display:flex; flex-direction:column; align-items:flex-start; gap:8px; flex:0 0 auto; background:var(--surface-1); }
-  .storage-collapsed-rail-toggle { width:30px; min-width:30px; height:30px; padding:0; justify-content:center; }
-  .storage-collapsed-rail-toggle svg { transition:transform .15s ease; }
-  .storage-shelves-body.rail-open .storage-collapsed-rail-toggle svg { transform:rotate(180deg); }
-  .storage-shelves-body:not(.rail-open) .storage-shelf-group-collapsed { display:none; }
-  .storage-collapsed-rail .storage-shelf-group-list { flex-direction:column; min-width:0; }
-  .storage-collapsed-rail .storage-shelf-group-collapsed { max-height:calc(100% - 38px); overflow:auto; }
-  .storage-shelf-group-collapsed { padding:10px; border:0.5px solid var(--border); border-radius:8px; background:rgba(255,255,255,0.025); }
-  .storage-shelf-group-expanded { flex:1; min-height:0; }
-  .storage-shelf-group-expanded .storage-shelf-group-list { align-items:flex-start; height:auto; min-height:0; }
+  .storage-shelves-pane {
+    display:grid;
+    grid-template-rows:auto minmax(0, 1fr) auto;
+    gap:6px;
+    min-width:0;
+    touch-action:pan-x pan-y;
+  }
+  .storage-desktop-shelves { display:grid; grid-template-columns:clamp(90px, 12vw, 170px) minmax(0, 1fr); gap:10px; min-height:0; }
+  .storage-shelf-names { display:flex; flex-direction:column; gap:4px; overflow:auto; padding:2px; border-right:1px solid var(--border); }
+  .storage-shelf-names button { padding:7px 9px; flex:none; white-space:normal; overflow-wrap:anywhere; text-align:left; background:transparent; border-color:transparent; }
+  .storage-shelf-names button[aria-current="true"], .storage-shelf-names button.is-drag-hovered { color:var(--accent); background:var(--accent-bg); border-color:var(--accent-border); }
+  .storage-shelf-stage { overflow:auto; min-width:0; min-height:0; clip-path:inset(0); }
+  .storage-shelf-stage.is-sliding { overflow:hidden; }
+  .storage-shelf-stage-content { position:relative; display:flex; width:max-content; min-width:100%; min-height:100%; zoom:var(--storage-shelf-zoom, 1); }
+  .storage-shelf-stage .storage-shelf[hidden] { display:none !important; }
+  .storage-shelf-stage-content > .storage-shelf { flex:none; margin:auto; }
+  .storage-shelf-stage-content > .storage-shelf-exit {
+    position:absolute; z-index:1; margin:0; pointer-events:none;
+  }
+  .storage-shelf-names button.has-storage-match { outline:1px dashed var(--accent); outline-offset:-2px; }
+  .storage-shelf-names button.is-right-shelf { border-color:var(--border-strong); }
+  .storage-shelf-panes { display:grid; grid-template-columns:minmax(0,1fr); min-height:0; }
+  .storage-shelf-panes.is-split { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .storage-shelf-panes > [data-shelf-side] { display:grid; grid-template-rows:minmax(0,1fr); min-width:0; min-height:0; }
+  .storage-shelf-panes > [data-shelf-side][hidden], .storage-shelf-panes select { display:none; }
+  .storage-shelf-panes.is-split > [data-shelf-side] { grid-template-rows:auto minmax(0,1fr); gap:6px; border:1px solid var(--border); border-radius:8px; }
+  .storage-shelf-panes.is-split select { display:block; width:100%; min-width:0; }
+  .storage-shelf-pagination, .storage-shelf-pager, .storage-shelf-zoom-label { display:flex; align-items:center; justify-content:center; gap:8px; font-variant-numeric:tabular-nums; }
+  .storage-shelf-pagination { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); }
+  .storage-shelf-pager { grid-column:2; grid-row:1; }
+  .storage-shelf-pager[hidden] { display:none; }
+  .storage-shelf-zoom-label { grid-column:1; grid-row:1; justify-content:flex-start; min-width:0; }
+  .storage-shelf-pagination [data-storage-split] { grid-column:3; grid-row:1; justify-self:end; }
+  .storage-shelf-pagination [data-storage-split][aria-pressed="true"] {
+    color:var(--accent); background:var(--accent-bg); border-color:var(--accent-border);
+  }
+  .storage-shelf-pagination button { display:inline-flex; align-items:center; justify-content:center; min-width:34px; min-height:32px; padding:0 6px; }
+  .storage-shelf-pagination svg { display:block; width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .storage-shelf-page, .storage-shelf-zoom-value { min-width:4ch; text-align:center; }
+  .storage-shelf-zoom-label { font-size:12px; }
+  .storage-shelf-zoom-label input { width:clamp(65px,9vw,135px); min-width:0; padding:0; }
   .storage-shelf:not(.is-collapsed) .storage-records { max-height:240px; }
   .storage-shelves-toolbar { position:sticky; left:0; z-index:4; display:flex; justify-content:flex-end; gap:8px; width:100%; padding-bottom:8px; background:var(--surface-1); }
   .storage-shelves-toggle-all { min-height:32px; padding:5px 9px; font-size:12px; }
   .storage-placement-mode-toggle { min-height:32px; padding:5px 9px; font-size:12px; }
-  .storage-shelf-zoom-controls { display:flex; align-items:center; gap:6px; }
   .storage-placement-mode-toggle[aria-pressed="true"] { color:var(--accent); border-color:var(--accent-border); background:var(--accent-bg); }
   .storage-layout.storage-item-dragging.storage-placement-mode .storage-shelf:not(.is-collapsed) {
     width:calc(var(--shelf-columns, 1) * 148px + 24px);
@@ -3686,8 +3714,8 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     width: 100%;
-    height: calc(100dvh - 210px);
-    min-height: 360px;
+    height: calc(100dvh - 210px - var(--app-status-height, 0px));
+    min-height: min(360px, max(0px, calc(100dvh - 210px - var(--app-status-height, 0px))));
     border: 0.5px solid var(--border);
     background: var(--surface-1);
     padding: 12px;
@@ -3731,12 +3759,9 @@
   }
   @media (max-width: 720px) {
     .wrap.storage-page { padding: 0 8px 8px; }
-    .storage-page > .storage-board { height: calc(100dvh - 250px); min-height: 320px; padding: 8px; }
+    .storage-page > .storage-board { height: calc(100dvh - 250px - var(--app-status-height, 0px)); min-height: min(320px, max(0px, calc(100dvh - 250px - var(--app-status-height, 0px)))); padding: 8px; }
     .storage-page .desktop-form-shell > .panel:first-child .toprow textarea { min-width: 100px; }
     .storage-shelves-toolbar { flex-wrap:wrap; justify-content:flex-start; gap:5px; }
-    .storage-shelf-group-list { zoom:calc(var(--storage-shelf-zoom, 1) * .62); }
-    .storage-shelf-zoom-controls { display:flex; flex:0 0 100%; align-items:center; gap:4px; }
-    .storage-shelf-zoom-controls button { width:30px; min-width:30px; height:30px; min-height:30px; padding:0; justify-content:center; }
     .storage-shelf-zoom-value { min-width:40px; color:var(--text-secondary); font-size:11px; text-align:center; }
     .storage-shelves-toggle-all,
     .storage-placement-mode-toggle { flex:1 1 0; min-width:0; min-height:30px; padding:4px 6px; font-size:11px; white-space:nowrap; }
@@ -4010,7 +4035,8 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%) scale(var(--vinyl-size, 1));
-    width: clamp(128px, 18vw, 176px);
+    --vinyl-preview-width: clamp(128px, 18vw, 176px);
+    width: var(--vinyl-preview-width);
     aspect-ratio: 1;
     border-radius: 50%;
     border: 1px solid rgba(255,255,255,0.65);
@@ -4020,6 +4046,27 @@
     box-shadow: 0 2px 12px rgba(0,0,0,.55);
     pointer-events: none;
     overflow: hidden;
+  }
+  #collectionGrid > .collection-card.is-vinyl-preview-open {
+    overflow: visible;
+    z-index: 3;
+  }
+  #collectionGrid > .collection-card.is-vinyl-preview-open > .album-color-bar {
+    overflow: visible;
+    clip-path: inset(-180px 0 0);
+  }
+  #collectionGrid > .collection-card.is-vinyl-preview-open .vinyl-card-preview {
+    top: 100%;
+    width: min(100%, var(--vinyl-preview-width));
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    #collectionGrid > .collection-card.is-vinyl-preview-open .vinyl-card-preview {
+      animation: collectionVinylSpin 3s linear infinite;
+    }
+  }
+  @keyframes collectionVinylSpin {
+    from { transform: translate(-50%, -50%) scale(var(--vinyl-size, 1)) rotate(0turn); }
+    to { transform: translate(-50%, -50%) scale(var(--vinyl-size, 1)) rotate(1turn); }
   }
   .vinyl-card-preview.is-clear,
   .fullscreen-player-vinyl.is-clear {
@@ -4135,7 +4182,7 @@
     top: 8px;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     min-width: 0;
     min-height: 0;
     overflow: hidden;
@@ -4197,7 +4244,7 @@
     position:static;
     min-height:0;
     padding:12px;
-    grid-template-rows:minmax(0, 1fr) auto;
+    grid-template-rows:auto minmax(0, 1fr) auto;
   }
   .vinyl-editor-box.is-picture-disc .vinyl-editor-disc { width:min(100%, 340px, 48vh); }
   .vinyl-editor-box.is-picture-disc .vinyl-editor-meta { grid-template-columns:minmax(0,1fr); width:100%; }
@@ -4286,7 +4333,7 @@
   }
   @media (max-width: 640px) {
     .album-color-bar:not(.inline) { height: 14px; }
-    .vinyl-card-preview { width: clamp(112px, 32vw, 150px); }
+    .vinyl-card-preview { --vinyl-preview-width: clamp(112px, 32vw, 150px); }
   }
   @media (max-width: 700px) and (max-height: 650px) {
     .vinyl-editor-layout { grid-template-rows: minmax(132px, 30%) minmax(0, 1fr); }
@@ -4790,6 +4837,8 @@
   #settingsPanel .tooltip-btn::after { display:none; bottom:100%; left:0; margin:0 0 4px; transform:none; width:max-content; max-width:220px; white-space:normal; }
   #settingsPanel .tooltip-btn:hover::after { display:block; transform:none; }
   #settingsPanel .settings-primary-actions > :last-child::after { left:auto; right:0; }
+  .collection-header .tooltip-btn::after { display:none; left:auto; right:0; transform:translateY(-14px); }
+  .collection-header .tooltip-btn:hover::after { display:block; }
   .filter-help-panel {
     display: none;
     position: absolute;
@@ -6175,8 +6224,7 @@
   .storage-page .desktop-form-shell { display: block; }
   .storage-page .desktop-form-shell > .panel:first-child { position: static; max-height: none; overflow: visible; }
   .wrap.storage-page { padding: 0 8px 6px; }
-  .storage-page > .storage-board { height: calc(100dvh - 128px); min-height: 0; padding: 6px; }
-  .storage-shelf-group-list { zoom: calc(var(--storage-shelf-zoom, 1) * .62); }
+  .storage-page > .storage-board { height: calc(100dvh - 128px - var(--app-status-height, 0px)); min-height: 0; padding: 6px; }
   .modal-box { max-height: calc(100dvh - 16px); overflow: auto; }
   .modal-overlay { padding: 8px; }
   .collection-toolbar { flex-wrap: nowrap; gap: 6px; }
@@ -7316,6 +7364,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .fullscreen-player-controls > .album-mini-control.primary { flex-basis:clamp(42px,12vw,58px) !important; width:clamp(42px,12vw,58px) !important; height:clamp(42px,12vw,58px) !important; }
 }
 
+  .is-label-editor .vinyl-editor-preview { grid-template-rows:minmax(0, 1fr) auto; }
   .is-label-editor #vinylEditorDisc::after { display:none; }
   .is-label-editor #cdDesignControl, .is-label-editor .vinyl-transparency-label,
   .is-label-editor #vinylLabelColor, .is-label-editor .vinyl-editor-meta label:has(#vinylLabelColor),
@@ -7671,7 +7720,24 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .vinyl-editor-command-row button { flex:1 0 auto; white-space:nowrap; }
   .vinyl-editor-command-row button[hidden], .is-label-editor .vinyl-main-label-photo { display:none !important; }
   .is-single-vinyl #vinylIndexControl, .is-single-vinyl #copyVinylDesignBtn { display:none !important; }
-  .vinyl-editor-preview > .vinyl-count-control { grid-column:1 / -1; justify-self:center; align-items:center; margin-bottom:8px; }
+  .vinyl-editor-preview > .vinyl-count-control { grid-column:1 / -1; justify-self:center; align-items:center; }
+  @media (max-width:700px) and (orientation:portrait) {
+    .vinyl-editor-box:not(.is-picture-disc) .vinyl-editor-layout {
+      grid-template-rows:minmax(min(235px, 48dvh), 42%) minmax(0, 1fr);
+    }
+    .vinyl-editor-box:not(.is-picture-disc) .vinyl-editor-preview {
+      grid-template-rows:auto minmax(0, 1fr);
+    }
+    .vinyl-editor-box:not(.is-picture-disc) .vinyl-editor-preview > :is(.vinyl-editor-disc, .vinyl-editor-meta) {
+      align-self:center;
+    }
+    .vinyl-editor-box:not(.is-picture-disc) .vinyl-editor-preview > .vinyl-editor-meta {
+      max-height:100%;
+      overflow-y:auto;
+    }
+    .vinyl-editor-box.is-label-editor .vinyl-editor-preview { grid-template-rows:minmax(0, 1fr); }
+    .vinyl-editor-box.is-picture-disc .vinyl-editor-preview { grid-template-rows:auto auto auto; }
+  }
   .is-label-editor .vinyl-layer-detail-row input[type="range"] { width:100%; min-width:0; height:28px; padding:0; accent-color:var(--accent); }
   .vinyl-label-slider-value { font-size:11px; text-align:right; font-variant-numeric:tabular-nums; color:var(--text-secondary); }
   .is-label-editor .vinyl-layer-detail-row { grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); }
@@ -7703,6 +7769,40 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .storage-shelf-pending-records { max-height:150px; overflow:auto; }
   .storage-shelf.is-collapsed .storage-shelf-pending { display:none; }
   .storage-shelf-pending-badge { flex:0 0 auto; color:var(--accent); font-size:10px; white-space:nowrap; }
+
+/* A shared bottom row reserves its actual height, even when a message wraps. */
+#appStatusBar {
+  position:fixed; inset:auto 0 0; z-index:105;
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+  pointer-events:none;
+}
+#appStatusBar:has(#cloudSyncBanner:not([hidden])),
+body:not(.fullscreen-player-open) #appStatusBar:has(> #albumListeningDock.is-collapsed:not([hidden], .is-hidden)) {
+  padding:6px max(12px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background:var(--surface-1);
+  box-shadow:0 -1px var(--border);
+}
+#appStatusBar > #cloudSyncBanner {
+  position:static; flex:1 1 320px; min-width:0; max-height:min(25dvh,120px);
+  overflow-wrap:anywhere; justify-content:flex-start; text-align:left; padding:6px 10px;
+  box-shadow:none; pointer-events:auto;
+}
+body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock.is-collapsed {
+  position:relative; inset:auto; margin-left:auto; max-width:100%; pointer-events:auto;
+}
+#appStatusBar > #albumListeningDock.is-collapsed.is-hidden { display:none; }
+body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock.is-expanded {
+  bottom:max(12px, var(--app-status-height, 0px));
+  pointer-events:auto;
+}
+#appRoot { padding-bottom:var(--app-status-height, 0px); }
+.modal-overlay {
+  bottom:var(--app-status-height, 0px);
+  align-items:safe center;
+  overflow-y:auto;
+}
+#shopModeOverlay { bottom:var(--app-status-height, 0px); }
+.fullscreen-player-overlay { height:calc(100dvh - var(--app-status-height, 0px)); }
 </style>
 <script src="discogs-client.js?v=20261119"></script>
 <script src="image-link-health.js?v=20261116"></script>
@@ -7713,7 +7813,11 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
 </script>
 </head>
 <body>
-<div id="cloudSyncBanner" role="status" aria-live="polite" hidden></div>
+<svg aria-hidden="true" width="0" height="0" style="position:absolute">
+  <symbol id="close-icon-symbol" viewBox="0 0 24 24">
+    <path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </symbol>
+</svg>
 <div id="appLoading" class="app-loading" role="status" aria-live="polite"><div class="app-loading-title" id="appLoadingTitle"></div><div class="app-loading-block"><span></span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="6" stroke="currentColor" stroke-width="1" opacity=".75"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></svg></div><p id="appLoadingText">Wird geladen …</p></div>
 
 <!-- Login / Registrierung -->
@@ -7788,7 +7892,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
             <label class="storage-random-field">
               <input type="text" id="storageRandomYearInput" class="storage-random-year-input" inputmode="numeric" placeholder="Jahr" aria-label="Jahr oder Jahresbereich">
             </label>
-            <button type="button" id="storageRandomClearBtn" class="storage-random-clear-btn" aria-label="Genre- und Jahresfilter leeren" title="Genre und Jahr leeren" hidden>×</button>
+            <button type="button" id="storageRandomClearBtn" class="storage-random-clear-btn" aria-label="Genre- und Jahresfilter leeren" title="Genre und Jahr leeren" hidden><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
           </div>
           <div class="storage-random-options">
             <label class="storage-random-format-toggle"><input type="checkbox" data-storage-random-format="Album" checked aria-label="LP einbeziehen"><span>LP</span></label>
@@ -8189,9 +8293,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="panel user-menu-panel" id="otherUsersPanel">
     <div class="user-menu-header">
       <p class="panel-title">Andere Nutzer</p>
-      <button type="button" id="closeUserMenuBtn" class="icon-btn" title="Schließen" aria-label="Schließen">
-        ✕︎
-      </button>
+      <button type="button" id="closeUserMenuBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <input type="search" id="userSearchInput" class="user-search-input" placeholder="Nutzer oder Sammlung suchen…" aria-label="Nutzer suchen" autocomplete="off">
     <div id="userList" class="user-list user-card-grid"></div>
@@ -8244,7 +8346,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
       <div id="collectionSearchRow" class="search-row" style="width:100%; margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; position:relative;">
         <div style="flex:1; min-width:200px; display:flex; align-items:center; gap:8px; position:relative;">
           <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Lagerort, Waschdatum..." style="flex:1; min-width:0;" />
-          <button type="button" id="collectionFilterHelpBtn" class="icon-btn tooltip-btn" title="Suchhilfe anzeigen" aria-label="Suchhilfe anzeigen" data-tooltip="Filter: title:, artist:, track:, genre:, year:, location:, washed:, notes:, releaseType:">?</button>
+          <button type="button" id="collectionFilterHelpBtn" class="icon-btn" title="Suchhilfe anzeigen" aria-label="Suchhilfe anzeigen">?</button>
           <div id="collectionFilterHelpPanel" class="filter-help-panel" aria-live="polite">
             <strong>Verfügbare Filter</strong><br>
             <code>title:</code> Titel, <code>artist:</code> Interpret, <code>track:</code> Track, <code>genre:</code> Genre,<br>
@@ -8270,7 +8372,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.8"/></svg>
           </button>
           <button id="clearSelectionBtn" class="settings-fix-btn bulk-action-btn tooltip-btn" title="Auswahl löschen" aria-label="Auswahl löschen" data-tooltip="Auswahl löschen">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5l14 14M19 5 5 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg>
           </button>
           <button type="button" id="bulkDeleteBtn" class="settings-fix-btn bulk-action-btn tooltip-btn" title="Ausgewählte Alben löschen" aria-label="Ausgewählte Alben löschen" data-tooltip="Alben löschen" disabled style="color:#e35c65;">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2m4 0-1 15H6L5 6m5 4v7m4-7v7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -8282,7 +8384,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h12M4 10h12M4 14h8M17 14v7m-3.5-3.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <button id="bulkCancelBtn" class="settings-fix-btn bulk-action-btn tooltip-btn" title="Massenbearbeitung abbrechen" aria-label="Massenbearbeitung abbrechen" data-tooltip="Abbrechen" style="color:var(--text-secondary);">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg>
           </button>
         </div>
       </div>
@@ -8438,7 +8540,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
           <button type="button" id="coverSearchSubmitBtn">Suche</button>
         </div>
       </div>
-      <button type="button" id="closeCoverSearchBtn" class="icon-btn" title="Schließen">×</button>
+      <button type="button" id="closeCoverSearchBtn" class="icon-btn" title="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <p class="match-status" id="coverSearchStatus" hidden></p>
     <div class="cover-search-grid" id="coverSearchResults"></div>
@@ -8449,7 +8551,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="modal-box album-editor-box">
     <div class="album-editor-heading">
       <p class="modal-title" id="albumEditorTitle">Album bearbeiten</p>
-      <button type="button" id="closeAlbumEditorBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+      <button type="button" id="closeAlbumEditorBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <div id="albumEditorModalContent"></div>
   </div>
@@ -8459,11 +8561,13 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="modal-box album-listening-box">
     <div class="album-editor-heading">
       <p class="modal-title" id="albumListeningTitle">Album anhören</p>
-      <button type="button" id="closeAlbumListeningBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+      <button type="button" id="closeAlbumListeningBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <div id="albumListeningContent"></div>
   </div>
 </div>
+<div id="appStatusBar">
+<div id="cloudSyncBanner" role="status" aria-live="polite" hidden></div>
 <aside id="albumListeningDock" class="album-listening-dock is-collapsed" aria-label="Mini-Player" hidden>
   <div class="album-listening-dock-header">
     <strong id="albumListeningDockTitle" class="album-listening-dock-title"></strong>
@@ -8478,6 +8582,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     <ol id="albumQueueList" class="album-queue-list"></ol>
   </section>
 </aside>
+</div>
 
 <div id="fullscreenPlayerOverlay" class="fullscreen-player-overlay" role="dialog" aria-modal="true" aria-label="Musikplayer im Vollbild" hidden>
   <div class="fullscreen-player-top-actions">
@@ -8490,12 +8595,12 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     <button type="button" id="fullscreenPlayerZoomToggle" class="icon-btn" title="Plattenspieler und Cover vergrößern" aria-label="Plattenspieler und Cover vergrößern" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 6 6M7 10h6M10 7v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
     <button type="button" id="fullscreenPlayerViewToggle" class="icon-btn" title="Schräge Ansicht" aria-label="Schräge Ansicht"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="13" rx="9" ry="4.5" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="1.2" fill="currentColor"/></svg></button>
     <button type="button" id="fullscreenPlayerMenuToggle" class="icon-btn" title="Sammlung einblenden" aria-label="Sammlung einblenden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 5V2h14v16h-3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><rect x="3" y="6" width="14" height="16" rx="1" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="14" r="4" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="14" r="1" fill="currentColor"/></svg></button>
-    <button type="button" id="closeFullscreenPlayerBtn" class="icon-btn fullscreen-player-close" title="Vollbild schließen" aria-label="Vollbild schließen"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button type="button" id="closeFullscreenPlayerBtn" class="icon-btn fullscreen-player-close" title="Vollbild schließen" aria-label="Vollbild schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
   </div>
-  <aside id="fullscreenPlayerMusicSettingsPanel" class="fullscreen-player-music-settings" aria-label="Musikplayer-Einstellungen" hidden><header><strong>Musikplayer-Einstellungen</strong><button type="button" id="fullscreenPlayerMusicSettingsClose" aria-label="Musikplayer-Einstellungen schließen">×</button></header><div id="fullscreenPlayerMusicSettingsContent"></div></aside>
+  <aside id="fullscreenPlayerMusicSettingsPanel" class="fullscreen-player-music-settings" aria-label="Musikplayer-Einstellungen" hidden><header><strong>Musikplayer-Einstellungen</strong><button type="button" id="fullscreenPlayerMusicSettingsClose" aria-label="Musikplayer-Einstellungen schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></header><div id="fullscreenPlayerMusicSettingsContent"></div></aside>
   <aside id="fullscreenPlayerMenu" class="fullscreen-player-menu" aria-label="Sammlung durchsuchen" hidden>
     <div class="fullscreen-player-menu-header">
-      <div class="fullscreen-player-menu-heading"><strong id="fullscreenPlayerMenuTitle">Sammlung</strong><button type="button" id="fullscreenPlayerMenuClose" aria-label="Albumauswahl schließen">×</button></div>
+      <div class="fullscreen-player-menu-heading"><strong id="fullscreenPlayerMenuTitle">Sammlung</strong><button type="button" id="fullscreenPlayerMenuClose" aria-label="Albumauswahl schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></div>
       <span id="fullscreenPlayerMenuCount" class="settings-panel-hint" aria-live="polite"></span>
       <input type="search" id="fullscreenPlayerMenuSearch" placeholder="Sammlung durchsuchen …" aria-label="Sammlung durchsuchen" autocomplete="off">
       <div class="fullscreen-player-menu-filter" role="group" aria-label="Sammlungsfilter">
@@ -8510,7 +8615,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     <ol id="fullscreenPlayerMenuList" class="fullscreen-player-menu-list"></ol>
   </aside>
   <form id="fullscreenPlayerPosterForm" class="fullscreen-player-poster-form" aria-label="Raum gestalten" hidden>
-    <div class="room-settings-heading"><strong>Raum gestalten</strong><button type="button" id="fullscreenRoomClose" aria-label="Raum-Menü schließen">×</button></div>
+    <div class="room-settings-heading"><strong>Raum gestalten</strong><button type="button" id="fullscreenRoomClose" aria-label="Raum-Menü schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></div>
     <section class="fullscreen-audio-settings" aria-label="Audio-Equalizer">
       <strong>Audio-Equalizer</strong>
       <button type="button" id="fullscreenAudioConnect">Audio mit Equalizer verbinden</button>
@@ -8646,7 +8751,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     </div>
   </div>
   <section id="fullscreenPlayerTracksPanel" class="fullscreen-player-tracks-panel" aria-label="Album-Titelliste" hidden>
-    <header><strong id="fullscreenPlayerTracksTitle">Album-Titelliste</strong><button type="button" id="fullscreenPlayerTrackMapping" aria-label="Titel zuordnen" title="Titel zuordnen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 17V5l9-2v9"/><circle cx="6" cy="17" r="3"/><path d="M18 12.5l3 3-5.7 5.7-3.6.6.6-3.6z" fill="currentColor" fill-opacity=".12"/><path d="m17.3 13.2 3 3"/></svg></button><button type="button" id="fullscreenPlayerTracksClose" aria-label="Album-Titelliste schließen">×</button></header>
+    <header><strong id="fullscreenPlayerTracksTitle">Album-Titelliste</strong><button type="button" id="fullscreenPlayerTrackMapping" aria-label="Titel zuordnen" title="Titel zuordnen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 17V5l9-2v9"/><circle cx="6" cy="17" r="3"/><path d="M18 12.5l3 3-5.7 5.7-3.6.6.6-3.6z" fill="currentColor" fill-opacity=".12"/><path d="m17.3 13.2 3 3"/></svg></button><button type="button" id="fullscreenPlayerTracksClose" aria-label="Album-Titelliste schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></header>
     <p id="fullscreenPlayerTracksStatus" class="settings-panel-hint" role="status"></p>
     <ol id="fullscreenPlayerTracksList" class="fullscreen-player-tracks-list"></ol>
   </section>
@@ -8680,7 +8785,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
 <aside class="docs-panel" id="docsPanel" aria-label="Hilfe und Dokumentation" aria-hidden="true">
   <div class="docs-header">
     <h2>Hilfe &amp; Doku</h2>
-    <button type="button" id="closeDocsBtn" class="icon-btn" title="Schließen" aria-label="Doku schließen">×</button>
+    <button type="button" id="closeDocsBtn" class="icon-btn" title="Schließen" aria-label="Doku schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
   </div>
   <input type="search" id="docsSearch" class="docs-search" placeholder="In der Doku suchen…" aria-label="In der Doku suchen" autocomplete="off">
   <div class="docs-body" id="docsBody">
@@ -8889,7 +8994,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="modal-box compare-box">
     <div class="compare-close-row">
       <p class="modal-title" id="compareTitle" hidden>Sammlungen vergleichen</p>
-      <button type="button" id="closeCompareBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+      <button type="button" id="closeCompareBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <div id="compareBody"></div>
   </div>
@@ -8899,7 +9004,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="modal-box cover-url-box">
     <div class="album-editor-heading">
       <p class="modal-title" id="discogsUrlTitle">Discogs-Link</p>
-      <button type="button" id="closeDiscogsUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+      <button type="button" id="closeDiscogsUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <div class="row">
       <input type="url" id="fDiscogsUrl" placeholder="Discogs-Release- oder Master-Link" aria-label="Discogs-URL des Albums">
@@ -8912,7 +9017,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="modal-box cover-url-box">
     <div class="album-editor-heading">
       <p class="modal-title" id="spotifyAlbumUrlTitle">Spotify-Link · Album oder Playlist</p>
-      <button type="button" id="closeSpotifyAlbumUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+      <button type="button" id="closeSpotifyAlbumUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <input type="text" id="spotifyAlbumUrlInput" placeholder="https://open.spotify.com/intl-de/album/…" aria-label="Spotify-Album, Playlist oder Spotify-URI" autocomplete="off" spellcheck="false">
     <p class="settings-panel-hint" id="spotifyAlbumUrlStatus" aria-live="polite">Album- oder Playlist-Link. Mit „Spotify-Treffer neu auswählen“ öffnest du die Suche erneut.</p>
@@ -8927,7 +9032,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="modal-box cover-url-box">
     <div class="album-editor-heading">
       <p class="modal-title" id="coverUrlTitle">Cover-Bildlink</p>
-      <button type="button" id="closeCoverUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+      <button type="button" id="closeCoverUrlBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <input type="url" id="coverUrlModalInput" aria-label="Cover-Bildlink" placeholder="https://…">
     <p class="settings-panel-hint" id="coverUrlResolutionMessage" aria-live="polite"></p>
@@ -8949,7 +9054,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
         <span class="settings-panel-hint" id="vinylEditorAlbumTitle"></span>
         <span class="settings-panel-hint" id="vinylMigrationProgress" style="display:none;"></span>
       </div>
-      <button type="button" id="closeVinylEditorBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+      <button type="button" id="closeVinylEditorBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <div class="vinyl-editor-command-row">
       <button type="button" id="suggestVinylFromDiscogsBtn" title="Design aus Discogs vorschlagen"><span class="command-long">Design aus Discogs</span><span class="command-short">Discogs</span></button>
@@ -8961,7 +9066,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     </div>
     <div class="vinyl-editor-layout">
       <aside id="vinylReferencePanel" class="vinyl-reference-panel" hidden aria-label="Discogs-Fotovorlage">
-        <div class="vinyl-editor-toolbar"><strong>Fotovorlage</strong><button type="button" id="hideVinylReferenceBtn" aria-label="Fotovorlage ausblenden">×</button></div>
+        <div class="vinyl-editor-toolbar"><strong>Fotovorlage</strong><button type="button" id="hideVinylReferenceBtn" aria-label="Fotovorlage ausblenden"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></div>
         <img id="vinylReferenceImage" alt="Ausgewähltes Discogs-Release-Foto als Vorlage" referrerpolicy="no-referrer">
         <div class="vinyl-reference-navigation"><button type="button" id="previousVinylReferenceBtn" aria-label="Vorheriges Referenzfoto">←</button><span id="vinylReferenceCounter"></span><button type="button" id="nextVinylReferenceBtn" aria-label="Nächstes Referenzfoto">→</button><button type="button" id="chooseVinylReferenceBtn">Auswahl</button></div>
         <label class="vinyl-reference-opacity">Überlagerung <output id="vinylReferenceOpacityValue">50%</output><input type="range" id="vinylReferenceOpacity" min="0" max="100" value="50" aria-label="Deckkraft der Fotovorlage"></label>
@@ -9039,7 +9144,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="modal-box shop-mode-box">
     <div class="wash-mode-header">
       <p class="modal-title" id="shopModeTitle">Plattenladen</p>
-      <button type="button" id="closeShopModeBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+      <button type="button" id="closeShopModeBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <div class="shop-layout">
     <div class="shop-left">
@@ -9064,7 +9169,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     <div class="wash-mode-header">
       <p class="modal-title" id="washModeTitle">Waschmodus</p>
       <p class="wash-mode-message wash-header-location" id="washModeLocation"></p>
-      <button type="button" id="closeWashModeBtn" class="icon-btn" title="Waschen beenden" aria-label="Waschen beenden">×</button>
+      <button type="button" id="closeWashModeBtn" class="icon-btn" title="Waschen beenden" aria-label="Waschen beenden"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <section id="washModeSelection">
       <div class="wash-shelf-overview" id="washShelfOverview"></div>
@@ -9129,7 +9234,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
           <p class="modal-title" id="storageResultTitle"></p>
           <p class="storage-result-artist" id="storageResultArtist"></p>
         </div>
-        <button type="button" id="closeStorageRandomResultBtn" class="icon-btn" title="Schließen" aria-label="Ergebnis schließen">×</button>
+        <button type="button" id="closeStorageRandomResultBtn" class="icon-btn" title="Schließen" aria-label="Ergebnis schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
       </div>
       <div class="storage-result-content-layout">
         <div class="storage-result-layout">
@@ -9178,7 +9283,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="modal-box" style="width:min(560px, 94vw); max-height:85vh; overflow:auto;">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
       <p class="modal-title">Lagerorte verwalten</p>
-      <button type="button" id="closeShelfLocationsBtn" class="icon-btn" title="Schließen" aria-label="Schließen">✕︎</button>
+      <button type="button" id="closeShelfLocationsBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <div id="shelfLocationsList" style="display:grid; gap:8px; margin:14px 0;"></div>
     <div class="shelf-location-new" style="display:grid; grid-template-columns:minmax(0,1fr) 88px 88px auto; align-items:end; gap:8px;">
@@ -9194,7 +9299,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   <div class="modal-box storage-order-box">
     <div class="storage-order-header">
       <p class="modal-title" id="storageOrderTitle">Fachsortierung</p>
-      <button type="button" id="closeStorageOrderBtn" class="icon-btn" title="Schließen" aria-label="Schließen">×</button>
+      <button type="button" id="closeStorageOrderBtn" class="icon-btn" title="Schließen" aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
     <p class="settings-panel-hint" id="storageOrderLocation"></p>
     <div class="storage-order-settings">
@@ -9503,6 +9608,8 @@ function restoreCollectionViewSettings(settings) {
   storagePaneSplit = 0.67;
   storageShelfZoom = 0.8;
   storagePlacementMode = false;
+  desktopStorageShelfId = desktopStorageRightId = desktopStorageSearch = '';
+  desktopStorageSplit = false;
   collapsedStorageShelfIds.clear();
   initializedStorageShelfIds.clear();
   expandedStorageShelfIds.clear();
@@ -10415,7 +10522,6 @@ function updateCloudSyncBanner(message, state = 'pending', retry = false) {
     banner.append(button);
   }
   banner.hidden = false;
-  raiseNotificationLayer(banner);
   if (cloudCollectionIntegrityIssue?.uid === currentUid) return;
   cloudBannerHideTimer = setTimeout(() => {
     banner.hidden = true;
@@ -12608,7 +12714,7 @@ if (settingsBtn && settingsPanel) {
     settingsPanel.style.top = `${top}px`;
     settingsPanel.style.right = `${Math.max(8, window.innerWidth - buttonRect.right)}px`;
     settingsPanel.style.left = 'auto';
-    settingsPanel.style.maxHeight = `${Math.max(0, viewportTop + viewportHeight - top - 8)}px`;
+    settingsPanel.style.maxHeight = `max(0px, calc(${Math.max(0, viewportTop + viewportHeight - top - 8)}px - var(--app-status-height, 0px)))`;
   };
   const repositionOpenSettings = () => {
     if (settingsPanel.classList.contains('open')) positionSettingsPanel();
@@ -13713,7 +13819,7 @@ function resetShopMode() {
 
 function closeShopMode() {
   const shopDock = document.getElementById('albumListeningDock');
-  if (shopDock.parentElement.id === 'shopPlayerSlot') document.body.appendChild(shopDock);
+  if (shopDock.parentElement.id === 'shopPlayerSlot') document.getElementById('appStatusBar').appendChild(shopDock);
   document.body.classList.remove('shop-active');
   document.getElementById('shopModeHeaderBtn').classList.remove('toggle-active');
   if (shopSavedTitle !== null) document.getElementById('collectionTitleDisplay').textContent = shopSavedTitle;
@@ -14161,7 +14267,7 @@ function renderShelfLocationsManager() {
       <input type="text" class="shelf-name-input" value="${escapeHtml(shelf.name)}" aria-label="Regalname">
       <label class="storage-dimension-control">Reihen <input type="number" class="shelf-rows-input" min="1" max="10" value="${shelf.rows}" aria-label="Reihen"></label>
       <label class="storage-dimension-control">Spalten <input type="number" class="shelf-columns-input" min="1" max="10" value="${shelf.columns}" aria-label="Spalten"></label>
-      <button type="button" class="remove-shelf-btn" title="Regal löschen" aria-label="Regal löschen">×</button>
+      <button type="button" class="remove-shelf-btn" title="Regal löschen" aria-label="Regal löschen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
     </div>
   `).join('');
   list.querySelectorAll('[data-shelf-id]').forEach(row => {
@@ -15267,7 +15373,7 @@ function renderVinylEditor() {
           <div class="vinyl-layer-actions">
             <button type="button" data-layer-action="up" aria-label="Effekt nach oben verschieben" title="Nach oben" ${index === 0 || record.layers.length === 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
             <button type="button" data-layer-action="down" aria-label="Effekt nach unten verschieben" title="Nach unten" ${index === record.layers.length - 1 || record.layers.length === 1 ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 10 6 6 6-6"/></svg></button>
-            <button type="button" data-layer-action="remove" aria-label="Effekt löschen" title="Löschen">×</button>
+            <button type="button" data-layer-action="remove" aria-label="Effekt löschen" title="Löschen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
           </div>
         </div>
         <div class="vinyl-layer-detail-row ${layer.type === 'Label' ? 'vinyl-label-detail-row' : ''}">
@@ -17867,7 +17973,7 @@ function renderGenreChips(value, chipListId = 'fGenreChips', inputId = 'fGenre')
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
     removeButton.className = 'genre-chip-remove';
-    removeButton.textContent = '×';
+    removeButton.innerHTML = '<svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg>';
     removeButton.title = `${genre} entfernen`;
     removeButton.setAttribute('aria-label', `${genre} entfernen`);
     removeButton.addEventListener('click', () => {
@@ -18030,7 +18136,7 @@ function initNameChipField(input, kind) {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'genre-chip-remove';
-    remove.textContent = '×';
+    remove.innerHTML = '<svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg>';
     remove.title = `${text} entfernen`;
     remove.setAttribute('aria-label', `${text} entfernen`);
     remove.addEventListener('click', event => {
@@ -20430,7 +20536,9 @@ function getFullscreenPlayerLayout() {
 function sortFullscreenPlayerActions() {
   const toolbar=document.querySelector('.fullscreen-player-top-actions');
   const order=['#spotifyPlaylistPlayBtn','#fullscreenPlayerMusicSettings','#fullscreenPlayerZoomToggle','#fullscreenPlayerViewToggle','#fullscreenPlayerLayoutToggle','#fullscreenPlayerTracksToggle','#fullscreenPlayerQueueToggle','#fullscreenPlayerMenuToggle','[data-page-fullscreen]','#fullscreenPlayerRoomSettings','#closeFullscreenPlayerBtn'];
-  const buttons=order.map(selector=>document.querySelector(selector)).filter(Boolean);
+  const buttons=order.map(selector=>selector === '#spotifyPlaylistPlayBtn'
+    ? document.getElementById('spotifyPlaylistPlayBtn')
+    : toolbar.querySelector(selector)).filter(Boolean);
   if(buttons.every((button,index)=>toolbar.children[index]===button))return;
   toolbar.append(...buttons);
 }
@@ -21575,10 +21683,17 @@ function clearAlbumQueueDrag() {
 }
 function updateAlbumQueueDragTarget(drag) {
   drag.list.querySelectorAll('.queue-drop-before,.queue-drop-after').forEach(row=>row.classList.remove('queue-drop-before','queue-drop-after'));
-  const row=document.elementFromPoint(drag.x,drag.y)?.closest('[data-queue-index]');
-  drag.target=null;
-  if(!row || row.parentElement!==drag.list)return;
-  const bounds=row.getBoundingClientRect(),after=drag.y>bounds.top+bounds.height/2;
+  const hit = document.elementFromPoint(drag.x, drag.y);
+  drag.target = null;
+  if (!hit || !drag.list.contains(hit)) return;
+  let row = hit.closest('[data-queue-index]');
+  if (row?.parentElement !== drag.list) {
+    const rows = [...drag.list.children].filter(child => child.hasAttribute('data-queue-index'));
+    row = rows.find(child => child.getBoundingClientRect().bottom >= drag.y) || rows.at(-1);
+  }
+  if (!row) return;
+  const bounds = row.getBoundingClientRect();
+  const after = drag.y > bounds.top + bounds.height / 2;
   const insertion=Number(row.dataset.queueIndex)+(after?1:0);
   drag.target=Math.max(0,Math.min(drag.snapshot.length-1,insertion-(insertion>drag.index?1:0)));
   row.classList.add(after?'queue-drop-after':'queue-drop-before');
@@ -21680,7 +21795,7 @@ function renderFullscreenPlayerQueue() {
     moveDown.addEventListener('click', () => moveQueuedAlbum(index, 1));
     const remove = document.createElement('button');
     remove.type = 'button';
-    remove.textContent = '×';
+    remove.innerHTML = '<svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg>';
     remove.title = 'Album aus der Warteschlange entfernen';
     remove.setAttribute('aria-label', remove.title);
     remove.addEventListener('click', () => {
@@ -21906,7 +22021,7 @@ function renderListeningAlbumQueue() {
     moveDown.addEventListener('click', () => moveQueuedAlbum(index, 1));
     const remove = document.createElement('button');
     remove.type = 'button';
-    remove.textContent = '×';
+    remove.innerHTML = '<svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg>';
     remove.title = 'Album aus der Warteschlange entfernen';
     remove.setAttribute('aria-label', remove.title);
     remove.addEventListener('click', () => {
@@ -25625,7 +25740,7 @@ function openReferenceColorPicker(field, layer = null) {
   const dialog = document.createElement('dialog');
   dialog.className = 'vinyl-reference-color-dialog';
   dialog.setAttribute('aria-label', `${colorName} aus Fotovorlage`);
-  dialog.innerHTML = `<header><strong>${colorName} auswählen</strong><button type="button" data-close aria-label="Farbauswahl schließen">×</button></header>
+  dialog.innerHTML = `<header><strong>${colorName} auswählen</strong><button type="button" data-close aria-label="Farbauswahl schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></header>
     <p>Tippe auf das Foto, um die Farbe mit der Pipette auszuwählen.</p><img alt="Fotovorlage zur Farbauswahl" referrerpolicy="no-referrer">
     <p role="status" aria-live="polite"></p><button type="button" data-eyedropper hidden>Bildschirm-Pipette</button>
     <details><summary>Foto als Datei öffnen</summary><p>Falls der Bildserver die Farbauswahl sperrt, kannst du dasselbe Foto hier öffnen.</p><input type="file" accept="image/*" aria-label="Fotovorlage für Farbauswahl öffnen"></details>`;
@@ -25792,7 +25907,7 @@ async function openDiscogsReleasePictures(purpose = 'picture', layer = null) {
     releasePictureDialog = document.createElement('dialog');
     releasePictureDialog.className = 'discogs-label-image-dialog';
     releasePictureDialog.setAttribute('aria-labelledby','releasePictureTitle');
-    releasePictureDialog.innerHTML = `<div class="vinyl-editor-toolbar"><h2 id="releasePictureTitle">Discogs-Release-Fotos</h2><button type="button" data-close-release-pictures aria-label="Fotoauswahl schließen">×</button></div><p class="settings-panel-hint" data-release-status role="status"></p><div class="discogs-label-image-choices" data-release-grid></div><div class="vinyl-editor-footer"><button type="button" data-retry-release-pictures>Erneut laden</button><button type="button" data-close-release-pictures>Schließen</button></div>`;
+    releasePictureDialog.innerHTML = `<div class="vinyl-editor-toolbar"><h2 id="releasePictureTitle">Discogs-Release-Fotos</h2><button type="button" data-close-release-pictures aria-label="Fotoauswahl schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></div><p class="settings-panel-hint" data-release-status role="status"></p><div class="discogs-label-image-choices" data-release-grid></div><div class="vinyl-editor-footer"><button type="button" data-retry-release-pictures>Erneut laden</button><button type="button" data-close-release-pictures>Schließen</button></div>`;
     releasePictureDialog.addEventListener('keydown', event => event.stopPropagation());
     releasePictureDialog.addEventListener('close', () => { releasePictureRequest++; });
     releasePictureDialog.addEventListener('click', event => {
@@ -25848,7 +25963,7 @@ function openLabelImageDialog(layer) {
     labelImageDialog = document.createElement('dialog');
     labelImageDialog.className = 'discogs-label-image-dialog';
     labelImageDialog.setAttribute('aria-labelledby', 'labelImageDialogTitle');
-    labelImageDialog.innerHTML = `<div class="vinyl-editor-toolbar"><h2 id="labelImageDialogTitle">Logo auswählen</h2><button type="button" data-close-image-dialog aria-label="Bildauswahl schließen">×</button></div><p class="settings-panel-hint" data-image-status role="status"></p><div data-image-grid></div><div class="vinyl-editor-footer"><button type="button" data-close-image-dialog>Schließen</button></div>`;
+    labelImageDialog.innerHTML = `<div class="vinyl-editor-toolbar"><h2 id="labelImageDialogTitle">Logo auswählen</h2><button type="button" data-close-image-dialog aria-label="Bildauswahl schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></div><p class="settings-panel-hint" data-image-status role="status"></p><div data-image-grid></div><div class="vinyl-editor-footer"><button type="button" data-close-image-dialog>Schließen</button></div>`;
     labelImageDialog.addEventListener('keydown', event => event.stopPropagation());
     labelImageDialog.addEventListener('click', event => {
       event.stopPropagation();
@@ -26851,7 +26966,7 @@ function createUnsortedStorageCard(item) {
       <div class="storage-unsorted-actions">
         <button type="button" class="listen" title="Album anhören" aria-label="Album anhören">▶︎</button>
         <button type="button" class="edit" title="Bearbeiten" aria-label="Bearbeiten">✎</button>
-        <button type="button" class="del" title="Löschen" aria-label="Löschen">×</button>
+        <button type="button" class="del" title="Löschen" aria-label="Löschen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
       </div>
     </div>`;
   bindStorageItemPointerDrag(card, item);
@@ -26928,7 +27043,7 @@ function renderStorageRandomGenreChips(genres) {
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
     removeButton.className = 'genre-chip-remove';
-    removeButton.textContent = '×';
+    removeButton.innerHTML = '<svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg>';
     removeButton.title = `${canonicalGenre} entfernen`;
     removeButton.setAttribute('aria-label', `${canonicalGenre} entfernen`);
     removeButton.addEventListener('click', () => {
@@ -27188,6 +27303,76 @@ document.addEventListener('keydown', event => {
   }
 });
 
+function buildStorageReelStops(candidates, winner, steps, initial = null) {
+  const stops = [];
+  let previous = initial;
+  for (let index = 0; index < steps - 1; index++) {
+    const options = candidates.filter(candidate => candidate !== previous && (index !== steps - 2 || candidate !== winner));
+    if (!options.length) continue;
+    previous = options[Math.floor(Math.random() * options.length)];
+    stops.push(previous);
+  }
+  if (previous !== winner) stops.push(winner);
+  return stops;
+}
+
+async function playStorageShelfReel(board, winner, pause, active) {
+  const candidates = [...board.querySelectorAll('[data-open-storage-shelf]')].map(button => button.dataset.openStorageShelf);
+  const originalRight = desktopStorageRightId;
+  const count = candidates.length;
+  const winnerIndex = candidates.indexOf(winner);
+  if (winnerIndex < 0 || !active()) return;
+  if (count === 1) {
+    showDesktopStorageShelf(board, winner);
+    return;
+  }
+  const start = Math.max(0, candidates.indexOf(desktopStorageShelfId));
+  const steps = count + (winnerIndex - start + count) % count;
+  for (let step = 1; step <= steps; step++) {
+    if (!active()) return;
+    const duration = Math.round(285 + 300 * (step / steps) ** 2);
+    const id = candidates[(start + step) % count];
+    showDesktopStorageShelf(board, id, true, 'left', {direction:1, duration});
+    await pause(duration + (step === steps ? 120 : 0));
+  }
+  if (active() && desktopStorageSplit && originalRight !== winner) {
+    showDesktopStorageShelf(board, originalRight, false, 'right');
+  }
+}
+
+async function playStorageCompartmentReel(winner, pause, active) {
+  const grid = winner.parentElement;
+  if (!grid?.matches('.storage-compartments')) return;
+  const compartments = [...grid.querySelectorAll(':scope > .storage-compartment')];
+  const stops = buildStorageReelStops(compartments, winner, compartments.length > 1 ? 8 : 1);
+  const marker = document.createElement('span');
+  marker.className = 'storage-compartment-reel-marker';
+  marker.setAttribute('aria-hidden', 'true');
+  grid.appendChild(marker);
+  try {
+    for (const [index, stop] of stops.entries()) {
+      if (!active()) return;
+      const duration = index === 0 ? 0 : 100 + 4 * index ** 2;
+      const stage = grid.closest('.storage-shelf-stage');
+      if (stage) {
+        const bounds = stage.getBoundingClientRect();
+        const target = stop.getBoundingClientRect();
+        if (target.left < bounds.left || target.right > bounds.right || target.top < bounds.top || target.bottom > bounds.bottom) {
+          stop.scrollIntoView({block:'nearest', inline:'nearest', behavior:'smooth'});
+        }
+      }
+      marker.style.transition = `transform ${duration}ms ease-in-out, width ${duration}ms ease-in-out, height ${duration}ms ease-in-out`;
+      marker.style.transform = `translate(${stop.offsetLeft}px, ${stop.offsetTop}px)`;
+      marker.style.width = `${stop.offsetWidth}px`;
+      marker.style.height = `${stop.offsetHeight}px`;
+      await pause(Math.max(100, duration));
+    }
+    await pause(180);
+  } finally {
+    marker.remove();
+  }
+}
+
 async function showRandomStoredVinyl() {
   if (storageRandomPickInProgress) return;
   const selectedFormats = getStorageRandomFormats();
@@ -27203,7 +27388,7 @@ async function showRandomStoredVinyl() {
   const yearInput = document.getElementById('storageRandomYearInput');
   const yearIsValid = validateStorageRandomYear(yearInput.value);
   const yearRange = yearIsValid ? getStorageRandomYearRange(yearInput.value) : null;
-  const matchingStoredTiles = [...document.querySelectorAll('#storageBoard .storage-record[data-storage-item]')]
+  const matchingStoredTiles = [...document.querySelectorAll('#storageBoard .storage-compartment [data-storage-item]')]
     .filter(tile => {
       const item = collection.find(entry => String(entry.id) === tile.dataset.storageItem);
       if (!item || !selectedFormats.includes(getReleaseType(item))) return false;
@@ -27252,7 +27437,11 @@ async function showRandomStoredVinyl() {
 
   storageRandomPickInProgress = true;
   if (storageRandomPickBtn) storageRandomPickBtn.disabled = true;
+  const board = document.getElementById('storageBoard');
   const shelf = selectedShelfGroup.element;
+  const layout = activeStorageLayout;
+  const active = () => layout === activeStorageLayout && shelf.isConnected && activeView === 'storage';
+  const isDesktop = !!board.querySelector('.storage-shelf-stage');
   const compartment = selectedCompartmentGroup.element;
   document.querySelectorAll('#storageBoard .random-pick-shelf, #storageBoard .random-pick-compartment, #storageBoard .random-highlight')
     .forEach(element => element.classList.remove('random-pick-shelf', 'random-pick-compartment', 'random-highlight'));
@@ -27278,29 +27467,33 @@ async function showRandomStoredVinyl() {
 
   try {
     if (playAnimation) {
-      if (eligibleShelves.length > 1) {
-        await runRoulette(eligibleShelves.map(group => group.element), shelf, 'random-pick-shelf');
-        clearStage();
-        await pause(160);
+      if (isDesktop) {
+        await playStorageShelfReel(board, shelf.dataset.shelfId, pause, active);
+        if (!active()) return;
+        await playStorageCompartmentReel(compartment, pause, active);
+      } else {
+        if (eligibleShelves.length > 1) await runRoulette(eligibleShelves.map(group => group.element), shelf, 'random-pick-shelf');
+        if (eligibleCompartments.length > 1) {
+          await runRoulette(eligibleCompartments.map(group => group.element), compartment, 'random-pick-compartment');
+          await pause(220);
+        }
       }
-      if (eligibleCompartments.length > 1) {
-        await runRoulette(eligibleCompartments.map(group => group.element), compartment, 'random-pick-compartment');
-        await pause(220);
-      }
+      if (!active()) return;
       clearStage();
-      if (selectedCompartmentGroup.tiles.length > 1) {
-        const reelItems = selectedCompartmentGroup.tiles
-          .map(tile => collection.find(item => String(item.id) === tile.dataset.storageItem))
-          .filter(Boolean);
-        const shelfName = shelf.querySelector('.storage-shelf-name')?.value || 'Regal';
-        const shelfSettings = shelfLocations.find(entry => entry.id === shelf.dataset.shelfId);
-        const compartmentLabel = getShelfCompartmentLabel(shelfSettings, compartment.dataset.dropCompartment);
-        const locationLabel = isSingleCompartmentShelf(shelfSettings)
-          ? shelfName
-          : `${shelfName} · ${compartmentLabel}`;
-        await playStorageCaseRoll(reelItems, selectedItem, locationLabel);
-      }
+      const reelItems = selectedCompartmentGroup.tiles
+        .map(tile => collection.find(item => String(item.id) === tile.dataset.storageItem))
+        .filter(Boolean);
+      const shelfName = shelf.querySelector('.storage-shelf-name')?.value || 'Regal';
+      const shelfSettings = shelfLocations.find(entry => entry.id === shelf.dataset.shelfId);
+      const compartmentLabel = getShelfCompartmentLabel(shelfSettings, compartment.dataset.dropCompartment);
+      const locationLabel = isSingleCompartmentShelf(shelfSettings)
+        ? shelfName
+        : `${shelfName} · ${compartmentLabel}`;
+      if (reelItems.length > 1) await playStorageCaseRoll(reelItems, selectedItem, locationLabel);
+    } else if (isDesktop) {
+      showDesktopStorageShelf(board, shelf.dataset.shelfId);
     }
+    if (!active()) return;
     selectedTile.classList.add('random-highlight');
     compartment.classList.add('random-pick-compartment');
     randomHighlightedItemId = selectedItem.id;
@@ -27326,7 +27519,10 @@ let activeStorageDropTarget = null;
 let suppressStorageClickUntil = 0;
 let draggedStorageShelfId = null;
 let storagePlacementMode = false;
-let storageCollapsedRailOpen = false;
+let desktopStorageShelfId = '';
+let desktopStorageRightId = '';
+let desktopStorageSplit = false;
+let desktopStorageSearch = '';
 
 function applyStoragePaneLayout(layout) {
   if (!layout) return;
@@ -27354,10 +27550,8 @@ function applyStorageShelfZoom(board) {
   board.style.setProperty('--storage-shelf-zoom', String(zoom));
   const value = board.querySelector('.storage-shelf-zoom-value');
   if (value) value.textContent = `${Math.round(zoom * 100)}%`;
-  board.querySelectorAll('.storage-shelf-zoom-controls button').forEach(button => {
-    const direction = Number(button.dataset.zoomDelta);
-    button.disabled = direction < 0 ? zoom <= 0.7 : zoom >= 1.8;
-  });
+  const slider = board.querySelector('.storage-shelf-zoom');
+  if (slider) slider.value = String(Math.round(zoom * 100));
 }
 
 function bindStorageShelfPinchZoom(pane, board) {
@@ -27498,6 +27692,8 @@ function continueStoragePointerDrag() {
   const drag = activeStoragePointerDrag;
   if (!drag?.dragging) return;
   scrollStoragePanesNearPointer(drag.x, drag.y);
+  const hit = document.elementFromPoint(drag.x, drag.y);
+  updateDesktopStorageShelfHover(drag, hit, performance.now());
   setStoragePointerDropTarget(findStorageDropTargetAt(drag.x, drag.y));
   drag.autoScrollFrame = requestAnimationFrame(continueStoragePointerDrag);
 }
@@ -27510,48 +27706,59 @@ function setStoragePointerDropTarget(target) {
 }
 
 function clearStoragePointerDrag() {
-  activeStorageDropTarget?.classList.remove('drag-over');
-  activeStorageDropTarget = null;
-  if (activeStoragePointerDrag?.autoScrollFrame) cancelAnimationFrame(activeStoragePointerDrag.autoScrollFrame);
-  if (activeStoragePointerDrag?.longPressTimer) clearTimeout(activeStoragePointerDrag.longPressTimer);
-  activeStoragePointerDrag?.preview?.remove();
-  activeStoragePointerDrag?.source?.classList.remove('storage-pointer-source');
-  activeStorageLayout?.classList.remove('storage-item-dragging');
+  const drag = activeStoragePointerDrag;
   activeStoragePointerDrag = null;
+  setStoragePointerDropTarget(null);
+  if (!drag) return;
+  cancelAnimationFrame(drag.autoScrollFrame);
+  clearTimeout(drag.longPressTimer);
+  if (drag.board.hasPointerCapture(drag.pointerId)) drag.board.releasePointerCapture(drag.pointerId);
+  drag.preview?.remove();
+  drag.hoverShelf?.classList.remove('is-drag-hovered');
+  drag.source.classList.remove('storage-pointer-source');
+  drag.layout?.classList.remove('storage-item-dragging');
+}
+
+function startStoragePointerDrag(drag) {
+  if (!drag.source.isConnected) {
+    clearStoragePointerDrag();
+    return false;
+  }
+  // The layout can hide the source row while revealing drop targets.
+  drag.board.setPointerCapture(drag.pointerId);
+  drag.dragging = true;
+  drag.source.classList.add('storage-pointer-source');
+  if (storagePlacementMode || mobileStorageMedia.matches) drag.layout?.classList.add('storage-item-dragging');
+  drag.preview = document.createElement('img');
+  drag.preview.className = 'storage-pointer-preview';
+  drag.preview.src = drag.item.coverUrl || '';
+  drag.preview.alt = '';
+  drag.preview.style.left = `${drag.x}px`;
+  drag.preview.style.top = `${drag.y}px`;
+  document.body.appendChild(drag.preview);
+  drag.autoScrollFrame = requestAnimationFrame(continueStoragePointerDrag);
+  return true;
 }
 
 function bindStorageItemPointerDrag(source, item) {
   if (!source) return;
   source.addEventListener('pointerdown', event => {
-    if (event.button !== 0 || !item.owned) return;
+    if (event.button !== 0 || !item.owned || activeStoragePointerDrag) return;
     if (event.target.closest('button, input, textarea, select')) return;
+    const board = source.closest('#storageBoard');
+    if (!board) return;
     const isTouch = event.pointerType === 'touch';
-    activeStoragePointerDrag = {
-      pointerId: event.pointerId,
-      item,
-      source,
-      isTouch,
-      startX: event.clientX,
-      startY: event.clientY,
-      x: event.clientX,
-      y: event.clientY,
-      dragging: false,
-      preview: null,
-      autoScrollFrame: 0,
-      longPressTimer: isTouch ? setTimeout(() => {
-        if (activeStoragePointerDrag?.pointerId !== event.pointerId) return;
-        activeStoragePointerDrag.dragging = true;
-        source.classList.add('storage-pointer-source');
-        if (storagePlacementMode || mobileStorageMedia.matches) activeStorageLayout?.classList.add('storage-item-dragging');
-        activeStoragePointerDrag.preview = document.createElement('img');
-        activeStoragePointerDrag.preview.className = 'storage-pointer-preview';
-        activeStoragePointerDrag.preview.src = item.coverUrl || '';
-        activeStoragePointerDrag.preview.alt = '';
-        document.body.appendChild(activeStoragePointerDrag.preview);
-        activeStoragePointerDrag.autoScrollFrame = requestAnimationFrame(continueStoragePointerDrag);
-        source.setPointerCapture(event.pointerId);
-      }, 450) : 0
+    const drag = {
+      pointerId: event.pointerId, item, source, board, layout: activeStorageLayout, isTouch,
+      startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY,
+      dragging: false, preview: null, autoScrollFrame: 0, longPressTimer: 0
     };
+    activeStoragePointerDrag = drag;
+    if (isTouch) {
+      drag.longPressTimer = setTimeout(() => {
+        if (activeStoragePointerDrag === drag) startStoragePointerDrag(drag);
+      }, 450);
+    }
   });
 }
 
@@ -27560,57 +27767,49 @@ document.addEventListener('pointermove', event => {
   if (!drag || drag.pointerId !== event.pointerId) return;
   drag.x = event.clientX;
   drag.y = event.clientY;
-  if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) >= 6) {
+  if (!drag.dragging) {
+    if (Math.hypot(drag.x - drag.startX, drag.y - drag.startY) < 6) return;
     if (drag.isTouch) {
-      clearTimeout(drag.longPressTimer);
-      drag.longPressTimer = 0;
       clearStoragePointerDrag();
       return;
     }
+    if (!startStoragePointerDrag(drag)) return;
   }
-  if (!drag.dragging && drag.isTouch) return;
-  if (!drag.dragging && Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 6) return;
   event.preventDefault();
-  if (!drag.dragging) {
-    drag.dragging = true;
-    drag.source.classList.add('storage-pointer-source');
-    if (storagePlacementMode || mobileStorageMedia.matches) activeStorageLayout?.classList.add('storage-item-dragging');
-    drag.preview = document.createElement('img');
-    drag.preview.className = 'storage-pointer-preview';
-    drag.preview.src = drag.item.coverUrl || '';
-    drag.preview.alt = '';
-    document.body.appendChild(drag.preview);
-    drag.autoScrollFrame = requestAnimationFrame(continueStoragePointerDrag);
-  }
-  drag.preview.style.left = `${event.clientX}px`;
-  drag.preview.style.top = `${event.clientY}px`;
-  setStoragePointerDropTarget(findStorageDropTargetAt(event.clientX, event.clientY));
+  drag.preview.style.left = `${drag.x}px`;
+  drag.preview.style.top = `${drag.y}px`;
+  setStoragePointerDropTarget(findStorageDropTargetAt(drag.x, drag.y));
 }, { capture: true, passive: false });
 
 document.addEventListener('pointerup', event => {
   const drag = activeStoragePointerDrag;
   if (!drag || drag.pointerId !== event.pointerId) return;
+  const target = drag.dragging ? findStorageDropTargetAt(event.clientX, event.clientY) : null;
   if (drag.dragging) {
     event.preventDefault();
-    const target = findStorageDropTargetAt(event.clientX, event.clientY);
-    if (target && drag.item.owned) {
-      if (target.hasAttribute('data-drop-shelf-pending')) {
-        drag.item.shelfId = target.dataset.dropShelfPending;
-        delete drag.item.shelfCompartment;
-      } else if (target.hasAttribute('data-drop-unsorted')) {
-        delete drag.item.shelfId;
-        delete drag.item.shelfCompartment;
-      } else {
-        assignItemToStorageLocation(drag.item, target.dataset.dropShelf, target.dataset.dropCompartment);
-      }
-      suppressStorageClickUntil = Date.now() + 500;
-      saveShelfLayout();
-    }
+    suppressStorageClickUntil = Date.now() + 500;
   }
   clearStoragePointerDrag();
+  if (!target || !drag.board.contains(target) || !drag.item.owned || !collection.includes(drag.item)) return;
+  if (target.hasAttribute('data-drop-shelf-pending')) {
+    drag.item.shelfId = target.dataset.dropShelfPending;
+    delete drag.item.shelfCompartment;
+  } else if (target.hasAttribute('data-drop-unsorted')) {
+    delete drag.item.shelfId;
+    delete drag.item.shelfCompartment;
+  } else {
+    assignItemToStorageLocation(drag.item, target.dataset.dropShelf, target.dataset.dropCompartment);
+  }
+  saveShelfLayout();
 }, true);
 
-document.addEventListener('pointercancel', clearStoragePointerDrag, true);
+for (const eventName of ['pointercancel', 'lostpointercapture']) {
+  document.addEventListener(eventName, event => {
+    const drag = activeStoragePointerDrag;
+    if (drag?.pointerId !== event.pointerId) return;
+    if (eventName === 'pointercancel' || event.target === drag.board) clearStoragePointerDrag();
+  }, true);
+}
 document.addEventListener('touchmove', event => {
   if (activeStoragePointerDrag?.isTouch && activeStoragePointerDrag.dragging) event.preventDefault();
 }, { capture:true, passive:false });
@@ -27844,36 +28043,106 @@ async function removeShelfCompartment(shelf, compartmentNumber) {
 const expandedStorageShelfIds = new Set();
 const initializedStorageShelfIds = new Set();
 
-function updateStorageShelfCollapseControls(board) {
-  if (!board) return;
-  const collapsedShelves = board.querySelector('.storage-shelf-group-collapsed .storage-shelf-group-list');
-  const expandedShelves = board.querySelector('.storage-shelf-group-expanded .storage-shelf-group-list');
-  shelfLocations.forEach(shelf => {
-    const element = board.querySelector(`.storage-shelf[data-shelf-id="${CSS.escape(shelf.id)}"]`);
-    if (!element) return;
-    const collapsed = collapsedStorageShelfIds.has(shelf.id);
-    element.classList.toggle('is-collapsed', collapsed);
-    (collapsed ? collapsedShelves : expandedShelves)?.appendChild(element);
-    const button = element.querySelector('.storage-shelf-toggle');
-    if (button) {
-      button.setAttribute('aria-expanded', String(!collapsed));
-      button.title = collapsed ? 'Regal ausklappen' : 'Regal einklappen';
-      button.setAttribute('aria-label', `${button.title}: ${element.querySelector('.storage-shelf-name')?.value || 'Regal'}`);
+function captureStorageShelfExit(content) {
+  const current = content.querySelector('.storage-shelf[data-shelf-id]');
+  if (!current) return null;
+  const stage = content.parentElement.getBoundingClientRect();
+  const bounds = current.getBoundingClientRect();
+  const zoom = bounds.width / current.offsetWidth || 1;
+  const copy = current.cloneNode(true);
+  copy.classList.add('storage-shelf-exit');
+  copy.removeAttribute('data-shelf-id');
+  copy.inert = true;
+  copy.setAttribute('aria-hidden', 'true');
+  copy.querySelectorAll('[data-storage-item], [id]').forEach(element => {
+    element.removeAttribute('data-storage-item');
+    element.removeAttribute('id');
+  });
+  copy.style.left = `${(bounds.left - stage.left) / zoom}px`;
+  copy.style.top = `${(bounds.top - stage.top) / zoom}px`;
+  copy.style.width = `${bounds.width / zoom}px`;
+  return {copy, distance:Math.max(stage.width, bounds.width) / zoom};
+}
+
+function showDesktopStorageShelf(board, shelfId, animate = false, side = 'left', motion = {}) {
+  const buttons = [...board.querySelectorAll('[data-open-storage-shelf]')];
+  const ids = buttons.map(button => button.dataset.openStorageShelf);
+  if (!ids.includes(shelfId)) return;
+  const previous = buttons.findIndex(button => button.getAttribute('aria-current') === 'true');
+  if (side === 'right') {
+    if (shelfId === desktopStorageShelfId) desktopStorageShelfId = desktopStorageRightId;
+    desktopStorageRightId = shelfId;
+  } else {
+    if (desktopStorageSplit && shelfId === desktopStorageRightId) desktopStorageRightId = desktopStorageShelfId;
+    desktopStorageShelfId = shelfId;
+  }
+  if (!ids.includes(desktopStorageRightId) || desktopStorageRightId === desktopStorageShelfId) {
+    desktopStorageRightId = ids.find(id => id !== desktopStorageShelfId) || '';
+  }
+  const split = desktopStorageSplit && ids.length > 1;
+  const left = board.querySelector('[data-shelf-side=left]');
+  const right = board.querySelector('[data-shelf-side=right]');
+  const first = left.querySelector('.storage-shelf-stage-content');
+  const second = right.querySelector('.storage-shelf-stage-content');
+  const pool = board.querySelector('.storage-shelf-pool');
+  const index = ids.indexOf(desktopStorageShelfId);
+  const changed = index !== previous;
+  const shouldSlide = changed && animate && previous >= 0 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (changed) {
+    first.querySelector('.storage-shelf-exit')?.remove();
+    first.parentElement.classList.remove('is-sliding');
+  }
+  const outgoing = shouldSlide ? captureStorageShelfExit(first) : null;
+  right.hidden = !split;
+  right.parentElement.classList.toggle('is-split', split);
+  left.querySelector('select').value = desktopStorageShelfId;
+  right.querySelector('select').value = desktopStorageRightId;
+  board.querySelector('[data-storage-split]').setAttribute('aria-pressed', String(split));
+  board.querySelector('.storage-shelf-pager').hidden = split;
+  buttons.forEach((button, i) => {
+    if (i === index) button.setAttribute('aria-current', 'true');
+    else button.removeAttribute('aria-current');
+    button.classList.toggle('is-right-shelf', split && ids[i] === desktopStorageRightId);
+  });
+  board.querySelectorAll('.storage-shelf[data-shelf-id]').forEach(shelf => {
+    const target = shelf.dataset.shelfId === desktopStorageShelfId ? first
+      : split && shelf.dataset.shelfId === desktopStorageRightId ? second : pool;
+    if (shelf.parentElement === target) return;
+    shelf.getAnimations().forEach(animation => animation.cancel());
+    target.appendChild(shelf);
+    if (target === pool) return;
+    target.parentElement.scrollLeft = target.parentElement.scrollTop = 0;
+    if (target === first && shouldSlide) {
+      const direction = motion.direction ?? (index > previous ? 1 : -1);
+      const distance = Math.max(outgoing?.distance || 0, shelf.offsetWidth, target.clientWidth);
+      const timing = {duration:motion.duration ?? 520, easing:'cubic-bezier(.45, 0, .2, 1)'};
+      const stage = first.parentElement;
+      stage.classList.add('is-sliding');
+      const entrance = shelf.animate([{transform:`translateX(${direction * distance}px)`}, {transform:'translateX(0)'}], timing);
+      entrance.onfinish = () => stage.classList.remove('is-sliding');
+      if (outgoing) {
+        first.appendChild(outgoing.copy);
+        const exit = outgoing.copy.animate(
+          [{transform:'translateX(0)'}, {transform:`translateX(${-direction * distance}px)`}], timing);
+        exit.onfinish = () => outgoing.copy.remove();
+      }
     }
   });
-  board.querySelector('.storage-shelf-group-collapsed .storage-shelf-group-count').textContent =
-    String(shelfLocations.filter(shelf => collapsedStorageShelfIds.has(shelf.id)).length);
-  board.querySelector('.storage-shelf-group-expanded .storage-shelf-group-count').textContent =
-    String(shelfLocations.filter(shelf => !collapsedStorageShelfIds.has(shelf.id)).length);
-  const allExpanded = shelfLocations.length > 0 && shelfLocations.every(shelf => !collapsedStorageShelfIds.has(shelf.id));
-  const toggleAll = board.querySelector('.storage-shelves-toggle-all');
-  if (toggleAll) {
-    toggleAll.disabled = shelfLocations.length === 0;
-    toggleAll.setAttribute('aria-expanded', String(allExpanded));
-    toggleAll.title = allExpanded ? 'Alle Regale einklappen' : 'Alle Regale ausklappen';
-    toggleAll.setAttribute('aria-label', toggleAll.title);
-    toggleAll.querySelector('span').textContent = toggleAll.title;
+  board.querySelector('[data-storage-shelf-step="-1"]').disabled = ids.length < 2;
+  board.querySelector('[data-storage-shelf-step="1"]').disabled = ids.length < 2;
+  board.querySelector('.storage-shelf-page').textContent = `${index + 1} / ${ids.length}`;
+}
+
+function updateDesktopStorageShelfHover(drag, hit, now) {
+  const name = hit?.closest('[data-open-storage-shelf]');
+  const candidate = name && drag.layout?.contains(name) && name.getAttribute('aria-current') !== 'true' ? name : null;
+  if (candidate !== drag.hoverShelf) {
+    drag.hoverShelf?.classList.remove('is-drag-hovered');
+    drag.hoverShelf = candidate;
+    drag.hoverShelfSince = now;
+    candidate?.classList.add('is-drag-hovered');
   }
+  if (candidate && now - drag.hoverShelfSince >= 300) candidate.click();
 }
 
 let mobileStorageShelfId = null;
@@ -27973,13 +28242,10 @@ function renderStorageBoard(visibleItems) {
     renderMobileStorageBoard(board, visibleItems);
     return;
   }
-  shelfLocations.forEach(shelf => {
-    if (!initializedStorageShelfIds.has(shelf.id)) {
-      initializedStorageShelfIds.add(shelf.id);
-      collapsedStorageShelfIds.add(shelf.id);
-    }
-  });
   const ownedItems = visibleItems.filter(item => item.owned);
+  const matchingShelves = new Set(collectionFilterQuery
+    ? ownedItems.filter(item => matchesCollectionQuery(item, collectionFilterQuery)).map(item => item.shelfId)
+    : []);
   const randomSelectedItem = ownedItems.find(item => item.id === randomHighlightedItemId);
   const randomSelectedShelf = randomSelectedItem ? shelfLocations.find(entry => entry.id === randomSelectedItem.shelfId) : null;
   if (randomSelectedItem && !isValidShelfCompartment(randomSelectedShelf, randomSelectedItem.shelfCompartment)) randomHighlightedItemId = null;
@@ -28020,28 +28286,20 @@ function renderStorageBoard(visibleItems) {
         : `<input type="text" class="storage-compartment-name" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" value="${escapeHtml(compartmentName)}" placeholder="Name" aria-label="Name für Fach ${number}">`;
       const compartmentLabel = getShelfCompartmentLabel(shelf, number);
       return `<section class="storage-compartment${hasSearchMatch ? ' search-match' : ''}" style="grid-row:${rowNumber};grid-column:${columnNumber};" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}">
-        <header class="storage-compartment-header">${singleCompartment ? '' : `<span class="storage-compartment-index" aria-hidden="true">${number}</span>`}${compartmentNameMarkup}<span class="storage-count" title="${compartmentCount} Album${compartmentCount === 1 ? '' : 'e'}">${compartmentCount}</span><button type="button" class="storage-order-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fachsortierung bearbeiten" aria-label="Sortierung von ${escapeHtml(compartmentLabel)} bearbeiten"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h10M4 12h7M4 18h4M17 4v16m0 0-3-3m3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" class="wash-compartment-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `${escapeHtml(compartmentLabel)} waschen` : `Keine Vinyls in ${escapeHtml(compartmentLabel)}`}" aria-label="${escapeHtml(compartmentLabel)} waschen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 4l1 2M12 3v2M18 4l-1 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="spotify-compartment-playlist-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `Spotify-Playlist aus ${escapeHtml(compartmentLabel)} erstellen` : `Keine Alben in ${escapeHtml(compartmentLabel)}`}" aria-label="Spotify-Playlist aus ${escapeHtml(compartmentLabel)} erstellen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7c5-1.5 11-.8 16 2M5 12c4-1.2 9-.7 13 1.2M6 17c3-.8 6-.4 9 .8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button><button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen">×</button></header>
+        <header class="storage-compartment-header">${singleCompartment ? '' : `<span class="storage-compartment-index" aria-hidden="true">${number}</span>`}${compartmentNameMarkup}<span class="storage-count" title="${compartmentCount} Album${compartmentCount === 1 ? '' : 'e'}">${compartmentCount}</span><button type="button" class="storage-order-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fachsortierung bearbeiten" aria-label="Sortierung von ${escapeHtml(compartmentLabel)} bearbeiten"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h10M4 12h7M4 18h4M17 4v16m0 0-3-3m3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" class="wash-compartment-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `${escapeHtml(compartmentLabel)} waschen` : `Keine Vinyls in ${escapeHtml(compartmentLabel)}`}" aria-label="${escapeHtml(compartmentLabel)} waschen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 4l1 2M12 3v2M18 4l-1 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>${shelf.mode !== 'display' ? `<button type="button" class="spotify-compartment-playlist-button" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="${compartmentCount ? `Spotify-Playlist aus ${escapeHtml(compartmentLabel)} erstellen` : `Keine Alben in ${escapeHtml(compartmentLabel)}`}" aria-label="Spotify-Playlist aus ${escapeHtml(compartmentLabel)} erstellen"${compartmentCount ? '' : ' disabled'}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7c5-1.5 11-.8 16 2M5 12c4-1.2 9-.7 13 1.2M6 17c3-.8 6-.4 9 .8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>` : ''}<button type="button" class="remove-compartment" data-shelf-id="${escapeHtml(shelf.id)}" data-compartment="${number}" title="Fach löschen" aria-label="Fach ${number} löschen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></header>
         <div class="storage-records" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}"></div>
       </section>`;
     }).join('');
-    const isCollapsed = collapsedStorageShelfIds.has(shelf.id);
-    return `<section class="storage-shelf${shelf.mode === 'display' ? ' display-mode' : ''}${isCollapsed ? ' is-collapsed' : ''}${expandedStorageShelfIds.has(shelf.id) ? ' settings-open' : ''}" data-shelf-id="${escapeHtml(shelf.id)}" style="--shelf-rows:${shelf.rows};--shelf-columns:${shelf.columns};--shelf-width:${shelfWidth}px;">
+    return `<section class="storage-shelf${shelf.mode === 'display' ? ' display-mode' : ''}${expandedStorageShelfIds.has(shelf.id) ? ' settings-open' : ''}" data-shelf-id="${escapeHtml(shelf.id)}" style="--shelf-rows:${shelf.rows};--shelf-columns:${shelf.columns};--shelf-width:${shelfWidth}px;">
       <header class="storage-shelf-header">
         <div class="storage-shelf-topline">
-          <span class="storage-shelf-name-label" draggable="true" title="Ziehen, um Regale umzuordnen" aria-label="Regal ${escapeHtml(shelf.name)} umordnen">${escapeHtml(shelf.name)}</span>
-          <button type="button" class="storage-shelf-drag-handle" draggable="true" title="Ziehen, um Regale umzuordnen" aria-label="Regal ${escapeHtml(shelf.name)} umordnen">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3" r="1"/><circle cx="11" cy="3" r="1"/><circle cx="5" cy="8" r="1"/><circle cx="11" cy="8" r="1"/><circle cx="5" cy="13" r="1"/><circle cx="11" cy="13" r="1"/></svg>
-          </button>
           <input type="text" class="storage-shelf-name" data-shelf-id="${escapeHtml(shelf.id)}" value="${escapeHtml(shelf.name)}" aria-label="Regalname ${escapeHtml(shelf.name)}">
           <span class="storage-count storage-shelf-count" title="${shelfItems.length} Album${shelfItems.length === 1 ? '' : 'e'} im Regal">${shelfItems.length}</span>
           ${shelfPending.length ? `<span class="storage-shelf-pending-badge" title="${shelfPending.length} Platten noch keinem Fach zugeordnet">${shelfPending.length} ohne Fach</span>` : ''}
-          <button type="button" class="storage-shelf-toggle" aria-expanded="${!isCollapsed}" title="${isCollapsed ? 'Regal ausklappen' : 'Regal einklappen'}" aria-label="${isCollapsed ? 'Regal ausklappen' : 'Regal einklappen'}: ${escapeHtml(shelf.name)}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
           <button type="button" class="storage-shelf-settings" aria-expanded="${expandedStorageShelfIds.has(shelf.id)}" title="Maßeinstellungen öffnen" aria-label="Maßeinstellungen öffnen">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51-1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <button type="button" class="remove-shelf" title="Regal löschen" aria-label="Regal ${escapeHtml(shelf.name)} löschen">×</button>
+          <button type="button" class="remove-shelf" title="Regal löschen" aria-label="Regal ${escapeHtml(shelf.name)} löschen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
         </div>
         <div class="storage-shelf-dimensions">
           <label class="storage-dimension-control">Ansicht <select class="storage-shelf-mode" aria-label="Regalansicht ${escapeHtml(shelf.name)}"><option value="shelf"${shelf.mode === 'display' ? '' : ' selected'}>Regal</option><option value="display"${shelf.mode === 'display' ? ' selected' : ''}>Display</option></select></label>
@@ -28053,38 +28311,37 @@ function renderStorageBoard(visibleItems) {
       <div class="storage-compartments">${compartmentMarkup}</div>
     </section>`;
   };
-  const collapsedShelves = shelfLocations.filter(shelf => collapsedStorageShelfIds.has(shelf.id));
-  const expandedShelves = shelfLocations.filter(shelf => !collapsedStorageShelfIds.has(shelf.id));
-  const collapsedSections = collapsedShelves.map(renderShelf).join('');
-  const expandedSections = expandedShelves.map(renderShelf).join('');
+  const shelfOptions = shelfLocations.map(shelf => `<option value="${escapeHtml(shelf.id)}">${escapeHtml(shelf.name)}</option>`).join('');
+  const pane = (side, label) => `<section data-shelf-side="${side}"${side === 'right' ? ' hidden' : ''}>
+    <select aria-label="${label}">${shelfOptions}</select>
+    <div class="storage-shelf-stage"><div class="storage-shelf-stage-content"></div></div>
+  </section>`;
     board.innerHTML = `<div class="storage-layout">
       <section class="storage-shelves-pane">
         <div class="storage-shelves-toolbar">
-          <div class="storage-shelf-zoom-controls" role="group" aria-label="Regalansicht vergrößern oder verkleinern">
-            <button type="button" data-zoom-delta="-0.1" aria-label="Regale verkleinern" title="Regale verkleinern">−</button>
-            <span class="storage-shelf-zoom-value" aria-live="polite">100%</span>
-            <button type="button" data-zoom-delta="0.1" aria-label="Regale vergrößern" title="Regale vergrößern">+</button>
-          </div>
           <button type="button" class="storage-placement-mode-toggle" aria-pressed="${storagePlacementMode}" title="Fächer beim Ziehen als Ablageziele anzeigen">Fächer-Modus: ${storagePlacementMode ? 'An' : 'Aus'}</button>
-          <button type="button" class="storage-shelves-toggle-all" aria-expanded="false" title="Alle Regale ausklappen"><span>Alle Regale ausklappen</span></button>
+          <button type="button" class="storage-add-shelf" title="Regal hinzufügen" aria-label="Regal hinzufügen">+</button>
         </div>
-        <div class="storage-shelves-body${storageCollapsedRailOpen ? ' rail-open' : ''}">
-        <aside class="storage-collapsed-rail">
-          <button type="button" class="storage-collapsed-rail-toggle" aria-expanded="${storageCollapsedRailOpen}" title="Eingeklappte Regale ${storageCollapsedRailOpen ? 'ausblenden' : 'anzeigen'}" aria-label="Eingeklappte Regale ${storageCollapsedRailOpen ? 'ausblenden' : 'anzeigen'}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <section class="storage-shelf-group storage-shelf-group-collapsed">
-            <div class="storage-shelf-group-heading"><span>Eingeklappt</span><span class="storage-shelf-group-count">${collapsedShelves.length}</span></div>
-            <div class="storage-shelf-group-list">${collapsedSections}<button type="button" class="storage-add-shelf" title="Regal hinzufügen" aria-label="Regal hinzufügen">+</button></div>
-          </section>
-        </aside>
-        <div class="storage-shelf-groups">
-          <section class="storage-shelf-group storage-shelf-group-expanded">
-            <div class="storage-shelf-group-heading"><span>Ausgeklappt</span><span class="storage-shelf-group-count">${expandedShelves.length}</span></div>
-            <div class="storage-shelf-group-list">${expandedSections}</div>
-          </section>
+        <div class="storage-desktop-shelves">
+          <nav class="storage-shelf-names" aria-label="Regale">
+            ${shelfLocations.map(shelf => `<button type="button" draggable="true" data-open-storage-shelf="${escapeHtml(shelf.id)}"${matchingShelves.has(shelf.id) ? ' class="has-storage-match" title="Enthält Suchtreffer"' : ''}>${escapeHtml(shelf.name)}</button>`).join('')}
+          </nav>
+          <div class="storage-shelf-panes">
+            ${pane('left', 'Linkes Regal')}
+            ${pane('right', 'Rechtes Regal')}
+            ${shelfLocations.length ? '' : '<p>Keine Regale angelegt.</p>'}
+          </div>
+          <div class="storage-shelf-pool" hidden>${shelfLocations.map(renderShelf).join('')}</div>
         </div>
-        </div>
+        <nav class="storage-shelf-pagination" aria-label="Regalansicht">
+          <div class="storage-shelf-pager">
+            <button type="button" data-storage-shelf-step="-1" aria-label="Vorheriges Regal" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+            <span class="storage-shelf-page" aria-live="polite"></span>
+            <button type="button" data-storage-shelf-step="1" aria-label="Nächstes Regal" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+          </div>
+          <label class="storage-shelf-zoom-label">Zoom <input class="storage-shelf-zoom" type="range" min="70" max="180" step="1"><output class="storage-shelf-zoom-value"></output></label>
+          <button type="button" data-storage-split aria-pressed="false" aria-label="Geteilte Regalansicht" title="Geteilte Regalansicht"${shelfLocations.length < 2 ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/></svg></button>
+        </nav>
       </section>
       <div class="storage-pane-resizer" role="separator" tabindex="0" aria-label="Bereichsbreite anpassen" aria-orientation="vertical"></div>
       <aside class="storage-unsorted-pane" data-drop-unsorted>
@@ -28103,16 +28360,13 @@ function renderStorageBoard(visibleItems) {
   activeStorageLayout = layout;
   applyStoragePaneLayout(layout);
   applyStorageShelfZoom(board);
-  board.querySelectorAll('.storage-shelf-zoom-controls button').forEach(button => {
-    button.addEventListener('click', () => {
-      storageShelfZoom = Math.round((storageShelfZoom + Number(button.dataset.zoomDelta)) * 10) / 10;
-      storageShelfZoom = Math.max(0.7, Math.min(1.8, storageShelfZoom));
-      applyStorageShelfZoom(board);
-      saveCloudDataDebounced();
-    });
+  const zoomSlider = layout.querySelector('.storage-shelf-zoom');
+  zoomSlider.addEventListener('input', () => {
+    storageShelfZoom = Number(zoomSlider.value) / 100;
+    applyStorageShelfZoom(board);
   });
+  zoomSlider.addEventListener('change', () => saveCloudDataDebounced());
   layout.classList.toggle('storage-placement-mode', storagePlacementMode);
-  updateStorageShelfCollapseControls(board);
   const placementModeToggle = layout.querySelector('.storage-placement-mode-toggle');
   placementModeToggle.addEventListener('click', () => {
     storagePlacementMode = !storagePlacementMode;
@@ -28124,23 +28378,56 @@ function renderStorageBoard(visibleItems) {
     layout.classList.toggle('storage-placement-mode', storagePlacementMode);
     saveCloudDataDebounced();
   });
-  layout.querySelector('.storage-shelves-toggle-all').addEventListener('click', () => {
-    const shouldExpand = shelfLocations.some(shelf => collapsedStorageShelfIds.has(shelf.id));
-    shelfLocations.forEach(shelf => {
-      if (shouldExpand) collapsedStorageShelfIds.delete(shelf.id);
-      else collapsedStorageShelfIds.add(shelf.id);
+  const shelfButtons = [...layout.querySelectorAll('[data-open-storage-shelf]')];
+  shelfButtons.forEach(button => {
+    const id = button.dataset.openStorageShelf;
+    button.addEventListener('click', () => showDesktopStorageShelf(board, id, !activeStoragePointerDrag?.dragging));
+    button.addEventListener('dragstart', event => {
+      draggedStorageShelfId = id;
+      event.dataTransfer?.setData('text/plain', id);
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
     });
-    updateStorageShelfCollapseControls(board);
-    saveCloudDataDebounced();
+    button.addEventListener('dragend', () => { draggedStorageShelfId = null; });
+    button.addEventListener('dragover', event => {
+      if (draggedStorageShelfId && draggedStorageShelfId !== id) event.preventDefault();
+    });
+    button.addEventListener('drop', event => {
+      const sourceId = draggedStorageShelfId;
+      if (!sourceId || sourceId === id) return;
+      event.preventDefault();
+      const sourceIndex = shelfLocations.findIndex(shelf => shelf.id === sourceId);
+      if (sourceIndex < 0) return;
+      const [shelf] = shelfLocations.splice(sourceIndex, 1);
+      const index = shelfLocations.findIndex(entry => entry.id === id);
+      const bounds = button.getBoundingClientRect();
+      shelfLocations.splice(index + Number(event.clientY >= bounds.top + bounds.height / 2), 0, shelf);
+      draggedStorageShelfId = null;
+      saveShelfLayout();
+    });
   });
-  layout.querySelector('.storage-collapsed-rail-toggle').addEventListener('click', event => {
-    storageCollapsedRailOpen = !storageCollapsedRailOpen;
-    layout.querySelector('.storage-shelves-body').classList.toggle('rail-open', storageCollapsedRailOpen);
-    const label = `Eingeklappte Regale ${storageCollapsedRailOpen ? 'ausblenden' : 'anzeigen'}`;
-    event.currentTarget.setAttribute('aria-expanded', String(storageCollapsedRailOpen));
-    event.currentTarget.title = label;
-    event.currentTarget.setAttribute('aria-label', label);
+  layout.querySelectorAll('[data-storage-shelf-step]').forEach(button => {
+    button.addEventListener('click', () => {
+      const index = shelfButtons.findIndex(entry => entry.dataset.openStorageShelf === desktopStorageShelfId);
+      const direction = Number(button.dataset.storageShelfStep);
+      const next = shelfButtons[(index + direction + shelfButtons.length) % shelfButtons.length];
+      if (next) showDesktopStorageShelf(board, next.dataset.openStorageShelf, true, 'left', {direction});
+    });
   });
+  layout.querySelectorAll('[data-shelf-side] select').forEach(select => {
+    select.addEventListener('change', () => {
+      showDesktopStorageShelf(board, select.value, false, select.closest('[data-shelf-side]').dataset.shelfSide);
+    });
+  });
+  layout.querySelector('[data-storage-split]').addEventListener('click', () => {
+    desktopStorageSplit = !desktopStorageSplit;
+    showDesktopStorageShelf(board, desktopStorageShelfId);
+  });
+  const searchShelf = desktopStorageSearch !== collectionFilterQuery && !matchingShelves.has(desktopStorageShelfId)
+    && !(desktopStorageSplit && matchingShelves.has(desktopStorageRightId))
+    && shelfButtons.find(button => matchingShelves.has(button.dataset.openStorageShelf));
+  desktopStorageSearch = collectionFilterQuery;
+  const initialShelf = searchShelf || shelfButtons.find(button => button.dataset.openStorageShelf === desktopStorageShelfId) || shelfButtons[0];
+  if (initialShelf) showDesktopStorageShelf(board, initialShelf.dataset.openStorageShelf);
   bindStorageShelfPinchZoom(layout.querySelector('.storage-shelves-pane'), board);
   const resizer = layout.querySelector('.storage-pane-resizer');
   bindStoragePaneResizer(layout, resizer);
@@ -28180,48 +28467,6 @@ function renderStorageBoard(visibleItems) {
   board.querySelectorAll('.storage-shelf').forEach(shelfElement => {
     const shelf = shelfLocations.find(entry => entry.id === shelfElement.dataset.shelfId);
     shelfElement.querySelector('.remove-shelf').addEventListener('click', () => removeShelf(shelf));
-    shelfElement.querySelectorAll('.storage-shelf-name-label, .storage-shelf-drag-handle').forEach(handle => {
-      handle.addEventListener('dragstart', event => {
-        draggedStorageShelfId = shelf.id;
-        event.dataTransfer?.setData('text/plain', shelf.id);
-        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
-        shelfElement.classList.add('dragging');
-      });
-      handle.addEventListener('dragend', () => {
-        draggedStorageShelfId = null;
-        board.querySelectorAll('.storage-shelf').forEach(element => element.classList.remove('dragging', 'drop-target'));
-      });
-    });
-    shelfElement.addEventListener('dragover', event => {
-      if (!draggedStorageShelfId || draggedStorageShelfId === shelf.id) return;
-      event.preventDefault();
-      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-      shelfElement.classList.add('drop-target');
-    });
-    shelfElement.addEventListener('dragleave', event => {
-      if (!shelfElement.contains(event.relatedTarget)) shelfElement.classList.remove('drop-target');
-    });
-    shelfElement.addEventListener('drop', event => {
-      const sourceId = event.dataTransfer?.getData('text/plain') || draggedStorageShelfId;
-      if (!sourceId || sourceId === shelf.id) return;
-      event.preventDefault();
-      const sourceIndex = shelfLocations.findIndex(entry => entry.id === sourceId);
-      if (sourceIndex < 0) return;
-      const [movedShelf] = shelfLocations.splice(sourceIndex, 1);
-      const targetIndex = shelfLocations.findIndex(entry => entry.id === shelf.id);
-      if (targetIndex < 0) return;
-      const targetBounds = shelfElement.getBoundingClientRect();
-      const insertionIndex = targetIndex + Number(event.clientX >= targetBounds.left + targetBounds.width / 2);
-      shelfLocations.splice(insertionIndex, 0, movedShelf);
-      draggedStorageShelfId = null;
-      saveShelfLayout();
-    });
-    shelfElement.querySelector('.storage-shelf-toggle').addEventListener('click', () => {
-      if (collapsedStorageShelfIds.has(shelf.id)) collapsedStorageShelfIds.delete(shelf.id);
-      else collapsedStorageShelfIds.add(shelf.id);
-      updateStorageShelfCollapseControls(board);
-      saveCloudDataDebounced();
-    });
     const settingsButton = shelfElement.querySelector('.storage-shelf-settings');
     settingsButton.addEventListener('click', () => {
       const isOpen = shelfElement.classList.toggle('settings-open');
@@ -28294,8 +28539,9 @@ function renderStorageBoard(visibleItems) {
 
 function captureStorageBoardState(board) {
   if (!board) return null;
-  const scrollPositions = [...board.querySelectorAll('.storage-shelves-pane, .storage-unsorted-list, .storage-records')].map(element => ({
-    kind: element.classList.contains('storage-shelves-pane') ? 'shelves' : element.classList.contains('storage-unsorted-list') ? 'unsorted' : 'compartment',
+  const scrollPositions = [...board.querySelectorAll('.storage-shelf-stage, .storage-unsorted-list, .storage-records:not([hidden] *, .storage-shelf-exit *)')].map(element => ({
+    kind: element.classList.contains('storage-shelf-stage') ? 'shelves' : element.classList.contains('storage-unsorted-list') ? 'unsorted' : 'compartment',
+    side: element.closest('[data-shelf-side]')?.dataset.shelfSide,
     shelfId: element.dataset.dropShelf || '',
     compartment: element.dataset.dropCompartment || '',
     left: element.scrollLeft,
@@ -28326,7 +28572,7 @@ function restoreStorageBoardState(board, state) {
   if (!board || !state) return;
   state.scrollPositions.forEach(position => {
     let element = null;
-    if (position.kind === 'shelves') element = board.querySelector('.storage-shelves-pane');
+    if (position.kind === 'shelves') element = board.querySelector(`[data-shelf-side=${position.side || 'left'}] .storage-shelf-stage`);
     else if (position.kind === 'unsorted') element = board.querySelector('.storage-unsorted-list');
     else element = [...board.querySelectorAll('.storage-records')].find(candidate =>
       candidate.dataset.dropShelf === position.shelfId && candidate.dataset.dropCompartment === position.compartment);
@@ -28481,7 +28727,7 @@ document.getElementById('imageLinkWarningBtn').addEventListener('click', () => {
     imageLinkHealthDialog = document.createElement('dialog');
     imageLinkHealthDialog.className='image-link-health-dialog';
     imageLinkHealthDialog.setAttribute('aria-label','Nicht erreichbare Bildlinks');
-    imageLinkHealthDialog.innerHTML='<header><strong>Nicht erreichbare Bildlinks</strong><button type="button" data-close aria-label="Schließen">×</button></header><p role="status" aria-live="polite"></p><div data-image-link-list></div><button type="button" data-recheck>Erneut prüfen</button>';
+    imageLinkHealthDialog.innerHTML='<header><strong>Nicht erreichbare Bildlinks</strong><button type="button" data-close aria-label="Schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></header><p role="status" aria-live="polite"></p><div data-image-link-list></div><button type="button" data-recheck>Erneut prüfen</button>';
     imageLinkHealthDialog.querySelector('[data-close]').addEventListener('click',()=>imageLinkHealthDialog.close());
     imageLinkHealthDialog.querySelector('[data-recheck]').addEventListener('click',()=>{void checkImageLinks(true);});
     document.body.append(imageLinkHealthDialog);
@@ -28492,6 +28738,35 @@ document.getElementById('imageLinkWarningBtn').addEventListener('click', () => {
 window.addEventListener('online',()=>{void checkImageLinks(true);});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleImageLinkCheck();});
 setInterval(()=>{if(!document.hidden)scheduleImageLinkCheck();},IMAGE_LINK_RECHECK_MS);
+
+function attachCollectionVinylHover(card, disc) {
+  const openClass = 'is-vinyl-preview-open';
+  let slide;
+  const move = (event, reveal) => {
+    if (event.pointerType !== 'mouse') return;
+    const isOpen = card.classList.contains(openClass);
+    if (!reveal && !isOpen) return;
+    const from = isOpen ? getComputedStyle(disc).translate : '0 50%';
+    slide?.cancel();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      card.classList.toggle(openClass, reveal);
+      return;
+    }
+    card.classList.add(openClass);
+    const motion = disc.animate([{translate:from}, {translate:reveal ? '0 0' : '0 50%'}], {
+      duration:280, easing:reveal ? 'ease-out' : 'ease-in', fill:'both'
+    });
+    slide = motion;
+    motion.onfinish = () => {
+      if (slide !== motion) return;
+      if (!reveal) card.classList.remove(openClass);
+      motion.cancel();
+      slide = null;
+    };
+  };
+  card.addEventListener('pointerenter', event => move(event, true));
+  card.addEventListener('pointerleave', event => move(event, false));
+}
 
 function renderCollection() {
   scheduleImageLinkCheck();
@@ -28823,7 +29098,7 @@ ${actionButtons}
         <div class="media-info">
           <p class="title">${escapeHtml(getDisplayName(item.title))}</p>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-            <div style="flex:1;">
+            <div style="flex:1; min-width:0;">
               <p class="artist" style="margin:4px 0 0;">${escapeHtml(getArtistDisplayName(item))}</p>
             </div>
             <div style="flex-shrink:0; display:flex; align-items:center; gap:8px;">
@@ -28872,6 +29147,9 @@ ${actionButtons}
             showAlert('Dies ist eine schreibgeschützte Ansicht. Importiere die Sammlung in deine eigene, um sie zu bearbeiten.');
           });
         }
+      }
+      if (viewingOwnCollection && !isCdItem(item)) {
+        attachCollectionVinylHover(card, card.querySelector('.vinyl-card-preview'));
       }
       card.querySelector('.album-listen-card-btn')?.addEventListener('click', event => {
         event.preventDefault();
@@ -30063,6 +30341,12 @@ async function showVinylBackupManager(){
   try{await refresh();}catch(e){status.textContent='Backup-Speicher nicht verfügbar: '+e.message;}
 }
 document.getElementById('vinylBackupsBtn').addEventListener('click', showVinylBackupManager);
+const appStatusBar = document.getElementById('appStatusBar');
+const appStatusObserver = new ResizeObserver(([entry]) => {
+  const height = entry.target.getBoundingClientRect().height;
+  document.documentElement.style.setProperty('--app-status-height', `${Math.ceil(height)}px`);
+});
+appStatusObserver.observe(appStatusBar, {box:'border-box'});
 </script>
 </body>
 </html>
