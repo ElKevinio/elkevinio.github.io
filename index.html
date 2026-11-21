@@ -1257,10 +1257,40 @@
     padding: 8px 12px; margin-bottom: 14px;
   }
   .rating-control { display:grid; grid-template-columns:minmax(85px,1fr) minmax(70px,2fr) 4.5ch auto; align-items:center; gap:8px; font-size:12px; }
-  .rating-control input[type="range"] { width:100%; min-width:0; padding:0; accent-color:var(--accent); }
+  .rating-control input[type="range"] {
+    appearance:none; -webkit-appearance:none; width:100%; min-width:0; height:24px; padding:0; margin:0;
+    border:0; border-radius:5px; box-shadow:none;
+    background:
+      repeating-linear-gradient(to right, transparent 0 calc(100% / 11 - 2px), var(--surface-1) calc(100% / 11 - 2px) calc(100% / 11)) center / 100% 8px no-repeat,
+      linear-gradient(to right, var(--border-strong) 0 45.45%, var(--text-muted) 45.45% 54.55%, var(--accent-border) 54.55% 100%) center / 100% 8px no-repeat;
+    cursor:grab;
+  }
+  .rating-control input[type="range"]:active { cursor:grabbing; }
+  .rating-control input[type="range"]:disabled { cursor:default; }
+  .rating-control input[type="range"]:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .rating-control input[type="range"]::-webkit-slider-thumb {
+    appearance:none; -webkit-appearance:none; width:14px; height:16px;
+    border:2px solid var(--surface-1); border-radius:4px; background:var(--accent);
+  }
+  .rating-control input[type="range"]::-moz-range-thumb {
+    box-sizing:border-box; width:14px; height:16px;
+    border:2px solid var(--surface-1); border-radius:4px; background:var(--accent);
+  }
+  .rating-control input[type="range"][data-unrated]::-webkit-slider-thumb { background:var(--text-muted); }
+  .rating-control input[type="range"][data-unrated]::-moz-range-thumb { background:var(--text-muted); }
   .rating-control output { text-align:right; font-variant-numeric:tabular-nums; }
   .rating-control button { padding:3px 6px; }
   .rating-album { display:grid; gap:4px; }
+  .listening-track-rating { width:min(100%, 340px); margin:6px auto; }
+  .listening-track-rating[hidden], #miniTrackRatingToggle[hidden] { display:none; }
+  #miniTrackRatingToggle[aria-expanded="true"] { border-color:var(--accent-border); color:var(--accent); }
+  #miniTrackRatingToggle.is-rated path { fill:currentColor; }
+  .album-listening-dock.is-collapsed #miniTrackRating {
+    position:absolute; inset:auto 0 calc(100% + 8px); width:auto; margin:0; padding:10px;
+    border:1px solid var(--border-strong); border-radius:10px; background:var(--surface-2);
+    box-shadow:var(--shadow);
+  }
+  .listening-track-rating label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .rating-track { break-inside:avoid; padding:4px 0; }
   @media (max-width:600px) { #fTracklist { column-count:1; } }
   .rating-track .rating-control { grid-template-columns:minmax(0,1fr) 4.5ch auto; }
@@ -7801,9 +7831,72 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock.is-collaps
   position:relative; inset:auto; margin-left:auto; max-width:100%; pointer-events:auto;
 }
 #appStatusBar > #albumListeningDock.is-collapsed.is-hidden { display:none; }
-body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock.is-expanded {
-  bottom:max(12px, var(--app-status-height, 0px));
+body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-hidden) {
   pointer-events:auto;
+}
+body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-collapsed) {
+  bottom:max(12px, var(--app-status-height, 0px));
+}
+#appStatusBar > #albumListeningDock:not(.is-collapsed) .album-mini-main {
+  grid-template-columns:clamp(64px, 23vw, 96px) minmax(0,1fr);
+  align-items:center;
+  gap:clamp(6px, 2vw, 12px);
+}
+#appStatusBar > #albumListeningDock:not(.is-collapsed) .album-mini-player:not(:has(.album-mini-cover:not([hidden]))) .album-mini-main {
+  grid-template-columns:minmax(0,1fr);
+}
+#appStatusBar > #albumListeningDock:not(.is-collapsed) .album-mini-cover {
+  width:100%;
+  height:auto;
+  aspect-ratio:1;
+  align-self:start;
+}
+#appStatusBar > #albumListeningDock:not(.is-collapsed) .album-listening-dock-expand-handle {
+  margin-bottom:0;
+}
+#appStatusBar > #albumListeningDock:not(.is-collapsed) .album-mini-topbar {
+  flex-wrap:nowrap;
+  justify-content:safe flex-end;
+  min-height:30px;
+  margin-bottom:0;
+}
+#appStatusBar .album-mini-topbar > #miniTrackRatingToggle {
+  margin-right:auto;
+}
+#appStatusBar > #albumListeningDock:not(.is-collapsed) .album-mini-track-title {
+  font-size:clamp(15px, 4.5vw, 18px);
+}
+.album-mini-track-actions { display:flex; align-items:center; gap:6px; margin-top:5px; }
+.album-listening-dock.is-collapsed .album-mini-track-actions { display:none; }
+#appStatusBar > #albumListeningDock:not(.is-collapsed) .album-mini-player > .album-mini-controls {
+  margin-top:8px;
+}
+@media (max-width:400px) {
+  #appStatusBar > #albumListeningDock:not(.is-collapsed) .album-mini-controls {
+    gap:4px; justify-content:safe center; overflow-x:auto;
+  }
+}
+#albumListeningDock { --mini-button-size:36px; --mini-play-size:42px; }
+#albumListeningDock.is-collapsed { --mini-button-size:26px; --mini-play-size:32px; }
+#albumListeningDock :is(.album-mini-topbar, .album-mini-controls, .album-mini-track-actions) > :is(button, a),
+#albumListeningDock .mini-volume-menu > button {
+  box-sizing:border-box;
+  flex:0 0 var(--mini-button-size);
+  width:var(--mini-button-size); min-width:var(--mini-button-size);
+  height:var(--mini-button-size); min-height:var(--mini-button-size);
+  padding:0; border-radius:6px;
+}
+#albumListeningDock .album-mini-controls > .primary {
+  flex-basis:var(--mini-play-size);
+  width:var(--mini-play-size); min-width:var(--mini-play-size);
+  height:var(--mini-play-size); min-height:var(--mini-play-size); border-radius:50%;
+}
+#albumListeningDock .mini-volume-menu { flex-basis:var(--mini-button-size); }
+#miniTrackRating { width:100%; }
+#miniTrackRating .rating-control { grid-template-columns:minmax(0,1fr) 3ch; }
+#miniTrackRating .rating-control output { margin:0; }
+@media (max-width:400px) {
+  #albumListeningDock:not(.is-collapsed) { --mini-button-size:32px; --mini-play-size:38px; }
 }
 #appRoot { padding-bottom:var(--app-status-height, 0px); }
 .modal-overlay {
@@ -8589,6 +8682,8 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock.is-expande
     <button type="button" id="closeAlbumListeningDockBtn" class="icon-btn album-listening-dock-close" title="Wiedergabe beenden" aria-label="Wiedergabe beenden"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div>
   <div id="albumListeningDockContent"></div>
+  <button type="button" id="miniTrackRatingToggle" class="album-mini-control" aria-expanded="false" aria-controls="miniTrackRating" aria-label="Song bewerten" title="Song bewerten" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+  <div id="miniTrackRating" class="listening-track-rating" hidden></div>
   <section id="albumQueuePanel" class="album-queue-panel" aria-label="Album-Warteschlange" hidden>
     <div class="album-queue-drag-handle" role="slider" tabindex="0" aria-label="Warteschlange höher oder niedriger ziehen" aria-valuemin="0" aria-valuemax="100" aria-valuenow="55"><span></span></div>
     <div class="album-queue-header"><h2 class="album-queue-heading">Warteschlange</h2><button type="button" class="album-queue-clear" data-clear-album-queue title="Warteschlange leeren">Warteschlange leeren</button><button type="button" class="album-queue-shuffle" data-shuffle-album-queue title="Wartende Alben zufällig mischen" aria-label="Album-Warteschlange mischen" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 3-2 4-4m4-4c1-2 2-4 4-4h3m-4-4 4 4-4 4"/></svg><span>Shuffle</span></button></div>
@@ -8779,6 +8874,7 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock.is-expande
   <div class="fullscreen-player-info">
     <strong id="fullscreenPlayerTrack" class="fullscreen-player-track"></strong>
     <span id="fullscreenPlayerArtist" class="fullscreen-player-artist"></span>
+    <div id="fullscreenTrackRating" class="listening-track-rating" hidden></div>
     <span id="fullscreenPlayerAlbumProgress" class="fullscreen-player-album-progress" hidden></span>
     <div class="fullscreen-player-progress"><span id="fullscreenPlayerProgressBar"></span><input type="range" id="fullscreenPlayerSeek" min="0" max="0" value="0" step="1" aria-label="Wiedergabeposition im Vollbild" disabled></div>
     <div class="fullscreen-player-time"><span id="fullscreenPlayerPosition">0:00</span><span id="fullscreenPlayerDuration">0:00</span></div>
@@ -13832,7 +13928,10 @@ function resetShopMode() {
 
 function closeShopMode() {
   const shopDock = document.getElementById('albumListeningDock');
-  if (shopDock.parentElement.id === 'shopPlayerSlot') document.getElementById('appStatusBar').appendChild(shopDock);
+  if (shopDock.parentElement.id === 'shopPlayerSlot') {
+    document.getElementById('appStatusBar').appendChild(shopDock);
+    placeMiniTrackRatingToggle();
+  }
   document.body.classList.remove('shop-active');
   document.getElementById('shopModeHeaderBtn').classList.remove('toggle-active');
   if (shopSavedTitle !== null) document.getElementById('collectionTitleDisplay').textContent = shopSavedTitle;
@@ -17961,25 +18060,29 @@ function getAlbumRating(item) {
 
 const albumRatingFormat = new Intl.NumberFormat('de-DE', {maximumFractionDigits:2});
 
-function renderRatingControl(container, id, label, getScore, setScore) {
-  container.innerHTML = `<label for="${id}">${escapeHtml(label)}</label><input id="${id}" type="range" min="1" max="10" step="0.1"><output for="${id}"></output><button type="button" title="Bewertung entfernen" aria-label="${escapeHtml(label)} entfernen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>`;
+function renderRatingControl(container, id, label, getScore, setScore, compact = false) {
+  const name = escapeHtml(label);
+  const slider = `<input id="${id}" type="range" min="0" max="10" step="1"${compact ? ` aria-label="${name}"` : ''}><output for="${id}"></output>`;
+  container.innerHTML = compact ? slider : `<label for="${id}">${name}</label>${slider}<button type="button" title="Bewertung entfernen" aria-label="${name} entfernen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>`;
   const input = container.querySelector('input');
   const output = container.querySelector('output');
   const clear = container.querySelector('button');
   const refresh = (score = getScore(), automatic = false) => {
-    input.value = score ?? 5;
+    const rounded = Math.round(score ?? 0);
+    input.value = score == null ? 5 : rounded <= 5 ? rounded - 1 : rounded;
+    input.toggleAttribute('data-unrated', score == null);
     input.disabled = automatic;
-    input.setAttribute('aria-valuetext', score == null ? 'Unbewertet' : `${albumRatingFormat.format(score)} von 10`);
-    clear.disabled = automatic || score == null;
+    input.setAttribute('aria-valuetext', score == null ? 'Neutral, unbewertet' : `${albumRatingFormat.format(score)} von 10`);
+    if (clear) clear.disabled = automatic || score == null;
     output.value = score == null ? '–' : albumRatingFormat.format(score);
   };
   const apply = () => {
-    setScore(Number(input.value));
+    const position = Number(input.value);
+    setScore(position === 5 ? null : position < 5 ? position + 1 : position);
     refresh();
   };
   input.addEventListener('input', apply);
-  input.addEventListener('click', () => { if (getScore() == null) apply(); });
-  clear.addEventListener('click', () => { setScore(null); refresh(); });
+  clear?.addEventListener('click', () => { setScore(null); refresh(); });
   refresh();
   return refresh;
 }
@@ -19233,6 +19336,7 @@ function queueListeningCloudSave(session) {
     {trackUri:listeningCloudConfirmedTrackUri,paused:listeningCloudConfirmedPaused});
   const shared = listeningCloudSharedKey(state);
   if (shared === listeningSyncLastSerialized) return;
+  flushListeningTrackRatings();
   listeningSyncLastSerialized = shared;
   const uid = currentUid;
   const revision = Math.max(Date.now(), listeningSyncRevision + 1);
@@ -19509,6 +19613,7 @@ function updateAlbumDockToggle() {
     button.setAttribute('aria-label', button.title);
     button.setAttribute('aria-expanded', String(!isCollapsed));
   });
+  placeMiniTrackRatingToggle();
 }
 
 function toggleAlbumDockCollapsed() {
@@ -19880,8 +19985,118 @@ document.getElementById('startObsExport').addEventListener('click', () => {
   if(obsExportWindow){obsExportWindow.focus();sendObsStyles();sendObsExportState();}
 });
 
+const pendingListeningRatings = new Map();
+let listeningRatingContext = '';
+let listeningRatingPaused = null;
+
+function flushListeningTrackRatings() {
+  if (!pendingListeningRatings.size) return;
+  const uid = currentUid, epoch = cloudAccountEpoch;
+  let changed = false;
+  for (const [id, entry] of pendingListeningRatings) {
+    if (entry.uid !== uid || entry.epoch !== epoch) {
+      pendingListeningRatings.delete(id);
+      continue;
+    }
+    if (!isCloudSession(uid, epoch) || cloudAccountReadyUid !== uid) continue;
+    const album = ownCollection.find(item => String(item.id) === entry.albumId);
+    if (album && getRatingTrackRows(album.tracklist).some(row => row.key === entry.trackKey)) {
+      const ratings = {...album.trackRatings};
+      if (entry.value === null) delete ratings[entry.trackKey];
+      else ratings[entry.trackKey] = entry.value;
+      if (entry.value !== validAlbumRating(album.trackRatings?.[entry.trackKey])) {
+        album.trackRatings = ratings;
+        changed = true;
+      }
+    }
+    pendingListeningRatings.delete(id);
+  }
+  if (changed) saveOwnCollectionData(true);
+}
+
+function getListeningRatingTarget(content) {
+  const albumId = currentListeningAlbum?.id;
+  if (albumId == null || !isCloudSession(currentUid, cloudAccountEpoch) || cloudAccountReadyUid !== currentUid) return null;
+  const album = ownCollection.find(item => String(item.id) === String(albumId));
+  const row = content.querySelector('.album-mini-track.is-current');
+  const title = row?.querySelector('.album-mini-track-name')?.textContent?.trim();
+  if (!album || !title) return null;
+  const position = row.querySelector('.album-mini-track-number')?.textContent?.trim();
+  const matches = getRatingTrackRows(album.tracklist).filter(entry =>
+    entry.key && entry.track.title.trim().toLowerCase() === title.toLowerCase());
+  const positioned = matches.filter(entry => String(entry.track.position || entry.track.number || '') === position?.replace(/^0+(?=\d)/, ''));
+  const track = matches.length === 1 ? matches[0] : positioned.length === 1 ? positioned[0] : null;
+  return track ? {album, track} : null;
+}
+
+const miniTrackRatingToggle = document.getElementById('miniTrackRatingToggle');
+const miniTrackRatingPanel = document.getElementById('miniTrackRating');
+function setMiniTrackRatingOpen(open) {
+  miniTrackRatingPanel.hidden = !open;
+  miniTrackRatingToggle.setAttribute('aria-expanded', String(open));
+}
+miniTrackRatingToggle.addEventListener('click', () => setMiniTrackRatingOpen(miniTrackRatingPanel.hidden));
+miniTrackRatingPanel.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  event.stopPropagation();
+  setMiniTrackRatingOpen(false);
+  miniTrackRatingToggle.focus();
+});
+
+function placeMiniTrackRatingToggle() {
+  const dock = document.getElementById('albumListeningDock');
+  const content = document.getElementById('albumListeningDockContent');
+  const transport = content.querySelector('.album-mini-controls');
+  const topbar = content.querySelector('.album-mini-topbar');
+  const expandedRow = dock.closest('.shop-player-slot') ? content.querySelector('.album-mini-track-actions') : topbar;
+  const target = dock.classList.contains('is-collapsed') ? transport : expandedRow || transport;
+  if (target && miniTrackRatingToggle.parentElement !== target) {
+    if (target === expandedRow) target.prepend(miniTrackRatingToggle);
+    else target.append(miniTrackRatingToggle);
+  }
+}
+
+function syncListeningTrackRating() {
+  const content = document.getElementById('albumListeningDockContent');
+  const {album, track} = getListeningRatingTarget(content) || {};
+  const uid = currentUid, epoch = cloudAccountEpoch;
+  const id = track ? JSON.stringify([uid, epoch, String(album.id), track.key]) : '';
+  placeMiniTrackRatingToggle();
+  miniTrackRatingToggle.hidden = !track;
+  const paused = content.querySelector('.album-mini-control[aria-label="Wiedergabe starten"]') !== null;
+  if (id === listeningRatingContext && paused === listeningRatingPaused) return;
+  if (listeningRatingContext && (id !== listeningRatingContext || (paused && !listeningRatingPaused))) {
+    flushListeningTrackRatings();
+  }
+  listeningRatingPaused = paused;
+  if (id === listeningRatingContext) return;
+  listeningRatingContext = id;
+  setMiniTrackRatingOpen(false);
+  const score = () => pendingListeningRatings.has(id)
+    ? pendingListeningRatings.get(id).value
+    : validAlbumRating(album?.trackRatings?.[track?.key]);
+  miniTrackRatingToggle.classList.toggle('is-rated', score() !== null);
+  const controls = [];
+  for (const elementId of ['miniTrackRating', 'fullscreenTrackRating']) {
+    const host = document.getElementById(elementId);
+    host.replaceChildren();
+    if (elementId === 'fullscreenTrackRating') host.hidden = !track;
+    if (!track) continue;
+    const control = document.createElement('div');
+    control.className = 'rating-control';
+    host.append(control);
+    controls.push(renderRatingControl(control, `${elementId}Input`, track.track.title, score, value => {
+      if (listeningRatingContext !== id || !isCloudSession(uid, epoch)) return;
+      pendingListeningRatings.set(id, {uid, epoch, albumId:String(album.id), trackKey:track.key, value});
+      miniTrackRatingToggle.classList.toggle('is-rated', value !== null);
+      for (const refresh of controls) refresh();
+    }, elementId === 'miniTrackRating'));
+  }
+}
+
 function syncFullscreenPlayer() {
   syncPlayerVolumeControls();
+  syncListeningTrackRating();
   if (!isFullscreenPlayerOpen() || document.hidden) return;
   const presentation = [innerWidth,innerHeight,fullscreenRoomStyle.layout,fullscreenRoomStyle.zoom,fullscreenRoomStyle.windows,fullscreenRoomStyle.weather,fullscreenRoomStyle.timeOfDay,fullscreenRoomStyle.windowScene,getFullscreenPlayerView(),document.getElementById('fullscreenPlayerPosterForm').hidden].join('|');
   if (presentation !== fullscreenPresentationSignature) {
@@ -22351,7 +22566,7 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   player.dataset.provider = 'youtube';
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), createFullscreenPlayerToggle(), createMiniVolumeButton(), createAlbumDockToggle());
+  topbar.append(createAlbumQueueToggle(), createFullscreenPlayerToggle(), createAlbumDockToggle());
   const main = document.createElement('div');
   main.className = 'album-mini-main';
   const cover = document.createElement('img');
@@ -22384,7 +22599,10 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   const expandedClose = createExpandedDockCloseButton();
   topbar.append(expandedClose);
   controls.append(collapsedTitle, toggle, createAlbumDockToggle(), createCollapsedDockCloseButton());
-  meta.append(currentTrack, artist, controls);
+  const trackActions = document.createElement('div');
+  trackActions.className = 'album-mini-track-actions';
+  trackActions.append(createMiniVolumeButton());
+  meta.append(currentTrack, artist, trackActions);
 
   main.append(cover, meta);
   const progress = document.createElement('div');
@@ -22415,9 +22633,8 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
   link.innerHTML = LISTENING_ICON_SVG.external;
-  toggle.after(link);
-  topbar.append(link);
-  player.append(topbar, main, host, message, progress);
+  trackActions.append(link);
+  player.append(topbar, main, controls, host, message, progress);
   container.replaceChildren(player);
 
   let ready = false;
@@ -22800,14 +23017,6 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   favorite.innerHTML = LISTENING_ICON_SVG.favorite;
   favorite.setAttribute('aria-label', 'Zu deinen Spotify-Lieblingssongs hinzufügen');
   favorite.title = 'Zu deinen Spotify-Lieblingssongs hinzufügen';
-  const openInSpotify = document.createElement('a');
-  openInSpotify.className = 'album-mini-control album-mini-open-spotify';
-  openInSpotify.href = originalUrl;
-  openInSpotify.target = '_blank';
-  openInSpotify.rel = 'noopener';
-  openInSpotify.innerHTML = LISTENING_ICON_SVG.external;
-  openInSpotify.title = 'In Spotify öffnen (volle Länge, wenn die Vorschau hier nur 30 Sekunden spielt)';
-  openInSpotify.setAttribute('aria-label', 'In Spotify öffnen');
   const nextQueued = document.createElement('button');
   nextQueued.type = 'button';
   nextQueued.className = 'album-mini-control album-mini-queue-next';
@@ -22823,7 +23032,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   favorite.disabled = true;
   const topbar = document.createElement('div');
   topbar.className = 'album-mini-topbar';
-  topbar.append(createAlbumQueueToggle(), openInSpotify, createFullscreenPlayerToggle(), createMiniVolumeButton(), createAlbumDockToggle());
+  topbar.append(createAlbumQueueToggle(), createFullscreenPlayerToggle(), createAlbumDockToggle());
   const trackList = document.createElement('ol');
   trackList.className = 'album-mini-tracklist';
   const progress = document.createElement('div');
@@ -22858,11 +23067,14 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     createAlbumDockToggle(),
     createCollapsedDockCloseButton()
   );
-  meta.append(currentTrack, artist, controls);
+  const trackActions = document.createElement('div');
+  trackActions.className = 'album-mini-track-actions';
+  trackActions.append(createMiniVolumeButton());
+  meta.append(currentTrack, artist, trackActions);
 
   main.append(cover, meta);
   progress.append(seek);
-  player.append(expandHandle, trackList, topbar, main, host, message, progress);
+  player.append(expandHandle, trackList, topbar, main, controls, host, message, progress);
   container.append(player);
 
   const setExpanded = expanded => {
@@ -23749,6 +23961,7 @@ function mountListeningEmbed(container, url, title, item = null, restorePlayback
     listeningVinylAppearance = chooseListeningVinylAppearance(currentListeningAlbum);
     updateAlbumDockToggle();
     updateAlbumMiniPlayerButton();
+    syncListeningTrackRating();
     persistListeningSession();
   }
   if (spotifyEmbed) {
