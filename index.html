@@ -1397,14 +1397,7 @@
     min-height: 260px;
   }
   .storage-shelf.display-mode { min-width:0; min-height:0; }
-  .storage-shelf-header {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  .storage-shelf-header, .storage-compartment-header {
+  .storage-compartment-header {
     position:relative;
     top:auto;
     z-index:auto;
@@ -1414,21 +1407,12 @@
     border:0;
     box-shadow:none;
   }
-  .storage-shelf-topline { display:flex; align-items:center; gap:6px; min-width:0; }
-  .storage-shelf-dimensions { display:none; align-items:center; gap:10px; }
-  .storage-shelf.settings-open .storage-shelf-dimensions { display:flex; }
-  .storage-shelf-dimensions select { width:auto; min-width:10px; padding:5px 7px; }
-  .storage-shelf-settings { width:30px !important; min-width:30px !important; padding:0 !important; }
-  .storage-shelf-header h3, .storage-shelf-name { flex: 1 1 auto; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .storage-shelf-name { width:100%; padding:0; border:0; background:transparent; color:var(--text-primary); font-size:14px; font-weight:600; }
   .storage-shelf-name-label { display:none; flex:1 1 auto; min-width:0; overflow:hidden; color:var(--text-primary); font-size:14px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; cursor:grab; user-select:none; }
   .storage-shelf-name-label:active { cursor:grabbing; }
   .storage-shelf-drag-handle { display:none; width:24px !important; min-width:24px !important; cursor:grab; color:var(--text-muted); }
   .storage-shelf-drag-handle:active { cursor:grabbing; }
   .storage-shelf-name:focus { outline:1px solid var(--accent-border); outline-offset:2px; }
-  .storage-dimension-control { display:flex; align-items:center; gap:4px; color:var(--text-secondary); font-size:11px; white-space:nowrap; }
-  .storage-dimension-control input { width:54px; padding:5px 4px; }
-  .storage-shelf-header button, .storage-compartment-header button, .storage-add-shelf {
+  .storage-compartment-header button, .storage-add-shelf {
     min-width: 30px;
     width: 30px;
     height: 26px;
@@ -1454,15 +1438,16 @@
     overflow:hidden;
     transition: background 0.15s, border-color 0.15s;
   }
-  .storage-compartment.drag-over, .storage-unsorted.drag-over {
-    border: 2px solid var(--accent);
-    background: var(--accent-bg);
-    box-shadow: 0 0 0 2px var(--accent-border);
-  }
   .storage-compartment.search-match {
     border: 2px solid var(--accent);
     background: var(--accent-bg);
     box-shadow: 0 0 0 2px var(--accent-border);
+  }
+  .storage-compartment.drag-over, .storage-shelf-pending.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-bg);
+    outline: 2px solid var(--accent);
+    outline-offset: -3px;
   }
   .storage-compartment-header {
     display: flex;
@@ -1485,7 +1470,6 @@
     line-height:1.5;
     white-space:nowrap;
   }
-  .storage-shelf-count { margin-left:4px; }
   .storage-compartment-name {
     flex:1;
     min-width:0;
@@ -3371,16 +3355,17 @@
     .storage-record .listen,
     .storage-unsorted-actions .listen { opacity:1; pointer-events:auto; transform:none; }
   }
-  @media (min-width:1280px) {
+  @media (min-width:1440px) {
     .storage-random-filter-btn { display:none !important; }
     .storage-random-filter-panel,
     .storage-random-filter-panel.open {
       position:static;
       display:flex;
       align-items:center;
+      flex-wrap:wrap;
       gap:8px;
       width:auto;
-      max-width:none;
+      max-width:calc(100vw - 520px);
       padding:0;
       border:0;
       border-radius:0;
@@ -3413,6 +3398,7 @@
     padding:0;
     align-self:start;
   }
+  .storage-shelf.display-mode:not(.is-collapsed) .storage-compartment { min-height:120px; }
   .storage-shelf.display-mode .storage-compartments {
     grid-template-columns:repeat(var(--shelf-columns, 1), 120px);
     grid-template-rows:repeat(var(--shelf-rows, 1), max-content);
@@ -3447,6 +3433,9 @@
   .storage-shelf.display-mode .storage-compartment:hover .storage-compartment-header,
   .storage-shelf.display-mode .storage-compartment:focus-within .storage-compartment-header {
     opacity:1;
+  }
+  .storage-shelf.display-mode .storage-compartment:hover .storage-compartment-header > :is(button, input),
+  .storage-shelf.display-mode .storage-compartment:focus-within .storage-compartment-header > :is(button, input) {
     pointer-events:auto;
   }
   .storage-shelf.display-mode .storage-compartment-name {
@@ -3465,10 +3454,6 @@
   .storage-shelf.display-mode .storage-compartment-header .wash-compartment-button { position:absolute; right:20px; width:18px; min-width:18px; height:18px; min-height:18px; }
   .storage-shelf.display-mode .storage-compartment-header .storage-order-button { position:absolute; right:40px; }
   .storage-shelf.display-mode .storage-compartment-header .spotify-compartment-playlist-button { position:absolute; right:60px; width:18px; min-width:18px; height:18px; min-height:18px; }
-  .storage-shelf.display-mode .storage-shelf-topline { gap:3px; }
-  .storage-shelf.display-mode .storage-shelf-name { min-width:24px; }
-  .storage-shelf.display-mode .storage-shelf-topline button { width:22px; min-width:22px; height:22px; padding:0; }
-  .storage-shelf.display-mode .storage-shelf-count { padding-right:3px; padding-left:3px; }
   .storage-shelf.display-mode div.storage-records {
     flex:0 0 auto;
     width:100%;
@@ -3562,31 +3547,125 @@
   .storage-shelves-pane, .storage-unsorted-pane { min-width:0; min-height:0; background:var(--surface-1); }
   .storage-shelves-pane {
     display:grid;
+    container: storage-shelves / inline-size;
     grid-template-rows:auto minmax(0, 1fr) auto;
     gap:6px;
     min-width:0;
     touch-action:pan-x pan-y;
   }
-  .storage-desktop-shelves { display:grid; grid-template-columns:clamp(90px, 12vw, 170px) minmax(0, 1fr); gap:10px; min-height:0; }
-  .storage-shelf-names { display:flex; flex-direction:column; gap:4px; overflow:auto; padding:2px; border-right:1px solid var(--border); }
-  .storage-shelf-names button { padding:7px 9px; flex:none; white-space:normal; overflow-wrap:anywhere; text-align:left; background:transparent; border-color:transparent; }
+  .storage-desktop-shelves {
+    display:grid;
+    position:relative;
+    --storage-rail-width:170px;
+    --storage-rail-compact-width:58px;
+    --storage-property-compact-width:36px;
+    --storage-rail-divider-width:18px;
+    --storage-rail-gap:6px;
+    --storage-shelf-nav-width:var(--storage-rail-width);
+    --storage-properties-width:var(--storage-rail-width);
+    grid-template-columns:var(--storage-shelf-nav-width) var(--storage-rail-divider-width) minmax(0, 1fr); gap:var(--storage-rail-gap); min-height:0;
+  }
+  .storage-desktop-shelves:has(> .storage-shelf-properties:not([hidden])) {
+    grid-template-columns:var(--storage-shelf-nav-width) var(--storage-rail-divider-width) var(--storage-properties-width) minmax(0, 1fr);
+  }
+  .storage-desktop-shelves.is-shelf-list-collapsed { --storage-shelf-nav-width:var(--storage-rail-compact-width); }
+  .storage-desktop-shelves.is-properties-collapsed { --storage-properties-width:var(--storage-property-compact-width); }
+  .storage-shelf-names, .storage-shelf-property-fields {
+    border:1px solid var(--border); border-radius:8px; background:var(--surface-1);
+  }
+  .storage-shelf-names { display:flex; flex-direction:column; gap:4px; overflow:auto; padding:4px; }
+  .storage-shelf-names > * { flex-shrink:0; }
+  .storage-shelf-name-row { display:grid; grid-template-columns:minmax(0,1fr) 22px; gap:3px; align-items:center; }
+  .storage-shelf-names [data-open-storage-shelf] {
+    padding:6px; min-width:0; min-height:34px; white-space:normal; overflow-wrap:anywhere; text-align:left;
+    background:transparent; border-color:transparent;
+  }
+  .storage-shelf-name-row .remove-shelf, .storage-shelf-names .storage-add-shelf {
+    display:inline-flex; justify-content:center; align-items:center; padding:0;
+  }
+  .storage-shelf-name-row .remove-shelf { width:22px; min-width:22px; height:26px; border-color:transparent; background:transparent; }
+  .storage-shelf-name-row .remove-shelf:hover { color:var(--danger); background:var(--surface-2); }
+  .storage-shelf-names .storage-add-shelf { align-self:stretch; width:auto; min-width:0; min-height:32px; }
+  .is-shelf-list-collapsed [data-open-storage-shelf] { justify-content:center; padding-inline:0; }
+  .is-shelf-list-collapsed .storage-shelf-full-name { display:none; }
+  .is-shelf-list-collapsed [data-open-storage-shelf]::before { content:attr(data-initial); font-weight:600; }
+  .storage-shelf-list-divider {
+    position:relative; align-items:flex-start; justify-content:center; width:18px; min-width:0;
+    padding:8px 0; border:0; border-radius:4px; background:transparent; color:var(--text-secondary);
+  }
+  .storage-shelf-list-divider::before { content:''; position:absolute; inset:0 auto 0 50%; width:1px; background:var(--border-strong); }
+  .storage-shelf-list-divider svg { position:relative; width:16px; height:18px; background:var(--surface-1); }
+  .is-shelf-list-collapsed .storage-shelf-list-divider svg { transform:rotate(180deg); }
   .storage-shelf-names button[aria-current="true"], .storage-shelf-names button.is-drag-hovered { color:var(--accent); background:var(--accent-bg); border-color:var(--accent-border); }
-  .storage-shelf-stage { overflow:auto; min-width:0; min-height:0; clip-path:inset(0); }
+  .storage-shelf-properties {
+    min-width:0; min-height:0; overflow:auto;
+  }
+  .storage-shelf-properties[hidden] { display:none; }
+  .storage-shelf-property-fields {
+    display:flex; flex-direction:column; gap:6px; padding:6px;
+  }
+  .storage-shelf-property-heading { color:var(--text-secondary); font-size:12px; font-weight:600; }
+  .storage-shelf-property-initial { display:none; width:32px; min-height:34px; padding:0; justify-content:center; }
+  .is-properties-collapsed .storage-shelf-property-initial { display:inline-flex; }
+  .is-properties-collapsed .storage-shelf-property-fields { display:none; }
+  .is-properties-collapsed .storage-shelf-property-initial[aria-expanded="true"] + .storage-shelf-property-fields {
+    display:flex; position:absolute; z-index:5; top:38px;
+    width:var(--storage-rail-width); max-height:calc(100% - 38px); overflow:auto;
+    box-shadow:0 4px 12px var(--border-strong);
+  }
+  .storage-dimension-control { display:grid; gap:4px; min-width:0; color:var(--text-secondary); font-size:11px; }
+  .storage-dimension-control :is(input, select) { width:100%; min-width:0; min-height:34px; padding:5px 6px; }
+  .storage-shelf-dimensions { display:grid; grid-template-columns:repeat(2,minmax(0, 1fr)); gap:6px; }
+  .storage-shelf-properties .storage-shelf-count { align-self:flex-start; margin:0; }
+  .storage-shelf-stage { overflow:auto; overscroll-behavior:contain; min-width:0; min-height:0; clip-path:inset(0); }
   .storage-shelf-stage.is-sliding { overflow:hidden; }
-  .storage-shelf-stage-content { position:relative; display:flex; width:max-content; min-width:100%; min-height:100%; zoom:var(--storage-shelf-zoom, 1); }
+  .storage-shelf-stage { container-type:inline-size; }
+  .storage-shelf-stage-content { position:relative; display:flex; min-height:100%; zoom:var(--storage-shelf-zoom, 1); }
+  .storage-layout:not(.storage-item-dragging.storage-placement-mode) .storage-shelf-stage-content > .storage-shelf:not(.display-mode):not(.storage-shelf-exit) {
+    min-width:var(--shelf-min-width);
+    width:clamp(var(--shelf-min-width), calc(100cqi / var(--storage-shelf-zoom, 1)), var(--shelf-width));
+  }
+  .storage-layout:not(.storage-item-dragging.storage-placement-mode) .storage-shelf-stage .storage-shelf:not(.display-mode) .storage-compartments {
+    grid-template-columns:repeat(var(--shelf-columns), minmax(152px, 1fr));
+  }
+  .storage-shelf-stage .storage-shelf:not(.display-mode) .storage-compartment-header {
+    flex-wrap:wrap; justify-content:flex-end; gap:2px; padding:2px 4px; height:auto;
+  }
+  .storage-shelf-stage .storage-compartment-name { flex:1 1 50%; top:auto; }
+  .storage-shelf-stage .storage-compartment-header button {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:34px; min-width:34px; height:34px; min-height:34px; padding:0;
+  }
+  .storage-shelf-stage .storage-compartment-header button svg { width:21px; height:21px; }
+  .storage-shelf-stage .storage-shelf.display-mode .remove-compartment {
+    width:34px; min-width:34px; height:34px; min-height:34px;
+  }
+  @media (pointer:coarse) {
+    .storage-shelf-stage .storage-compartment-header button,
+    .storage-shelf-stage .storage-shelf.display-mode .remove-compartment {
+      width:44px; min-width:44px; height:44px; min-height:44px;
+    }
+    .storage-shelf-stage .storage-shelf.display-mode .storage-compartment-header { opacity:1; }
+    .storage-shelf-stage .storage-shelf.display-mode .remove-compartment { pointer-events:auto; }
+  }
   .storage-shelf-stage .storage-shelf[hidden] { display:none !important; }
-  .storage-shelf-stage-content > .storage-shelf { flex:none; margin:auto; }
+  .storage-shelf-stage-content > .storage-shelf { flex:none; margin:0 auto; }
   .storage-shelf-stage-content > .storage-shelf-exit {
     position:absolute; z-index:1; margin:0; pointer-events:none;
   }
   .storage-shelf-names button.has-storage-match { outline:1px dashed var(--accent); outline-offset:-2px; }
   .storage-shelf-names button.is-right-shelf { border-color:var(--border-strong); }
   .storage-shelf-panes { display:grid; grid-template-columns:minmax(0,1fr); min-height:0; }
-  .storage-shelf-panes.is-split { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .storage-shelf-panes.is-split {
+    --storage-split-gap:8px;
+    --storage-split-border:1px;
+    grid-template-columns:minmax(0,var(--storage-left-share,1fr)) minmax(0,var(--storage-right-share,1fr));
+    gap:var(--storage-split-gap);
+  }
   .storage-shelf-panes > [data-shelf-side] { display:grid; grid-template-rows:minmax(0,1fr); min-width:0; min-height:0; }
   .storage-shelf-panes > [data-shelf-side][hidden], .storage-shelf-panes select { display:none; }
-  .storage-shelf-panes.is-split > [data-shelf-side] { grid-template-rows:auto minmax(0,1fr); gap:6px; border:1px solid var(--border); border-radius:8px; }
-  .storage-shelf-panes.is-split select { display:block; width:100%; min-width:0; }
+  .storage-shelf-panes.is-split > [data-shelf-side] { grid-template-rows:auto minmax(0,1fr); gap:6px; border:var(--storage-split-border) solid var(--border); border-radius:8px; }
+  .storage-shelf-panes.is-split select { display:block; width:100%; min-width:0; text-align:center; font-weight:600; }
   .storage-shelf-pagination, .storage-shelf-pager, .storage-shelf-zoom-label { display:flex; align-items:center; justify-content:center; gap:8px; font-variant-numeric:tabular-nums; }
   .storage-shelf-pagination { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); }
   .storage-shelf-pager { grid-column:2; grid-row:1; }
@@ -3666,12 +3745,7 @@
     height:max-content;
     flex:0 0 min(240px, calc(100vw - 48px));
   }
-  .storage-shelf.is-collapsed .storage-shelf-header { gap:0; margin-bottom:0; }
   .storage-shelf.is-collapsed .storage-shelf-name-label { display:block; }
-  .storage-shelf.is-collapsed .storage-shelf-name,
-  .storage-shelf.is-collapsed .storage-shelf-count,
-  .storage-shelf.is-collapsed .storage-shelf-settings,
-  .storage-shelf.is-collapsed .storage-shelf-dimensions { display:none !important; }
   .storage-shelf.is-collapsed .storage-compartments { display:none; }
   .storage-shelf:not(.is-collapsed) .storage-shelf-drag-handle { display:inline-flex; }
   .storage-shelf.dragging { opacity:.45; }
@@ -5864,8 +5938,6 @@
     .sort-select { min-width: 0; flex: 1 1 auto; font-size: 13px; padding-left: 8px; padding-right: 8px; }
     .sort-direction-group { flex-shrink: 0; }
   }
-  body.storage-page-active .header-actions { gap: 4px; }
-
   /* At small widths show two compact stats next to the header actions (buttons) */
   @media (max-width: 720px) {
     header { position: sticky; }
@@ -6022,18 +6094,23 @@
   }
 
   @media (max-width: 720px) {
-    body.storage-page-active header .header-actions { width:222px; }
+    body.storage-page-active header .header-top-row { flex-wrap:wrap; gap:8px; }
+    body.storage-page-active header .header-actions {
+      position:static; width:auto; max-width:100%; flex-wrap:wrap; gap:4px;
+    }
     body.storage-page-active .header-actions > .icon-btn,
     body.storage-page-active .header-actions > .storage-random-filter-wrap,
-    body.storage-page-active .header-actions > .settings-wrap { flex:0 0 32px; }
+    body.storage-page-active .header-actions > .settings-wrap { flex:none; }
     body.storage-page-active header .header-stats {
+      position:static;
       right:auto;
+      width:100%;
       max-width:100%;
     }
     body.storage-page-active header .title-input {
-      flex-basis:calc(100% - 300px);
-      width:calc(100% - 300px);
-      max-width:calc(100% - 300px);
+      flex:1 1 42px;
+      width:auto;
+      max-width:none;
     }
   }
 
@@ -7585,7 +7662,7 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     .shelf-location-new { grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; }
     .shelf-location-new > label:first-child, .shelf-location-new > button { grid-column:1 / -1; }
     .storage-compartment-header { flex-wrap:wrap; min-height:44px; }
-    .storage-compartment-header button, .storage-shelf-header button, .storage-order-drag-handle { min-width:36px; min-height:36px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+    .storage-compartment-header button, .storage-order-drag-handle { min-width:36px; min-height:36px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
     .fullscreen-player-menu-item-actions button { min-width:44px; min-height:44px; }
     .fullscreen-player-menu-heading button, .room-settings-heading button { min-width:44px; min-height:44px; }
     .room-settings-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -7632,6 +7709,13 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .storage-mobile-row { display:flex; align-items:center; gap:10px; width:100%; padding:12px; text-align:left; white-space:normal; }
   .storage-mobile-row strong { flex:1; overflow-wrap:anywhere; }
   .storage-mobile-row span { font-size:12px; color:var(--text-secondary); }
+  .storage-mobile-row svg { width:20px; height:20px; flex:none; }
+  .storage-mobile-compartment .storage-mobile-row svg { width:24px; height:24px; }
+  .storage-mobile-row[aria-expanded="true"] svg { transform:rotate(180deg); }
+  .storage-mobile-shelf { display:grid; grid-template-columns:minmax(0,1fr) 44px; align-items:center; }
+  .storage-mobile-shelf .storage-mobile-row:only-child { grid-column:1 / -1; }
+  .storage-mobile-shelf .remove-shelf { width:44px; padding:0; justify-content:center; border-color:transparent; }
+  .storage-mobile .storage-add-shelf { width:100%; font-size:20px; }
   .storage-mobile-shelf, .storage-mobile-pending { border:1px solid var(--border-strong); border-radius:8px; background:var(--surface-2); }
   .storage-mobile-pending { padding:12px; margin-top:auto; }
   .storage-mobile-pending h3 { margin:0 0 10px; font-size:14px; }
@@ -7656,7 +7740,6 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .storage-mobile .storage-record .listen { display:none; }
   .storage-mobile-moving { padding:10px; background:var(--accent-bg); border-radius:8px; font-size:13px; }
   .storage-mobile .drag-over { outline:2px solid var(--accent); background:var(--accent-bg); }
-  .storage-mobile.storage-item-dragging .storage-mobile-contents { display:none; }
 
 
   .vinyl-color-picker-row { display:flex; align-items:center; gap:6px; min-width:0; }
@@ -7698,11 +7781,13 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     header .header-actions > .icon-btn,
     header .header-actions .desktop-mode-shortcuts > .icon-btn,
     header .header-actions > .settings-wrap > .icon-btn,
-    header .header-actions > .storage-random-filter-wrap,
     header .header-actions .storage-random-filter-btn {
       flex:0 0 36px; width:36px; min-width:36px; height:36px; min-height:36px; padding:0;
     }
     header .header-actions > .settings-wrap { flex:0 0 36px; margin:0; }
+  }
+  @media (min-width:1440px) {
+    body.storage-page-active header .title-input { flex-basis:0; }
   }
 
   .color-swatch-control {
@@ -7825,7 +7910,6 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .storage-shelf-pending > header { display:flex; align-items:center; gap:6px; padding:0 0 6px; font-size:11px; }
   .storage-shelf-pending-records { max-height:150px; overflow:auto; }
   .storage-shelf.is-collapsed .storage-shelf-pending { display:none; }
-  .storage-shelf-pending-badge { flex:0 0 auto; color:var(--accent); font-size:10px; white-space:nowrap; }
 
 /* A shared bottom row reserves its actual height, even when a message wraps. */
 #appStatusBar {
@@ -7968,7 +8052,7 @@ pre.tool-dialog-list { margin:0; padding:8px; background:var(--surface-1); borde
 .tool-backup-preview { padding:8px; margin:0 0 8px; border:1px solid var(--border-strong); border-radius:8px; font-size:12px; }
 .tool-backup-preview > p { margin:0 0 6px; }
 .docs-panel { bottom:var(--app-status-height, 0px); }
-@media (max-width:1279px) {
+@media (width < 1440px) {
   #storageRandomFilterPanel {
     box-sizing:border-box;
     top:var(--storage-filter-top, 8px);
@@ -9239,7 +9323,7 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
 <h4>Lageransicht</h4>
 <ul>
 <li>Alben per Drag &amp; Drop (am Handy gedrückt halten) in Fächer ziehen. Mobil zeigt die Startseite eine Regalliste und darunter unsortierte Alben. Ein Album kann zuerst einem Regal und danach einem Fach zugeordnet werden – durch Ziehen oder „Verschieben“. Im Regal stehen die noch nicht einsortierten Alben unten. Beim Einsortieren werden Fächer als kompakte Namensliste angezeigt; sonst mit Inhalt. Oben führt „Regale“ zurück.</li>
-<li>Regale lassen sich ein-/ausklappen, verschieben und zoomen (+/−, am Handy auch Pinch).</li>
+<li>Am Desktop stehen links die Regale, daneben Name und Eigenschaften und rechts die scrollbaren Fächer. In der geteilten Ansicht wählst du oben je ein Regal aus. Bei wenig Platz kannst du die Regale auf ihre Anfangsbuchstaben reduzieren. Die Eigenschaften des linken Regals klappen automatisch ein und lassen sich über den Anfangsbuchstaben öffnen. Mit dem Zoomregler passt du die Größe der Fächer an.</li>
 <li>Im Fach öffnet der Reihenfolge-Button die <b>Sortierung</b>: Alben per Drag nach oben/unten ziehen oder mit den Pfeilen verschieben.</li>
 <li>Neben der Fachnummer startet ein kleiner Wasch-Button den Waschmodus für dieses Fach.</li>
 <li><b>Displaywand</b>: Regale im Modus „Display“ zeigen die Alben als kleine Sammlungskarten. Titel und Interpret erscheinen beim Drüberfahren, zusammen mit einem größeren <b>Anhören</b>-Button. Im Fach-Kopf gibt es dort nur das ✕︎ zum Entfernen; Wasch- und Sortierknopf fehlen.</li>
@@ -10003,6 +10087,7 @@ function restoreCollectionViewSettings(settings) {
   storagePlacementMode = false;
   desktopStorageShelfId = desktopStorageRightId = desktopStorageSearch = '';
   desktopStorageSplit = false;
+  desktopStorageListCollapsed = false;
   collapsedStorageShelfIds.clear();
   initializedStorageShelfIds.clear();
   expandedStorageShelfIds.clear();
@@ -10551,7 +10636,8 @@ function mergeCloudCollectionVersions(base, local, remote) {
 
 function sameCloudCollectionRevision(before, after) {
   return [before, after].every(root => root?.collectionStorageVersion === 2)
-    && Number(before.collectionRevision || 0) === Number(after.collectionRevision || 0)
+    && Number.isSafeInteger(before.collectionRevision)
+    && before.collectionRevision === after.collectionRevision
     && ['collectionChunkIds', 'collectionImageIds', 'collectionItemCount']
       .every(key => stableCloudJson(before[key]) === stableCloudJson(after[key]));
 }
@@ -10629,6 +10715,12 @@ async function saveCloudCollectionV2(uid, items, previousRoot, rootFields, budge
     }));
     const desiredImages=new Map([...localPlan.images].filter(([id,image])=>
       plan.docIds.has(id) && !removedImages.has(id) && (image!==baseImages.get(id) || stagedImageIds.has(id))));
+    const independentlyRemovedImage=[...desiredImages.keys()].some(id=>previousImageIds.has(id) && !remoteImageIds.has(id));
+    if (independentlyRemovedImage) {
+      const error=new Error('Das Picture-Disc-Bild wurde auf einem anderen Gerät entfernt. Es wurde nichts überschrieben.');
+      error.code='collection/concurrent-edit';
+      throw error;
+    }
     const imagesRef=getCloudImagesRef(uid);
     await Promise.all([...removedImages,...desiredImages.keys()].map(async id=>{
       const snap=await transaction.get(imagesRef.doc(id));
@@ -27786,12 +27878,14 @@ if (storageRandomFilterBtn && storageRandomFilterPanel) {
     storageRandomFilterPanel.style.removeProperty('left');
     storageRandomFilterBtn.setAttribute('aria-expanded', 'false');
   };
+  const inlineRandomFilter = window.matchMedia('(min-width: 1440px)');
+  inlineRandomFilter.addEventListener('change', closeStorageRandomFilterPanel);
   storageRandomFilterBtn.addEventListener('click', event => {
     event.stopPropagation();
     const opening = !storageRandomFilterPanel.classList.contains('open');
     if (opening) {
       refreshStorageRandomGenreOptions();
-      if (window.innerWidth < 1280) {
+      if (!inlineRandomFilter.matches) {
         document.body.appendChild(storageRandomFilterPanel);
         storageRandomFilterPanel.style.position = 'fixed';
         storageRandomFilterPanel.style.zIndex = '2147483647';
@@ -28606,8 +28700,8 @@ async function showRandomStoredVinyl() {
       const reelItems = selectedCompartmentGroup.tiles
         .map(tile => collection.find(item => String(item.id) === tile.dataset.storageItem))
         .filter(Boolean);
-      const shelfName = shelf.querySelector('.storage-shelf-name')?.value || 'Regal';
       const shelfSettings = shelfLocations.find(entry => entry.id === shelf.dataset.shelfId);
+      const shelfName = shelfSettings?.name || 'Regal';
       const compartmentLabel = getShelfCompartmentLabel(shelfSettings, compartment.dataset.dropCompartment);
       const locationLabel = isSingleCompartmentShelf(shelfSettings)
         ? shelfName
@@ -28639,32 +28733,68 @@ let storagePaneResize = null;
 let activeStorageLayout = null;
 let activeStoragePointerDrag = null;
 let activeStorageDropTarget = null;
+let storageRenderPending = false;
 let suppressStorageClickUntil = 0;
 let draggedStorageShelfId = null;
 let storagePlacementMode = false;
 let desktopStorageShelfId = '';
 let desktopStorageRightId = '';
 let desktopStorageSplit = false;
+let desktopStorageListCollapsed = false;
 let desktopStorageSearch = '';
 
+function getStorageShelfLayoutWidths(desktop) {
+  const styles = getComputedStyle(desktop);
+  const railWidth = parseFloat(styles.getPropertyValue('--storage-rail-width'));
+  const listWidth = desktopStorageListCollapsed
+    ? parseFloat(styles.getPropertyValue('--storage-rail-compact-width')) : railWidth;
+  const dividerWidth = parseFloat(styles.getPropertyValue('--storage-rail-divider-width'));
+  const gap = parseFloat(styles.getPropertyValue('--storage-rail-gap'));
+  const properties = desktop.querySelector('.storage-shelf-properties');
+  const panes = desktop.querySelector('.storage-shelf-panes');
+  const shelves = [...panes.querySelectorAll('.storage-shelf[data-shelf-id]')];
+  const widths = shelves.map(shelf =>
+    parseFloat(shelf.style.getPropertyValue('--shelf-min-width')) * storageShelfZoom);
+  let stageWidth = widths.reduce((total, width) => total + width, 0);
+  if (widths.length === 2) {
+    const paneStyles = getComputedStyle(panes);
+    const border = parseFloat(paneStyles.getPropertyValue('--storage-split-border'));
+    stageWidth += parseFloat(paneStyles.getPropertyValue('--storage-split-gap')) + 4 * border;
+    panes.style.setProperty('--storage-left-share', `${widths[0] + 2 * border}fr`);
+    panes.style.setProperty('--storage-right-share', `${widths[1] + 2 * border}fr`);
+  }
+  const baseWidth = listWidth + dividerWidth + stageWidth + gap * (properties.hidden ? 2 : 3);
+  return {
+    expanded: baseWidth + (properties.hidden ? 0 : railWidth),
+    compact: baseWidth + (properties.hidden ? 0 : parseFloat(styles.getPropertyValue('--storage-property-compact-width')))
+  };
+}
+
 function applyStoragePaneLayout(layout) {
-  if (!layout) return;
+  if (!layout || layout.classList.contains('storage-mobile') || !layout.clientWidth) return;
   layout.classList.toggle('unsorted-collapsed', storageUnsortedCollapsed);
+  const desktop = layout.querySelector('.storage-desktop-shelves');
+  const widths = getStorageShelfLayoutWidths(desktop);
   const isStacked = window.matchMedia('(max-width: 720px)').matches;
+  layout.querySelector('.storage-pane-resizer').setAttribute('aria-orientation', isStacked ? 'horizontal' : 'vertical');
   if (storageUnsortedCollapsed) {
     layout.style.gridTemplateColumns = isStacked ? 'minmax(0, 1fr)' : 'minmax(0, 1fr) 42px';
     layout.style.gridTemplateRows = isStacked ? 'minmax(0, 1fr) 42px' : 'minmax(0, 1fr)';
-    return;
-  }
-  if (isStacked) {
+  } else if (isStacked) {
     layout.style.gridTemplateColumns = 'minmax(0, 1fr)';
     layout.style.gridTemplateRows = `minmax(0, ${storagePaneSplit}fr) 8px minmax(0, ${1 - storagePaneSplit}fr)`;
   } else {
     const usable = Math.max(1, layout.clientWidth - 8);
-    const split = Math.min(storagePaneSplit, Math.max(0.28, 1 - 220 / usable));
-    layout.style.gridTemplateColumns = `minmax(0, ${split}fr) 8px minmax(0, ${1 - split}fr)`;
+    const maxShelfWidth = Math.max(0, usable - 190);
+    const minShelfWidth = Math.min(maxShelfWidth, Math.max(420, Math.ceil(widths.compact)));
+    const shelfWidth = Math.max(minShelfWidth, Math.min(usable * storagePaneSplit, maxShelfWidth));
+    layout.style.gridTemplateColumns = `minmax(0, ${shelfWidth}px) 8px minmax(0, 1fr)`;
     layout.style.gridTemplateRows = 'minmax(0, 1fr)';
   }
+  const properties = desktop.querySelector('.storage-shelf-properties');
+  const compact = !properties.hidden && desktop.clientWidth < Math.ceil(widths.expanded);
+  desktop.classList.toggle('is-properties-collapsed', compact);
+  if (!compact) properties.querySelector('.storage-shelf-property-initial').setAttribute('aria-expanded', 'false');
 }
 
 function applyStorageShelfZoom(board) {
@@ -28675,20 +28805,21 @@ function applyStorageShelfZoom(board) {
   if (value) value.textContent = `${Math.round(zoom * 100)}%`;
   const slider = board.querySelector('.storage-shelf-zoom');
   if (slider) slider.value = String(Math.round(zoom * 100));
+  applyStoragePaneLayout(board.querySelector('.storage-layout'));
 }
 
 function bindStorageShelfPinchZoom(pane, board) {
   pane.addEventListener('pointerdown', event => {
     if (event.pointerType !== 'touch') return;
-    pane.setPointerCapture(event.pointerId);
     storagePinchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (storagePinchPointers.size !== 2) return;
+    clearStoragePointerDrag();
+    for (const pointerId of storagePinchPointers.keys()) pane.setPointerCapture(pointerId);
     const [first, second] = [...storagePinchPointers.values()];
     storagePinchState = {
       distance: Math.hypot(second.x - first.x, second.y - first.y),
       zoom: storageShelfZoom
     };
-    clearStoragePointerDrag();
   });
   pane.addEventListener('pointermove', event => {
     if (!storagePinchPointers.has(event.pointerId)) return;
@@ -28701,16 +28832,15 @@ function bindStorageShelfPinchZoom(pane, board) {
     storageShelfZoom = Math.max(0.7, Math.min(1.8, storagePinchState.zoom * distance / storagePinchState.distance));
     applyStorageShelfZoom(board);
   }, { passive:false });
-  const finishPinch = event => {
-    if (!storagePinchPointers.delete(event.pointerId)) return;
-    if (storagePinchState) {
-      storagePinchState = null;
-      saveCloudDataDebounced();
-    }
-  };
-  pane.addEventListener('pointerup', finishPinch);
-  pane.addEventListener('pointercancel', finishPinch);
 }
+
+function finishStoragePinch(event) {
+  if (!storagePinchPointers.delete(event.pointerId) || !storagePinchState) return;
+  storagePinchState = null;
+  saveCloudDataDebounced();
+}
+document.addEventListener('pointerup', finishStoragePinch, true);
+document.addEventListener('pointercancel', finishStoragePinch, true);
 
 function bindStoragePaneResizer(layout, handle) {
   handle.addEventListener('pointerdown', event => {
@@ -28731,8 +28861,10 @@ function bindStoragePaneResizer(layout, handle) {
     const isStacked = window.matchMedia('(max-width: 720px)').matches;
     const towardEnd = isStacked ? event.key === 'ArrowDown' : event.key === 'ArrowRight';
     const towardStart = isStacked ? event.key === 'ArrowUp' : event.key === 'ArrowLeft';
-    if (towardEnd) storagePaneSplit = Math.max(0.28, storagePaneSplit - 0.04);
-    if (towardStart) storagePaneSplit = Math.min(0.78, storagePaneSplit + 0.04);
+    if (!towardEnd && !towardStart) return;
+    const pane = layout.querySelector('.storage-shelves-pane');
+    const currentSplit = isStacked ? pane.clientHeight / (layout.clientHeight - 8) : pane.clientWidth / (layout.clientWidth - 8);
+    storagePaneSplit = Math.max(0.28, Math.min(0.78, currentSplit + (towardStart ? -0.04 : 0.04)));
     applyStoragePaneLayout(layout);
     saveCloudDataDebounced();
   });
@@ -28760,7 +28892,23 @@ document.addEventListener('pointerup', event => {
 window.addEventListener('resize', () => applyStoragePaneLayout(activeStorageLayout));
 
 function findStorageDropTargetAt(x, y) {
-  return document.elementFromPoint(x, y)?.closest('.storage-compartment, [data-drop-unsorted], [data-drop-shelf-pending]') || null;
+  const hit = document.elementFromPoint(x, y);
+  const direct = hit?.closest('.storage-compartment, [data-drop-unsorted], [data-drop-shelf-pending]');
+  if (direct) return direct;
+  const grid = hit?.closest('.storage-compartments');
+  if (!grid) return null;
+  // The visible seams between adjacent compartments are part of the drop area.
+  let closest = null;
+  let nearest = 12;
+  for (const compartment of grid.children) {
+    if (!compartment.matches('.storage-compartment')) continue;
+    const {left,right,top,bottom} = compartment.getBoundingClientRect();
+    const distance = Math.hypot(Math.max(left-x, 0, x-right), Math.max(top-y, 0, y-bottom));
+    if (distance >= nearest) continue;
+    nearest = distance;
+    closest = compartment;
+  }
+  return closest;
 }
 
 function scrollStoragePanesNearPointer(x, y) {
@@ -28840,6 +28988,9 @@ function clearStoragePointerDrag() {
   drag.hoverShelf?.classList.remove('is-drag-hovered');
   drag.source.classList.remove('storage-pointer-source');
   drag.layout?.classList.remove('storage-item-dragging');
+  if (storageRenderPending) requestAnimationFrame(() => {
+    if (storageRenderPending && activeView === 'storage' && !activeStoragePointerDrag) renderCollection();
+  });
 }
 
 function startStoragePointerDrag(drag) {
@@ -28847,11 +28998,17 @@ function startStoragePointerDrag(drag) {
     clearStoragePointerDrag();
     return false;
   }
-  // The layout can hide the source row while revealing drop targets.
-  drag.board.setPointerCapture(drag.pointerId);
+  // Capture on the board so moving between shelves keeps the same pointer session.
+  try {
+    drag.board.setPointerCapture(drag.pointerId);
+  } catch (error) {
+    if (error.name !== 'NotFoundError') throw error;
+    clearStoragePointerDrag();
+    return false;
+  }
   drag.dragging = true;
   drag.source.classList.add('storage-pointer-source');
-  if (storagePlacementMode || mobileStorageMedia.matches) drag.layout?.classList.add('storage-item-dragging');
+  if (storagePlacementMode) drag.layout?.classList.add('storage-item-dragging');
   drag.preview = document.createElement('img');
   drag.preview.className = 'storage-pointer-preview';
   drag.preview.src = drag.item.coverUrl || '';
@@ -28873,6 +29030,7 @@ function bindStorageItemPointerDrag(source, item) {
     const isTouch = event.pointerType === 'touch';
     const drag = {
       pointerId: event.pointerId, item, source, board, layout: activeStorageLayout, isTouch,
+      uid: currentUid, epoch: cloudAccountEpoch,
       startX: event.clientX, startY: event.clientY, x: event.clientX, y: event.clientY,
       dragging: false, preview: null, autoScrollFrame: 0, longPressTimer: 0
     };
@@ -28913,15 +29071,25 @@ document.addEventListener('pointerup', event => {
     suppressStorageClickUntil = Date.now() + 500;
   }
   clearStoragePointerDrag();
-  if (!target || !drag.board.contains(target) || !drag.item.owned || !collection.includes(drag.item)) return;
-  if (target.hasAttribute('data-drop-shelf-pending')) {
-    drag.item.shelfId = target.dataset.dropShelfPending;
-    delete drag.item.shelfCompartment;
+  if (!target || !drag.board.contains(target) || !viewingOwnCollection || drag.uid !== currentUid || drag.epoch !== cloudAccountEpoch) return;
+  const item = collection.find(entry => entry.id === drag.item.id);
+  if (!item?.owned) return;
+  const shelfId = target.dataset.dropShelf || target.dataset.dropShelfPending || '';
+  const compartment = target.dataset.dropCompartment || '';
+  if (shelfId === (item.shelfId || '') && Number(compartment) === Number(item.shelfCompartment || '')) return;
+  if (shelfId) {
+    const shelf = shelfLocations.find(entry => entry.id === shelfId);
+    if (!shelf || (compartment && !isValidShelfCompartment(shelf, compartment))) return;
+    if (compartment) assignItemToStorageLocation(item, shelfId, compartment);
+    else {
+      item.shelfId = shelfId;
+      delete item.shelfCompartment;
+    }
   } else if (target.hasAttribute('data-drop-unsorted')) {
-    delete drag.item.shelfId;
-    delete drag.item.shelfCompartment;
+    delete item.shelfId;
+    delete item.shelfCompartment;
   } else {
-    assignItemToStorageLocation(drag.item, target.dataset.dropShelf, target.dataset.dropCompartment);
+    return;
   }
   saveShelfLayout();
 }, true);
@@ -29115,11 +29283,15 @@ function addStorageShelf() {
     compartments: 1
   };
   shelfLocations.push(shelf);
+  desktopStorageShelfId = shelf.id;
   saveShelfLayout();
-  renderCollection();
-  const nameInput = document.querySelector(`#storageBoard .storage-shelf[data-shelf-id="${CSS.escape(shelf.id)}"] .storage-shelf-name`);
-  nameInput?.focus();
-  nameInput?.select();
+  const nameInput = document.querySelector('#storageBoard .storage-shelf-properties:not([hidden]) .storage-shelf-name');
+  if (nameInput?.getClientRects().length) {
+    nameInput.focus();
+    nameInput.select();
+  } else {
+    document.querySelector('#storageBoard [data-open-storage-shelf][aria-current="true"]')?.focus();
+  }
 }
 
 async function removeShelf(shelf) {
@@ -29165,6 +29337,20 @@ async function removeShelfCompartment(shelf, compartmentNumber) {
 
 const expandedStorageShelfIds = new Set();
 const initializedStorageShelfIds = new Set();
+
+function getStorageShelfInitial(name) {
+  return (Array.from(name.trim())[0] || '–').toLocaleUpperCase('de');
+}
+
+function updateDesktopStorageListCollapse(layout) {
+  layout.classList.toggle('is-shelf-list-collapsed', desktopStorageListCollapsed);
+  const divider = layout.querySelector('.storage-shelf-list-divider');
+  const label = desktopStorageListCollapsed ? 'Regalliste ausklappen' : 'Regalliste einklappen';
+  divider.setAttribute('aria-expanded', String(!desktopStorageListCollapsed));
+  divider.setAttribute('aria-label', label);
+  divider.title = label;
+  applyStoragePaneLayout(layout.closest('.storage-layout'));
+}
 
 function captureStorageShelfExit(content) {
   const current = content.querySelector('.storage-shelf[data-shelf-id]');
@@ -29220,6 +29406,20 @@ function showDesktopStorageShelf(board, shelfId, animate = false, side = 'left',
   right.parentElement.classList.toggle('is-split', split);
   left.querySelector('select').value = desktopStorageShelfId;
   right.querySelector('select').value = desktopStorageRightId;
+  const properties = board.querySelector('.storage-shelf-properties');
+  properties.hidden = false;
+  const shelf = shelfLocations.find(entry => entry.id === desktopStorageShelfId);
+  properties.dataset.shelfId = shelf.id;
+  const initial = properties.querySelector('.storage-shelf-property-initial');
+  initial.textContent = getStorageShelfInitial(shelf.name);
+  initial.title = `Eigenschaften von ${shelf.name}`;
+  initial.setAttribute('aria-label', initial.title);
+  properties.querySelector('.storage-shelf-name').value = shelf.name;
+  properties.querySelector('.storage-shelf-mode').value = shelf.mode || 'shelf';
+  properties.querySelector('.storage-shelf-rows').value = shelf.rows;
+  properties.querySelector('.storage-shelf-columns').value = shelf.columns;
+  const count = collection.filter(item => item.owned && item.shelfId === shelf.id).length;
+  properties.querySelector('.storage-shelf-count').textContent = `${count} ${count === 1 ? 'Album' : 'Alben'}`;
   board.querySelector('[data-storage-split]').setAttribute('aria-pressed', String(split));
   board.querySelector('.storage-shelf-pager').hidden = split;
   buttons.forEach((button, i) => {
@@ -29254,6 +29454,7 @@ function showDesktopStorageShelf(board, shelfId, animate = false, side = 'left',
   board.querySelector('[data-storage-shelf-step="-1"]').disabled = ids.length < 2;
   board.querySelector('[data-storage-shelf-step="1"]').disabled = ids.length < 2;
   board.querySelector('.storage-shelf-page').textContent = `${index + 1} / ${ids.length}`;
+  applyStoragePaneLayout(board.querySelector('.storage-layout'));
 }
 
 function updateDesktopStorageShelfHover(drag, hit, now) {
@@ -29319,15 +29520,19 @@ function renderMobileStorageBoard(board, visibleItems) {
       const section = document.createElement('section');
       section.className = 'storage-mobile-shelf';
       section.dataset.dropShelfPending = entry.id;
-      section.innerHTML = `<button type="button" class="storage-mobile-row"><strong>${escapeHtml(entry.name)}</strong><span>${count(items)} Platten · ${count(items.filter(isPending))} unsortiert</span><span aria-hidden="true">›</span></button>`;
-      section.querySelector('button').addEventListener('click', () => {
+      section.innerHTML = `<button type="button" class="storage-mobile-row"><strong>${escapeHtml(entry.name)}</strong><span>${count(items)} Platten · ${count(items.filter(isPending))} unsortiert</span><span aria-hidden="true">›</span></button>${movingItem ? '' : `<button type="button" class="icon-btn remove-shelf" aria-label="${escapeHtml(entry.name)} löschen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>`}`;
+      section.querySelector('.remove-shelf')?.addEventListener('click', () => removeShelf(entry));
+      section.querySelector('.storage-mobile-row').addEventListener('click', () => {
         if (movingItem) move(entry);
         mobileStorageShelfId = entry.id;
         renderMobileStorageBoard(board, visibleItems);
       });
       destinations.appendChild(section);
     });
-    if (!shelfLocations.length) destinations.innerHTML = '<p class="settings-panel-hint">Lege zuerst ein Regal unter Lagerorte an.</p>';
+    if (!movingItem) {
+      destinations.insertAdjacentHTML('beforeend', '<button type="button" class="storage-add-shelf" aria-label="Regal hinzufügen">+</button>');
+      destinations.querySelector('.storage-add-shelf').addEventListener('click', addStorageShelf);
+    }
   } else {
     for (let number = 1; number <= getShelfCapacity(shelf); number++) {
       if (!isValidShelfCompartment(shelf, number)) continue;
@@ -29336,7 +29541,7 @@ function renderMobileStorageBoard(board, visibleItems) {
       section.className = 'storage-compartment storage-mobile-compartment';
       section.dataset.dropShelf = shelf.id;
       section.dataset.dropCompartment = number;
-      section.innerHTML = `<button type="button" class="storage-mobile-row"><strong>${escapeHtml(getShelfCompartmentLabel(shelf, number))}</strong><span>${items.length}</span>${movingItem ? '<span>Hier ablegen</span>' : ''}</button><div class="storage-mobile-contents"></div>`;
+      section.innerHTML = `<button type="button" class="storage-mobile-row"><strong>${escapeHtml(getShelfCompartmentLabel(shelf, number))}</strong><span>${items.length}</span>${movingItem ? '<span>Hier ablegen</span>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'}</button><div class="storage-mobile-contents"></div>`;
       section.querySelector('button').addEventListener('click', () => {
         if (movingItem) { move(shelf, number); return; }
         section.classList.toggle('storage-mobile-open');
@@ -29389,6 +29594,9 @@ function renderStorageBoard(visibleItems) {
   }
   const renderShelf = shelf => {
     const capacity = getShelfCapacity(shelf);
+    const minShelfWidth = shelf.mode === 'display'
+      ? shelf.columns * 128 + 17
+      : shelf.columns * 158 + 12;
     const shelfWidth = shelf.mode === 'display'
       ? shelf.columns * 120 + Math.max(0, shelf.columns - 1) * 8 + 25
       : Math.max(300, shelf.columns * 165 + 28);
@@ -29413,23 +29621,7 @@ function renderStorageBoard(visibleItems) {
         <div class="storage-records" data-drop-shelf="${escapeHtml(shelf.id)}" data-drop-compartment="${number}"></div>
       </section>`;
     }).join('');
-    return `<section class="storage-shelf${shelf.mode === 'display' ? ' display-mode' : ''}${expandedStorageShelfIds.has(shelf.id) ? ' settings-open' : ''}" data-shelf-id="${escapeHtml(shelf.id)}" style="--shelf-rows:${shelf.rows};--shelf-columns:${shelf.columns};--shelf-width:${shelfWidth}px;">
-      <header class="storage-shelf-header">
-        <div class="storage-shelf-topline">
-          <input type="text" class="storage-shelf-name" data-shelf-id="${escapeHtml(shelf.id)}" value="${escapeHtml(shelf.name)}" aria-label="Regalname ${escapeHtml(shelf.name)}">
-          <span class="storage-count storage-shelf-count" title="${shelfItems.length} Album${shelfItems.length === 1 ? '' : 'e'} im Regal">${shelfItems.length}</span>
-          ${shelfPending.length ? `<span class="storage-shelf-pending-badge" title="${shelfPending.length} Platten noch keinem Fach zugeordnet">${shelfPending.length} ohne Fach</span>` : ''}
-          <button type="button" class="storage-shelf-settings" aria-expanded="${expandedStorageShelfIds.has(shelf.id)}" title="Maßeinstellungen öffnen" aria-label="Maßeinstellungen öffnen">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V19a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H10a1.65 1.65 0 001-1.51V4a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V10a1.65 1.65 0 001.51 1H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51-1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <button type="button" class="remove-shelf" title="Regal löschen" aria-label="Regal ${escapeHtml(shelf.name)} löschen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
-        </div>
-        <div class="storage-shelf-dimensions">
-          <label class="storage-dimension-control">Ansicht <select class="storage-shelf-mode" aria-label="Regalansicht ${escapeHtml(shelf.name)}"><option value="shelf"${shelf.mode === 'display' ? '' : ' selected'}>Regal</option><option value="display"${shelf.mode === 'display' ? ' selected' : ''}>Display</option></select></label>
-          <label class="storage-dimension-control">Reihen <input type="number" class="storage-shelf-rows" min="1" max="10" value="${shelf.rows}" aria-label="Reihen ${escapeHtml(shelf.name)}"></label>
-          <label class="storage-dimension-control">Spalten <input type="number" class="storage-shelf-columns" min="1" max="10" value="${shelf.columns}" aria-label="Spalten ${escapeHtml(shelf.name)}"></label>
-        </div>
-      </header>
+    return `<section class="storage-shelf${shelf.mode === 'display' ? ' display-mode' : ''}" data-shelf-id="${escapeHtml(shelf.id)}" style="--shelf-rows:${shelf.rows};--shelf-columns:${shelf.columns};--shelf-width:${shelfWidth}px;--shelf-min-width:${minShelfWidth}px;">
       ${shelfPending.length ? `<section class="storage-shelf-pending" data-drop-shelf-pending="${escapeHtml(shelf.id)}"><header>Noch keinem Fach zugeordnet <span class="storage-count">${shelfPending.length}</span></header><div class="storage-shelf-pending-records" data-pending-list="${escapeHtml(shelf.id)}"></div></section>` : ''}
       <div class="storage-compartments">${compartmentMarkup}</div>
     </section>`;
@@ -29437,18 +29629,35 @@ function renderStorageBoard(visibleItems) {
   const shelfOptions = shelfLocations.map(shelf => `<option value="${escapeHtml(shelf.id)}">${escapeHtml(shelf.name)}</option>`).join('');
   const pane = (side, label) => `<section data-shelf-side="${side}"${side === 'right' ? ' hidden' : ''}>
     <select aria-label="${label}">${shelfOptions}</select>
-    <div class="storage-shelf-stage"><div class="storage-shelf-stage-content"></div></div>
+    <div class="storage-shelf-stage" role="region" aria-label="${label} – Fächer" tabindex="0"><div class="storage-shelf-stage-content"></div></div>
   </section>`;
     board.innerHTML = `<div class="storage-layout">
       <section class="storage-shelves-pane">
         <div class="storage-shelves-toolbar">
           <button type="button" class="storage-placement-mode-toggle" aria-pressed="${storagePlacementMode}" title="Fächer beim Ziehen als Ablageziele anzeigen">Fächer-Modus: ${storagePlacementMode ? 'An' : 'Aus'}</button>
-          <button type="button" class="storage-add-shelf" title="Regal hinzufügen" aria-label="Regal hinzufügen">+</button>
         </div>
         <div class="storage-desktop-shelves">
-          <nav class="storage-shelf-names" aria-label="Regale">
-            ${shelfLocations.map(shelf => `<button type="button" draggable="true" data-open-storage-shelf="${escapeHtml(shelf.id)}"${matchingShelves.has(shelf.id) ? ' class="has-storage-match" title="Enthält Suchtreffer"' : ''}>${escapeHtml(shelf.name)}</button>`).join('')}
+          <nav id="storageShelfNames" class="storage-shelf-names" aria-label="Regale">
+            ${shelfLocations.map(shelf => `<div class="storage-shelf-name-row">
+              <button type="button" draggable="true" data-open-storage-shelf="${escapeHtml(shelf.id)}" data-initial="${escapeHtml(getStorageShelfInitial(shelf.name))}" aria-label="${escapeHtml(shelf.name)}" title="${escapeHtml(shelf.name)}${matchingShelves.has(shelf.id) ? ' · Enthält Suchtreffer' : ''}"${matchingShelves.has(shelf.id) ? ' class="has-storage-match"' : ''}><span class="storage-shelf-full-name">${escapeHtml(shelf.name)}</span></button>
+              <button type="button" class="icon-btn remove-shelf" data-remove-storage-shelf="${escapeHtml(shelf.id)}" title="${escapeHtml(shelf.name)} löschen" aria-label="${escapeHtml(shelf.name)} löschen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
+            </div>`).join('')}
+            <button type="button" class="storage-add-shelf" title="Regal hinzufügen" aria-label="Regal hinzufügen">+</button>
           </nav>
+          <button type="button" class="storage-shelf-list-divider" aria-controls="storageShelfNames"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+          <aside class="storage-shelf-properties" aria-label="Regaleigenschaften" hidden>
+            <button type="button" class="storage-shelf-property-initial" aria-expanded="false" aria-controls="storageShelfPropertyFields"></button>
+            <div id="storageShelfPropertyFields" class="storage-shelf-property-fields">
+              <span class="storage-shelf-property-heading">Eigenschaften</span>
+              <label class="storage-dimension-control">Regalname <input type="text" class="storage-shelf-name"></label>
+              <label class="storage-dimension-control">Ansicht <select class="storage-shelf-mode"><option value="shelf">Regal</option><option value="display">Display</option></select></label>
+              <div class="storage-shelf-dimensions">
+                <label class="storage-dimension-control">Reihen <input type="number" class="storage-shelf-rows" min="1" max="10"></label>
+                <label class="storage-dimension-control">Spalten <input type="number" class="storage-shelf-columns" min="1" max="10"></label>
+              </div>
+              <span class="storage-count storage-shelf-count"></span>
+            </div>
+          </aside>
           <div class="storage-shelf-panes">
             ${pane('left', 'Linkes Regal')}
             ${pane('right', 'Rechtes Regal')}
@@ -29482,6 +29691,18 @@ function renderStorageBoard(visibleItems) {
   const layout = board.querySelector('.storage-layout');
   activeStorageLayout = layout;
   applyStoragePaneLayout(layout);
+  const desktop = layout.querySelector('.storage-desktop-shelves');
+  updateDesktopStorageListCollapse(desktop);
+  desktop.querySelector('.storage-shelf-list-divider').addEventListener('click', () => {
+    desktopStorageListCollapsed = !desktopStorageListCollapsed;
+    updateDesktopStorageListCollapse(desktop);
+  });
+  desktop.querySelectorAll('[data-remove-storage-shelf]').forEach(button => {
+    button.addEventListener('click', () => {
+      const shelf = shelfLocations.find(entry => entry.id === button.dataset.removeStorageShelf);
+      if (shelf) removeShelf(shelf);
+    });
+  });
   applyStorageShelfZoom(board);
   const zoomSlider = layout.querySelector('.storage-shelf-zoom');
   zoomSlider.addEventListener('input', () => {
@@ -29587,46 +29808,50 @@ function renderStorageBoard(visibleItems) {
       });
   });
 
-  board.querySelectorAll('.storage-shelf').forEach(shelfElement => {
+  const properties = layout.querySelector('.storage-shelf-properties');
+  const propertyToggle = properties.querySelector('.storage-shelf-property-initial');
+  propertyToggle.addEventListener('click', () => {
+    propertyToggle.setAttribute('aria-expanded', String(propertyToggle.getAttribute('aria-expanded') === 'false'));
+  });
+  properties.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || propertyToggle.getAttribute('aria-expanded') !== 'true') return;
+    propertyToggle.setAttribute('aria-expanded', 'false');
+    propertyToggle.focus();
+  });
+  const propertyShelf = () => shelfLocations.find(shelf => shelf.id === properties.dataset.shelfId);
+  const nameInput = properties.querySelector('.storage-shelf-name');
+  const rowInput = properties.querySelector('.storage-shelf-rows');
+  const columnInput = properties.querySelector('.storage-shelf-columns');
+  properties.querySelector('.storage-shelf-mode').addEventListener('change', event => {
+    const shelf = propertyShelf();
+    if (shelf) setShelfMode(shelf, event.target.value, event.target);
+  });
+  nameInput.addEventListener('change', () => {
+    const shelf = propertyShelf();
+    if (!shelf) return;
+    const name = nameInput.value.trim();
+    if (!name || name === shelf.name) {
+      nameInput.value = shelf.name;
+      return;
+    }
+    shelf.name = name;
+    saveShelfLayout();
+  });
+  const saveDimensions = async () => {
+    const shelf = propertyShelf();
+    if (!shelf) return;
+    const rows = Number(rowInput.value), columns = Number(columnInput.value);
+    if (shelf.rows === rows && shelf.columns === columns) return;
+    const updated = await updateShelfDimensions(shelf, rows, columns);
+    if (!updated && properties.isConnected && propertyShelf() === shelf) {
+      rowInput.value = shelf.rows;
+      columnInput.value = shelf.columns;
+    }
+  };
+  rowInput.addEventListener('change', saveDimensions);
+  columnInput.addEventListener('change', saveDimensions);
+  board.querySelectorAll('.storage-shelf[data-shelf-id]').forEach(shelfElement => {
     const shelf = shelfLocations.find(entry => entry.id === shelfElement.dataset.shelfId);
-    shelfElement.querySelector('.remove-shelf').addEventListener('click', () => removeShelf(shelf));
-    const settingsButton = shelfElement.querySelector('.storage-shelf-settings');
-    settingsButton.addEventListener('click', () => {
-      const isOpen = shelfElement.classList.toggle('settings-open');
-      settingsButton.setAttribute('aria-expanded', String(isOpen));
-      settingsButton.title = isOpen ? 'Maßeinstellungen schließen' : 'Maßeinstellungen öffnen';
-      settingsButton.setAttribute('aria-label', settingsButton.title);
-      if (isOpen) expandedStorageShelfIds.add(shelf.id);
-      else expandedStorageShelfIds.delete(shelf.id);
-      saveCloudDataDebounced();
-    });
-    shelfElement.querySelector('.storage-shelf-mode').addEventListener('change', event => {
-      setShelfMode(shelf, event.target.value, event.target);
-    });
-    const nameInput = shelfElement.querySelector('.storage-shelf-name');
-    nameInput.addEventListener('change', () => {
-      const name = nameInput.value.trim();
-      if (!name) {
-        nameInput.value = shelf.name;
-        return;
-      }
-      shelf.name = name;
-      nameInput.setAttribute('aria-label', `Regalname ${name}`);
-      saveShelfLayout();
-    });
-    const saveDimensions = async () => {
-      const rowInput = shelfElement.querySelector('.storage-shelf-rows');
-      const columnInput = shelfElement.querySelector('.storage-shelf-columns');
-      const updated = await updateShelfDimensions(shelf, Number(rowInput.value), Number(columnInput.value));
-      if (!updated) {
-        rowInput.value = shelf.rows;
-        columnInput.value = shelf.columns;
-      } else {
-        renderCollection();
-      }
-    };
-    shelfElement.querySelector('.storage-shelf-rows').addEventListener('change', saveDimensions);
-    shelfElement.querySelector('.storage-shelf-columns').addEventListener('change', saveDimensions);
     shelfElement.querySelectorAll('.storage-compartment-name').forEach(input => {
       input.addEventListener('change', () => {
         const number = input.dataset.compartment;
@@ -29673,10 +29898,12 @@ function captureStorageBoardState(board) {
   const activeElement = document.activeElement;
   let focus = null;
   if (board.contains(activeElement)) {
+    const properties = activeElement.closest('.storage-shelf-properties');
     const shelf = activeElement.closest('.storage-shelf');
-    const controlClass = ['storage-shelf-name', 'storage-shelf-rows', 'storage-shelf-columns'].find(className => activeElement.classList.contains(className));
-    if (shelf && controlClass) {
-      focus = { kind: 'shelf-control', shelfId: shelf.dataset.shelfId, controlClass };
+    const controlClass = ['storage-shelf-name', 'storage-shelf-mode', 'storage-shelf-rows', 'storage-shelf-columns']
+      .find(className => activeElement.classList.contains(className));
+    if (properties && controlClass) {
+      focus = { kind: 'shelf-control', shelfId: properties.dataset.shelfId, controlClass };
     } else if (shelf && activeElement.classList.contains('storage-compartment-name')) {
       focus = { kind: 'compartment-name', shelfId: shelf.dataset.shelfId, compartment: activeElement.dataset.compartment };
     }
@@ -29706,11 +29933,11 @@ function restoreStorageBoardState(board, state) {
   });
   window.scrollTo(state.windowX, state.windowY);
   if (!state.focus) return;
-  const shelf = [...board.querySelectorAll('.storage-shelf')].find(element => element.dataset.shelfId === state.focus.shelfId);
-  if (!shelf) return;
-  const target = state.focus.kind === 'shelf-control'
-    ? shelf.querySelector(`.${state.focus.controlClass}`)
-    : [...shelf.querySelectorAll('.storage-compartment-name')].find(input => input.dataset.compartment === state.focus.compartment);
+  const shelfId = CSS.escape(state.focus.shelfId);
+  const selector = state.focus.kind === 'shelf-control'
+    ? `.storage-shelf-properties[data-shelf-id="${shelfId}"]:not([hidden]) .${state.focus.controlClass}`
+    : `.storage-shelf[data-shelf-id="${shelfId}"] .storage-compartment-name[data-compartment="${CSS.escape(state.focus.compartment)}"]`;
+  const target = board.querySelector(selector);
   if (!target) return;
   target.focus({ preventScroll: true });
   if (state.focus.selectionStart != null && typeof target.setSelectionRange === 'function') {
@@ -29892,6 +30119,15 @@ function attachCollectionVinylHover(card, disc) {
 }
 
 function renderCollection() {
+  const drag = activeStoragePointerDrag;
+  if (drag) {
+    if (activeView === 'storage' && viewingOwnCollection && drag.uid === currentUid && drag.epoch === cloudAccountEpoch) {
+      storageRenderPending = true;
+      return;
+    }
+    clearStoragePointerDrag();
+  }
+  storageRenderPending = false;
   scheduleImageLinkCheck();
   fullscreenShelfDataRevision = (fullscreenShelfDataRevision || 0) + 1;
   const grid = document.getElementById('collectionGrid');
