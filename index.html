@@ -1257,27 +1257,24 @@
     padding: 8px 12px; margin-bottom: 14px;
   }
   .rating-control { display:grid; grid-template-columns:minmax(85px,1fr) minmax(70px,2fr) 4.5ch auto; align-items:center; gap:8px; font-size:12px; }
-  .rating-control input[type="range"] {
-    appearance:none; -webkit-appearance:none; width:100%; min-width:0; height:24px; padding:0; margin:0;
-    border:0; border-radius:5px; box-shadow:none;
-    background:
-      repeating-linear-gradient(to right, transparent 0 calc(100% / 11 - 2px), var(--surface-1) calc(100% / 11 - 2px) calc(100% / 11)) center / 100% 8px no-repeat,
-      linear-gradient(to right, var(--border-strong) 0 45.45%, var(--text-muted) 45.45% 54.55%, var(--accent-border) 54.55% 100%) center / 100% 8px no-repeat;
-    cursor:grab;
+  .rating-slider { position:relative; display:grid; align-items:center; min-width:0; height:24px; border-radius:4px; }
+  .rating-steps { display:grid; grid-template-columns:repeat(11,minmax(0,1fr)); align-items:center; }
+  .rating-steps > span { height:8px; margin-inline:1px; border-radius:2px; background:var(--border-strong); }
+  .rating-steps > span:nth-child(n+7) { background:var(--accent-border); }
+  .rating-steps > span:nth-child(6) { background:var(--text-muted); }
+  .rating-steps > span.is-selected { height:16px; background:var(--accent); }
+  .rating-steps > span.is-selected:nth-child(6) { background:var(--text-muted); }
+  .rating-slider:has(input:focus-visible) { outline:2px solid var(--accent); outline-offset:2px; }
+  .rating-slider input[type="range"] {
+    position:absolute; inset:0; appearance:none; -webkit-appearance:none;
+    width:100%; min-width:0; height:100%; margin:0; padding:0; border:0;
+    opacity:0; cursor:grab;
   }
-  .rating-control input[type="range"]:active { cursor:grabbing; }
-  .rating-control input[type="range"]:disabled { cursor:default; }
-  .rating-control input[type="range"]:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-  .rating-control input[type="range"]::-webkit-slider-thumb {
-    appearance:none; -webkit-appearance:none; width:14px; height:16px;
-    border:2px solid var(--surface-1); border-radius:4px; background:var(--accent);
-  }
-  .rating-control input[type="range"]::-moz-range-thumb {
-    box-sizing:border-box; width:14px; height:16px;
-    border:2px solid var(--surface-1); border-radius:4px; background:var(--accent);
-  }
-  .rating-control input[type="range"][data-unrated]::-webkit-slider-thumb { background:var(--text-muted); }
-  .rating-control input[type="range"][data-unrated]::-moz-range-thumb { background:var(--text-muted); }
+  .rating-slider input:active { cursor:grabbing; }
+  .rating-slider input:disabled { cursor:default; }
+  /* The native thumb travels between the centers of the first and last slots. */
+  .rating-slider input::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; width:calc(100% / 11); height:24px; }
+  .rating-slider input::-moz-range-thumb { box-sizing:border-box; width:calc(100% / 11); height:24px; border:0; }
   .rating-control output { text-align:right; font-variant-numeric:tabular-nums; }
   .rating-control button { padding:3px 6px; }
   .rating-album { display:grid; gap:4px; }
@@ -6594,7 +6591,6 @@
 
 
 [data-page-fullscreen][hidden] { display:none !important; }
-.fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-shelf-picker { max-width:calc(100% - 16px); box-sizing:border-box; }
 .fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-shelf-picker label { display:none; }
 .fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-shelf-picker select { min-width:0; width:100%; max-width:100%; }
 
@@ -7898,6 +7894,30 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
   min-height:0;
 }
 .fullscreen-player-overlay .fullscreen-player-stage { overflow:clip; }
+.fullscreen-player-stage > .fullscreen-player-zoom { display:none; }
+.fullscreen-player-overlay.is-angled-view .fullscreen-player-stage > .fullscreen-player-zoom {
+  position:absolute;
+  right:10px;
+  bottom:10px;
+  z-index:4;
+  display:inline-flex;
+  box-sizing:border-box;
+  width:44px;
+  height:44px;
+  padding:0;
+  border:1px solid var(--border-strong);
+  border-radius:50%;
+  background:var(--surface-2);
+  color:var(--text-primary);
+}
+.fullscreen-player-stage > .fullscreen-player-zoom[aria-pressed="true"] {
+  color:var(--accent);
+  border-color:var(--accent);
+}
+.fullscreen-player-overlay.is-angled-view .fullscreen-player-stage > .fullscreen-player-shelf-picker {
+  max-width:calc(100% - 72px);
+  box-sizing:border-box;
+}
 .fullscreen-player-overlay:not(.is-split-layout) .fullscreen-player-info {
   box-sizing:border-box;
   padding:8px 0 0;
@@ -8740,12 +8760,11 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
 <div id="fullscreenPlayerOverlay" class="fullscreen-player-overlay" role="dialog" aria-modal="true" aria-label="Musikplayer im Vollbild" hidden>
   <div class="fullscreen-player-top-actions" role="group" aria-label="Ansicht und Menüs">
     <button type="button" class="icon-btn" data-page-fullscreen title="Seite im Vollbild anzeigen" aria-label="Seite im Vollbild anzeigen" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
-    <button type="button" id="fullscreenPlayerMusicSettings" class="icon-btn" aria-label="Musikplayer-Einstellungen" title="Musikplayer-Einstellungen" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--surface-2)"/><circle cx="16" cy="12" r="2" fill="var(--surface-2)"/><circle cx="10" cy="17" r="2" fill="var(--surface-2)"/></svg></button>
-    <button type="button" id="fullscreenPlayerRoomSettings" class="icon-btn" aria-label="Raum gestalten" title="Raum gestalten" aria-expanded="false">⚙</button>
+    <button type="button" id="fullscreenPlayerMusicSettings" class="icon-btn" aria-label="Musikplayer-Einstellungen" title="Musikplayer-Einstellungen" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 3v4m0 4v10m7-18v11m0 4v3m7-18v6m0 4v8M2.5 9h5m2 7h5m2-5h5"/></svg></button>
+    <button type="button" id="fullscreenPlayerRoomSettings" class="icon-btn" aria-label="Raum gestalten" title="Raum gestalten" aria-expanded="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5 12 3l9 3.5v11L12 21l-9-3.5zM12 3v11m-9 3.5 9-3.5 9 3.5"/><path d="m6 8 3-1.2v4L6 12z"/></svg></button>
     <button type="button" id="fullscreenPlayerTracksToggle" class="icon-btn" title="Album-Titelliste einblenden" aria-label="Album-Titelliste einblenden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
     <button type="button" id="fullscreenPlayerQueueToggle" class="icon-btn" title="Warteschlange einblenden" aria-label="Warteschlange einblenden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m18 15 3 3-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button type="button" id="fullscreenPlayerLayoutToggle" class="icon-btn" title="Links-rechts-Ansicht" aria-label="Links-rechts-Ansicht" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M13 4v16" stroke="currentColor" stroke-width="1.7"/></svg></button>
-    <button type="button" id="fullscreenPlayerZoomToggle" class="icon-btn" title="Plattenspieler und Cover vergrößern" aria-label="Plattenspieler und Cover vergrößern" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 6 6M7 10h6M10 7v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
     <button type="button" id="fullscreenPlayerViewToggle" class="icon-btn" title="Schräge Ansicht" aria-label="Schräge Ansicht"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="13" rx="9" ry="4.5" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="13" r="1.2" fill="currentColor"/></svg></button>
     <button type="button" id="fullscreenPlayerMenuToggle" class="icon-btn" title="Sammlung einblenden" aria-label="Sammlung einblenden" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 5V2h14v16h-3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><rect x="3" y="6" width="14" height="16" rx="1" stroke="currentColor" stroke-width="1.7"/><circle cx="10" cy="14" r="4" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="14" r="1" fill="currentColor"/></svg></button>
     <button type="button" id="closeFullscreenPlayerBtn" class="icon-btn fullscreen-player-close" title="Vollbild schließen" aria-label="Vollbild schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>
@@ -8776,7 +8795,7 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
       <small id="fullscreenAudioExtensionStatus" role="status">Erweiterung wird gesucht …</small>
       <p id="fullscreenAudioStatus" class="settings-panel-hint audio-status-error" role="status" aria-live="polite" hidden></p>
       <label class="audio-responsiveness" for="fullscreenAudioResponsiveness">Responsiveness <output id="fullscreenAudioResponsivenessValue">40%</output></label>
-      <input type="range" id="fullscreenAudioResponsiveness" min="0" max="100" step="1" value="40" aria-label="Responsiveness">
+      <input type="range" id="fullscreenAudioResponsiveness" min="0" max="100" step="1" value="40" data-range-neutral="40" aria-label="Responsiveness">
       <div class="audio-responsiveness-ends"><span>Stark geglättet</span><span>Direkt</span></div>
     </section>
     <div class="room-settings-grid" id="fullscreenPlayerRoomFields"></div>
@@ -8789,8 +8808,8 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
     <div id="fullscreenWallpaperPosition" hidden>
       <div id="fullscreenWallpaperPreview" aria-label="Bildausschnitt durch Ziehen verschieben"><img alt="Vorschau des Wandbilds" draggable="false"></div>
       <small>Bild mit Maus oder Finger verschieben oder die Regler verwenden.</small>
-      <label for="fullscreenWallpaperX">Horizontal</label><input id="fullscreenWallpaperX" type="range" min="0" max="100" value="50">
-      <label for="fullscreenWallpaperY">Vertikal</label><input id="fullscreenWallpaperY" type="range" min="0" max="100" value="50">
+      <label for="fullscreenWallpaperX">Horizontal</label><input id="fullscreenWallpaperX" type="range" min="0" max="100" value="50" data-range-neutral="50">
+      <label for="fullscreenWallpaperY">Vertikal</label><input id="fullscreenWallpaperY" type="range" min="0" max="100" value="50" data-range-neutral="50">
     </div>
     </fieldset>
     <p id="fullscreenRoomCloudStatus" class="settings-panel-hint" role="status">Raumeinstellungen werden geladen …</p>
@@ -8902,6 +8921,7 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
       <label for="fullscreenPlayerShelfSelect">Regal</label>
       <select id="fullscreenPlayerShelfSelect" aria-label="Regal für die 3D-Ansicht wählen"></select>
     </div>
+    <button type="button" id="fullscreenPlayerZoomToggle" class="icon-btn fullscreen-player-zoom" title="Plattenspieler und Cover vergrößern" aria-label="Plattenspieler und Cover vergrößern" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="m15 15 6 6M7 10h6M10 7v6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>
   </div>
   <section id="fullscreenPlayerTracksPanel" class="fullscreen-player-tracks-panel" aria-label="Album-Titelliste" hidden>
     <header><strong id="fullscreenPlayerTracksTitle">Album-Titelliste</strong><button type="button" id="fullscreenPlayerTrackMapping" aria-label="Titel zuordnen" title="Titel zuordnen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 17V5l9-2v9"/><circle cx="6" cy="17" r="3"/><path d="M18 12.5l3 3-5.7 5.7-3.6.6.6-3.6z" fill="currentColor" fill-opacity=".12"/><path d="m17.3 13.2 3 3"/></svg></button><button type="button" id="fullscreenPlayerTracksClose" aria-label="Album-Titelliste schließen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></header>
@@ -9223,7 +9243,7 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
         <div class="vinyl-editor-toolbar"><strong>Fotovorlage</strong><button type="button" id="hideVinylReferenceBtn" aria-label="Fotovorlage ausblenden"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button></div>
         <img id="vinylReferenceImage" alt="Ausgewähltes Discogs-Release-Foto als Vorlage" referrerpolicy="no-referrer">
         <div class="vinyl-reference-navigation"><button type="button" id="previousVinylReferenceBtn" aria-label="Vorheriges Referenzfoto">←</button><span id="vinylReferenceCounter"></span><button type="button" id="nextVinylReferenceBtn" aria-label="Nächstes Referenzfoto">→</button><button type="button" id="chooseVinylReferenceBtn">Auswahl</button></div>
-        <label class="vinyl-reference-opacity">Überlagerung <output id="vinylReferenceOpacityValue">50%</output><input type="range" id="vinylReferenceOpacity" min="0" max="100" value="50" aria-label="Deckkraft der Fotovorlage"></label>
+        <label class="vinyl-reference-opacity">Überlagerung <output id="vinylReferenceOpacityValue">50%</output><input type="range" id="vinylReferenceOpacity" min="0" max="100" value="50" data-range-neutral="50" aria-label="Deckkraft der Fotovorlage"></label>
         <p class="settings-panel-hint" id="vinylReferenceStatus" role="status"></p>
       </aside>
       <section class="vinyl-editor-preview" aria-label="Vinyl-Vorschau">
@@ -9242,7 +9262,7 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
           </label>
           <label>Grundfarbe<span class="vinyl-color-picker-row"><input type="color" id="vinylBaseColor" value="#000000"><button type="button" class="vinyl-reference-color-button" data-reference-color="baseColor" title="Grundfarbe aus Fotovorlage wählen" aria-label="Grundfarbe aus Fotovorlage wählen" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M4 20l3-1 11-11a2.1 2.1 0 0 0-3-3L4 16l-1 5 5-1M12 7l5 5"/></svg></button></span></label>
           <label>Label-Farbe<span class="vinyl-color-picker-row"><input type="color" id="vinylLabelColor" value="#ffffff"><button type="button" class="vinyl-reference-color-button" data-reference-color="labelColor" title="Label-Farbe aus Fotovorlage wählen" aria-label="Label-Farbe aus Fotovorlage wählen" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M4 20l3-1 11-11a2.1 2.1 0 0 0-3-3L4 16l-1 5 5-1M12 7l5 5"/></svg></button></span></label>
-          <label class="vinyl-transparency-label">Transparenz <span id="vinylTransparencyValue">0%</span><input type="range" id="vinylTransparencyInput" min="0" max="100" value="0" aria-label="Transparenz"></label>
+          <label class="vinyl-transparency-label">Transparenz <span id="vinylTransparencyValue">0%</span><input type="range" id="vinylTransparencyInput" min="0" max="100" value="0" data-range-neutral="0" aria-label="Transparenz"></label>
         </div>
       </section>
       <section class="vinyl-editor-controls">
@@ -9266,10 +9286,10 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
             <button type="button" id="setPictureColorMarkerBtn" aria-pressed="false">Farbmarker setzen</button>
           </div>
           <div class="cd-picture-adjustments">
-            <label>Horizontal<input type="range" id="cdPictureXInput" min="-150" max="150" value="0"><output id="cdPictureXValue">0%</output></label>
-            <label>Vertikal<input type="range" id="cdPictureYInput" min="-150" max="150" value="0"><output id="cdPictureYValue">0%</output></label>
-            <label>Zoom<input type="range" id="cdPictureZoomInput" min="0.5" max="6" step="0.05" value="1"><output id="cdPictureZoomValue">1×</output></label>
-            <label>Drehung<input type="range" id="cdPictureRotationInput" min="-180" max="180" step="1" value="0"><output id="cdPictureRotationValue">0°</output></label>
+            <label>Horizontal<input type="range" id="cdPictureXInput" min="-150" max="150" value="0" data-range-neutral="0"><output id="cdPictureXValue">0%</output></label>
+            <label>Vertikal<input type="range" id="cdPictureYInput" min="-150" max="150" value="0" data-range-neutral="0"><output id="cdPictureYValue">0%</output></label>
+            <label>Zoom<input type="range" id="cdPictureZoomInput" min="0.5" max="6" step="0.05" value="1" data-range-neutral="1"><output id="cdPictureZoomValue">1×</output></label>
+            <label>Drehung<input type="range" id="cdPictureRotationInput" min="-180" max="180" step="1" value="0" data-range-neutral="0"><output id="cdPictureRotationValue">0°</output></label>
           </div>
           <details class="editor-help"><summary>Bild ausrichten · Hilfe</summary><p class="settings-panel-hint" style="margin:0;">Das ganze Bild bleibt beim Bearbeiten erhalten. Discogs-Fotos werden als Bild-Link mit Ausschnitt und Drehung gespeichert. Bei hochgeladenen Bildern kannst du zusätzlich mit dem Farbmarker eine Farbe aufnehmen. Ziehen zum Verschieben · Mausrad oder Trackpad-Pinch zum Zoomen · auf dem Handy mit zwei Fingern zoomen.</p></details>
           <p class="cd-picture-status" id="cdPictureStatus" aria-live="polite"></p>
@@ -12901,6 +12921,44 @@ if (settingsBtn && settingsPanel) {
   });
 }
 
+const neutralRangeSelector = 'input[type="range"][data-range-neutral]:enabled';
+let neutralRangeGesture = null;
+document.addEventListener('pointerdown', event => {
+  if (event.button !== 0 || !event.target.matches?.(neutralRangeSelector)) return;
+  neutralRangeGesture = {input:event.target, pointerId:event.pointerId};
+}, true);
+for (const type of ['pointerup', 'pointercancel']) {
+  document.addEventListener(type, event => {
+    const gesture = neutralRangeGesture;
+    if (gesture?.pointerId !== event.pointerId) return;
+    // Let the native slider process the final pointer event before releasing the snap.
+    setTimeout(() => { if (neutralRangeGesture === gesture) neutralRangeGesture = null; }, 0);
+  }, true);
+}
+window.addEventListener('blur', () => { neutralRangeGesture = null; });
+document.addEventListener('input', event => {
+  const input = event.target;
+  if (neutralRangeGesture?.input !== input) return;
+  const neutral = Number(input.dataset.rangeNeutral);
+  const tolerance = (Number(input.max) - Number(input.min)) * 0.02;
+  if (Math.abs(input.valueAsNumber - neutral) <= tolerance) input.valueAsNumber = neutral;
+}, true);
+
+function resetRangeToNeutral(event) {
+  const input = event.target;
+  if (!input.matches?.(neutralRangeSelector)) return;
+  event.preventDefault();
+  const neutral = Number(input.dataset.rangeNeutral);
+  if (input.valueAsNumber === neutral) return;
+  input.valueAsNumber = neutral;
+  input.dispatchEvent(new Event('input', {bubbles:true}));
+  input.dispatchEvent(new Event('change', {bubbles:true}));
+}
+document.addEventListener('dblclick', resetRangeToNeutral);
+document.addEventListener('keydown', event => {
+  if (event.shiftKey && event.key === 'Home') resetRangeToNeutral(event);
+});
+
 // Keep native color picking while drawing a clean swatch with an edit hint.
 function refreshColorSwatches() {
   document.querySelectorAll('input[type="color"]:not(#accentColorInput)').forEach(input => {
@@ -15426,38 +15484,38 @@ function renderVinylLayerDetailControls(layer) {
       <label>Bildhintergrund<select data-layer-field="logoBackground"><option value="original" ${!['light','dark'].includes(layer.logoBackground) ? 'selected' : ''}>Original</option><option value="light" ${layer.logoBackground === 'light' ? 'selected' : ''}>Weiß ausblenden</option><option value="dark" ${layer.logoBackground === 'dark' ? 'selected' : ''}>Schwarz ausblenden</option></select></label>
       <details class="editor-help vinyl-logo-help"><summary>Hintergrund · Hilfe</summary><p class="settings-panel-hint">Optische Überblendung: Weiß ausblenden eignet sich für dunkle Logos, Schwarz ausblenden für helle Logos. Andere Bildfarben können sich dabei mit der Label-Farbe mischen.</p></details>
       <label>Platzierung<select data-layer-field="logoPosition"><option value="top" ${layer.logoPosition !== 'bottom' ? 'selected' : ''}>Oben</option><option value="bottom" ${layer.logoPosition === 'bottom' ? 'selected' : ''}>Unten</option></select></label>
-      <label>Breite %<input type="number" data-layer-field="logoWidth" min="10" max="200" value="${layer.logoWidth || 50}"></label>
-      <label>Horizontal %<input type="number" data-layer-field="logoX" min="-100" max="100" value="${layer.logoX ?? 0}"></label>
-      <label>Vertikal %<input type="number" data-layer-field="logoY" min="-100" max="100" value="${layer.logoY ?? (layer.logoPosition === 'bottom' ? 61 : 16)}"></label>
-      <label>Drehung °<input type="number" data-layer-field="logoRotation" min="-180" max="180" value="${layer.logoRotation ?? 0}"></label>
+      <label>Breite %<input type="number" data-layer-field="logoWidth" min="10" max="200" data-range-neutral="${layer.logoSource === 'reference' ? 100 : 50}" value="${layer.logoWidth || 50}"></label>
+      <label>Horizontal %<input type="number" data-layer-field="logoX" min="-100" max="100" data-range-neutral="0" value="${layer.logoX ?? 0}"></label>
+      <label>Vertikal %<input type="number" data-layer-field="logoY" min="-100" max="100" data-range-neutral="${layer.logoSource === 'reference' ? 0 : layer.logoPosition === 'bottom' ? 61 : 16}" value="${layer.logoY ?? (layer.logoPosition === 'bottom' ? 61 : 16)}"></label>
+      <label>Drehung °<input type="number" data-layer-field="logoRotation" min="-180" max="180" data-range-neutral="0" value="${layer.logoRotation ?? 0}"></label>
       <button type="button" data-reset-logo-transform>Position &amp; Größe zurücksetzen</button>
       <p class="settings-panel-hint" role="status">${escapeHtml(discogsLogoStatus.get(layer) || (layer.logoDataUrl || layer.logoUrl ? 'Logo gespeichert.' : 'Wähle ein Label, um sein Logo zu laden.'))}</p>
       ${layer.labelId ? `<a href="https://www.discogs.com/label/${layer.labelId}" target="_blank" rel="noopener noreferrer">Label auf Discogs</a>` : ''}`;
   }
 
-  if (VINYL_SHAPES.includes(layer.type)) return [['x','Horizontal %',-100,100,0],['y','Vertikal %',-100,100,0],['width','Breite / Durchmesser %',1,200,50],['height','Höhe %',1,200,50],['rotation','Drehung °',-180,180,0]].map(([key,label,min,max,value]) => `<label>${label}<input type="number" data-layer-field="${key}" min="${min}" max="${max}" value="${layer[key] ?? value}"></label>`).join('');
+  if (VINYL_SHAPES.includes(layer.type)) return [['x','Horizontal %',-100,100,0],['y','Vertikal %',-100,100,0],['width','Breite / Durchmesser %',1,200,50],['height','Höhe %',1,200,50],['rotation','Drehung °',-180,180,0]].map(([key,label,min,max,value]) => `<label>${label}<input type="number" data-layer-field="${key}" min="${min}" max="${max}" data-range-neutral="${value}" value="${layer[key] ?? value}"></label>`).join('');
   if (layer.type === 'Liquid') {
-    return `<label class="vinyl-liquid-control">Liquid-Anteil <span data-liquid-amount>${layer.amount ?? 50}%</span><input type="range" data-layer-field="amount" min="0" max="100" value="${layer.amount ?? 50}" aria-label="Liquid-Anteil"></label>`;
+    return `<label class="vinyl-liquid-control">Liquid-Anteil <span data-liquid-amount>${layer.amount ?? 50}%</span><input type="range" data-layer-field="amount" min="0" max="100" value="${layer.amount ?? 50}" data-range-neutral="50" aria-label="Liquid-Anteil"></label>`;
   }
 
   let lengthControls = '';
   if (layer.type === 'Streifen Random') {
     lengthControls = `<label>Länge<select data-layer-field="lengthMode"><option value="random" ${layer.lengthMode !== 'fixed' ? 'selected' : ''}>Zufällig</option><option value="fixed" ${layer.lengthMode === 'fixed' ? 'selected' : ''}>Fest</option></select></label>
       ${layer.lengthMode === 'fixed'
-        ? `<label>Länge %<input type="number" data-layer-field="length" min="1" max="100" value="${layer.length}"></label>`
-        : `<label>Min %<input type="number" data-layer-field="lengthMin" min="0" max="100" value="${layer.lengthMin}"></label><label>Max %<input type="number" data-layer-field="lengthMax" min="0" max="100" value="${layer.lengthMax}"></label>`}`;
+        ? `<label>Länge %<input type="number" data-layer-field="length" min="1" max="100" data-range-neutral="65" value="${layer.length}"></label>`
+        : `<label>Min %<input type="number" data-layer-field="lengthMin" min="0" max="100" data-range-neutral="0" value="${layer.lengthMin}"></label><label>Max %<input type="number" data-layer-field="lengthMax" min="0" max="100" data-range-neutral="65" value="${layer.lengthMax}"></label>`}`;
   } else if (layer.type === 'Farbe Innen') {
     lengthControls = `<label>Rand<select data-layer-field="lengthMode"><option value="fixed" ${layer.lengthMode !== 'random' ? 'selected' : ''}>Fest</option><option value="random" ${layer.lengthMode === 'random' ? 'selected' : ''}>Zufällig</option></select></label>
-      <label>Baseline %<input type="number" data-layer-field="length" min="1" max="100" value="${layer.length}"></label>`;
+      <label>Baseline %<input type="number" data-layer-field="length" min="1" max="100" data-range-neutral="65" value="${layer.length}"></label>`;
   } else if (['Punkte Random', 'Quadrate Random', 'Marble Random'].includes(layer.type)) {
-    lengthControls = `<label>Bereich %<input type="number" data-layer-field="length" min="1" max="100" value="${layer.length}"></label>`;
+    lengthControls = `<label>Bereich %<input type="number" data-layer-field="length" min="1" max="100" data-range-neutral="65" value="${layer.length}"></label>`;
   }
 
   const sizeControls = layer.type === 'Punkte Random'
-    ? `<label>Größe<select data-layer-field="sizeMode"><option value="random" ${layer.sizeMode !== 'fixed' ? 'selected' : ''}>Zufällig</option><option value="fixed" ${layer.sizeMode === 'fixed' ? 'selected' : ''}>Fest</option></select></label>${layer.sizeMode === 'fixed' ? `<label>Größe<input type="number" data-layer-field="size" min="1" max="20" value="${layer.size}"></label>` : ''}`
+    ? `<label>Größe<select data-layer-field="sizeMode"><option value="random" ${layer.sizeMode !== 'fixed' ? 'selected' : ''}>Zufällig</option><option value="fixed" ${layer.sizeMode === 'fixed' ? 'selected' : ''}>Fest</option></select></label>${layer.sizeMode === 'fixed' ? `<label>Größe<input type="number" data-layer-field="size" min="1" max="20" data-range-neutral="4" value="${layer.size}"></label>` : ''}`
     : '';
   const angleControls = ['VollFarbe', 'Streifen Random', 'Punkte Random', 'Quadrate Random', 'Marble Random'].includes(layer.type)
-    ? `<div class="angle-fields"><label>Start Grad<input type="number" data-layer-field="startAngle" min="0" max="360" value="${layer.startAngle}"></label><label>Ende Grad<input type="number" data-layer-field="endAngle" min="0" max="360" value="${layer.endAngle}"></label></div>`
+    ? `<div class="angle-fields"><label>Start Grad<input type="number" data-layer-field="startAngle" min="0" max="360" data-range-neutral="0" value="${layer.startAngle}"></label><label>Ende Grad<input type="number" data-layer-field="endAngle" min="0" max="360" data-range-neutral="360" value="${layer.endAngle}"></label></div>`
     : '';
   return `${lengthControls}${sizeControls}${angleControls}`;
 }
@@ -18110,15 +18168,20 @@ const albumRatingFormat = new Intl.NumberFormat('de-DE', {maximumFractionDigits:
 
 function renderRatingControl(container, id, label, getScore, setScore, compact = false) {
   const name = escapeHtml(label);
-  const slider = `<input id="${id}" type="range" min="0" max="10" step="1"${compact ? ` aria-label="${name}"` : ''}><output for="${id}"></output>`;
+  const slider = `<span class="rating-slider"><span class="rating-steps" aria-hidden="true">${'<span></span>'.repeat(11)}</span><input id="${id}" type="range" min="0" max="10" step="1" data-range-neutral="5"${compact ? ` aria-label="${name}"` : ''}></span><output for="${id}"></output>`;
   container.innerHTML = compact ? slider : `<label for="${id}">${name}</label>${slider}<button type="button" title="Bewertung entfernen" aria-label="${name} entfernen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>`;
   const input = container.querySelector('input');
+  const steps = container.querySelector('.rating-steps').children;
   const output = container.querySelector('output');
   const clear = container.querySelector('button');
+  let selectedStep;
   const refresh = (score = getScore(), automatic = false) => {
     const rounded = Math.round(score ?? 0);
-    input.value = score == null ? 5 : rounded <= 5 ? rounded - 1 : rounded;
-    input.toggleAttribute('data-unrated', score == null);
+    const position = score == null ? 5 : rounded <= 5 ? rounded - 1 : rounded;
+    input.value = position;
+    selectedStep?.classList.remove('is-selected');
+    selectedStep = steps[position];
+    selectedStep.classList.add('is-selected');
     input.disabled = automatic;
     input.setAttribute('aria-valuetext', score == null ? 'Neutral, unbewertet' : `${albumRatingFormat.format(score)} von 10`);
     if (clear) clear.disabled = automatic || score == null;
@@ -19188,6 +19251,7 @@ async function applyPlayerVolume() {
 function createPlayerVolumeControl() {
   const row=document.createElement('label');row.className='player-volume';row.hidden=true;
   const input=document.createElement('input');input.type='range';input.min='0';input.max='100';input.step='1';input.value=String(playerVolume);input.disabled=true;input.setAttribute('aria-label','Lautstärke');
+  input.dataset.rangeNeutral = '80';
   input.addEventListener('input',()=>{playerVolume=Number(input.value);syncPlayerVolumeControls();});
   input.addEventListener('change',()=>{try{localStorage.setItem('playerVolumeV1',String(playerVolume));}catch{} void applyPlayerVolume();});
   input.style.setProperty('--volume-level',`${playerVolume}%`);
@@ -20900,7 +20964,7 @@ function getFullscreenPlayerLayout() {
 }
 function sortFullscreenPlayerActions() {
   const toolbar=document.querySelector('.fullscreen-player-top-actions');
-  const order=['#spotifyPlaylistPlayBtn','#fullscreenPlayerMusicSettings','#fullscreenPlayerZoomToggle','#fullscreenPlayerViewToggle','#fullscreenPlayerLayoutToggle','#fullscreenPlayerTracksToggle','#fullscreenPlayerQueueToggle','#fullscreenPlayerMenuToggle','[data-page-fullscreen]','#fullscreenPlayerRoomSettings','#closeFullscreenPlayerBtn'];
+  const order=['#spotifyPlaylistPlayBtn','#fullscreenPlayerMusicSettings','#fullscreenPlayerViewToggle','#fullscreenPlayerLayoutToggle','#fullscreenPlayerTracksToggle','#fullscreenPlayerQueueToggle','#fullscreenPlayerMenuToggle','[data-page-fullscreen]','#fullscreenPlayerRoomSettings','#closeFullscreenPlayerBtn'];
   const buttons=order.map(selector=>selector === '#spotifyPlaylistPlayBtn'
     ? document.getElementById('spotifyPlaylistPlayBtn')
     : toolbar.querySelector(selector)).filter(Boolean);
@@ -20932,7 +20996,6 @@ function applyFullscreenPlayerPresentation() {
   const touchControls=!!mobileMode || window.matchMedia('(pointer:coarse)').matches;
   sortFullscreenPlayerActions();
   overlay.classList.toggle('has-mobile-scene-controls',touchControls);
-  zoom.hidden = touchControls && getFullscreenPlayerView() !== 'angled';
   zoom.setAttribute('aria-pressed', String(zoomEnabled));
   document.querySelector('[data-room-style="layout"]')?.closest('label').toggleAttribute('hidden', !!mobileMode);
   document.querySelector('[data-room-style="zoom"]')?.closest('label').toggleAttribute('hidden', false);
@@ -20949,10 +21012,6 @@ document.getElementById('fullscreenPlayerLayoutToggle').addEventListener('click'
 });
 document.getElementById('fullscreenPlayerZoomToggle').addEventListener('click', () => {
   fullscreenRoomStyle.zoom = fullscreenRoomStyle.zoom === 'on' ? 'off' : 'on';
-  if (fullscreenRoomStyle.zoom === 'on' && getFullscreenPlayerView() !== 'angled') {
-    localStorage.setItem(FULLSCREEN_PLAYER_VIEW_KEY, 'angled');
-    applyFullscreenPlayerView();
-  }
   applyFullscreenPlayerPresentation();
   renderFullscreenPlayerShelf();
   persistFullscreenRoomStyle();
@@ -21146,7 +21205,10 @@ function appendRoomSetting(key,label,input) {
   label.textContent = title;
   const isRange=options === 'range';
   const input = document.createElement(options && !isRange ? 'select' : 'input');
-  if (isRange) { input.type='range';input.min='0';input.max='100';input.step='1';input.setAttribute('aria-label',title); }
+  if (isRange) {
+    input.type='range';input.min='0';input.max='100';input.step='1';input.setAttribute('aria-label',title);
+    input.dataset.rangeNeutral = String(fullscreenRoomDefaults[key]);
+  }
   else if (options) Object.entries(options).forEach(([value,text]) => {
     const option = document.createElement('option'); option.value = value; option.textContent = text; input.append(option);
   });
@@ -26506,9 +26568,7 @@ document.getElementById('vinylLayerList').addEventListener('input', event => {
     if (input) input.value = layer.logoY;
   }
   else if (field === 'amount') {
-    const requestedAmount = Math.max(0, Math.min(100, Number(event.target.value) || 0));
-    layer.amount = Math.abs(requestedAmount - 50) <= 2 ? 50 : requestedAmount;
-    event.target.value = layer.amount;
+    layer.amount = Math.max(0, Math.min(100, Number(event.target.value) || 0));
     const amountLabel = row.querySelector('[data-liquid-amount]');
     if (amountLabel) amountLabel.textContent = `${layer.amount}%`;
   }
@@ -26539,9 +26599,7 @@ document.getElementById('vinylLayerList').addEventListener('change', event => {
   if (!['number','range'].includes(event.target.type)) return;
   const row = event.target.closest('[data-layer-index]');
   const layer = editorRecord().layers[Number(row.dataset.layerIndex)];
-  const limits = field === 'logoWidth' ? [10,200] : ['x','y','logoX','logoY'].includes(field) ? [-100,100] : ['rotation','logoRotation'].includes(field) ? [-180,180] : ['width','height'].includes(field) ? [1,200] : field === 'startAngle' || field === 'endAngle' ? [0, 360]
-    : field === 'size' ? [1, 20]
-      : field === 'lengthMin' ? [0, 100] : [1, 100];
+  const limits = [Number(event.target.min), Number(event.target.max)];
   const parsedValue = event.target.value === '' ? limits[0] : Number(event.target.value);
   layer[field] = Math.max(limits[0], Math.min(limits[1], Number.isFinite(parsedValue) ? parsedValue : limits[0]));
   event.target.value = layer[field];
@@ -28708,7 +28766,7 @@ function renderStorageBoard(visibleItems) {
             <span class="storage-shelf-page" aria-live="polite"></span>
             <button type="button" data-storage-shelf-step="1" aria-label="Nächstes Regal" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
           </div>
-          <label class="storage-shelf-zoom-label">Zoom <input class="storage-shelf-zoom" type="range" min="70" max="180" step="1"><output class="storage-shelf-zoom-value"></output></label>
+          <label class="storage-shelf-zoom-label">Zoom <input class="storage-shelf-zoom" type="range" min="70" max="180" step="1" data-range-neutral="100"><output class="storage-shelf-zoom-value"></output></label>
           <button type="button" data-storage-split aria-pressed="false" aria-label="Geteilte Regalansicht" title="Geteilte Regalansicht"${shelfLocations.length < 2 ? ' disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/></svg></button>
         </nav>
       </section>
