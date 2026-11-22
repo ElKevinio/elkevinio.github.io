@@ -18872,6 +18872,7 @@ function renderRankingPicker() {
   const query = normalizeRankingText(rankingSearch.value).split(' ');
   const filter = rankingFilter.value;
   const searchable = ownCollection.flatMap(album => {
+    if (!album.owned) return [];
     const rows = getRankableTracks(album);
     if (!rows.length) return [];
     const progress = getRankingProgress(rows, album.trackRatings);
@@ -18923,7 +18924,7 @@ function renderRankingPicker() {
   const empty = document.getElementById('rankingModeEmpty');
   empty.hidden = !!searchable.length;
   empty.textContent = rankingSearch.value.trim() || filter !== 'all'
-    ? 'Keine passenden Alben gefunden.' : 'In deiner Sammlung gibt es noch keine Alben mit Titelliste.';
+    ? 'Keine passenden Alben gefunden.' : 'Du besitzt noch keine Alben mit Titelliste.';
 }
 
 function showRankingPicker() {
@@ -18947,7 +18948,7 @@ function refreshRankingSummary(draft) {
 }
 
 function openRankingAlbum(id) {
-  const album = ownCollection.find(item => item.id === id);
+  const album = ownCollection.find(item => item.owned && item.id === id);
   if (!album) { renderRankingPicker(); return; }
   const rows = getRankableTracks(album);
   if (!rows.length) { renderRankingPicker(); return; }
@@ -18990,9 +18991,9 @@ function openRankingAlbum(id) {
 function saveRankingMode() {
   const draft = rankingDraft;
   if (!draft || !isCloudSession(draft.uid, draft.epoch) || cloudAccountReadyUid !== draft.uid) return;
-  const album = ownCollection.find(item => item.id === draft.id);
+  const album = ownCollection.find(item => item.owned && item.id === draft.id);
   if (!album) {
-    rankingStatus.textContent = 'Dieser Eintrag ist nicht mehr in deiner Sammlung.';
+    rankingStatus.textContent = 'Dieses Album ist nicht mehr als im Besitz markiert.';
     return;
   }
   const rows = getRankableTracks(album);
@@ -19010,6 +19011,7 @@ function saveRankingMode() {
   let updatedCopies = 0;
   const previous = ownCollection;
   ownCollection = ownCollection.map(item => {
+    if (!item.owned) return item;
     const selected = item.id === album.id;
     if (!selected && (!albumKey || getRankingAlbumKey(item) !== albumKey)) return item;
     const ratings = transferRankingScores(rows, selected ? rows : getRankableTracks(item), item.trackRatings, scores);
