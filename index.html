@@ -3562,7 +3562,8 @@
     --storage-rail-divider-width:18px;
     --storage-rail-gap:6px;
     --storage-shelf-nav-width:var(--storage-rail-width);
-    --storage-properties-width:var(--storage-rail-width);
+    --storage-property-width:200px;
+    --storage-properties-width:var(--storage-property-width);
     grid-template-columns:var(--storage-shelf-nav-width) var(--storage-rail-divider-width) minmax(0, 1fr); gap:var(--storage-rail-gap); min-height:0;
   }
   .storage-desktop-shelves:has(> .storage-shelf-properties:not([hidden])) {
@@ -3570,9 +3571,6 @@
   }
   .storage-desktop-shelves.is-shelf-list-collapsed { --storage-shelf-nav-width:var(--storage-rail-compact-width); }
   .storage-desktop-shelves.is-properties-collapsed { --storage-properties-width:var(--storage-property-compact-width); }
-  .storage-shelf-names, .storage-shelf-property-fields {
-    border:1px solid var(--border); border-radius:8px; background:var(--surface-1);
-  }
   .storage-shelf-names { display:flex; flex-direction:column; gap:4px; overflow:auto; padding:4px; }
   .storage-shelf-names > * { flex-shrink:0; }
   .storage-shelf-name-row { display:grid; grid-template-columns:minmax(0,1fr) 22px; gap:3px; align-items:center; }
@@ -3596,22 +3594,27 @@
   .storage-shelf-list-divider::before { content:''; position:absolute; inset:0 auto 0 50%; width:1px; background:var(--border-strong); }
   .storage-shelf-list-divider svg { position:relative; width:16px; height:18px; background:var(--surface-1); }
   .is-shelf-list-collapsed .storage-shelf-list-divider svg { transform:rotate(180deg); }
-  .storage-shelf-names button[aria-current="true"], .storage-shelf-names button.is-drag-hovered { color:var(--accent); background:var(--accent-bg); border-color:var(--accent-border); }
+  .storage-shelf-names button[aria-current="true"], .storage-shelf-names button.is-drag-hovered { color:var(--accent); background:var(--accent-bg); }
   .storage-shelf-properties {
     min-width:0; min-height:0; overflow:auto;
+    border-inline-end:1px solid var(--border-strong);
   }
   .storage-shelf-properties[hidden] { display:none; }
   .storage-shelf-property-fields {
     display:flex; flex-direction:column; gap:6px; padding:6px;
   }
   .storage-shelf-property-heading { color:var(--text-secondary); font-size:12px; font-weight:600; }
-  .storage-shelf-property-initial { display:none; width:32px; min-height:34px; padding:0; justify-content:center; }
-  .is-properties-collapsed .storage-shelf-property-initial { display:inline-flex; }
+  .storage-shelf-property-toggle {
+    display:none; align-items:center; justify-content:center;
+    width:32px; min-width:0; min-height:34px; padding:0; border:0; background:transparent;
+  }
+  .storage-shelf-property-toggle svg { width:18px; height:18px; }
+  .is-properties-collapsed .storage-shelf-property-toggle { display:inline-flex; }
   .is-properties-collapsed .storage-shelf-property-fields { display:none; }
-  .is-properties-collapsed .storage-shelf-property-initial[aria-expanded="true"] + .storage-shelf-property-fields {
+  .is-properties-collapsed .storage-shelf-property-toggle[aria-expanded="true"] + .storage-shelf-property-fields {
     display:flex; position:absolute; z-index:5; top:38px;
-    width:var(--storage-rail-width); max-height:calc(100% - 38px); overflow:auto;
-    box-shadow:0 4px 12px var(--border-strong);
+    width:var(--storage-property-width); max-height:calc(100% - 38px); overflow:auto;
+    background:var(--surface-1); box-shadow:0 4px 12px var(--border-strong);
   }
   .storage-dimension-control { display:grid; gap:4px; min-width:0; color:var(--text-secondary); font-size:11px; }
   .storage-dimension-control :is(input, select) { width:100%; min-width:0; min-height:34px; padding:5px 6px; }
@@ -3649,22 +3652,25 @@
     .storage-shelf-stage .storage-shelf.display-mode .remove-compartment { pointer-events:auto; }
   }
   .storage-shelf-stage .storage-shelf[hidden] { display:none !important; }
-  .storage-shelf-stage-content > .storage-shelf { flex:none; margin:0 auto; }
+  .storage-shelf-stage-content > .storage-shelf { flex:none; margin:0 auto; border:0; }
   .storage-shelf-stage-content > .storage-shelf-exit {
     position:absolute; z-index:1; margin:0; pointer-events:none;
   }
   .storage-shelf-names button.has-storage-match { outline:1px dashed var(--accent); outline-offset:-2px; }
-  .storage-shelf-names button.is-right-shelf { border-color:var(--border-strong); }
+  .storage-shelf-names button.is-right-shelf { background:var(--surface-2); }
   .storage-shelf-panes { display:grid; grid-template-columns:minmax(0,1fr); min-height:0; }
   .storage-shelf-panes.is-split {
     --storage-split-gap:8px;
-    --storage-split-border:1px;
     grid-template-columns:minmax(0,var(--storage-left-share,1fr)) minmax(0,var(--storage-right-share,1fr));
     gap:var(--storage-split-gap);
   }
   .storage-shelf-panes > [data-shelf-side] { display:grid; grid-template-rows:minmax(0,1fr); min-width:0; min-height:0; }
   .storage-shelf-panes > [data-shelf-side][hidden], .storage-shelf-panes select { display:none; }
-  .storage-shelf-panes.is-split > [data-shelf-side] { grid-template-rows:auto minmax(0,1fr); gap:6px; border:var(--storage-split-border) solid var(--border); border-radius:8px; }
+  .storage-shelf-panes.is-split > [data-shelf-side] { position:relative; grid-template-rows:auto minmax(0,1fr); gap:6px; }
+  .storage-shelf-panes.is-split > [data-shelf-side="right"]::before {
+    content:''; position:absolute; inset-block:0; inset-inline-start:calc(var(--storage-split-gap) / -2);
+    width:1px; background:var(--border-strong); pointer-events:none;
+  }
   .storage-shelf-panes.is-split select { display:block; width:100%; min-width:0; text-align:center; font-weight:600; }
   .storage-shelf-pagination, .storage-shelf-pager, .storage-shelf-zoom-label { display:flex; align-items:center; justify-content:center; gap:8px; font-variant-numeric:tabular-nums; }
   .storage-shelf-pagination { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); }
@@ -7716,7 +7722,8 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
   .storage-mobile-shelf .storage-mobile-row:only-child { grid-column:1 / -1; }
   .storage-mobile-shelf .remove-shelf { width:44px; padding:0; justify-content:center; border-color:transparent; }
   .storage-mobile .storage-add-shelf { width:100%; font-size:20px; }
-  .storage-mobile-shelf, .storage-mobile-pending { border:1px solid var(--border-strong); border-radius:8px; background:var(--surface-2); }
+  .storage-mobile-shelf + .storage-mobile-shelf { border-block-start:1px solid var(--border-strong); }
+  .storage-mobile-pending { border:1px solid var(--border-strong); border-radius:8px; background:var(--surface-2); }
   .storage-mobile-pending { padding:12px; margin-top:auto; }
   .storage-mobile-pending h3 { margin:0 0 10px; font-size:14px; }
   .storage-mobile-items, .storage-mobile-contents { display:flex; flex-direction:column; gap:6px; }
@@ -9323,7 +9330,7 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
 <h4>Lageransicht</h4>
 <ul>
 <li>Alben per Drag &amp; Drop (am Handy gedrückt halten) in Fächer ziehen. Mobil zeigt die Startseite eine Regalliste und darunter unsortierte Alben. Ein Album kann zuerst einem Regal und danach einem Fach zugeordnet werden – durch Ziehen oder „Verschieben“. Im Regal stehen die noch nicht einsortierten Alben unten. Beim Einsortieren werden Fächer als kompakte Namensliste angezeigt; sonst mit Inhalt. Oben führt „Regale“ zurück.</li>
-<li>Am Desktop stehen links die Regale, daneben Name und Eigenschaften und rechts die scrollbaren Fächer. In der geteilten Ansicht wählst du oben je ein Regal aus. Bei wenig Platz kannst du die Regale auf ihre Anfangsbuchstaben reduzieren. Die Eigenschaften des linken Regals klappen automatisch ein und lassen sich über den Anfangsbuchstaben öffnen. Mit dem Zoomregler passt du die Größe der Fächer an.</li>
+<li>Am Desktop stehen links die Regale, daneben Name und Eigenschaften und rechts die scrollbaren Fächer. In der geteilten Ansicht wählst du oben je ein Regal aus. Bei wenig Platz kannst du die Regale auf ihre Anfangsbuchstaben reduzieren. Die Eigenschaften des linken Regals klappen automatisch ein und lassen sich über das Reglersymbol öffnen. Mit dem Zoomregler passt du die Größe der Fächer an.</li>
 <li>Im Fach öffnet der Reihenfolge-Button die <b>Sortierung</b>: Alben per Drag nach oben/unten ziehen oder mit den Pfeilen verschieben.</li>
 <li>Neben der Fachnummer startet ein kleiner Wasch-Button den Waschmodus für dieses Fach.</li>
 <li><b>Displaywand</b>: Regale im Modus „Display“ zeigen die Alben als kleine Sammlungskarten. Titel und Interpret erscheinen beim Drüberfahren, zusammen mit einem größeren <b>Anhören</b>-Button. Im Fach-Kopf gibt es dort nur das ✕︎ zum Entfernen; Wasch- und Sortierknopf fehlen.</li>
@@ -28758,14 +28765,13 @@ function getStorageShelfLayoutWidths(desktop) {
   let stageWidth = widths.reduce((total, width) => total + width, 0);
   if (widths.length === 2) {
     const paneStyles = getComputedStyle(panes);
-    const border = parseFloat(paneStyles.getPropertyValue('--storage-split-border'));
-    stageWidth += parseFloat(paneStyles.getPropertyValue('--storage-split-gap')) + 4 * border;
-    panes.style.setProperty('--storage-left-share', `${widths[0] + 2 * border}fr`);
-    panes.style.setProperty('--storage-right-share', `${widths[1] + 2 * border}fr`);
+    stageWidth += parseFloat(paneStyles.getPropertyValue('--storage-split-gap'));
+    panes.style.setProperty('--storage-left-share', `${widths[0]}fr`);
+    panes.style.setProperty('--storage-right-share', `${widths[1]}fr`);
   }
   const baseWidth = listWidth + dividerWidth + stageWidth + gap * (properties.hidden ? 2 : 3);
   return {
-    expanded: baseWidth + (properties.hidden ? 0 : railWidth),
+    expanded: baseWidth + (properties.hidden ? 0 : parseFloat(styles.getPropertyValue('--storage-property-width'))),
     compact: baseWidth + (properties.hidden ? 0 : parseFloat(styles.getPropertyValue('--storage-property-compact-width')))
   };
 }
@@ -28794,7 +28800,7 @@ function applyStoragePaneLayout(layout) {
   const properties = desktop.querySelector('.storage-shelf-properties');
   const compact = !properties.hidden && desktop.clientWidth < Math.ceil(widths.expanded);
   desktop.classList.toggle('is-properties-collapsed', compact);
-  if (!compact) properties.querySelector('.storage-shelf-property-initial').setAttribute('aria-expanded', 'false');
+  if (!compact) properties.querySelector('.storage-shelf-property-toggle').setAttribute('aria-expanded', 'false');
 }
 
 function applyStorageShelfZoom(board) {
@@ -29410,10 +29416,6 @@ function showDesktopStorageShelf(board, shelfId, animate = false, side = 'left',
   properties.hidden = false;
   const shelf = shelfLocations.find(entry => entry.id === desktopStorageShelfId);
   properties.dataset.shelfId = shelf.id;
-  const initial = properties.querySelector('.storage-shelf-property-initial');
-  initial.textContent = getStorageShelfInitial(shelf.name);
-  initial.title = `Eigenschaften von ${shelf.name}`;
-  initial.setAttribute('aria-label', initial.title);
   properties.querySelector('.storage-shelf-name').value = shelf.name;
   properties.querySelector('.storage-shelf-mode').value = shelf.mode || 'shelf';
   properties.querySelector('.storage-shelf-rows').value = shelf.rows;
@@ -29646,7 +29648,9 @@ function renderStorageBoard(visibleItems) {
           </nav>
           <button type="button" class="storage-shelf-list-divider" aria-controls="storageShelfNames"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
           <aside class="storage-shelf-properties" aria-label="Regaleigenschaften" hidden>
-            <button type="button" class="storage-shelf-property-initial" aria-expanded="false" aria-controls="storageShelfPropertyFields"></button>
+            <button type="button" class="storage-shelf-property-toggle" aria-label="Regaleigenschaften" title="Regaleigenschaften" aria-expanded="false" aria-controls="storageShelfPropertyFields">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h4m4 0h8M4 12h10m4 0h2M4 18h4m4 0h8M8 4v4m6 2v4m-6 2v4"/></svg>
+            </button>
             <div id="storageShelfPropertyFields" class="storage-shelf-property-fields">
               <span class="storage-shelf-property-heading">Eigenschaften</span>
               <label class="storage-dimension-control">Regalname <input type="text" class="storage-shelf-name"></label>
@@ -29809,7 +29813,7 @@ function renderStorageBoard(visibleItems) {
   });
 
   const properties = layout.querySelector('.storage-shelf-properties');
-  const propertyToggle = properties.querySelector('.storage-shelf-property-initial');
+  const propertyToggle = properties.querySelector('.storage-shelf-property-toggle');
   propertyToggle.addEventListener('click', () => {
     propertyToggle.setAttribute('aria-expanded', String(propertyToggle.getAttribute('aria-expanded') === 'false'));
   });
