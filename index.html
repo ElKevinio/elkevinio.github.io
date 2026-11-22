@@ -1284,7 +1284,7 @@
   .listening-track-rating { width:min(100%, 340px); margin:6px auto; }
   .listening-track-rating[hidden], #miniTrackRatingToggle[hidden] { display:none; }
   #miniTrackRatingToggle[aria-expanded="true"] { border-color:var(--accent-border); color:var(--accent); }
-  #miniTrackRatingToggle.is-rated path { fill:currentColor; }
+  #miniTrackRatingToggle.is-rated { color:var(--accent); }
   .album-listening-dock.is-collapsed #miniTrackRating {
     position:absolute; inset:auto 0 calc(100% + 8px); width:auto; margin:0; padding:10px;
     border:1px solid var(--border-strong); border-radius:10px; background:var(--surface-2);
@@ -6594,18 +6594,7 @@
 
 
 [data-page-fullscreen][hidden] { display:none !important; }
-.fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-stage > #fullscreenPlayerZoomToggle,
-.fullscreen-player-overlay.has-mobile-scene-controls > #fullscreenPlayerViewToggle {
-  position:absolute; bottom:10px; z-index:8; width:38px; height:38px; min-width:38px; padding:8px;
-  display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--border-strong); border-radius:50%;
-  background:var(--surface-2); color:var(--text-primary); box-shadow:0 3px 12px #0005;
-}
-.fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-stage > #fullscreenPlayerZoomToggle { left:auto; right:8px; transform:none; }
-.fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-stage > #fullscreenPlayerZoomToggle[hidden] { display:none; }
-.fullscreen-player-overlay.has-mobile-scene-controls > #fullscreenPlayerViewToggle { position:absolute; right:max(10px, env(safe-area-inset-right)); bottom:max(10px, env(safe-area-inset-bottom)); z-index:12; }
-.fullscreen-player-stage > #fullscreenPlayerZoomToggle svg,.fullscreen-player-overlay > #fullscreenPlayerViewToggle svg { width:20px; height:20px; }
-
-.fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-shelf-picker { max-width:calc(100% - 72px); box-sizing:border-box; }
+.fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-shelf-picker { max-width:calc(100% - 16px); box-sizing:border-box; }
 .fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-shelf-picker label { display:none; }
 .fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-shelf-picker select { min-width:0; width:100%; max-width:100%; }
 
@@ -7149,12 +7138,6 @@
 .player-volume[hidden],.mini-volume-menu[hidden] { display:none !important; }
 
 
-/* Mobile scene controls stay above the room but beneath all pop-up menus. */
-.fullscreen-player-overlay.has-mobile-scene-controls > #fullscreenPlayerViewToggle {
-  bottom:max(20px, calc(env(safe-area-inset-bottom) + 16px));
-  z-index:3;
-}
-.fullscreen-player-overlay.has-mobile-scene-controls .fullscreen-player-stage > #fullscreenPlayerZoomToggle { z-index:3; }
 .fullscreen-player-menu,.fullscreen-player-queue-panel,.fullscreen-player-tracks-panel,
 .fullscreen-player-poster-form,.fullscreen-player-music-settings { z-index:20; }
 .fullscreen-player-top-actions { z-index:30; }
@@ -7171,7 +7154,6 @@
 .fullscreen-player-music-settings #playerSettingsDetails > summary { display:none; }
 .fullscreen-player-music-settings #listeningSettingsBlock { display:block; }
 @media (max-width:700px) {
- .fullscreen-player-overlay.has-mobile-scene-controls > #fullscreenPlayerViewToggle { bottom:max(24px, calc(env(safe-area-inset-bottom) + 20px)); }
  .fullscreen-player-controls { gap:clamp(5px, 2vw, 14px); }
  .fullscreen-player-controls .album-mini-control { flex-basis:42px; width:42px; min-width:42px; }
 }
@@ -7261,25 +7243,22 @@
 @media (max-width:700px) and (orientation:portrait) {
   .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) {
     justify-content:flex-start;
-    gap:clamp(10px, 2.2dvh, 20px);
-    padding:calc(env(safe-area-inset-top) + 58px) 14px
-            calc(env(safe-area-inset-bottom) + 20px);
+    padding-inline:14px;
     overflow-x:hidden;
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
   }
   .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-stage {
-    flex:0 0 auto;
     width:100%;
     min-height:0;
     gap:clamp(12px, 2dvh, 20px);
   }
   .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-turntable {
-    width:min(76vw, 34dvh, 360px);
+    width:min(72vw, 28dvh, 360px);
     max-width:100%;
   }
   .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-cover {
-    width:min(43vw, 19dvh, 210px);
+    width:min(40vw, 15dvh, 210px);
     max-width:100%;
   }
   .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-info {
@@ -7291,18 +7270,6 @@
   .fullscreen-player-overlay:not(.is-split-layout):not(.is-angled-view) .fullscreen-player-controls {
     width:min(100%, 440px);
     margin-top:6px;
-  }
-  .fullscreen-player-top-actions {
-    left:8px;
-    right:8px;
-    justify-content:flex-end;
-    gap:clamp(2px, 1vw, 6px);
-  }
-  .fullscreen-player-top-actions .icon-btn {
-    flex:0 1 40px;
-    min-width:0;
-    width:clamp(32px, 9vw, 40px);
-    height:40px;
   }
 }
 @media (max-width:700px) and (orientation:portrait) and (max-height:740px) {
@@ -7566,8 +7533,6 @@ body:not(.fullscreen-player-open) #albumQueuePanel:not([hidden]) {
     .shelf-location-new > label:first-child, .shelf-location-new > button { grid-column:1 / -1; }
     .storage-compartment-header { flex-wrap:wrap; min-height:44px; }
     .storage-compartment-header button, .storage-shelf-header button, .storage-order-drag-handle { min-width:36px; min-height:36px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
-    .fullscreen-player-top-actions { max-width:calc(100% - 16px); overflow-x:auto; justify-content:flex-start; padding-bottom:4px; }
-    #closeFullscreenPlayerBtn { position:sticky; right:0; z-index:2; background:var(--surface-2); }
     .fullscreen-player-menu-item-actions button { min-width:44px; min-height:44px; }
     .fullscreen-player-menu-heading button, .room-settings-heading button { min-width:44px; min-height:44px; }
     .room-settings-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -7893,8 +7858,9 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
 }
 #albumListeningDock .mini-volume-menu { flex-basis:var(--mini-button-size); }
 #miniTrackRating { width:100%; }
-#miniTrackRating .rating-control { grid-template-columns:minmax(0,1fr) 3ch; }
-#miniTrackRating .rating-control output { margin:0; }
+#fullscreenTrackRating { width:100%; margin:2px 0; flex-shrink:0; }
+:is(#miniTrackRating, #fullscreenTrackRating) .rating-control { grid-template-columns:minmax(0,1fr) 3ch; }
+:is(#miniTrackRating, #fullscreenTrackRating) .rating-control output { margin:0; }
 @media (max-width:400px) {
   #albumListeningDock:not(.is-collapsed) { --mini-button-size:32px; --mini-play-size:38px; }
 }
@@ -7905,7 +7871,86 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
   overflow-y:auto;
 }
 #shopModeOverlay { bottom:var(--app-status-height, 0px); }
-.fullscreen-player-overlay { height:calc(100dvh - var(--app-status-height, 0px)); }
+.fullscreen-player-overlay {
+  --player-toolbar-height:calc(56px + env(safe-area-inset-top));
+  height:calc(100dvh - var(--app-status-height, 0px));
+}
+.fullscreen-player-top-actions {
+  box-sizing:border-box;
+  inset:0 0 auto;
+  max-width:none;
+  height:var(--player-toolbar-height);
+  padding:env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+  justify-content:safe flex-end;
+  overflow-x:auto;
+  scrollbar-width:none;
+  background:var(--surface-1);
+  border-bottom:1px solid var(--border);
+}
+.fullscreen-player-top-actions .icon-btn { flex:0 0 auto; box-sizing:border-box; }
+#closeFullscreenPlayerBtn { position:sticky; right:0; z-index:2; background:var(--surface-2); }
+.fullscreen-player-overlay:not(.is-split-layout) {
+  padding-top:var(--player-toolbar-height);
+  gap:0;
+}
+.fullscreen-player-overlay:not(.is-split-layout) .fullscreen-player-stage {
+  flex:1 1 0;
+  min-height:0;
+}
+.fullscreen-player-overlay .fullscreen-player-stage { overflow:clip; }
+.fullscreen-player-overlay:not(.is-split-layout) .fullscreen-player-info {
+  box-sizing:border-box;
+  padding:8px 0 0;
+  border-top:1px solid var(--border);
+}
+.fullscreen-player-overlay.is-split-layout .fullscreen-player-stage,
+.fullscreen-player-overlay.is-split-layout .fullscreen-player-info { top:calc(var(--player-toolbar-height) + 8px); }
+.fullscreen-player-overlay .room-window.is-narrow { visibility:hidden; }
+.room-window.is-narrow * { animation-play-state:paused !important; }
+.fullscreen-player-controls > .album-mini-control.primary { border-radius:50%; padding:0; }
+@media (max-width:960px) {
+  .fullscreen-player-info > .player-transport-row {
+    display:flex;
+    flex-direction:column;
+    flex-shrink:0;
+    gap:4px;
+  }
+  .fullscreen-player-info > .player-transport-row > .player-volume { flex:auto; }
+  .fullscreen-player-overlay.is-split-layout .fullscreen-player-info {
+    container-type:inline-size;
+    justify-content:safe center;
+    padding-inline:10px;
+  }
+  .fullscreen-player-overlay.is-split-layout .fullscreen-player-controls { gap:4px !important; }
+  .fullscreen-player-overlay.is-split-layout .fullscreen-player-controls > .album-mini-control {
+    --control-size:clamp(24px, calc((100cqi - 20px) / 6.25), 44px);
+    flex:0 0 var(--control-size) !important;
+    width:var(--control-size) !important;
+    height:var(--control-size) !important;
+    min-width:0;
+    min-height:0;
+    padding:0;
+  }
+  .fullscreen-player-overlay.is-split-layout .fullscreen-player-controls > .album-mini-control.primary {
+    --control-size:clamp(30px, calc((100cqi - 20px) / 5), 55px);
+    min-width:0;
+  }
+}
+@media (max-width:700px) and (orientation:portrait) {
+  .fullscreen-player-overlay:not(.is-split-layout) { padding-bottom:calc(env(safe-area-inset-bottom) + 34px); }
+  .fullscreen-player-top-actions { gap:4px; }
+  .fullscreen-player-top-actions .icon-btn {
+    width:clamp(32px, 9vw, 40px); min-width:0; height:40px; min-height:40px;
+  }
+  .fullscreen-player-controls > .album-mini-control { min-width:0; min-height:0; }
+  .fullscreen-player-controls > .album-mini-control.primary {
+    --player-play-size:clamp(44px, 13vw, 58px);
+    flex:0 0 var(--player-play-size) !important;
+    width:var(--player-play-size) !important;
+    height:var(--player-play-size) !important;
+    min-width:0;
+  }
+}
 </style>
 <script src="discogs-client.js?v=20261119"></script>
 <script src="image-link-health.js?v=20261116"></script>
@@ -8682,7 +8727,7 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
     <button type="button" id="closeAlbumListeningDockBtn" class="icon-btn album-listening-dock-close" title="Wiedergabe beenden" aria-label="Wiedergabe beenden"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
   </div>
   <div id="albumListeningDockContent"></div>
-  <button type="button" id="miniTrackRatingToggle" class="album-mini-control" aria-expanded="false" aria-controls="miniTrackRating" aria-label="Song bewerten" title="Song bewerten" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+  <button type="button" id="miniTrackRatingToggle" class="album-mini-control" aria-expanded="false" aria-controls="miniTrackRating" aria-label="Song bewerten" title="Song bewerten" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 12h8m5 0h5M5 16v2m7-2v2m7-2v2"/><circle cx="13.5" cy="12" r="2.5"/></svg></button>
   <div id="miniTrackRating" class="listening-track-rating" hidden></div>
   <section id="albumQueuePanel" class="album-queue-panel" aria-label="Album-Warteschlange" hidden>
     <div class="album-queue-drag-handle" role="slider" tabindex="0" aria-label="Warteschlange höher oder niedriger ziehen" aria-valuemin="0" aria-valuemax="100" aria-valuenow="55"><span></span></div>
@@ -8693,7 +8738,7 @@ body:not(.fullscreen-player-open) #appStatusBar > #albumListeningDock:not(.is-co
 </div>
 
 <div id="fullscreenPlayerOverlay" class="fullscreen-player-overlay" role="dialog" aria-modal="true" aria-label="Musikplayer im Vollbild" hidden>
-  <div class="fullscreen-player-top-actions">
+  <div class="fullscreen-player-top-actions" role="group" aria-label="Ansicht und Menüs">
     <button type="button" class="icon-btn" data-page-fullscreen title="Seite im Vollbild anzeigen" aria-label="Seite im Vollbild anzeigen" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
     <button type="button" id="fullscreenPlayerMusicSettings" class="icon-btn" aria-label="Musikplayer-Einstellungen" title="Musikplayer-Einstellungen" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--surface-2)"/><circle cx="16" cy="12" r="2" fill="var(--surface-2)"/><circle cx="10" cy="17" r="2" fill="var(--surface-2)"/></svg></button>
     <button type="button" id="fullscreenPlayerRoomSettings" class="icon-btn" aria-label="Raum gestalten" title="Raum gestalten" aria-expanded="false">⚙</button>
@@ -13930,6 +13975,9 @@ function closeShopMode() {
   const shopDock = document.getElementById('albumListeningDock');
   if (shopDock.parentElement.id === 'shopPlayerSlot') {
     document.getElementById('appStatusBar').appendChild(shopDock);
+    const volume = shopDock.querySelector('.album-mini-track-actions .mini-volume-menu');
+    const topbar = shopDock.querySelector('.album-mini-topbar');
+    if (volume && topbar) topbar.insertBefore(volume, topbar.lastElementChild);
     placeMiniTrackRatingToggle();
   }
   document.body.classList.remove('shop-active');
@@ -19601,18 +19649,20 @@ function showAlbumMiniPlayer() {
   persistListeningSession();
 }
 
+function updateAlbumDockToggleButton(button, isCollapsed) {
+  button.innerHTML = isCollapsed
+    ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 10 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  button.title = isCollapsed ? 'Mini-Player öffnen' : 'Mini-Player minimieren';
+  button.setAttribute('aria-label', button.title);
+  button.setAttribute('aria-expanded', String(!isCollapsed));
+}
+
 function updateAlbumDockToggle() {
   const dock = document.getElementById('albumListeningDock');
   if (!dock) return;
   const isCollapsed = dock.classList.contains('is-collapsed');
-  document.querySelectorAll('#albumDockHeaderToggle, .album-dock-toggle').forEach(button => {
-    button.innerHTML = isCollapsed
-      ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 14 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-      : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 10 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    button.title = isCollapsed ? 'Mini-Player öffnen' : 'Mini-Player minimieren';
-    button.setAttribute('aria-label', button.title);
-    button.setAttribute('aria-expanded', String(!isCollapsed));
-  });
+  document.querySelectorAll('#albumDockHeaderToggle, .album-dock-toggle').forEach(button => updateAlbumDockToggleButton(button, isCollapsed));
   placeMiniTrackRatingToggle();
 }
 
@@ -19631,10 +19681,8 @@ function createAlbumDockToggle() {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'album-dock-toggle';
-  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 10 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  button.title = 'Mini-Player minimieren';
-  button.setAttribute('aria-label', button.title);
-  button.setAttribute('aria-expanded', 'true');
+  const isCollapsed = document.getElementById('albumListeningDock')?.classList.contains('is-collapsed') ?? false;
+  updateAlbumDockToggleButton(button, isCollapsed);
   button.addEventListener('click', toggleAlbumDockCollapsed);
   return button;
 }
@@ -20090,7 +20138,7 @@ function syncListeningTrackRating() {
       pendingListeningRatings.set(id, {uid, epoch, albumId:String(album.id), trackKey:track.key, value});
       miniTrackRatingToggle.classList.toggle('is-rated', value !== null);
       for (const refresh of controls) refresh();
-    }, elementId === 'miniTrackRating'));
+    }, true));
   }
 }
 
@@ -20882,12 +20930,6 @@ function applyFullscreenPlayerPresentation() {
   layout.setAttribute('aria-label', layout.title);
   const zoom = document.getElementById('fullscreenPlayerZoomToggle');
   const touchControls=!!mobileMode || window.matchMedia('(pointer:coarse)').matches;
-  const viewButton=document.getElementById('fullscreenPlayerViewToggle');
-  const toolbar=document.querySelector('.fullscreen-player-top-actions');
-  const zoomTarget=touchControls?stage:toolbar;
-  const viewTarget=touchControls?overlay:toolbar;
-  if(zoom.parentElement!==zoomTarget)zoomTarget.append(zoom);
-  if(viewButton.parentElement!==viewTarget)viewTarget.append(viewButton);
   sortFullscreenPlayerActions();
   overlay.classList.toggle('has-mobile-scene-controls',touchControls);
   zoom.hidden = touchControls && getFullscreenPlayerView() !== 'angled';
@@ -22432,6 +22474,12 @@ document.getElementById('roomCrateOpenQueue').addEventListener('click',()=>setFu
 document.addEventListener('click',event=>{if(!roomQueueCrate.contains(event.target))roomQueueCrateMenu.hidden=true;});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!roomQueueCrateMenu.hidden){event.stopImmediatePropagation();roomQueueCrateMenu.hidden=true;roomQueueCrate.focus();}},true);
 new ResizeObserver(updateRoomQueueCrateSpace).observe(document.querySelector('.fullscreen-player-stage'));
+const roomWindowResizeObserver = new ResizeObserver(entries => {
+  for (const {target, contentRect} of entries) {
+    target.classList.toggle('is-narrow', contentRect.width < 80 || contentRect.height < 72);
+  }
+});
+document.querySelectorAll('.fullscreen-player-room .room-window').forEach(frame => roomWindowResizeObserver.observe(frame));
 document.querySelectorAll('.furniture-chair').forEach(img=>img.addEventListener('load',scheduleRoomChairOverlap));
 renderRoomQueueCrate();
 
@@ -22601,7 +22649,9 @@ function buildYouTubeMiniPlayer(container, videoId, originalUrl, item, title, re
   controls.append(collapsedTitle, toggle, createAlbumDockToggle(), createCollapsedDockCloseButton());
   const trackActions = document.createElement('div');
   trackActions.className = 'album-mini-track-actions';
-  trackActions.append(createMiniVolumeButton());
+  const volumeButton = createMiniVolumeButton();
+  if (dock.closest('.shop-player-slot')) trackActions.append(volumeButton);
+  else topbar.insertBefore(volumeButton, topbar.lastElementChild);
   meta.append(currentTrack, artist, trackActions);
 
   main.append(cover, meta);
@@ -23069,7 +23119,9 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   );
   const trackActions = document.createElement('div');
   trackActions.className = 'album-mini-track-actions';
-  trackActions.append(createMiniVolumeButton());
+  const volumeButton = createMiniVolumeButton();
+  if (dock.closest('.shop-player-slot')) trackActions.append(volumeButton);
+  else topbar.insertBefore(volumeButton, topbar.lastElementChild);
   meta.append(currentTrack, artist, trackActions);
 
   main.append(cover, meta);
