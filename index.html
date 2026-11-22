@@ -1296,6 +1296,51 @@
   @media (max-width:600px) { #fTracklist { column-count:1; } }
   .rating-track .rating-control { grid-template-columns:minmax(0,1fr) 4.5ch auto; }
   .rating-track .rating-control label { position:absolute; clip-path:inset(50%); width:1px; height:1px; overflow:hidden; }
+  .ranking-mode {
+    position:fixed; inset:0; width:100%; max-width:none; height:100dvh; max-height:none;
+    margin:0; padding:0; border:0; background:var(--surface-1); color:var(--text-primary);
+  }
+  .ranking-mode::backdrop { background:var(--surface-1); }
+  .ranking-mode [hidden] { display:none; }
+  .ranking-mode-top {
+    position:sticky; top:0; z-index:1; background:var(--surface-1);
+    border-bottom:1px solid var(--border-strong);
+  }
+  .ranking-mode-bar, .ranking-mode-body {
+    width:min(860px,100%); margin-inline:auto; padding:14px clamp(14px,4vw,32px);
+  }
+  .ranking-mode-bar { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .ranking-mode h2, .ranking-mode h3, .ranking-mode p { margin:0; }
+  .ranking-mode-bar h2 { font-size:clamp(19px,4vw,25px); }
+  .ranking-mode button { min-height:42px; }
+  .ranking-mode-body { display:grid; gap:20px; padding-block:24px; }
+  .ranking-mode-controls, .ranking-mode-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .ranking-mode-controls input { flex:1 1 220px; min-width:0; }
+  .ranking-mode-controls :is(input,select) { min-height:44px; }
+  .ranking-mode-group { display:grid; gap:8px; }
+  .ranking-mode-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:8px; }
+  .ranking-mode-card {
+    display:grid; grid-template-columns:44px minmax(0,1fr); gap:10px; align-items:center;
+    min-width:0; padding:8px; text-align:left; white-space:normal;
+  }
+  .ranking-mode-card > :first-child { width:44px; height:44px; object-fit:cover; border-radius:5px; background:var(--surface-3); }
+  .ranking-mode-card span { min-width:0; }
+  .ranking-mode-card :is(strong,small) { display:block; overflow-wrap:anywhere; }
+  .ranking-mode-card small, .ranking-mode-meta, .ranking-mode-progress { color:var(--text-secondary); }
+  .ranking-mode-summary {
+    width:min(860px,100%); margin-inline:auto; padding:0 clamp(14px,4vw,32px) 12px;
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px;
+  }
+  .ranking-mode-average { display:flex; align-items:baseline; gap:8px; }
+  .ranking-mode-average output { font-size:clamp(25px,5vw,40px); color:var(--accent); font-variant-numeric:tabular-nums; }
+  .ranking-mode-tracks { display:grid; gap:12px; }
+  .ranking-mode-tracks .rating-track { background:var(--surface-2); border-radius:8px; padding:12px 16px; }
+  .ranking-mode-tracks .track-row { font-size:clamp(16px,3vw,20px); gap:10px; }
+  .ranking-mode-tracks .rating-control { font-size:18px; grid-template-columns:minmax(0,1fr) 3ch auto; }
+  .ranking-mode-tracks .rating-control button { min-width:42px; }
+  .ranking-mode-tracks .rating-slider { height:44px; }
+  .ranking-mode-tracks .rating-steps > span { height:10px; }
+  .ranking-mode-tracks .rating-steps > .is-selected { height:23px; }
   .collection-rating { color:var(--accent); font-size:11px; white-space:nowrap; }
   .track-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
   .track-row span:last-child { color: var(--text-secondary); }
@@ -5934,9 +5979,6 @@
     .filter-tabs { gap: 4px; }
     .settings-panel { right: -8px; width: 240px; }
     header { gap: 6px; padding: 10px 12px; }
-    header .header-stats { gap: 6px; margin-left: 0; }
-    header .header-stats .stat-detail { display: none; }
-    header .header-stats .stat-compact { display: inline-flex; padding: 6px 8px; font-size: 12px; }
     .header-actions { gap: 4px; margin-left: 4px; }
     .header-actions .icon-btn { width: 32px; height: 32px; }
     .settings-wrap .icon-btn { width: 32px; height: 32px; }
@@ -5944,36 +5986,15 @@
     .sort-select { min-width: 0; flex: 1 1 auto; font-size: 13px; padding-left: 8px; padding-right: 8px; }
     .sort-direction-group { flex-shrink: 0; }
   }
-  /* At small widths show two compact stats next to the header actions (buttons) */
   @media (max-width: 720px) {
     header { position: sticky; }
     header .header-actions { position: absolute; right: 12px; top: 12px; z-index: 40; width: 156px; display: flex; justify-content: flex-end; gap: 6px; }
-    header .header-stats {
-      position: absolute;
-      right: calc(12px + 156px + 4px); /* place stats to the left of the action buttons */
-      top: 12px;
-      display: flex;
-      flex-direction: row;
-      gap: 6px;
-      align-items: center;
-      pointer-events: auto;
-      max-width: calc(100% - 196px);
-      width: auto;
-      justify-content: flex-end;
-      overflow-x: auto;
-      flex-wrap: nowrap;
-      white-space: nowrap;
-      z-index: 35;
-      left: auto;
-    }
-    header .header-stats .stat-detail { display: none; }
-    header .header-stats .stat-compact { display: inline-flex; }
+    header .header-stats { gap: 6px; z-index: 35; }
     /* Ensure settings panel overlays the stats and actions */
     .settings-panel { z-index: 10050; }
     .settings-wrap .icon-btn { z-index: 10060; }
   }
 
-  /* Keep compact stats in the first row at very small widths. */
   @media (max-width: 480px) {
     header .header-top-row {
       align-items: center;
@@ -5988,23 +6009,6 @@
       width: calc(100% - 246px);
       max-width: calc(100% - 246px);
     }
-    header .header-stats {
-      position: absolute;
-      right: calc(12px + 156px + 4px);
-      top: 12px;
-      left: auto;
-      width: auto;
-      max-width: calc(100% - 196px);
-      flex-direction: row;
-      gap: 6px;
-      max-height: 36px;
-      overflow-x: auto;
-      overflow-y: hidden;
-      margin-top: 0;
-      z-index: 50;
-    }
-    header .header-stats .stat-detail { display: none; }
-    header .header-stats .stat-compact { display: inline-flex; }
     .filter-tabs .filter-label { display: none !important; }
     .filter-tabs button { padding: 8px !important; }
   }
@@ -6076,9 +6080,6 @@
       flex-basis: calc(100% - 246px);
       width: calc(100% - 246px);
       max-width: calc(100% - 246px);
-    }
-    header .header-stats .stat-compact {
-      background: var(--bar);
     }
     header .header-stats,
     header .header-actions {
@@ -8275,6 +8276,47 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
   </div>
 </div>
 
+<dialog id="rankingMode" class="ranking-mode" aria-labelledby="rankingModeTitle">
+  <div class="ranking-mode-top">
+    <div class="ranking-mode-bar">
+      <div><h2 id="rankingModeTitle">Rankingmodus</h2><p id="rankingModeArtist" class="ranking-mode-meta" hidden></p></div>
+      <button type="button" id="closeRankingModeBtn">Schließen</button>
+    </div>
+    <div id="rankingModeSummary" class="ranking-mode-summary" hidden>
+      <div>
+        <div class="ranking-mode-average"><span>Gesamtwertung</span><output id="rankingModeAverage" aria-label="Gesamtwertung">–</output></div>
+        <small id="rankingModeProgress" class="ranking-mode-progress"></small>
+      </div>
+      <div class="ranking-mode-actions">
+        <button type="button" id="rankingModeChoose">Album auswählen</button>
+        <button type="button" id="rankingModeSave" class="primary-action">Speichern</button>
+      </div>
+      <p id="rankingModeStatus" class="ranking-mode-meta" role="status"></p>
+    </div>
+  </div>
+  <section id="rankingModePicker" class="ranking-mode-body" aria-label="Album auswählen">
+    <div class="ranking-mode-controls">
+      <input id="rankingModeSearch" type="search" placeholder="Album oder Interpret suchen" aria-label="Album oder Interpret suchen" autocomplete="off">
+      <select id="rankingModeFilter" aria-label="Bewertungsstatus">
+        <option value="all">Alle Alben</option>
+        <option value="unrated">Unbewertet</option>
+        <option value="partial">Teilweise bewertet</option>
+        <option value="complete">Vollständig bewertet</option>
+      </select>
+    </div>
+    <section id="rankingModeSuggestions" class="ranking-mode-group" hidden>
+      <h3>Vorschläge</h3>
+      <div class="ranking-mode-list"></div>
+    </section>
+    <section class="ranking-mode-group">
+      <h3>Deine Alben</h3>
+      <p id="rankingModeEmpty" class="ranking-mode-meta" hidden></p>
+      <div id="rankingModeAlbums" class="ranking-mode-list"></div>
+    </section>
+  </section>
+  <section id="rankingModeTracks" class="ranking-mode-body ranking-mode-tracks" aria-label="Titel bewerten" hidden></section>
+</dialog>
+
 <div id="appRoot" class="hidden">
 
 <header>
@@ -8779,6 +8821,7 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
       <div id="collectionSearchRow" class="search-row" style="width:100%; margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; position:relative;">
         <div style="flex:1; min-width:200px; display:flex; align-items:center; gap:8px; position:relative;">
           <input type="text" id="collectionFilter" placeholder="Sammlung durchsuchen: Titel, Interpret, Lagerort, Waschdatum..." style="flex:1; min-width:0;" />
+          <button type="button" id="openRankingModeBtn" class="icon-btn" title="Rankingmodus öffnen" aria-label="Rankingmodus öffnen" aria-haspopup="dialog"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 19v-5m7 5V5m7 14v-9"/></svg></button>
           <button type="button" id="collectionFilterHelpBtn" class="icon-btn" title="Suchhilfe anzeigen" aria-label="Suchhilfe anzeigen">?</button>
           <div id="collectionFilterHelpPanel" class="filter-help-panel" aria-live="polite">
             <strong>Verfügbare Filter</strong><br>
@@ -12142,6 +12185,7 @@ async function handleAuthStateChange(user, epoch) {
   const active = () => epoch === cloudAccountEpoch && (auth.currentUser?.uid || null) === (user?.uid || null);
   cloudAccountReadyUid = null;
   document.getElementById('vinylBackupDialog')?.close();
+  document.getElementById('rankingMode')?.close();
   clearTimeout(cloudSaveDebounceTimer);
   clearTimeout(cloudRetryTimer);
   cloudSaveDebounceTimer = null;
@@ -18679,7 +18723,9 @@ function averageTrackRating(tracks, ratings) {
 }
 
 function getAlbumRating(item) {
-  return averageTrackRating(item.tracklist || [], item.trackRatings) ?? validAlbumRating(item.rating);
+  return averageTrackRating(item.tracklist || [], item.trackRatings)
+    ?? validAlbumRating(item.rating)
+    ?? (item.trackRatings ? getRankingProgress(getRankableTracks(item), item.trackRatings).average : null);
 }
 
 const albumRatingFormat = new Intl.NumberFormat('de-DE', {maximumFractionDigits:2});
@@ -18764,6 +18810,264 @@ function renderTracklist() {
     return row;
   }));
 }
+
+function getRankableTracks(album) {
+  return getRatingTrackRows(album.tracklist).filter(row => row.key);
+}
+
+function getRankingProgress(rows, ratings) {
+  const scores = rows.map(({key}) => validAlbumRating(ratings?.[key])).filter(score => score !== null);
+  return {
+    count: scores.length,
+    total: rows.length,
+    average: scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : null
+  };
+}
+
+function normalizeRankingText(value) {
+  return String(value ?? '').normalize('NFC').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function getRankingAlbumKey(album) {
+  const title = normalizeRankingText(album.title);
+  const artist = normalizeRankingText(album.artist);
+  return title && artist ? JSON.stringify([title, artist]) : null;
+}
+
+function transferRankingScores(sourceRows, targetRows, targetRatings, scores) {
+  const ratings = {...targetRatings};
+  const targetKeys = new Set(targetRows.map(row => row.key));
+  const byTitle = rows => {
+    const index = new Map();
+    for (const row of rows) {
+      const title = normalizeRankingText(row.track.title);
+      index.set(title, index.has(title) ? null : row.key);
+    }
+    return index;
+  };
+  const sourceTitles = byTitle(sourceRows);
+  const targetTitles = byTitle(targetRows);
+  for (const {track, key} of sourceRows) {
+    if (!scores.has(key)) continue;
+    const title = normalizeRankingText(track.title);
+    const targetKey = targetKeys.has(key) ? key : sourceTitles.get(title) === key ? targetTitles.get(title) : null;
+    if (!targetKey) continue;
+    const score = scores.get(key);
+    if (score === null) delete ratings[targetKey];
+    else ratings[targetKey] = score;
+  }
+  return ratings;
+}
+
+const rankingMode = document.getElementById('rankingMode');
+const rankingPicker = document.getElementById('rankingModePicker');
+const rankingTracks = document.getElementById('rankingModeTracks');
+const rankingSearch = document.getElementById('rankingModeSearch');
+const rankingFilter = document.getElementById('rankingModeFilter');
+const rankingSave = document.getElementById('rankingModeSave');
+const rankingStatus = document.getElementById('rankingModeStatus');
+let rankingDraft = null;
+
+function renderRankingPicker() {
+  const query = normalizeRankingText(rankingSearch.value).split(' ');
+  const filter = rankingFilter.value;
+  const searchable = ownCollection.flatMap(album => {
+    const rows = getRankableTracks(album);
+    if (!rows.length) return [];
+    const progress = getRankingProgress(rows, album.trackRatings);
+    const state = progress.count === progress.total ? 'complete' : progress.count ? 'partial' : 'unrated';
+    const text = normalizeRankingText(`${album.title} ${album.artist}`);
+    return (filter === 'all' || filter === state) && query.every(word => text.includes(word))
+      ? [{album, progress, state}] : [];
+  }).sort((a, b) => (a.album.title || '').localeCompare(b.album.title || '', 'de'));
+  const renderCard = ({album, progress, state}) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'ranking-mode-card';
+    const cover = document.createElement(album.coverUrl ? 'img' : 'span');
+    if (album.coverUrl) {
+      cover.src = album.coverUrl;
+      cover.alt = '';
+      cover.loading = 'lazy';
+    }
+    const info = document.createElement('span');
+    const label = document.createElement('strong');
+    label.textContent = album.title || 'Unbenanntes Album';
+    const edition = document.createElement('small');
+    edition.textContent = [album.artist, getReleaseType(album), album.year].filter(Boolean).join(' · ');
+    const status = document.createElement('small');
+    const manual = validAlbumRating(album.rating);
+    status.textContent = state === 'unrated'
+      ? manual === null ? 'Unbewertet' : `Albumwertung ${albumRatingFormat.format(manual)}/10 · Keine Titel bewertet`
+      : `${state === 'complete' ? 'Vollständig' : `${progress.count}/${progress.total} Titel`} bewertet · ${albumRatingFormat.format(progress.average)}/10`;
+    info.append(label, edition, status);
+    card.append(cover, info);
+    card.addEventListener('click', () => openRankingAlbum(album.id));
+    return card;
+  };
+  const suggestions = [];
+  const suggestedKeys = new Set();
+  if (!rankingSearch.value.trim() && filter === 'all') {
+    for (const item of [...searchable.filter(item => item.state === 'partial'), ...searchable.filter(item => item.state === 'unrated')]) {
+      const key = getRankingAlbumKey(item.album) ?? item.album.id;
+      if (suggestedKeys.has(key)) continue;
+      suggestedKeys.add(key);
+      suggestions.push(item);
+      if (suggestions.length === 4) break;
+    }
+  }
+  const suggestionList = document.getElementById('rankingModeSuggestions');
+  suggestionList.hidden = !suggestions.length;
+  suggestionList.querySelector('.ranking-mode-list').replaceChildren(...suggestions.map(renderCard));
+  document.getElementById('rankingModeAlbums').replaceChildren(...searchable.map(renderCard));
+  const empty = document.getElementById('rankingModeEmpty');
+  empty.hidden = !!searchable.length;
+  empty.textContent = rankingSearch.value.trim() || filter !== 'all'
+    ? 'Keine passenden Alben gefunden.' : 'In deiner Sammlung gibt es noch keine Alben mit Titelliste.';
+}
+
+function showRankingPicker() {
+  rankingDraft = null;
+  document.getElementById('rankingModeTitle').textContent = 'Album auswählen';
+  document.getElementById('rankingModeArtist').hidden = true;
+  document.getElementById('rankingModeSummary').hidden = true;
+  rankingTracks.replaceChildren();
+  rankingTracks.hidden = true;
+  rankingPicker.hidden = false;
+  renderRankingPicker();
+  rankingMode.scrollTop = 0;
+  if (rankingMode.open) rankingSearch.focus();
+}
+
+function refreshRankingSummary(draft) {
+  const {count, total, average} = getRankingProgress(draft.rows, draft.ratings);
+  document.getElementById('rankingModeAverage').value = average === null ? '–' : `${albumRatingFormat.format(average)}/10`;
+  document.getElementById('rankingModeProgress').textContent = `${count} von ${total} Titeln bewertet`;
+  rankingSave.disabled = !count && !draft.edits.size;
+}
+
+function openRankingAlbum(id) {
+  const album = ownCollection.find(item => item.id === id);
+  if (!album) { renderRankingPicker(); return; }
+  const rows = getRankableTracks(album);
+  if (!rows.length) { renderRankingPicker(); return; }
+  const draft = {
+    id, uid: currentUid, epoch: cloudAccountEpoch, rows,
+    baseline: {...album.trackRatings}, ratings: {...album.trackRatings}, edits: new Map()
+  };
+  rankingDraft = draft;
+  document.getElementById('rankingModeTitle').textContent = album.title || 'Unbenanntes Album';
+  const artist = document.getElementById('rankingModeArtist');
+  artist.textContent = album.artist || '';
+  artist.hidden = !album.artist;
+  document.getElementById('rankingModeSummary').hidden = false;
+  rankingStatus.textContent = '';
+  rankingTracks.replaceChildren(...rows.map(({track, key}, index) => {
+    const row = document.createElement('div');
+    row.className = 'rating-track';
+    row.innerHTML = `<div class="track-row"><span>${escapeHtml(track.position || (track.number ? track.number + '.' : ''))} ${escapeHtml(track.title)}</span><span>${escapeHtml(track.duration || '')}</span></div>`;
+    const control = document.createElement('div');
+    control.className = 'rating-control';
+    row.append(control);
+    renderRatingControl(control, `rankingModeTrack-${index}`, `Bewertung für ${track.title}`,
+      () => validAlbumRating(draft.ratings[key]), score => {
+        if (score === null) delete draft.ratings[key];
+        else draft.ratings[key] = score;
+        if (score === validAlbumRating(draft.baseline[key])) draft.edits.delete(key);
+        else draft.edits.set(key, score);
+        rankingStatus.textContent = draft.edits.size ? 'Ungespeicherte Änderungen' : '';
+        refreshRankingSummary(draft);
+      });
+    return row;
+  }));
+  rankingPicker.hidden = true;
+  rankingTracks.hidden = false;
+  refreshRankingSummary(draft);
+  rankingMode.scrollTop = 0;
+  rankingTracks.querySelector('input')?.focus({preventScroll:true});
+}
+
+function saveRankingMode() {
+  const draft = rankingDraft;
+  if (!draft || !isCloudSession(draft.uid, draft.epoch) || cloudAccountReadyUid !== draft.uid) return;
+  const album = ownCollection.find(item => item.id === draft.id);
+  if (!album) {
+    rankingStatus.textContent = 'Dieser Eintrag ist nicht mehr in deiner Sammlung.';
+    return;
+  }
+  const rows = getRankableTracks(album);
+  const currentKeys = new Set(rows.map(row => row.key));
+  if (rows.length !== draft.rows.length || draft.rows.some(row => !currentKeys.has(row.key))) {
+    rankingStatus.textContent = 'Die Titelliste wurde geändert. Wähle das Album erneut aus.';
+    return;
+  }
+  const scores = new Map();
+  for (const {key} of rows) {
+    const score = draft.edits.has(key) ? draft.edits.get(key) : validAlbumRating(album.trackRatings?.[key]);
+    if (score !== null || draft.edits.has(key)) scores.set(key, score);
+  }
+  const albumKey = getRankingAlbumKey(album);
+  let updatedCopies = 0;
+  const previous = ownCollection;
+  ownCollection = ownCollection.map(item => {
+    const selected = item.id === album.id;
+    if (!selected && (!albumKey || getRankingAlbumKey(item) !== albumKey)) return item;
+    const ratings = transferRankingScores(rows, selected ? rows : getRankableTracks(item), item.trackRatings, scores);
+    const oldRatings = item.trackRatings || {};
+    if (Object.keys(ratings).length === Object.keys(oldRatings).length
+      && Object.keys(ratings).every(key => ratings[key] === oldRatings[key])) return item;
+    if (!selected) updatedCopies++;
+    return {...item, trackRatings:ratings};
+  });
+  if (viewingOwnCollection) collection = ownCollection;
+  try {
+    saveOwnCollectionData(true);
+  } catch (error) {
+    ownCollection = previous;
+    if (viewingOwnCollection) collection = previous;
+    rankingStatus.textContent = 'Speichern fehlgeschlagen. Bitte erneut versuchen.';
+    return;
+  }
+  if (viewingOwnCollection) renderCollection();
+  openRankingAlbum(draft.id);
+  rankingStatus.textContent = updatedCopies
+    ? `Gespeichert und auf ${updatedCopies === 1 ? 'eine weitere Ausgabe' : `${updatedCopies} weitere Ausgaben`} übertragen.`
+    : 'Gespeichert.';
+  rankingSave.focus();
+}
+
+function canLeaveRankingAlbum() {
+  return !rankingDraft?.edits.size || window.confirm('Ungespeicherte Bewertungen verwerfen?');
+}
+
+document.getElementById('openRankingModeBtn').addEventListener('click', () => {
+  if (rankingMode.open || !isCloudSession(currentUid, cloudAccountEpoch) || cloudAccountReadyUid !== currentUid) return;
+  rankingSearch.value = '';
+  rankingFilter.value = 'all';
+  showRankingPicker();
+  rankingMode.showModal();
+  rankingSearch.focus();
+});
+document.getElementById('closeRankingModeBtn').addEventListener('click', () => {
+  if (canLeaveRankingAlbum()) rankingMode.close();
+});
+rankingMode.addEventListener('cancel', event => {
+  if (!canLeaveRankingAlbum()) event.preventDefault();
+});
+rankingMode.addEventListener('close', () => {
+  if (!rankingMode.open) {
+    rankingDraft = null;
+    rankingTracks.replaceChildren();
+    document.getElementById('rankingModeAlbums').replaceChildren();
+    document.querySelector('#rankingModeSuggestions .ranking-mode-list').replaceChildren();
+  }
+});
+document.getElementById('rankingModeChoose').addEventListener('click', () => {
+  if (canLeaveRankingAlbum()) showRankingPicker();
+});
+rankingSave.addEventListener('click', saveRankingMode);
+rankingSearch.addEventListener('input', renderRankingPicker);
+rankingFilter.addEventListener('change', renderRankingPicker);
 
 function mergeDiscogsGenres(genres, styles) {
   return getGenreValues([...getGenreValues(genres), ...getGenreValues(styles)]);
