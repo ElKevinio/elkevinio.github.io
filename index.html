@@ -20869,8 +20869,7 @@ function getListeningDisplayCover(item = currentListeningAlbum) {
   return (stored ? stored.coverUrl : item._collectionCoverUrl ?? item.coverUrl) || item._spotifyFallbackCoverUrl || '';
 }
 function syncListeningPlayerCovers() {
-  const url = getListeningDisplayCover();
-  let changed = false;
+  const url = getListeningDisplayCover(); let changed = false;
   for (const image of [document.querySelector('#albumListeningDockContent .album-mini-cover'), document.getElementById('fullscreenPlayerCover')]) {
     if (!image) continue;
     if (!image.dataset.coverSyncBound) {
@@ -21083,7 +21082,7 @@ function flushListeningTrackRatings() {
 
 function vinylTitleVariants(value, core = false) {
   let text = String(value || '').normalize('NFKC').toLowerCase();
-  if (core) text = text.replace(/\((?:[^)]*\b(?:version|remaster(?:ed)?|mix|edit)\b[^)]*)\)/gi, '').replace(/\s+[-–—]\s+(?:(?:new|album|single|original|radio)\s+(?:version|edit)|(?:\d{4}\s+)?remaster(?:ed)?(?:\s+\d{4})?)\s*$/i, '');
+  if (core) text = text.replace(/\((?:[^)]*\b(?:(?:new\s+take|alternate\s+take|alternative\s+take|take\s+\d+)|version|remaster(?:ed)?|mix|edit)\b[^)]*)\)/gi, '').replace(/\s+[-–—]\s+(?:(?:new|album|single|original|radio)\s+(?:version|edit|take)|(?:alternate|alternative)\s+take|take\s+\d+|(?:\d{4}\s+)?remaster(?:ed)?(?:\s+\d{4})?)\s*$/i, '');
   return [...new Set([text, ...text.split(/[=＝]/)].map(t => t.replace(/['’`]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim()).filter(Boolean))];
 }
 function vinylTitleScore(a,b) {
