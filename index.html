@@ -19635,7 +19635,7 @@ async function loadSpotifyContextTracks(rawUrl) {
       for(const entry of data.items||[]){
         const track=type==='playlist'?(entry.item||entry.track):entry;
         if(!track?.uri || track.is_local || track.type==='episode')continue;
-        tracks.push({uri:track.uri,title:getListeningDisplayText(track.name,'Unbenannter Track'),name:track.name,artists:track.artists,is_playable:track.is_playable,duration_ms:track.duration_ms});
+        tracks.push({uri:track.uri,title:getListeningDisplayText(track.name,'Unbenannter Track'),name:track.name,artists:track.artists,is_playable:track.is_playable,duration_ms:track.duration_ms,album:track.album,track_number:track.track_number,disc_number:track.disc_number});
       }
       if(data.next){const url=new URL(data.next);if(url.origin!=='https://api.spotify.com'||url.pathname!==path)throw new Error('Ungültige Spotify-Folgeseite.');next=url.href;}else next='';
     }
@@ -21058,19 +21058,69 @@ function flushListeningTrackRatings() {
   if (changed) saveOwnCollectionData(true);
 }
 
+
+function vinylTitleVariants(value, core = false) {
+  let text = String(value || '').normalize('NFKC').toLowerCase();
+  if (core) text = text.replace(/\((?:[^)]*\b(?:version|remaster(?:ed)?|mix|edit)\b[^)]*)\)/gi, '').replace(/\s+[-–—]\s+(?:(?:new|album|single|original|radio)\s+(?:version|edit)|(?:\d{4}\s+)?remaster(?:ed)?(?:\s+\d{4})?)\s*$/i, '');
+  return [...new Set([text, ...text.split(/[=＝]/)].map(t => t.replace(/['’`]/g,'').replace(/[^\p{L}\p{N}]+/gu,' ').trim()).filter(Boolean))];
+}
+function vinylTitleScore(a,b) {
+  const exactA=vinylTitleVariants(a), exactB=vinylTitleVariants(b);
+  if(exactA.some(x=>exactB.includes(x)))return 1;
+  const aa=vinylTitleVariants(a,true),bb=vinylTitleVariants(b,true);
+  if(aa.some(x=>bb.includes(x)))return .96;
+  let best=0;
+  for(const x of aa)for(const y of bb){
+    const u=x.replace(/ /g,''),v=y.replace(/ /g,'');
+    if(Math.min(u.length,v.length)<6)continue;
+    const xs=new Set(x.split(' ')),ys=new Set(y.split(' '));
+    const shared=[...xs].filter(t=>ys.has(t)&&t.length>=3);
+    if(shared.length>=2)best=Math.max(best,shared.length/Math.max(xs.size,ys.size)*.92);
+    const grams=t=>new Set(Array.from({length:Math.max(0,t.length-1)},(_,i)=>t.slice(i,i+2)));
+    const ug=grams(u),vg=grams(v);const overlap=[...ug].filter(g=>vg.has(g)).length;
+    const dice=2*overlap/(ug.size+vg.size);
+    if(dice>=.86)best=Math.max(best,dice*.94);
+  }
+  return best;
+}
+function vinylAlignTracks(source, target, allowPosition = false) {
+  const matches=new Map(),used=new Set();
+  const bind=(i,j,method)=>{matches.set(i,{index:j,method});used.add(j);};
+  for(const [threshold,method] of [[1,'Titel/URI'],[.96,'Titel ohne Versionszusatz'],[.8,'ähnlicher Titel']]){
+    const proposals=[];
+    source.forEach((track,i)=>{
+      if(matches.has(i))return;
+      const choices=target.map((other,j)=>({j,score:track.uri&&other.uri&&track.uri===other.uri?2:vinylTitleScore(track.title,other.title)})).filter(c=>!used.has(c.j)&&c.score>=threshold).sort((a,b)=>b.score-a.score);
+      if(choices.length&&(choices.length===1||choices[0].score-choices[1].score>=.08))proposals.push({i,...choices[0]});
+    });
+    for(const p of proposals){
+      if(used.has(p.j))continue;
+      const rivals=proposals.filter(q=>q.j===p.j);
+      if(rivals.length>1 && rivals.some(q=>q.i!==p.i&&q.score>=p.score-.08))continue;
+      bind(p.i,p.j,method);
+    }
+  }
+  if(allowPosition&&source.length===target.length&&source.length&&[...matches].every(([i,m])=>i===m.index)){
+    source.forEach((_,i)=>{if(!matches.has(i)&&!used.has(i))bind(i,i,'Albumposition');});
+  }
+  return matches;
+}
 function getListeningRatingTarget(content) {
-  const albumId = currentListeningAlbum?.id;
-  if (albumId == null || !isCloudSession(currentUid, cloudAccountEpoch) || cloudAccountReadyUid !== currentUid) return null;
-  const album = ownCollection.find(item => String(item.id) === String(albumId));
-  const row = content.querySelector('.album-mini-track.is-current');
-  const title = row?.querySelector('.album-mini-track-name')?.textContent?.trim();
-  if (!album || !title) return null;
-  const position = row.querySelector('.album-mini-track-number')?.textContent?.trim();
-  const matches = getRatingTrackRows(album.tracklist).filter(entry =>
-    entry.key && entry.track.title.trim().toLowerCase() === title.toLowerCase());
-  const positioned = matches.filter(entry => String(entry.track.position || entry.track.number || '') === position?.replace(/^0+(?=\d)/, ''));
-  const track = matches.length === 1 ? matches[0] : positioned.length === 1 ? positioned[0] : null;
-  return track ? {album, track} : null;
+  const albumId=currentListeningAlbum?.id;
+  if(albumId==null||!isCloudSession(currentUid,cloudAccountEpoch)||cloudAccountReadyUid!==currentUid)return null;
+  const album=ownCollection.find(item=>String(item.id)===String(albumId));
+  const buttons=[...content.querySelectorAll('.album-mini-track')];
+  const active=buttons.findIndex(b=>b.classList.contains('is-current'));
+  if(!album||active<0)return null;
+  const rows=getRatingTrackRows(album.tracklist).filter(row=>row.key);
+  const source=buttons.map(b=>({title:b.querySelector('.album-mini-track-name')?.textContent||'',uri:b.dataset.trackUri||''}));
+  const target=rows.map(row=>({title:row.track.title,uri:row.track.uri||album.spotifyTrackMappings?.[JSON.stringify([row.track.position,row.track.title])]?.uri||''}));
+  const player=content.querySelector('.album-mini-player');
+  const selected=getSpotifyAlbumId(currentListeningAlbum?.spotifyAlbumUrl||currentListeningAlbum?.listeningUrl);
+  const allowPosition=!!selected&&!currentListeningAlbum?.isListeningPlaylist&&player?.dataset.trackDurationSource==='spotify';
+  const match=vinylAlignTracks(source,target,allowPosition).get(active);
+  if(!match)return null;
+  return {album,track:rows[match.index],method:match.method};
 }
 
 const miniTrackRatingToggle = document.getElementById('miniTrackRatingToggle');
@@ -21102,11 +21152,12 @@ function placeMiniTrackRatingToggle() {
 
 function syncListeningTrackRating() {
   const content = document.getElementById('albumListeningDockContent');
-  const {album, track} = getListeningRatingTarget(content) || {};
+  const {album, track, method} = getListeningRatingTarget(content) || {};
   const uid = currentUid, epoch = cloudAccountEpoch;
   const id = track ? JSON.stringify([uid, epoch, String(album.id), track.key]) : '';
   placeMiniTrackRatingToggle();
   miniTrackRatingToggle.hidden = !track;
+  miniTrackRatingToggle.title = track ? `Song bewerten · ${method || "Titel"}` : "Song bewerten";
   const paused = content.querySelector('.album-mini-control[aria-label="Wiedergabe starten"]') !== null;
   if (id === listeningRatingContext && paused === listeningRatingPaused) return;
   if (listeningRatingContext && (id !== listeningRatingContext || (paused && !listeningRatingPaused))) {
@@ -23911,7 +23962,7 @@ function chooseDiscogsSpotifyMatch(track, artist, candidates) {
   const matches=candidates.filter(candidate=> {
     if(candidate.is_playable===false || !spotifyTrackUri(candidate.uri))return false;
     const mapped=mappedSpotifyTrack(candidate);
-    if(normalize(mapped.title)!==normalize(track.title))return false;
+    if(vinylTitleScore(mapped.title,track.title)<.96)return false;
     const artists=(candidate.artists || []).map(value=>normalizeArtist(value.name));
     if(!artists.includes(wantedArtist) && normalizeArtist(mapped.artist)!==wantedArtist)return false;
     const seconds=getListeningTrackDurationSeconds(track);
@@ -24029,6 +24080,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
   main.className = 'album-mini-main';
   const cover = document.createElement('img');
   cover.className = 'album-mini-cover';
+  cover.addEventListener('load',()=>{if(cover.naturalWidth>0)cover.hidden=false;});
   cover.alt = item?.coverUrl ? `Cover: ${title}` : '';
   cover.hidden = !item?.coverUrl;
   if (item?.coverUrl) {
@@ -24371,6 +24423,19 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       button.disabled = !controllerReady || !discogsSequenceReady || !tracks[index]?.uri;
     });
   };
+  const syncSpotifyCover = track => {
+    if(!track)return;
+    if(pendingAutoAdvancedTrackUri&&track.uri&&track.uri!==pendingAutoAdvancedTrackUri)return;
+    const art=track.album?.images?.find(image=>image?.url)?.url;
+    if(!art)return;
+    if(cover.getAttribute('src')!==art)cover.src=art;
+    cover.hidden=false;
+    cover.alt=`Cover: ${track.album?.name||track.name||title}`;
+    if(currentListeningAlbum&&currentListeningAlbum.coverUrl!==art){
+      currentListeningAlbum.coverUrl=art;
+      renderFullscreenPlayerCover();
+    }
+  };
   const updateCurrentTrack = (state = {}) => {
     if (pendingAutoAdvancedTrackUri && Date.now()-pendingTrackRequestedAt>=8000) pendingAutoAdvancedTrackUri='';
     if (!acceptsSpotifyTrackState(state, pendingAutoAdvancedTrackUri, tracks, pendingTrackRequestedAt)) state = {};
@@ -24387,7 +24452,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     const matchingIndex = reportedUri ? tracks.findIndex(track => track.uri === reportedUri) : -1;
     const reportedName = state.track_window?.current_track?.name || state.currentTrack?.name || state.name || '';
     const normalizeTrackName = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-    const matchingNames = reportedName ? tracks.map((track,index) => normalizeTrackName(track.title) === normalizeTrackName(reportedName) ? index : -1).filter(index => index >= 0) : [];
+    const matchingNames = reportedName ? tracks.map((track,index) => vinylTitleScore(track.title,reportedName) >= .96 ? index : -1).filter(index => index >= 0) : [];
     const nameIndex = matchingNames.length === 1 ? matchingNames[0] : -1;
     const pendingIndex = pendingAutoAdvancedTrackUri
       ? tracks.findIndex(track => track.uri === pendingAutoAdvancedTrackUri)
@@ -24430,16 +24495,7 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       }
     }
     if (currentIndex < 0 && reportedName && !pendingAutoAdvancedTrackUri) setPlayerText(currentTrack,reportedName);
-    if (item?.isListeningPlaylist) {
-      const spotifyTrack = state.track_window?.current_track || state.currentTrack;
-      const art = spotifyTrack?.album?.images?.[0]?.url || '';
-      if (art && currentListeningAlbum?.isListeningPlaylist && currentListeningAlbum.coverUrl !== art) {
-        currentListeningAlbum.coverUrl = art;
-        cover.src = art; cover.hidden = false;
-        renderFullscreenPlayerCover();
-        updateListeningPlaylistVinylColor(art);
-      }
-    }
+    syncSpotifyCover(state.track_window?.current_track || state.currentTrack || (currentIndex>=0 ? tracks[currentIndex] : null));
     const reportedArtists=state.track_window?.current_track?.artists || state.currentTrack?.artists;
     if (Array.isArray(reportedArtists) && !pendingAutoAdvancedTrackUri) setPlayerText(artist,reportedArtists.map(value=>value.name).filter(Boolean).join(', ') || item?.artist || 'Spotify');
     trackList.querySelectorAll('.album-mini-track').forEach((button, index) => {
@@ -24549,20 +24605,13 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
       if (requestId !== spotifyNowPlayingRequest || !host.isConnected) return;
       const track = data?.item;
       if (track?.type !== 'track' || !track.name) return;
+      const expectedUri=pendingAutoAdvancedTrackUri||playingUri;
+      if(expectedUri&&track.uri!==expectedUri)return;
+      if(!expectedUri&&!tracks.some(t=>t.uri===track.uri))return;
       // Ausschließlich Anzeige aktualisieren: kein Play, keine Firebase-Synchronisierung.
       setPlayerText(currentTrack, getListeningDisplayText(track.name, 'Spotify-Titel'));
       setPlayerText(artist, (track.artists || []).map(a => a.name).filter(Boolean).join(', ') || item?.artist || 'Spotify');
-      const spotifyCoverUrl = track.album?.images?.find(image => image?.url)?.url || '';
-      if (spotifyCoverUrl) {
-        if (cover.getAttribute('src') !== spotifyCoverUrl) cover.src = spotifyCoverUrl;
-        cover.hidden = false;
-        cover.alt = `Cover: ${track.album?.name || track.name}`;
-        if (currentListeningAlbum?.isListeningPlaylist && currentListeningAlbum.coverUrl !== spotifyCoverUrl) {
-          currentListeningAlbum.coverUrl = spotifyCoverUrl;
-          renderFullscreenPlayerCover();
-          void updateListeningPlaylistVinylColor(spotifyCoverUrl);
-        }
-      }
+      syncSpotifyCover(track);
       // iOS-Sperrbildschirm/Medienanzeige: Metadaten nur für die eigene
       // aktive Vinyls-Mediensitzung aktualisieren, nicht fremde Spotify-Player übernehmen.
       const session = navigator.mediaSession;
