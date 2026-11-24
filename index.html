@@ -12298,6 +12298,7 @@ auth.onAuthStateChanged(user => {
 });
 
 function saveOwnCollectionData(syncWhileViewingRemote = false) {
+  queueMicrotask(() => syncListeningPlayerCovers());
   ownCollectionTitle = ownCollectionTitle || 'Vinyl-Sammlung';
   localStorage.setItem(TITLE_STORAGE_KEY, ownCollectionTitle);
   saveAccountCollectionLocally();
@@ -17148,6 +17149,7 @@ function getPlausibilityHint(item) {
 }
 
 function saveCollection() {
+  queueMicrotask(() => syncListeningPlayerCovers());
   if (!viewingOwnCollection) return;
   ownCollection = collection;
   ownCollectionTitle = collectionTitle;
@@ -20860,14 +20862,34 @@ function applyListeningVinylAppearance(vinyl, item) {
   vinyl.innerHTML = `${getDiscArtworkMarkup(item)}${isCdItem(item) ? '' : getVinylLiquidMarkup(record, design.discStyle)}`;
 }
 
-function renderFullscreenPlayerCover() {
-  const cover = document.getElementById('fullscreenPlayerCover');
-  if (!cover) return;
-  const coverUrl = currentListeningAlbum?.coverUrl || '';
-  cover.hidden = !coverUrl;
-  if (coverUrl && cover.getAttribute('src') !== coverUrl) cover.src = coverUrl;
-  if (currentListeningAlbum?.isListeningPlaylist) void updateListeningPlaylistVinylColor(coverUrl);
+function getListeningDisplayCover(item = currentListeningAlbum) {
+  if (!item) return '';
+  if (item.isListeningPlaylist) return item.coverUrl || item._spotifyFallbackCoverUrl || '';
+  const stored = item.id != null && String(item.id) !== '' ? ownCollection.find(entry => String(entry.id) === String(item.id)) : null;
+  return (stored ? stored.coverUrl : item._collectionCoverUrl ?? item.coverUrl) || item._spotifyFallbackCoverUrl || '';
 }
+function syncListeningPlayerCovers() {
+  const url = getListeningDisplayCover();
+  let changed = false;
+  for (const image of [document.querySelector('#albumListeningDockContent .album-mini-cover'), document.getElementById('fullscreenPlayerCover')]) {
+    if (!image) continue;
+    if (!image.dataset.coverSyncBound) {
+      image.dataset.coverSyncBound = 'true';
+      image.addEventListener('load', () => { delete image.dataset.failedCover; image.hidden = !image.getAttribute('src') || !image.naturalWidth; });
+      image.addEventListener('error', () => { image.dataset.failedCover = image.getAttribute('src') || ''; image.hidden = true; });
+    }
+    if ((image.getAttribute('src') || '') !== url) {
+      changed = true; delete image.dataset.failedCover;
+      if (url) image.src = url; else image.removeAttribute('src');
+    }
+    const hidden = !url || image.dataset.failedCover === url;
+    if (image.hidden !== hidden) image.hidden = hidden;
+    const alt = url ? `Cover: ${currentListeningAlbum?.title || 'Album'}` : '';
+    if (image.alt !== alt) image.alt = alt;
+  }
+  if (changed && currentListeningAlbum?.isListeningPlaylist && url) void updateListeningPlaylistVinylColor(url);
+}
+function renderFullscreenPlayerCover() { syncListeningPlayerCovers(); }
 
 let fullscreenPlayerObserver = null;
 let fullscreenPlayerSyncTimer = null;
@@ -21190,6 +21212,7 @@ function syncListeningTrackRating() {
 }
 
 function syncFullscreenPlayer() {
+  syncListeningPlayerCovers();
   syncPlayerVolumeControls();
   syncListeningTrackRating();
   if (!isFullscreenPlayerOpen() || document.hidden) return;
@@ -24424,17 +24447,13 @@ function buildSpotifyMiniPlayer(container, originalUrl, item, title, restorePlay
     });
   };
   const syncSpotifyCover = track => {
-    if(!track)return;
-    if(pendingAutoAdvancedTrackUri&&track.uri&&track.uri!==pendingAutoAdvancedTrackUri)return;
-    const art=track.album?.images?.find(image=>image?.url)?.url;
-    if(!art)return;
-    if(cover.getAttribute('src')!==art)cover.src=art;
-    cover.hidden=false;
-    cover.alt=`Cover: ${track.album?.name||track.name||title}`;
-    if(currentListeningAlbum&&currentListeningAlbum.coverUrl!==art){
-      currentListeningAlbum.coverUrl=art;
-      renderFullscreenPlayerCover();
+    if (track && pendingAutoAdvancedTrackUri && track.uri && track.uri !== pendingAutoAdvancedTrackUri) return;
+    const art = track?.album?.images?.find(image => image?.url)?.url || '';
+    if (currentListeningAlbum && art) {
+      if (currentListeningAlbum.isListeningPlaylist) currentListeningAlbum.coverUrl = art;
+      else currentListeningAlbum._spotifyFallbackCoverUrl = art;
     }
+    syncListeningPlayerCovers();
   };
   const updateCurrentTrack = (state = {}) => {
     if (pendingAutoAdvancedTrackUri && Date.now()-pendingTrackRequestedAt>=8000) pendingAutoAdvancedTrackUri='';
@@ -25168,6 +25187,7 @@ function mountListeningEmbed(container, url, title, item = null, restorePlayback
     document.getElementById('albumListeningDockTitle').textContent = title || 'Album anhören';
     dock.hidden = false;
     currentListeningAlbum = { ...(item || {}), title: title || item?.title || 'Album', listeningUrl: url, ...(spotifyEmbed ? {spotifyAlbumUrl:url} : {}) };
+    if (!currentListeningAlbum.isListeningPlaylist) currentListeningAlbum._collectionCoverUrl = item?.coverUrl || '';
     listeningVinylAppearance = chooseListeningVinylAppearance(currentListeningAlbum);
     updateAlbumDockToggle();
     updateAlbumMiniPlayerButton();
@@ -30478,6 +30498,7 @@ function attachCollectionVinylHover(card, disc) {
 }
 
 function renderCollection() {
+  queueMicrotask(() => syncListeningPlayerCovers());
   const drag = activeStoragePointerDrag;
   if (drag) {
     if (activeView === 'storage' && viewingOwnCollection && drag.uid === currentUid && drag.epoch === cloudAccountEpoch) {
