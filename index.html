@@ -23370,7 +23370,6 @@ fullscreenCollectionSearch.addEventListener('blur', () => {
   window.setTimeout(() => { fullscreenSearchKeyboardMode = ''; }, 400);
 });
 fullscreenCollectionSearch.addEventListener('input', () => {
-  if (fullscreenCollectionSearch.value.trim()) pauseListeningForSearch();
   renderFullscreenPlayerMenu();
 });
 document.querySelectorAll('#fullscreenPlayerMenu [data-menu-filter]').forEach(button => {
@@ -30894,7 +30893,7 @@ ${actionButtons}
           });
         }
       }
-      if (viewingOwnCollection && !isCdItem(item)) {
+      if (!isCdItem(item)) {
         attachCollectionVinylHover(card, card.querySelector('.vinyl-card-preview'));
       }
       card.querySelector('.album-listen-card-btn')?.addEventListener('click', event => {
@@ -31574,7 +31573,6 @@ function getCollectionQueryScore(item, rawQuery) {
 
 document.getElementById('collectionFilter').addEventListener('input', (e) => {
   const v = e.target.value || '';
-  if (v.trim() && v.trim() !== collectionFilterQuery) pauseListeningForSearch();
   clearTimeout(filterDebounceTimer);
   filterDebounceTimer = setTimeout(() => {
     collectionFilterQuery = v.trim();
