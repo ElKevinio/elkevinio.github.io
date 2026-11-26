@@ -8339,6 +8339,7 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
   <h2 id="audioRecognitionTitle">Musik erkennen</h2>
   <div id="audioRecognitionAnimation" aria-hidden="true"></div>
   <canvas id="audioRecognitionWaveform" class="audio-recognition-waveform" width="800" height="128" aria-hidden="true" hidden></canvas>
+  <p id="audioRecognitionLevel" hidden></p>
   <p id="audioRecognitionStatus" role="status"></p>
   <div id="audioRecognitionResult" hidden>
     <strong id="audioRecognitionSong"></strong>
@@ -14713,6 +14714,9 @@ const audioRecognitionDialog = document.getElementById('audioRecognitionDialog')
 const audioRecognitionStatus = document.getElementById('audioRecognitionStatus');
 const audioRecognitionAnimation = document.getElementById('audioRecognitionAnimation');
 const audioRecognitionResult = document.getElementById('audioRecognitionResult');
+const audioRecognitionWaveform = document.getElementById('audioRecognitionWaveform');
+const audioRecognitionLevel = document.getElementById('audioRecognitionLevel');
+const recognitionDurationMs = 25000;
 let audioRecognitionAttempt = null;
 
 function stopAudioRecognition() {
@@ -14726,7 +14730,7 @@ function stopAudioRecognition() {
 }
 
 function startRecognitionWaveform(stream) {
-  const canvas = document.getElementById('audioRecognitionWaveform');
+  const canvas = audioRecognitionWaveform;
   const drawing = canvas.getContext('2d');
   if (!drawing) return;
   const AudioContextType = window.AudioContext || window.webkitAudioContext;
@@ -14739,7 +14743,6 @@ function startRecognitionWaveform(stream) {
     stopped = true;
     cancelAnimationFrame(frame);
     source?.disconnect();
-    canvas.hidden = true;
     void context.close().catch(() => {});
   };
   try {
@@ -14752,22 +14755,39 @@ function startRecognitionWaveform(stream) {
     const accent = getComputedStyle(canvas).getPropertyValue('--accent').trim();
     drawing.strokeStyle = accent || '#d4537e';
     drawing.lineWidth = 3;
-    const draw = () => {
+    const start = performance.now();
+    const peaks = new Float32Array(125);
+    let previousBucket = -1;
+    const draw = (now) => {
       analyser.getFloatTimeDomainData(samples);
-      drawing.clearRect(0, 0, width, height);
-      drawing.beginPath();
-      for (let i = 0; i < samples.length; i++) {
-        const x = i * width / (samples.length - 1);
-        const y = (1 - Math.max(-1, Math.min(1, samples[i] * 2))) * height / 2;
-        if (i === 0) drawing.moveTo(x, y);
-        else drawing.lineTo(x, y);
+      const bucket = Math.min(peaks.length - 1, Math.max(0, Math.floor((now - start) / (recognitionDurationMs / peaks.length))));
+      let peak = peaks[bucket];
+      for (const sample of samples) peak = Math.max(peak, Math.abs(sample));
+      peaks[bucket] = peak;
+      if (previousBucket !== bucket) {
+        previousBucket = bucket;
+        drawing.clearRect(0, 0, width, height);
+        drawing.beginPath();
+        drawing.moveTo(0, height / 2);
+        drawing.lineTo(width, height / 2);
+        drawing.stroke();
+        drawing.beginPath();
+        for (let i = 0; i <= bucket; i++) {
+          const x = (i + 0.5) * width / peaks.length;
+          const amplitude = Math.max(0, Math.min(1, (20 * Math.log10(peaks[i]) + 60) / 60));
+          const bar = amplitude * (height / 2 - 5);
+          drawing.moveTo(x, height / 2 - bar);
+          drawing.lineTo(x, height / 2 + bar);
+        }
+        drawing.stroke();
+        audioRecognitionLevel.textContent = `${Math.min(25, Math.floor((now - start) / 1000))} / 25 Sekunden aufgenommen`;
       }
-      drawing.stroke();
       frame = requestAnimationFrame(draw);
     };
     canvas.hidden = false;
+    audioRecognitionLevel.hidden = false;
     void context.resume().catch(stop);
-    draw();
+    frame = requestAnimationFrame(draw);
     return stop;
   } catch {
     stop();
@@ -14803,7 +14823,7 @@ function recordRecognitionClip(stream, signal) {
     signal.addEventListener('abort', cancel, {once:true});
     timer = setTimeout(() => {
       if (recorder.state === 'recording') recorder.stop();
-    }, 25000);
+    }, recognitionDurationMs);
   });
 }
 
@@ -14827,7 +14847,7 @@ function loadChromaprint() {
   return chromaprintModule;
 }
 
-async function fingerprintRecognitionClip(clip, signal) {
+async function fingerprintRecognitionClip(clip, signal, reportLevel) {
   const AudioContextType = window.AudioContext || window.webkitAudioContext;
   const context = new AudioContextType();
   try {
@@ -14837,12 +14857,25 @@ async function fingerprintRecognitionClip(clip, signal) {
     ]);
     signal.throwIfAborted();
     const channels = Array.from({length: decoded.numberOfChannels}, (_, i) => decoded.getChannelData(i));
-    const samples = new Int16Array(decoded.length);
-    for (let i = 0; i < samples.length; i++) {
+    const mono = new Float32Array(decoded.length);
+    let peak = 0;
+    let sumSquares = 0;
+    for (let i = 0; i < mono.length; i++) {
       let sum = 0;
       for (const channel of channels) sum += channel[i];
-      samples[i] = Math.max(-32768, Math.min(32767, sum * 32768 / channels.length));
+      const value = sum / channels.length;
+      mono[i] = value;
+      peak = Math.max(peak, Math.abs(value));
+      sumSquares += value * value;
     }
+    const rms = Math.sqrt(sumSquares / Math.max(1, mono.length));
+    const db = rms > 0 ? Math.round(20 * Math.log10(rms)) : -Infinity;
+    reportLevel(db, decoded.duration, peak);
+    if (decoded.duration < 5) throw new Error('Das Mikrofon hat zu früh aufgehört. Starte die Aufnahme erneut.');
+    if (rms < 0.0001) throw new Error('Das Mikrofon hat fast keinen Ton aufgenommen. Prüfe die Mikrofonquelle und geh näher an den Lautsprecher.');
+    const gain = Math.max(1, Math.min(8, 0.12 / rms, 0.95 / peak));
+    const samples = Int16Array.from(mono, value =>
+      Math.max(-32768, Math.min(32767, value * gain * 32768)));
     const fingerprint = chromaprint.fingerprintFromSamples(decoded.sampleRate, 1, samples);
     if (!fingerprint.raw.length) throw new Error('Aus der Aufnahme konnte kein Fingerabdruck erstellt werden.');
     return {fingerprint: fingerprint.compressed, duration: Math.round(decoded.duration)};
@@ -14889,10 +14922,10 @@ function requestAcoustidJsonp(endpoint, signal) {
   });
 }
 
-async function lookupRecognitionFingerprint(clip, credentials, signal) {
+async function lookupRecognitionFingerprint(clip, credentials, signal, reportLevel) {
   const params = new URLSearchParams({
     client: credentials.app, meta: 'recordings releasegroups',
-    ...await fingerprintRecognitionClip(clip, signal)
+    ...await fingerprintRecognitionClip(clip, signal, reportLevel)
   });
   if (credentials.user) params.set('user', credentials.user);
   const endpoint = new URL('https://api.acoustid.org/v2/lookup');
@@ -14928,6 +14961,9 @@ async function startAudioRecognition() {
   const {signal} = attempt.controller;
   audioRecognitionAttempt = attempt;
   audioRecognitionResult.hidden = true;
+  audioRecognitionWaveform.hidden = true;
+  audioRecognitionLevel.hidden = true;
+  audioRecognitionLevel.textContent = '';
   audioRecognitionStatus.textContent = 'Warte auf Mikrofonzugriff …';
   audioRecognitionDialog.showModal();
   try {
@@ -14971,10 +15007,19 @@ async function startAudioRecognition() {
     attempt.stream.getTracks().forEach(track => track.stop());
     if (!clip.size) throw new Error('Es wurde kein Audio aufgenommen.');
     audioRecognitionStatus.textContent = 'AcoustID gleicht den Audio-Fingerabdruck ab …';
-    const match = await lookupRecognitionFingerprint(clip, credentials, signal);
+    let quiet = false;
+    const match = await lookupRecognitionFingerprint(clip, credentials, signal, (db, duration, peak) => {
+      quiet = db < -35;
+      const level = Number.isFinite(db) ? `${db} dBFS` : 'kein Pegel';
+      const hint = quiet ? ' · sehr leise' : peak >= 0.99 ? ' · möglicherweise übersteuert' : '';
+      audioRecognitionLevel.textContent = `${Math.round(duration)} Sekunden aufgenommen · ${level}${hint}`;
+      audioRecognitionLevel.hidden = false;
+    });
     if (signal.aborted) return;
     if (!match) {
-      audioRecognitionStatus.textContent = 'Kein Song erkannt. Versuch es mit einer anderen Stelle des Songs.';
+      audioRecognitionStatus.textContent = quiet
+        ? 'Kein Song erkannt. Das Signal war leise. Geh mit dem Mikrofon näher an den Lautsprecher.'
+        : 'Kein Song erkannt. Versuch es mit einer anderen Stelle des Songs.';
       return;
     }
     const artist = match.artists.join(', ');
