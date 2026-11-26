@@ -5180,6 +5180,10 @@
   .audio-recognition-dialog p { margin:8px 0; }
   .audio-recognition-dialog button { min-height:44px; margin-top:12px; }
   .audio-recognition-dialog img { display:block; width:100%; height:auto; }
+  .audio-recognition-waveform {
+    display:block; width:100%; height:64px; margin:10px 0;
+    border:1px solid var(--border); border-radius:8px; background:var(--surface-2);
+  }
   .audio-recognition-dialog [hidden] { display:none; }
   .shop-barcode-button { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:44px; }
   #shopMessage { margin:0; }
@@ -8334,6 +8338,7 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
 <dialog id="audioRecognitionDialog" class="audio-recognition-dialog" aria-labelledby="audioRecognitionTitle">
   <h2 id="audioRecognitionTitle">Musik erkennen</h2>
   <div id="audioRecognitionAnimation" aria-hidden="true"></div>
+  <canvas id="audioRecognitionWaveform" class="audio-recognition-waveform" width="800" height="128" aria-hidden="true" hidden></canvas>
   <p id="audioRecognitionStatus" role="status"></p>
   <div id="audioRecognitionResult" hidden>
     <strong id="audioRecognitionSong"></strong>
@@ -14714,9 +14719,59 @@ function stopAudioRecognition() {
   const attempt = audioRecognitionAttempt;
   audioRecognitionAttempt = null;
   attempt?.controller.abort();
+  attempt?.stopWaveform?.();
   attempt?.stream?.getTracks().forEach(track => track.stop());
   audioRecognitionAnimation.replaceChildren();
   if (audioRecognitionDialog.open) audioRecognitionDialog.close();
+}
+
+function startRecognitionWaveform(stream) {
+  const canvas = document.getElementById('audioRecognitionWaveform');
+  const drawing = canvas.getContext('2d');
+  if (!drawing) return;
+  const AudioContextType = window.AudioContext || window.webkitAudioContext;
+  const context = new AudioContextType();
+  let source;
+  let frame;
+  let stopped = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    cancelAnimationFrame(frame);
+    source?.disconnect();
+    canvas.hidden = true;
+    void context.close().catch(() => {});
+  };
+  try {
+    source = context.createMediaStreamSource(stream);
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 1024;
+    source.connect(analyser);
+    const samples = new Float32Array(analyser.fftSize);
+    const {width, height} = canvas;
+    const accent = getComputedStyle(canvas).getPropertyValue('--accent').trim();
+    drawing.strokeStyle = accent || '#d4537e';
+    drawing.lineWidth = 3;
+    const draw = () => {
+      analyser.getFloatTimeDomainData(samples);
+      drawing.clearRect(0, 0, width, height);
+      drawing.beginPath();
+      for (let i = 0; i < samples.length; i++) {
+        const x = i * width / (samples.length - 1);
+        const y = (1 - Math.max(-1, Math.min(1, samples[i] * 2))) * height / 2;
+        if (i === 0) drawing.moveTo(x, y);
+        else drawing.lineTo(x, y);
+      }
+      drawing.stroke();
+      frame = requestAnimationFrame(draw);
+    };
+    canvas.hidden = false;
+    void context.resume().catch(stop);
+    draw();
+    return stop;
+  } catch {
+    stop();
+  }
 }
 
 function recordRecognitionClip(stream, signal) {
@@ -14904,7 +14959,13 @@ async function startAudioRecognition() {
     ear.src = new URL('./ear.gif', document.baseURI).href;
     audioRecognitionAnimation.replaceChildren(ear);
     audioRecognitionStatus.textContent = 'Höre 25 Sekunden zu … Die Aufnahme bleibt in diesem Browser.';
+    try {
+      attempt.stopWaveform = startRecognitionWaveform(attempt.stream);
+    } catch {
+      // Audio recording still works when the optional visualization is unavailable.
+    }
     const clip = await recordRecognitionClip(attempt.stream, signal);
+    attempt.stopWaveform?.();
     if (signal.aborted) return;
     audioRecognitionAnimation.replaceChildren();
     attempt.stream.getTracks().forEach(track => track.stop());
@@ -14937,6 +14998,7 @@ async function startAudioRecognition() {
         : error.message || 'Die Musikerkennung ist fehlgeschlagen.';
     }
   } finally {
+    attempt.stopWaveform?.();
     attempt.stream?.getTracks().forEach(track => track.stop());
     if (audioRecognitionAttempt === attempt) audioRecognitionAnimation.replaceChildren();
   }
