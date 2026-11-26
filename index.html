@@ -8445,9 +8445,12 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
             <label for="discogsTokenInput" class="settings-panel-title">Discogs-Token</label>
             <input type="password" id="discogsTokenInput" placeholder="Discogs Personal Access Token" autocomplete="off">
             <p class="settings-panel-hint"><a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener">Discogs-Token erstellen</a></p>
-            <label for="sonovaultKeyInput" class="settings-panel-title">SonoVault-API-Schlüssel</label>
-            <input type="password" id="sonovaultKeyInput" autocomplete="off" spellcheck="false" maxlength="512" aria-describedby="sonovaultKeyHint">
-            <p class="settings-panel-hint" id="sonovaultKeyHint">Wird für dieses Konto in diesem Browser gespeichert. <a href="https://sonovault.now/identify" target="_blank" rel="noopener noreferrer">SonoVault-Musikerkennung</a></p>
+            <label for="acoustidAppKeyInput" class="settings-panel-title">AcoustID-Anwendungsschlüssel</label>
+            <input type="text" id="acoustidAppKeyInput" autocomplete="off" spellcheck="false" maxlength="128">
+            <p class="settings-panel-hint"><a href="https://acoustid.org/new-application" target="_blank" rel="noopener noreferrer">Kostenlose Anwendung registrieren</a></p>
+            <label for="acoustidUserKeyInput" class="settings-panel-title">AcoustID-Benutzerschlüssel</label>
+            <input type="password" id="acoustidUserKeyInput" autocomplete="off" spellcheck="false" maxlength="128">
+            <p class="settings-panel-hint"><a href="https://acoustid.org/api-key" target="_blank" rel="noopener noreferrer">Persönlichen Schlüssel anzeigen</a> · ab 2027 erforderlich</p>
           </div>
           <div id="collectionSettingsContent">
 
@@ -9665,7 +9668,7 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
         </form>
         <div class="shop-scan-actions">
           <button type="button" id="shopBarcodeBtn" class="shop-barcode-button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 7V5h2M18 5h2v2M20 17v2h-2M6 19H4v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg>Barcode scannen</button>
-          <button type="button" id="shopAudioRecognitionBtn" class="icon-btn" title="Musik mit SonoVault erkennen" aria-label="Musik mit SonoVault erkennen" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4m4-7v10m5-14v18m5-14v10m4-7v4"/></svg></button>
+          <button type="button" id="shopAudioRecognitionBtn" class="icon-btn" title="Musik mit AcoustID erkennen" aria-label="Musik mit AcoustID erkennen" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4m4-7v10m5-14v18m5-14v10m4-7v4"/></svg></button>
         </div>
         <p class="wash-mode-message" id="shopMessage" aria-live="polite"></p>
         <div class="shop-results" id="shopResults" hidden></div>
@@ -12220,8 +12223,7 @@ async function handleAuthStateChange(user, epoch) {
   document.getElementById('vinylBackupDialog')?.close();
   document.getElementById('rankingMode')?.close();
   stopAudioRecognition();
-  sonovaultKeyInput.value = '';
-  delete sonovaultKeyInput.dataset.accountUid;
+  updateAcoustidInputs('');
   clearTimeout(cloudSaveDebounceTimer);
   clearTimeout(cloudRetryTimer);
   cloudSaveDebounceTimer = null;
@@ -13041,17 +13043,29 @@ if (discogsTokenInput) {
   });
 }
 
-const sonovaultKeyInput = document.getElementById('sonovaultKeyInput');
-function getSonovaultKey(uid) {
-  return uid ? localStorage.getItem(`sonovaultKeyV1:${uid}`) || '' : '';
+const acoustidInputs = {
+  app: document.getElementById('acoustidAppKeyInput'),
+  user: document.getElementById('acoustidUserKeyInput')
+};
+function readAcoustidKey(kind, uid) {
+  return uid ? localStorage.getItem(`acoustid:${kind}:${uid}`) || '' : '';
 }
-sonovaultKeyInput.addEventListener('change', () => {
-  const uid = auth.currentUser?.uid;
-  if (!uid || sonovaultKeyInput.dataset.accountUid !== uid) return;
-  const key = sonovaultKeyInput.value.trim();
-  if (key) localStorage.setItem(`sonovaultKeyV1:${uid}`, key);
-  else localStorage.removeItem(`sonovaultKeyV1:${uid}`);
-});
+function updateAcoustidInputs(uid) {
+  for (const [kind, input] of Object.entries(acoustidInputs)) {
+    input.dataset.accountUid = uid;
+    input.value = readAcoustidKey(kind, uid);
+  }
+}
+for (const [kind, input] of Object.entries(acoustidInputs)) {
+  input.addEventListener('change', () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || input.dataset.accountUid !== uid) return;
+    const name = `acoustid:${kind}:${uid}`;
+    const key = input.value.trim();
+    if (key) localStorage.setItem(name, key);
+    else localStorage.removeItem(name);
+  });
+}
 
 localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, 'auto');
 
@@ -13369,11 +13383,7 @@ if (settingsBtn && settingsPanel) {
   settingsBtn.addEventListener('click', e => {
     e.stopPropagation();
     const shouldOpen = !settingsPanel.classList.contains('open');
-    if (shouldOpen) {
-      const uid = auth.currentUser?.uid || '';
-      sonovaultKeyInput.dataset.accountUid = uid;
-      sonovaultKeyInput.value = getSonovaultKey(uid);
-    }
+    if (shouldOpen) updateAcoustidInputs(auth.currentUser?.uid || '');
     if (shouldOpen) {
       if (discogsPriceRefreshRunning || discogsGenreRefreshRunning) {
         discogsRefreshStatusDismissed = false;
@@ -14738,8 +14748,122 @@ function recordRecognitionClip(stream, signal) {
     signal.addEventListener('abort', cancel, {once:true});
     timer = setTimeout(() => {
       if (recorder.state === 'recording') recorder.stop();
-    }, 12000);
+    }, 25000);
   });
+}
+
+let chromaprintModule;
+
+function loadChromaprint() {
+  const base = 'https://cdn.jsdelivr.net/npm/rusty-chromaprint-wasm@0.1.5/dist/rusty_chromaprint_wasm_bg';
+  chromaprintModule ??= Promise.all([import(base + '.js'), fetch(base + '.wasm')])
+    .then(async ([bindings, response]) => {
+      if (!response.ok) throw new Error('Chromaprint konnte nicht geladen werden.');
+      const module = await WebAssembly.compile(await response.arrayBuffer());
+      const imports = Object.fromEntries(WebAssembly.Module.imports(module).map(entry => [entry.module, bindings]));
+      const instance = await WebAssembly.instantiate(module, imports);
+      bindings.__wbg_set_wasm(instance.exports);
+      instance.exports.__wbindgen_start?.();
+      return bindings;
+    }).catch(() => {
+      chromaprintModule = null;
+      throw new Error('Chromaprint konnte nicht geladen werden.');
+    });
+  return chromaprintModule;
+}
+
+async function fingerprintRecognitionClip(clip, signal) {
+  const AudioContextType = window.AudioContext || window.webkitAudioContext;
+  const context = new AudioContextType();
+  try {
+    const [chromaprint, decoded] = await Promise.all([
+      loadChromaprint(),
+      clip.arrayBuffer().then(buffer => context.decodeAudioData(buffer))
+    ]);
+    signal.throwIfAborted();
+    const channels = Array.from({length: decoded.numberOfChannels}, (_, i) => decoded.getChannelData(i));
+    const samples = new Int16Array(decoded.length);
+    for (let i = 0; i < samples.length; i++) {
+      let sum = 0;
+      for (const channel of channels) sum += channel[i];
+      samples[i] = Math.max(-32768, Math.min(32767, sum * 32768 / channels.length));
+    }
+    const fingerprint = chromaprint.fingerprintFromSamples(decoded.sampleRate, 1, samples);
+    if (!fingerprint.raw.length) throw new Error('Aus der Aufnahme konnte kein Fingerabdruck erstellt werden.');
+    return {fingerprint: fingerprint.compressed, duration: Math.round(decoded.duration)};
+  } finally {
+    await context.close().catch(() => {});
+  }
+}
+
+function requestAcoustidJsonp(endpoint, signal) {
+  signal.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const frame = document.createElement('iframe');
+    frame.hidden = true;
+    frame.setAttribute('sandbox', 'allow-scripts');
+    endpoint.searchParams.set('format', 'jsonp');
+    endpoint.searchParams.set('jsoncallback', 'vinylAcoustidResult');
+    const finish = (error, payload) => {
+      clearTimeout(timer);
+      window.removeEventListener('message', receive);
+      signal.removeEventListener('abort', cancel);
+      frame.remove();
+      if (error) reject(error);
+      else resolve(payload);
+    };
+    const receive = event => {
+      if (event.source !== frame.contentWindow || event.origin !== 'null') return;
+      if (event.data?.type === 'acoustid-result') finish(null, event.data.payload);
+      if (event.data?.type === 'acoustid-error') finish(new Error('AcoustID ist gerade nicht erreichbar.'));
+    };
+    const cancel = () => finish(signal.reason);
+    const timer = setTimeout(() => finish(new Error('AcoustID antwortet nicht.')), 12000);
+    window.addEventListener('message', receive);
+    signal.addEventListener('abort', cancel, {once:true});
+    // Keep the provider callback in an opaque origin, outside the collection app.
+    frame.srcdoc = `<script>
+      function vinylAcoustidResult(payload) { parent.postMessage({type:'acoustid-result', payload}, '*'); }
+      const request = document.createElement('script');
+      request.referrerPolicy = 'no-referrer';
+      request.src = ${JSON.stringify(endpoint.href)};
+      request.onerror = () => parent.postMessage({type:'acoustid-error'}, '*');
+      document.head.append(request);
+    <\/script>`;
+    document.body.append(frame);
+  });
+}
+
+async function lookupRecognitionFingerprint(clip, credentials, signal) {
+  const params = new URLSearchParams({
+    client: credentials.app, meta: 'recordings releasegroups',
+    ...await fingerprintRecognitionClip(clip, signal)
+  });
+  if (credentials.user) params.set('user', credentials.user);
+  const endpoint = new URL('https://api.acoustid.org/v2/lookup');
+  let payload;
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST', body: params, signal: AbortSignal.any([signal, AbortSignal.timeout(12000)])
+    });
+    payload = await response.json();
+  } catch (error) {
+    if (error.name !== 'TypeError' || signal.aborted) throw error;
+    endpoint.search = params.toString();
+    payload = await requestAcoustidJsonp(endpoint, signal);
+  }
+  if (payload?.status !== 'ok') {
+    if (Number(payload?.error?.code) === 21) throw new Error('Trage deinen AcoustID-Benutzerschlüssel in den Kontoeinstellungen ein.');
+    throw new Error(payload?.error?.message || 'AcoustID konnte den Fingerabdruck nicht prüfen.');
+  }
+  const results = [...(payload.results || [])].sort((a, b) => b.score - a.score);
+  for (const result of results) {
+    const recording = result.recordings?.find(entry => entry.title);
+    if (!recording || result.score < 0.5) continue;
+    const release = recording.releasegroups?.find(group => group.type === 'Album') ?? recording.releasegroups?.[0];
+    return {title: recording.title, artists: (recording.artists || []).map(artist => artist.name).filter(Boolean), album: release?.title};
+  }
+  return null;
 }
 
 async function startAudioRecognition() {
@@ -14753,9 +14877,10 @@ async function startAudioRecognition() {
   audioRecognitionDialog.showModal();
   try {
     if (!user) throw new Error('Melde dich an, um Musik zu erkennen.');
-    const key = getSonovaultKey(user.uid);
-    if (!key) throw new Error('Trage deinen SonoVault-API-Schlüssel in den Kontoeinstellungen ein.');
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder !== 'function') {
+    const credentials = {app: readAcoustidKey('app', user.uid), user: readAcoustidKey('user', user.uid)};
+    if (!credentials.app) throw new Error('Trage deinen AcoustID-Anwendungsschlüssel in den Kontoeinstellungen ein.');
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder !== 'function'
+      || !(window.AudioContext || window.webkitAudioContext)) {
       throw new Error('Dieser Browser unterstützt hier keine Mikrofonaufnahme.');
     }
     attempt.stream = await navigator.mediaDevices.getUserMedia({
@@ -14766,30 +14891,15 @@ async function startAudioRecognition() {
     ear.alt = '';
     ear.src = 'ear.gif';
     audioRecognitionAnimation.replaceChildren(ear);
-    audioRecognitionStatus.textContent = 'Höre 12 Sekunden zu … Der Ausschnitt wird an SonoVault gesendet.';
+    audioRecognitionStatus.textContent = 'Höre 25 Sekunden zu … Die Aufnahme bleibt in diesem Browser.';
     const clip = await recordRecognitionClip(attempt.stream, signal);
     if (signal.aborted) return;
     audioRecognitionAnimation.replaceChildren();
     attempt.stream.getTracks().forEach(track => track.stop());
     if (!clip.size) throw new Error('Es wurde kein Audio aufgenommen.');
-    audioRecognitionStatus.textContent = 'SonoVault sucht nach dem Song …';
-    const token = await user.getIdToken();
-    if (signal.aborted || auth.currentUser?.uid !== user.uid) return;
-    const endpoint = `https://europe-west1-${firebaseConfig.projectId}.cloudfunctions.net/identifyVinylAudio`;
-    const response = await fetch(endpoint, {
-      method:'POST', signal,
-      headers:{Authorization:`Bearer ${token}`, 'X-SonoVault-Key':key, 'Content-Type':'application/octet-stream'},
-      body:clip
-    });
-    const payload = await response.json().catch(() => null);
+    audioRecognitionStatus.textContent = 'AcoustID gleicht den Audio-Fingerabdruck ab …';
+    const match = await lookupRecognitionFingerprint(clip, credentials, signal);
     if (signal.aborted) return;
-    if (!response.ok || !payload) {
-      if (response.status === 429) throw new Error('Das Tageslimit für Musikerkennung ist erreicht.');
-      if (response.status === 404) throw new Error('Die Firebase-Funktion für die Musikerkennung ist noch nicht bereitgestellt.');
-      if (payload?.error === 'key') throw new Error('Prüfe deinen SonoVault-Schlüssel und ob dein Tarif Musikerkennung erlaubt.');
-      throw new Error('SonoVault ist gerade nicht erreichbar. Versuch es später erneut.');
-    }
-    const {match} = payload;
     if (!match) {
       audioRecognitionStatus.textContent = 'Kein Song erkannt. Versuch es mit einer anderen Stelle des Songs.';
       return;
@@ -14802,7 +14912,7 @@ async function startAudioRecognition() {
     document.getElementById('audioRecognitionSong').textContent = match.title;
     document.getElementById('audioRecognitionArtist').textContent = artist;
     const albumLine = document.getElementById('audioRecognitionAlbum');
-    albumLine.textContent = match.album ? `Album laut SonoVault: ${match.album}` : '';
+    albumLine.textContent = match.album ? `Album laut MusicBrainz: ${match.album}` : '';
     const collectionLine = document.getElementById('audioRecognitionCollection');
     collectionLine.textContent = localAlbums.size ? `In deinem Besitz: ${[...localAlbums].join(' · ')}` : '';
     audioRecognitionResult.hidden = false;
@@ -14811,7 +14921,7 @@ async function startAudioRecognition() {
     if (!signal.aborted) {
       audioRecognitionStatus.textContent = error.name === 'NotAllowedError' ? 'Der Mikrofonzugriff wurde nicht erlaubt.'
         : error.name === 'NotFoundError' ? 'Es wurde kein Mikrofon gefunden.'
-        : error instanceof TypeError ? 'Der Erkennungsserver ist nicht erreichbar.'
+        : error.name === 'TimeoutError' ? 'AcoustID antwortet nicht.'
         : error.message || 'Die Musikerkennung ist fehlgeschlagen.';
     }
   } finally {
