@@ -5167,6 +5167,20 @@
   .shop-search-row input { flex:1; min-width:0; min-height:44px; font-size:16px; }
   .shop-search-row .icon-btn { width:44px; height:44px; flex:none; padding:0; }
   .shop-search-row svg, .shop-barcode-button svg { width:20px; height:20px; }
+  .shop-scan-actions { display:flex; align-items:center; gap:8px; }
+  .shop-scan-actions > .icon-btn { flex:none; width:44px; height:44px; }
+  .shop-scan-actions > .icon-btn svg { width:21px; height:21px; }
+  .audio-recognition-dialog {
+    width:min(440px,calc(100% - 28px)); max-height:calc(100dvh - 28px); margin:auto;
+    padding:20px; border:1px solid var(--border-strong); border-radius:14px;
+    background:var(--surface-1); color:var(--text-primary); box-shadow:var(--shadow);
+  }
+  .audio-recognition-dialog::backdrop { background:rgba(0,0,0,.68); }
+  .audio-recognition-dialog h2 { margin:0 0 10px; }
+  .audio-recognition-dialog p { margin:8px 0; }
+  .audio-recognition-dialog button { min-height:44px; margin-top:12px; }
+  .audio-recognition-dialog img { display:block; width:100%; height:auto; }
+  .audio-recognition-dialog [hidden] { display:none; }
   .shop-barcode-button { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:44px; }
   #shopMessage { margin:0; }
   #shopMessage:empty, .shop-back[hidden] { display:none; }
@@ -8431,6 +8445,9 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
             <label for="discogsTokenInput" class="settings-panel-title">Discogs-Token</label>
             <input type="password" id="discogsTokenInput" placeholder="Discogs Personal Access Token" autocomplete="off">
             <p class="settings-panel-hint"><a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener">Discogs-Token erstellen</a></p>
+            <label for="sonovaultKeyInput" class="settings-panel-title">SonoVault-API-Schlüssel</label>
+            <input type="password" id="sonovaultKeyInput" autocomplete="off" spellcheck="false" maxlength="512" aria-describedby="sonovaultKeyHint">
+            <p class="settings-panel-hint" id="sonovaultKeyHint">Wird für dieses Konto in diesem Browser gespeichert. <a href="https://sonovault.now/identify" target="_blank" rel="noopener noreferrer">SonoVault-Musikerkennung</a></p>
           </div>
           <div id="collectionSettingsContent">
 
@@ -9625,6 +9642,19 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
   </div>
 </div>
 
+<dialog id="audioRecognitionDialog" class="audio-recognition-dialog" aria-labelledby="audioRecognitionTitle">
+  <h2 id="audioRecognitionTitle">Musik erkennen</h2>
+  <div id="audioRecognitionAnimation" aria-hidden="true"></div>
+  <p id="audioRecognitionStatus" role="status"></p>
+  <div id="audioRecognitionResult" hidden>
+    <strong id="audioRecognitionSong"></strong>
+    <p id="audioRecognitionArtist"></p>
+    <p id="audioRecognitionAlbum"></p>
+    <p id="audioRecognitionCollection"></p>
+  </div>
+  <button type="button" id="closeAudioRecognitionBtn">Schließen</button>
+</dialog>
+
 <div class="modal-overlay shop-mode-overlay" id="shopModeOverlay" role="region" aria-label="Plattenladen">
   <div class="modal-box shop-mode-box">
     <div class="shop-layout">
@@ -9633,7 +9663,10 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
           <input type="search" enterkeyhint="search" id="shopSearchInput" placeholder="Titel, Interpret oder Barcode" autocomplete="off" aria-label="Album suchen">
           <button type="submit" class="icon-btn" title="Suchen" aria-label="Suchen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></svg></button>
         </form>
-        <button type="button" id="shopBarcodeBtn" class="shop-barcode-button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 7V5h2M18 5h2v2M20 17v2h-2M6 19H4v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg>Barcode scannen</button>
+        <div class="shop-scan-actions">
+          <button type="button" id="shopBarcodeBtn" class="shop-barcode-button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 7V5h2M18 5h2v2M20 17v2h-2M6 19H4v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg>Barcode scannen</button>
+          <button type="button" id="shopAudioRecognitionBtn" class="icon-btn" title="Musik mit SonoVault erkennen" aria-label="Musik mit SonoVault erkennen" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4m4-7v10m5-14v18m5-14v10m4-7v4"/></svg></button>
+        </div>
         <p class="wash-mode-message" id="shopMessage" aria-live="polite"></p>
         <div class="shop-results" id="shopResults" hidden></div>
       </div>
@@ -12186,6 +12219,9 @@ async function handleAuthStateChange(user, epoch) {
   cloudAccountReadyUid = null;
   document.getElementById('vinylBackupDialog')?.close();
   document.getElementById('rankingMode')?.close();
+  stopAudioRecognition();
+  sonovaultKeyInput.value = '';
+  delete sonovaultKeyInput.dataset.accountUid;
   clearTimeout(cloudSaveDebounceTimer);
   clearTimeout(cloudRetryTimer);
   cloudSaveDebounceTimer = null;
@@ -13005,6 +13041,18 @@ if (discogsTokenInput) {
   });
 }
 
+const sonovaultKeyInput = document.getElementById('sonovaultKeyInput');
+function getSonovaultKey(uid) {
+  return uid ? localStorage.getItem(`sonovaultKeyV1:${uid}`) || '' : '';
+}
+sonovaultKeyInput.addEventListener('change', () => {
+  const uid = auth.currentUser?.uid;
+  if (!uid || sonovaultKeyInput.dataset.accountUid !== uid) return;
+  const key = sonovaultKeyInput.value.trim();
+  if (key) localStorage.setItem(`sonovaultKeyV1:${uid}`, key);
+  else localStorage.removeItem(`sonovaultKeyV1:${uid}`);
+});
+
 localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, 'auto');
 
 const SPOTIFY_CLIENT_ID_KEY = 'albumListeningSpotifyClientIdV1';
@@ -13321,6 +13369,11 @@ if (settingsBtn && settingsPanel) {
   settingsBtn.addEventListener('click', e => {
     e.stopPropagation();
     const shouldOpen = !settingsPanel.classList.contains('open');
+    if (shouldOpen) {
+      const uid = auth.currentUser?.uid || '';
+      sonovaultKeyInput.dataset.accountUid = uid;
+      sonovaultKeyInput.value = getSonovaultKey(uid);
+    }
     if (shouldOpen) {
       if (discogsPriceRefreshRunning || discogsGenreRefreshRunning) {
         discogsRefreshStatusDismissed = false;
@@ -14466,6 +14519,7 @@ function clearShopAlbum() {
 }
 
 function closeShopMode() {
+  stopAudioRecognition();
   shopSearchGeneration++;
   clearShopAlbum();
   document.body.classList.remove('shop-active');
@@ -14640,6 +14694,140 @@ document.getElementById('shopSearchForm').addEventListener('submit', event => {
   event.preventDefault();
   void runShopSearch();
 });
+const audioRecognitionDialog = document.getElementById('audioRecognitionDialog');
+const audioRecognitionStatus = document.getElementById('audioRecognitionStatus');
+const audioRecognitionAnimation = document.getElementById('audioRecognitionAnimation');
+const audioRecognitionResult = document.getElementById('audioRecognitionResult');
+let audioRecognitionAttempt = null;
+
+function stopAudioRecognition() {
+  const attempt = audioRecognitionAttempt;
+  audioRecognitionAttempt = null;
+  attempt?.controller.abort();
+  attempt?.stream?.getTracks().forEach(track => track.stop());
+  audioRecognitionAnimation.replaceChildren();
+  if (audioRecognitionDialog.open) audioRecognitionDialog.close();
+}
+
+function recordRecognitionClip(stream, signal) {
+  return new Promise((resolve, reject) => {
+    const recorder = new MediaRecorder(stream, {audioBitsPerSecond: 96000});
+    const chunks = [];
+    let timer;
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', cancel);
+    };
+    const cancel = () => {
+      cleanup();
+      if (recorder.state !== 'inactive') recorder.stop();
+      reject(signal.reason);
+    };
+    recorder.addEventListener('dataavailable', event => {
+      if (event.data.size) chunks.push(event.data);
+    });
+    recorder.addEventListener('stop', () => {
+      cleanup();
+      resolve(new Blob(chunks, {type: recorder.mimeType}));
+    }, {once:true});
+    recorder.addEventListener('error', () => {
+      cleanup();
+      reject(new Error('Die Audioaufnahme ist fehlgeschlagen.'));
+    }, {once:true});
+    recorder.start();
+    signal.addEventListener('abort', cancel, {once:true});
+    timer = setTimeout(() => {
+      if (recorder.state === 'recording') recorder.stop();
+    }, 12000);
+  });
+}
+
+async function startAudioRecognition() {
+  if (audioRecognitionDialog.open) return;
+  const user = auth.currentUser;
+  const attempt = {controller:new AbortController(), stream:null};
+  const {signal} = attempt.controller;
+  audioRecognitionAttempt = attempt;
+  audioRecognitionResult.hidden = true;
+  audioRecognitionStatus.textContent = 'Warte auf Mikrofonzugriff …';
+  audioRecognitionDialog.showModal();
+  try {
+    if (!user) throw new Error('Melde dich an, um Musik zu erkennen.');
+    const key = getSonovaultKey(user.uid);
+    if (!key) throw new Error('Trage deinen SonoVault-API-Schlüssel in den Kontoeinstellungen ein.');
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder !== 'function') {
+      throw new Error('Dieser Browser unterstützt hier keine Mikrofonaufnahme.');
+    }
+    attempt.stream = await navigator.mediaDevices.getUserMedia({
+      audio:{channelCount:1, echoCancellation:false, noiseSuppression:false, autoGainControl:false}
+    });
+    if (signal.aborted) return;
+    const ear = new Image();
+    ear.alt = '';
+    ear.src = 'ear.gif';
+    audioRecognitionAnimation.replaceChildren(ear);
+    audioRecognitionStatus.textContent = 'Höre 12 Sekunden zu … Der Ausschnitt wird an SonoVault gesendet.';
+    const clip = await recordRecognitionClip(attempt.stream, signal);
+    if (signal.aborted) return;
+    audioRecognitionAnimation.replaceChildren();
+    attempt.stream.getTracks().forEach(track => track.stop());
+    if (!clip.size) throw new Error('Es wurde kein Audio aufgenommen.');
+    audioRecognitionStatus.textContent = 'SonoVault sucht nach dem Song …';
+    const token = await user.getIdToken();
+    if (signal.aborted || auth.currentUser?.uid !== user.uid) return;
+    const endpoint = `https://europe-west1-${firebaseConfig.projectId}.cloudfunctions.net/identifyVinylAudio`;
+    const response = await fetch(endpoint, {
+      method:'POST', signal,
+      headers:{Authorization:`Bearer ${token}`, 'X-SonoVault-Key':key, 'Content-Type':'application/octet-stream'},
+      body:clip
+    });
+    const payload = await response.json().catch(() => null);
+    if (signal.aborted) return;
+    if (!response.ok || !payload) {
+      if (response.status === 429) throw new Error('Das Tageslimit für Musikerkennung ist erreicht.');
+      if (response.status === 404) throw new Error('Die Firebase-Funktion für die Musikerkennung ist noch nicht bereitgestellt.');
+      if (payload?.error === 'key') throw new Error('Prüfe deinen SonoVault-Schlüssel und ob dein Tarif Musikerkennung erlaubt.');
+      throw new Error('SonoVault ist gerade nicht erreichbar. Versuch es später erneut.');
+    }
+    const {match} = payload;
+    if (!match) {
+      audioRecognitionStatus.textContent = 'Kein Song erkannt. Versuch es mit einer anderen Stelle des Songs.';
+      return;
+    }
+    const artist = match.artists.join(', ');
+    const localAlbums = new Set(ownCollection.filter(album => album.owned
+      && normalizeRankingText(album.artist) === normalizeRankingText(artist)
+      && getRatingTrackRows(album.tracklist).some(row => row.key && normalizeRankingText(row.track.title) === normalizeRankingText(match.title))
+    ).map(album => album.title).filter(Boolean));
+    document.getElementById('audioRecognitionSong').textContent = match.title;
+    document.getElementById('audioRecognitionArtist').textContent = artist;
+    const albumLine = document.getElementById('audioRecognitionAlbum');
+    albumLine.textContent = match.album ? `Album laut SonoVault: ${match.album}` : '';
+    const collectionLine = document.getElementById('audioRecognitionCollection');
+    collectionLine.textContent = localAlbums.size ? `In deinem Besitz: ${[...localAlbums].join(' · ')}` : '';
+    audioRecognitionResult.hidden = false;
+    audioRecognitionStatus.textContent = 'Song erkannt.';
+  } catch (error) {
+    if (!signal.aborted) {
+      audioRecognitionStatus.textContent = error.name === 'NotAllowedError' ? 'Der Mikrofonzugriff wurde nicht erlaubt.'
+        : error.name === 'NotFoundError' ? 'Es wurde kein Mikrofon gefunden.'
+        : error instanceof TypeError ? 'Der Erkennungsserver ist nicht erreichbar.'
+        : error.message || 'Die Musikerkennung ist fehlgeschlagen.';
+    }
+  } finally {
+    attempt.stream?.getTracks().forEach(track => track.stop());
+    if (audioRecognitionAttempt === attempt) audioRecognitionAnimation.replaceChildren();
+  }
+}
+
+document.getElementById('shopAudioRecognitionBtn').addEventListener('click', startAudioRecognition);
+document.getElementById('closeAudioRecognitionBtn').addEventListener('click', stopAudioRecognition);
+audioRecognitionDialog.addEventListener('cancel', event => {
+  event.preventDefault();
+  stopAudioRecognition();
+});
+window.addEventListener('pagehide', stopAudioRecognition);
+
 document.getElementById('shopBarcodeBtn').addEventListener('click', () => {
   pauseListeningForSearch();
   startBarcodeScan(code => runShopSearch(code));
