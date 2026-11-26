@@ -8331,6 +8331,19 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
   <section id="rankingModeTracks" class="ranking-mode-body ranking-mode-tracks" aria-label="Titel bewerten" hidden></section>
 </dialog>
 
+<dialog id="audioRecognitionDialog" class="audio-recognition-dialog" aria-labelledby="audioRecognitionTitle">
+  <h2 id="audioRecognitionTitle">Musik erkennen</h2>
+  <div id="audioRecognitionAnimation" aria-hidden="true"></div>
+  <p id="audioRecognitionStatus" role="status"></p>
+  <div id="audioRecognitionResult" hidden>
+    <strong id="audioRecognitionSong"></strong>
+    <p id="audioRecognitionArtist"></p>
+    <p id="audioRecognitionAlbum"></p>
+    <p id="audioRecognitionCollection"></p>
+  </div>
+  <button type="button" id="closeAudioRecognitionBtn">Schließen</button>
+</dialog>
+
 <div id="appRoot" class="hidden">
 
 <header>
@@ -9644,19 +9657,6 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
     </div>
   </div>
 </div>
-
-<dialog id="audioRecognitionDialog" class="audio-recognition-dialog" aria-labelledby="audioRecognitionTitle">
-  <h2 id="audioRecognitionTitle">Musik erkennen</h2>
-  <div id="audioRecognitionAnimation" aria-hidden="true"></div>
-  <p id="audioRecognitionStatus" role="status"></p>
-  <div id="audioRecognitionResult" hidden>
-    <strong id="audioRecognitionSong"></strong>
-    <p id="audioRecognitionArtist"></p>
-    <p id="audioRecognitionAlbum"></p>
-    <p id="audioRecognitionCollection"></p>
-  </div>
-  <button type="button" id="closeAudioRecognitionBtn">Schließen</button>
-</dialog>
 
 <div class="modal-overlay shop-mode-overlay" id="shopModeOverlay" role="region" aria-label="Plattenladen">
   <div class="modal-box shop-mode-box">
@@ -14878,7 +14878,13 @@ async function startAudioRecognition() {
   try {
     if (!user) throw new Error('Melde dich an, um Musik zu erkennen.');
     const credentials = {app: readAcoustidKey('app', user.uid), user: readAcoustidKey('user', user.uid)};
-    if (!credentials.app) throw new Error('Trage deinen AcoustID-Anwendungsschlüssel in den Kontoeinstellungen ein.');
+    if (!credentials.app && !credentials.user) {
+      throw new Error('Die AcoustID-Schlüssel fehlen. Trage in den Kontoeinstellungen zuerst den Anwendungsschlüssel ein. Den Benutzerschlüssel kannst du dort ebenfalls hinzufügen.');
+    }
+    if (!credentials.app) throw new Error('Der AcoustID-Anwendungsschlüssel fehlt. Trage ihn in den Kontoeinstellungen ein.');
+    if (!credentials.user && Date.now() >= Date.UTC(2027, 0, 1)) {
+      throw new Error('Der AcoustID-Benutzerschlüssel fehlt. Trage ihn in den Kontoeinstellungen ein.');
+    }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder !== 'function'
       || !(window.AudioContext || window.webkitAudioContext)) {
       throw new Error('Dieser Browser unterstützt hier keine Mikrofonaufnahme.');
@@ -14889,7 +14895,13 @@ async function startAudioRecognition() {
     if (signal.aborted) return;
     const ear = new Image();
     ear.alt = '';
-    ear.src = 'ear.gif';
+    ear.addEventListener('error', () => {
+      if (!signal.aborted && audioRecognitionAnimation.contains(ear)) {
+        audioRecognitionAnimation.replaceChildren();
+        audioRecognitionStatus.textContent = 'Höre 25 Sekunden zu … Die Ohr-Animation konnte nicht geladen werden.';
+      }
+    }, {once:true});
+    ear.src = new URL('./ear.gif', document.baseURI).href;
     audioRecognitionAnimation.replaceChildren(ear);
     audioRecognitionStatus.textContent = 'Höre 25 Sekunden zu … Die Aufnahme bleibt in diesem Browser.';
     const clip = await recordRecognitionClip(attempt.stream, signal);
