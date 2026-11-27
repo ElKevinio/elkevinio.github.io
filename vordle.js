@@ -135,7 +135,7 @@
     coverFrame.append(coverImage,coverPlaceholder);coverInfo.append(hints,coverCaption);coverFigure.append(coverFrame,coverInfo);
     coverImage.addEventListener('error',()=>{failedCoverUrl=coverImage.getAttribute('src') || '';coverImage.hidden=true;coverPlaceholder.hidden=false;coverCaption.textContent='Cover konnte nicht geladen werden. Du kannst mit den Tabellenhinweisen weiterraten.';});
     const help=el('details','vordle-help');help.append(el('summary',null,'So funktioniert’s'));
-    help.append(el('p',null,'Errate ein Album, das jemand in seiner Sammlung besitzt.  Titel und Artist werden gelb, wenn sie passen, aber das Album noch falsch ist. Falsche Felder bleiben grau. Jahr-Pfeile: unter 3 Abstand grün, 3 bis unter 10 gelb, ab 10 rot. Genres zeigen nur gemeinsame Treffer. Nach Tipp 5 siehst du den ersten Buchstaben des Titels. Nach Tipp 7, 8 und 9 kommt jeweils ein weiterer Titel-Buchstabe hinzu; der Artist zeigt ab Tipp 7 einen, ab Tipp 8 zwei und ab Tipp 9 drei Buchstaben. Genre ist grün, sobald mindestens eines übereinstimmt; Format bei gleicher Veröffentlichungsart. Die Sammlung wird grün, wenn dein Tipp aus einer Sammlung stammt, die auch das gesuchte Album besitzt. ↑ bedeutet: neueres Jahr gesucht. ↓ bedeutet: älteres Jahr gesucht. Fehlende Daten bleiben grau. Das Cover wird nach jedem Fehlversuch schärfer. Nach zehn Fehlversuchen kannst du ohne Wertung weiterspielen oder die Lösung aufdecken. Zusätzliche Tipps bleiben auf diesem Gerät; die Gesamtzahl wird in der Rangliste geteilt. Jeden Tag um 00:00 Uhr in Berlin beginnt ein neues Spiel.'));
+    help.append(el('p',null,'Errate ein Album, das jemand in seiner Sammlung besitzt.  Titel und Artist werden gelb, wenn sie passen, aber das Album noch falsch ist. Falsche Felder bleiben grau. Jahr-Pfeile: unter 3 Abstand grün, 3 bis unter 10 gelb, ab 10 rot. Bei mehreren Genres oder Sammlungen sind nur die übereinstimmenden Einträge grün umrandet. Steht nur ein passender Eintrag im Feld, wird das ganze Feld grün. Nach Tipp 5 siehst du den ersten Buchstaben des Titels. Nach Tipp 7, 8 und 9 kommt jeweils ein weiterer Titel-Buchstabe hinzu; der Artist zeigt ab Tipp 7 einen, ab Tipp 8 zwei und ab Tipp 9 drei Buchstaben. Das Format wird bei gleicher Veröffentlichungsart grün. ↑ bedeutet: neueres Jahr gesucht. ↓ bedeutet: älteres Jahr gesucht. Fehlende Daten bleiben grau. Das Cover wird nach jedem Fehlversuch schärfer. Nach zehn Fehlversuchen kannst du ohne Wertung weiterspielen oder die Lösung aufdecken. Zusätzliche Tipps bleiben auf diesem Gerät; die Gesamtzahl wird in der Rangliste geteilt. Jeden Tag um 00:00 Uhr in Berlin beginnt ein neues Spiel.'));
     const form=el('form','vordle-form'),label=el('label',null,'Dein Album-Tipp');label.htmlFor='vordleSearch';
     const input=el('input');input.id='vordleSearch';input.type='search';input.placeholder='Artist oder Album suchen …';input.autocomplete='off';input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-controls','vordleSuggestions');input.setAttribute('aria-expanded','false');
     const suggestions=el('ul','vordle-suggestions');suggestions.id='vordleSuggestions';suggestions.setAttribute('role','listbox');suggestions.hidden=true;
@@ -421,8 +421,36 @@
         const answerCollections=Array.isArray(answer.collections)?answer.collections:[];
         const sharedCollections=guessedCollections.filter(name=>answerCollections.some(other=>normalize(name)===normalize(other)));
         const collectionHint={state:!guessedCollections.length || !answerCollections.length?'unknown':sharedCollections.length?'correct':'wrong',hint:!guessedCollections.length?'Sammlung für dieses Album nicht verfügbar':!answerCollections.length?'Sammlungsabgleich für dieses Tagesrätsel nicht verfügbar':sharedCollections.length?`Gleiche Sammlung: ${sharedCollections.join(', ')}`:'Keine gemeinsame Sammlung mit dem gesuchten Album'};
-        const values={title:album.title,artist:album.artist,year:album.year || '—',genres:hints.genres.matches.join(', '),format:album.format || '—',collection:guessedCollections.length?guessedCollections.join(', '):'—'};
-        for(const field of ['title','artist','year','genres','format','collection']){const hint=field==='collection'?collectionHint:hints[field],cell=el('td',`vordle-cell is-${hint.state}`);cell.setAttribute('data-label',({title:'Album',artist:'Artist',year:'Jahr',genres:'Genre',format:'Format',collection:'Sammlung'})[field]+(field==='title'?` · ${guessIndex+1}`:''));cell.setAttribute('aria-label',`${values[field]}: ${{correct:'Passt',partial:'Teilweise passend',wrong:'Passt nicht',unknown:'Unbekannt'}[hint.state]}. ${hint.hint}`);cell.title=`${values[field]} · ${hint.hint}`;cell.append(el('span','vordle-cell-value',values[field]),el('span',`vordle-cell-mark${hint.tone?' is-'+hint.tone:''}`,hint.arrow || {correct:'✓',partial:'≈',wrong:'×',unknown:'–'}[hint.state]));if(field==='title' && guessIndex>=officialCount)cell.append(el('small','vordle-practice-tag','Weiterspielen'));row.append(cell);}target.append(row);
+        const genres=album.genres || [];
+        const lists={genres,collection:guessedCollections};
+        const matches={genres:hints.genres.matches,collection:sharedCollections};
+        const values={title:album.title,artist:album.artist,year:album.year || '—',genres:genres.join(', ') || '—',
+          format:album.format || '—',collection:guessedCollections.join(', ') || '—'};
+        const labels={title:'Album',artist:'Artist',year:'Jahr',genres:'Genre',format:'Format',collection:'Sammlung'};
+        const states={correct:'Passt',partial:'Teilweise passend',wrong:'Passt nicht',unknown:'Unbekannt'};
+        const marks={correct:'✓',partial:'≈',wrong:'×',unknown:'–'};
+        for(const field of Object.keys(labels)){
+          const hint=field==='collection'?collectionHint:hints[field];
+          const entries=lists[field], shared=matches[field];
+          const isList=entries?.length>1;
+          const cell=el('td',`vordle-cell is-${hint.state}${isList?' has-entries':''}`);
+          const detail=field==='genres' && shared.length?`Übereinstimmende Genres: ${shared.join(', ')}`:hint.hint;
+          const stateLabel=isList && shared.length>0 && shared.length<entries.length?states.partial:states[hint.state];
+          cell.setAttribute('data-label',labels[field]+(field==='title'?` · ${guessIndex+1}`:''));
+          cell.setAttribute('aria-label',`${values[field]}: ${stateLabel}. ${detail}`);
+          cell.title=`${values[field]} · ${detail}`;
+          const value=el('span','vordle-cell-value',isList?null:values[field]);
+          if(isList){
+            const matchingEntries=new Set(shared.map(normalize));
+            for(const entry of entries){
+              value.append(el('span',`vordle-cell-entry${matchingEntries.has(normalize(entry))?' is-match':''}`,entry));
+            }
+          }
+          cell.append(value,el('span',`vordle-cell-mark${hint.tone?' is-'+hint.tone:''}`,hint.arrow || marks[hint.state]));
+          if(field==='title' && guessIndex>=officialCount)cell.append(el('small','vordle-practice-tag','Weiterspielen'));
+          row.append(cell);
+        }
+        target.append(row);
       }
     }
     function render(){

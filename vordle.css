@@ -120,3 +120,10 @@
  .vordle-history-detail .vordle-grid { min-width:0; }
 }
 @media(orientation:landscape) and (max-height:520px) { .vordle-hero { top:-12px; }.vordle-daily-label { display:none; }.vordle-statistic { padding:6px; }.vordle-statistics { margin:8px 0; } }
+
+
+.vordle-cell.has-entries { background:#3c444f; color:#e3e6ec; }
+.vordle-cell.has-entries .vordle-cell-value { display:flex; flex-wrap:wrap; gap:4px; overflow:visible; }
+.vordle-cell-entry { max-width:100%; padding:1px 5px; border:1px solid transparent; border-radius:6px; }
+.vordle-cell-entry.is-match { border-color:#71e09b; }
+.vordle-cell.has-entries.is-correct .vordle-cell-mark { color:#71e09b; }

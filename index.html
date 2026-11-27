@@ -8863,10 +8863,13 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
             <strong>Verfügbare Filter</strong><br>
             <code>title:</code> Titel, <code>artist:</code> Interpret, <code>track:</code> Track, <code>genre:</code> Genre,<br>
             <code>year:</code> Jahr, <code>location:</code> Lagerort, <code>washed:</code> Waschdatum,<br>
-            <code>notes:</code> Notizen, <code>releaseType:</code> LP / 10&quot; / CD / EP / 7&quot;<br>
+            <code>notes:</code> Notizen, <code>format:</code> LP / 10&quot; / CD / EP / 7&quot;<br>
+            <code>status:</code> Besitz oder Wunschliste, <code>condition:</code> Zustand, <code>color:</code> Farbe,<br>
+            <code>price:</code> Preis, <code>rating:</code> Bewertung<br>
             <strong>Beispiele:</strong><br>
             <code>artist:Michael Jackson</code><br>
             <code>genre:Rock year:1990</code><br>
+            <code>format:LP price:&lt;20 rating:&gt;=8</code><br>
             <code>title:&quot;Thriller&quot;</code>
           </div>
         </div>
@@ -9394,7 +9397,7 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
 <h4>Suchfilter</h4>
 <p>Freitext sucht in Titel, Interpret, Lagerort, Waschdatum u. a. Gezielt:</p>
 <ul>
-<li><code>title:</code> <code>artist:</code> <code>track:</code> <code>genre:</code> <code>year:</code> <code>location:</code> <code>washed:</code> <code>notes:</code> <code>releaseType:</code></li>
+<li><code>title:</code> <code>artist:</code> <code>track:</code> <code>genre:</code> <code>year:</code> <code>location:</code> <code>washed:</code> <code>notes:</code> <code>format:</code> <code>status:</code> <code>condition:</code> <code>price:</code> <code>rating:</code> <code>color:</code></li>
 <li>Beispiele: <code>artist:Michael Jackson</code> · <code>genre:Rock year:1990</code> · <code>title:"Thriller"</code></li>
 </ul>
 <h4>Sortierung</h4>
@@ -9408,7 +9411,7 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
 <p>Einstellungen →︎ <b>Lagerorte</b>: Regale mit Reihen × Spalten anlegen, Fächer umbenennen oder entfernen. Fachnamen werden überall angezeigt (auch im Waschmodus).</p>
 <h4>Lageransicht</h4>
 <ul>
-<li>Alben per Drag &amp; Drop (am Handy gedrückt halten) in Fächer ziehen. Mobil zeigt die Startseite eine Regalliste und darunter unsortierte Alben. Ein Album kann zuerst einem Regal und danach einem Fach zugeordnet werden – durch Ziehen oder „Verschieben“. Im Regal stehen die noch nicht einsortierten Alben unten. Beim Einsortieren werden Fächer als kompakte Namensliste angezeigt; sonst mit Inhalt. Oben führt „Regale“ zurück.</li>
+<li>Alben per Drag &amp; Drop (am Handy gedrückt halten) in Fächer ziehen. Mobil zeigt die Startseite eine Regalliste und darunter unsortierte Alben. Beim Ablegen auf einem Regal mit genau einem Fach landet das Album direkt darin. Bei mehreren Fächern landet es zunächst im unsortierten Bereich des Regals – durch Ziehen oder „Verschieben“. Im Regal stehen die noch nicht einsortierten Alben unten. Beim Einsortieren werden Fächer als kompakte Namensliste angezeigt; sonst mit Inhalt. Oben führt „Regale“ zurück.</li>
 <li>Am Desktop stehen links die Regale, daneben Name und Eigenschaften und rechts die scrollbaren Fächer. In der geteilten Ansicht wählst du oben je ein Regal aus. Bei wenig Platz kannst du die Regale auf ihre Anfangsbuchstaben reduzieren. Die Eigenschaften des linken Regals klappen automatisch ein und lassen sich über das Reglersymbol öffnen. Mit dem Zoomregler passt du die Größe der Fächer an.</li>
 <li>Im Fach öffnet der Reihenfolge-Button die <b>Sortierung</b>: Alben per Drag nach oben/unten ziehen oder mit den Pfeilen verschieben.</li>
 <li>Neben der Fachnummer startet ein kleiner Wasch-Button den Waschmodus für dieses Fach.</li>
@@ -9909,8 +9912,8 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
 </div><!-- /#appRoot -->
 
 <!-- Firebase SDK (kostenlos, "compat"-Version für einfache Einbindung ohne Build-Tool) -->
-<link rel="stylesheet" href="vordle.css?v=20261112-albumlinks">
-<script src="vordle.js?v=20261116-account-exclusion"></script>
+<link rel="stylesheet" href="vordle.css?v=20261127-entry-matches">
+<script src="vordle.js?v=20261127-entry-matches"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -13696,6 +13699,11 @@ function getValidShelfCompartmentNumbers(shelf) {
     .filter(number => isValidShelfCompartment(shelf, number));
 }
 
+function getMobileShelfDestination(shelf) {
+  const compartments = getValidShelfCompartmentNumbers(shelf);
+  return compartments.length === 1 ? compartments[0] : '';
+}
+
 function isSingleCompartmentShelf(shelf) {
   return getValidShelfCompartmentNumbers(shelf).length === 1;
 }
@@ -14663,11 +14671,18 @@ function showShopDetail(entry, result = null) {
     addButton.disabled = true;
     const status = document.getElementById('shopAddStatus');
     status.textContent = 'Wird hinzugefügt …';
+    const uid = currentUid, epoch = cloudAccountEpoch;
+    const active = () => isCloudSession(uid, epoch) && viewingOwnCollection
+      && shopSelectedEntry === entry && addButton.isConnected && shopOverlay.classList.contains('open');
     try {
-      const added = await addBulkImportEntry(Object.assign({}, entry));
+      const added = await addBulkImportEntry({...entry}, delay => {
+        if (active()) status.textContent = discogsWaitMessage(delay);
+      }, active);
+      if (!active()) return;
       status.textContent = added ? 'Zur Wunschliste hinzugefügt.' : 'Hinzufügen nicht möglich.';
       if (!added) addButton.disabled = false;
     } catch (error) {
+      if (!active()) return;
       console.error('Plattenladen: Hinzufügen fehlgeschlagen', error);
       status.textContent = 'Hinzufügen fehlgeschlagen.';
       addButton.disabled = false;
@@ -18167,8 +18182,7 @@ async function addBulkImportEntry(entry, onWait, active) {
     entry.tracklist = await fetchTracklistForAlbum(entry.album, entry.title, entry.artist);
   }
   if (!active()) return false;
-  quickAddFromSearch(entry);
-  return true;
+  return Boolean(quickAddFromSearch(entry));
 }
 
 function closeBulkImport() {
@@ -30248,12 +30262,14 @@ function renderMobileStorageBoard(board, visibleItems) {
       const section = document.createElement('section');
       section.className = 'storage-mobile-shelf';
       section.dataset.dropShelfPending = entry.id;
+      const destination = getMobileShelfDestination(entry);
+      if (destination) section.dataset.dropCompartment = String(destination);
       section.innerHTML = `<button type="button" class="storage-mobile-row"><strong>${escapeHtml(entry.name)}</strong><span>${count(items)} Platten · ${count(items.filter(isPending))} unsortiert</span><span aria-hidden="true">›</span></button>${movingItem ? '' : `<button type="button" class="icon-btn remove-shelf" aria-label="${escapeHtml(entry.name)} löschen"><svg class="close-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#close-icon-symbol"/></svg></button>`}`;
       section.querySelector('.remove-shelf')?.addEventListener('click', () => removeShelf(entry));
       section.querySelector('.storage-mobile-row').addEventListener('click', () => {
-        if (movingItem) move(entry);
         mobileStorageShelfId = entry.id;
-        renderMobileStorageBoard(board, visibleItems);
+        if (movingItem) move(entry, destination);
+        else renderMobileStorageBoard(board, visibleItems);
       });
       destinations.appendChild(section);
     });
@@ -31826,101 +31842,94 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
   }
 });
 
-// Collection filter: dynamisches Filtern nach Titel / Interpret / Jahr / Genre
+const collectionSearchAliases = {
+  title:'title', artist:'artist', track:'track', genre:'genre', year:'year', location:'location',
+  washed:'washed', lastwashed:'washed', format:'releaseType', releasetype:'releaseType',
+  notes:'notes', status:'status', condition:'condition', price:'price', rating:'rating', color:'color'
+};
+
 function parseCollectionQuery(rawQuery) {
   const query = String(rawQuery || '').trim().toLowerCase();
-  const fieldTerms = { title: [], artist: [], track: [], genre: [], year: [], location: [], washed: [] };
-  const tokens = [];
-  let remainder = query;
-
-  const fieldPattern = /\b(title|artist|track|genre|year|location|washed):"([^"]+)"|\b(title|artist|track|genre|year|location|washed):(\S+)/gi;
-  remainder = remainder.replace(fieldPattern, (match, f1, qval, f2, sval) => {
-    const field = (f1 || f2).toLowerCase();
-    const value = String(qval || sval || '').trim();
-    if (field && value) {
-      fieldTerms[field].push(value);
-    }
+  const fieldTerms = {};
+  const remainder = query.replace(/\b([a-z]+):(?:"([^"]+)"|(\S+))/g, (match, alias, quoted, unquoted) => {
+    if (!Object.hasOwn(collectionSearchAliases, alias)) return match;
+    const field = collectionSearchAliases[alias];
+    const value = (quoted || unquoted).trim();
+    if (value) (fieldTerms[field] ||= []).push(value);
     return '';
   });
+  return {fieldTerms, tokens:remainder.split(/\s+/).filter(Boolean)};
+}
 
-  remainder.split(/\s+/).filter(Boolean).forEach(token => tokens.push(token));
-  return { fieldTerms, tokens };
+function getCollectionSearchFields(item) {
+  const trackText = Array.isArray(item.tracklist) ? item.tracklist.map(track => track?.title || '').join(' ') : '';
+  return {
+    title: String(item.title || '').toLowerCase(),
+    artist: `${item.artist || ''} ${item.artistLatin || ''}`.toLocaleLowerCase('de'),
+    track: trackText.toLowerCase(),
+    genre: String(item.genre || '').toLowerCase(),
+    year: String(item.year || '').toLowerCase(),
+    releaseType: getReleaseType(item).toLowerCase(),
+    notes: String(item.notes || '').toLowerCase(),
+    location: getStorageLabel(item).toLowerCase(),
+    washed: viewingOwnCollection && item.owned ? String(item.lastWashed || '').toLowerCase() : ''
+  };
+}
+
+function matchesCollectionField(item, fields, field, term) {
+  if (field === 'releaseType') return fields.releaseType === normalizeReleaseTypeValue(term).toLowerCase();
+  if (field === 'status') {
+    return (item.owned ? ['besitz','im besitz','besitze ich','owned'] : ['wunschliste','wishlist']).includes(term);
+  }
+  if (field === 'condition') return normalizeConditionName(item.condition || 'Sehr gut').toLowerCase() === term;
+  if (field === 'color') {
+    const base = normalizeColor(getVinylRecordForItem(item).baseColor);
+    if (base === normalizeColor(term) && base) return true;
+    const {hueGroup,isNeutral,luminance} = getColorSortInfo(item);
+    const name = isNeutral ? (luminance < 0.05 ? 'schwarz' : luminance > 0.75 ? 'weiß' : 'grau')
+      : ['rot','orange','gelb','grün','türkis','blau','violett','pink'][hueGroup];
+    return name === term || (term === 'weiss' && name === 'weiß') || (term === 'lila' && name === 'violett');
+  }
+  if (field === 'price' || field === 'rating') {
+    const raw = field === 'rating' ? getAlbumRating(item) : item.discogsLowestPrice ?? item.discogsAveragePrice;
+    if (raw == null || raw === '') return false;
+    const match = /^(>=|<=|>|<|=)?\s*(\d+(?:[.,]\d+)?)(?:\s*€)?$/.exec(term);
+    if (!match) return false;
+    const value = Number(raw), target = Number(match[2].replace(',', '.'));
+    switch (match[1]) {
+      case '>=': return value >= target;
+      case '<=': return value <= target;
+      case '>': return value > target;
+      case '<': return value < target;
+      default: return value === target;
+    }
+  }
+  return fields[field].includes(term);
 }
 
 function matchesCollectionQuery(item, rawQuery) {
-  const { fieldTerms, tokens } = parseCollectionQuery(rawQuery);
-  const trackText = Array.isArray(item.tracklist)
-    ? item.tracklist.map(track => track?.title || '').join(' ')
-    : '';
-  const fields = {
-    title: (item.title || '').toString().toLowerCase(),
-    artist: `${item.artist || ''} ${item.artistLatin || ''}`.toLocaleLowerCase('de'),
-    track: trackText.toLowerCase(),
-    genre: (item.genre || '').toString().toLowerCase(),
-    year: (item.year || '').toString().toLowerCase(),
-    releaseType: (item.releaseType || '').toString().toLowerCase(),
-    notes: (item.notes || '').toString().toLowerCase(),
-    location: getStorageLabel(item).toLowerCase(),
-    washed: viewingOwnCollection && item.owned ? (item.lastWashed || '').toString().toLowerCase() : ''
-  };
-
-  for (const field of Object.keys(fieldTerms)) {
-    if (fieldTerms[field].length === 0) continue;
-    if (!fieldTerms[field].every(term => fields[field].includes(term))) {
-      return false;
-    }
-  }
-
-  return tokens.every(token => {
-    return fields.title.includes(token)
-      || fields.artist.includes(token)
-      || fields.track.includes(token)
-      || fields.genre.includes(token)
-      || fields.year.includes(token)
-      || fields.releaseType.includes(token)
-      || fields.notes.includes(token)
-      || fields.location.includes(token)
-      || fields.washed.includes(token);
-  });
+  const {fieldTerms,tokens} = parseCollectionQuery(rawQuery);
+  const fields = getCollectionSearchFields(item);
+  return Object.entries(fieldTerms).every(([field,terms]) =>
+    terms.every(term => matchesCollectionField(item, fields, field, term)))
+    && tokens.every(token => Object.values(fields).some(value => value.includes(token)));
 }
 
 function getCollectionQueryScore(item, rawQuery) {
-  const { fieldTerms, tokens } = parseCollectionQuery(rawQuery);
-  const trackText = Array.isArray(item.tracklist)
-    ? item.tracklist.map(track => track?.title || '').join(' ')
-    : '';
-  const fields = {
-    title: (item.title || '').toString().toLowerCase(),
-    artist: `${item.artist || ''} ${item.artistLatin || ''}`.toLocaleLowerCase('de'),
-    track: trackText.toLowerCase(),
-    genre: (item.genre || '').toString().toLowerCase(),
-    year: (item.year || '').toString().toLowerCase(),
-    releaseType: (item.releaseType || '').toString().toLowerCase(),
-    notes: (item.notes || '').toString().toLowerCase(),
-    location: getStorageLabel(item).toLowerCase(),
-    washed: viewingOwnCollection && item.owned ? (item.lastWashed || '').toString().toLowerCase() : ''
-  };
-
+  const {fieldTerms,tokens} = parseCollectionQuery(rawQuery);
+  const fields = getCollectionSearchFields(item);
+  const weights = {title:30,artist:25,track:20,genre:10,year:8,releaseType:6,notes:4,location:5,washed:5};
   let score = 0;
-  Object.keys(fieldTerms).forEach(field => {
-    fieldTerms[field].forEach(term => {
-      if (fields[field].includes(term)) {
-        score += field === 'title' ? 30 : field === 'artist' ? 25 : field === 'track' ? 20 : field === 'genre' ? 10 : 8;
-      }
-    });
-  });
-
-  tokens.forEach(token => {
-    if (fields.title.includes(token)) score += 30;
-    if (fields.artist.includes(token)) score += 25;
-    if (fields.track.includes(token)) score += 20;
-    if (fields.genre.includes(token)) score += 10;
-    if (fields.year.includes(token)) score += 8;
-    if (fields.releaseType.includes(token)) score += 6;
-    if (fields.notes.includes(token)) score += 4;
-    if (fields.location.includes(token) || fields.washed.includes(token)) score += 5;
-  });
-
+  for (const [field, terms] of Object.entries(fieldTerms)) {
+    for (const term of terms) {
+      if (matchesCollectionField(item, fields, field, term)) score += weights[field] || 8;
+    }
+  }
+  for (const token of tokens) {
+    for (const [field, weight] of Object.entries(weights)) {
+      if (fields[field].includes(token)) score += weight;
+    }
+  }
   return score;
 }
 
