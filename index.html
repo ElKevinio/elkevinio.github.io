@@ -8464,12 +8464,9 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
             <label for="discogsTokenInput" class="settings-panel-title">Discogs-Token</label>
             <input type="password" id="discogsTokenInput" placeholder="Discogs Personal Access Token" autocomplete="off">
             <p class="settings-panel-hint"><a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener">Discogs-Token erstellen</a></p>
-            <label for="acoustidAppKeyInput" class="settings-panel-title">AcoustID-Anwendungsschlüssel</label>
-            <input type="text" id="acoustidAppKeyInput" autocomplete="off" spellcheck="false" maxlength="128">
-            <p class="settings-panel-hint"><a href="https://acoustid.org/new-application" target="_blank" rel="noopener noreferrer">Kostenlose Anwendung registrieren</a></p>
-            <label for="acoustidUserKeyInput" class="settings-panel-title">AcoustID-Benutzerschlüssel</label>
-            <input type="password" id="acoustidUserKeyInput" autocomplete="off" spellcheck="false" maxlength="128">
-            <p class="settings-panel-hint"><a href="https://acoustid.org/api-key" target="_blank" rel="noopener noreferrer">Persönlichen Schlüssel anzeigen</a> · ab 2027 erforderlich</p>
+            <label for="auddTokenInput" class="settings-panel-title">AudD-API-Token</label>
+            <input type="password" id="auddTokenInput" autocomplete="off" spellcheck="false" maxlength="512" aria-describedby="auddTokenHint">
+            <p class="settings-panel-hint" id="auddTokenHint">Bleibt pro Konto in diesem Browser. <a href="https://dashboard.audd.io/" target="_blank" rel="noopener noreferrer">AudD-Dashboard</a></p>
           </div>
           <div id="collectionSettingsContent">
 
@@ -9674,7 +9671,7 @@ body:has(.modal-overlay.open:not(#shopModeOverlay), #authOverlay:not(.hidden)) #
         </form>
         <div class="shop-scan-actions">
           <button type="button" id="shopBarcodeBtn" class="shop-barcode-button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 7V5h2M18 5h2v2M20 17v2h-2M6 19H4v-2M8 8v8M11 8v8M14 8v8M17 8v8"/></svg>Barcode scannen</button>
-          <button type="button" id="shopAudioRecognitionBtn" class="icon-btn" title="Musik mit AcoustID erkennen" aria-label="Musik mit AcoustID erkennen" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4m4-7v10m5-14v18m5-14v10m4-7v4"/></svg></button>
+          <button type="button" id="shopAudioRecognitionBtn" class="icon-btn" title="Musik mit AudD erkennen" aria-label="Musik mit AudD erkennen" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 10v4m4-7v10m5-14v18m5-14v10m4-7v4"/></svg></button>
         </div>
         <p class="wash-mode-message" id="shopMessage" aria-live="polite"></p>
         <div class="shop-results" id="shopResults" hidden></div>
@@ -12229,7 +12226,7 @@ async function handleAuthStateChange(user, epoch) {
   document.getElementById('vinylBackupDialog')?.close();
   document.getElementById('rankingMode')?.close();
   stopAudioRecognition();
-  updateAcoustidInputs('');
+  updateAuddTokenInput('');
   clearTimeout(cloudSaveDebounceTimer);
   clearTimeout(cloudRetryTimer);
   cloudSaveDebounceTimer = null;
@@ -13049,29 +13046,22 @@ if (discogsTokenInput) {
   });
 }
 
-const acoustidInputs = {
-  app: document.getElementById('acoustidAppKeyInput'),
-  user: document.getElementById('acoustidUserKeyInput')
-};
-function readAcoustidKey(kind, uid) {
-  return uid ? localStorage.getItem(`acoustid:${kind}:${uid}`) || '' : '';
+const auddTokenInput = document.getElementById('auddTokenInput');
+function readAuddToken(uid) {
+  return uid ? localStorage.getItem(`auddToken:${uid}`) || '' : '';
 }
-function updateAcoustidInputs(uid) {
-  for (const [kind, input] of Object.entries(acoustidInputs)) {
-    input.dataset.accountUid = uid;
-    input.value = readAcoustidKey(kind, uid);
-  }
+function updateAuddTokenInput(uid) {
+  auddTokenInput.dataset.accountUid = uid;
+  auddTokenInput.value = readAuddToken(uid);
 }
-for (const [kind, input] of Object.entries(acoustidInputs)) {
-  input.addEventListener('change', () => {
-    const uid = auth.currentUser?.uid;
-    if (!uid || input.dataset.accountUid !== uid) return;
-    const name = `acoustid:${kind}:${uid}`;
-    const key = input.value.trim();
-    if (key) localStorage.setItem(name, key);
-    else localStorage.removeItem(name);
-  });
-}
+auddTokenInput.addEventListener('change', () => {
+  const uid = auth.currentUser?.uid;
+  if (!uid || auddTokenInput.dataset.accountUid !== uid) return;
+  const name = `auddToken:${uid}`;
+  const token = auddTokenInput.value.trim();
+  if (token) localStorage.setItem(name, token);
+  else localStorage.removeItem(name);
+});
 
 localStorage.setItem(DEFAULT_RELEASE_TYPE_KEY, 'auto');
 
@@ -13389,7 +13379,7 @@ if (settingsBtn && settingsPanel) {
   settingsBtn.addEventListener('click', e => {
     e.stopPropagation();
     const shouldOpen = !settingsPanel.classList.contains('open');
-    if (shouldOpen) updateAcoustidInputs(auth.currentUser?.uid || '');
+    if (shouldOpen) updateAuddTokenInput(auth.currentUser?.uid || '');
     if (shouldOpen) {
       if (discogsPriceRefreshRunning || discogsGenreRefreshRunning) {
         discogsRefreshStatusDismissed = false;
@@ -14716,7 +14706,8 @@ const audioRecognitionAnimation = document.getElementById('audioRecognitionAnima
 const audioRecognitionResult = document.getElementById('audioRecognitionResult');
 const audioRecognitionWaveform = document.getElementById('audioRecognitionWaveform');
 const audioRecognitionLevel = document.getElementById('audioRecognitionLevel');
-const recognitionDurationMs = 25000;
+const recognitionDurationMs = 12000;
+const recognitionDurationSeconds = recognitionDurationMs / 1000;
 let audioRecognitionAttempt = null;
 
 function stopAudioRecognition() {
@@ -14780,7 +14771,7 @@ function startRecognitionWaveform(stream) {
           drawing.lineTo(x, height / 2 + bar);
         }
         drawing.stroke();
-        audioRecognitionLevel.textContent = `${Math.min(25, Math.floor((now - start) / 1000))} / 25 Sekunden aufgenommen`;
+        audioRecognitionLevel.textContent = `${Math.min(recognitionDurationSeconds, Math.floor((now - start) / 1000))} / ${recognitionDurationSeconds} Sekunden aufgenommen`;
       }
       frame = requestAnimationFrame(draw);
     };
@@ -14827,34 +14818,30 @@ function recordRecognitionClip(stream, signal) {
   });
 }
 
-let chromaprintModule;
-
-function loadChromaprint() {
-  const base = 'https://cdn.jsdelivr.net/npm/rusty-chromaprint-wasm@0.1.5/dist/rusty_chromaprint_wasm_bg';
-  chromaprintModule ??= Promise.all([import(base + '.js'), fetch(base + '.wasm')])
-    .then(async ([bindings, response]) => {
-      if (!response.ok) throw new Error('Chromaprint konnte nicht geladen werden.');
-      const module = await WebAssembly.compile(await response.arrayBuffer());
-      const imports = Object.fromEntries(WebAssembly.Module.imports(module).map(entry => [entry.module, bindings]));
-      const instance = await WebAssembly.instantiate(module, imports);
-      bindings.__wbg_set_wasm(instance.exports);
-      instance.exports.__wbindgen_start?.();
-      return bindings;
-    }).catch(() => {
-      chromaprintModule = null;
-      throw new Error('Chromaprint konnte nicht geladen werden.');
-    });
-  return chromaprintModule;
+function encodeRecognitionWav(samples, sampleRate) {
+  const bytes = samples.length * 2;
+  const view = new DataView(new ArrayBuffer(44 + bytes));
+  for (const [offset, tag] of [[0,'RIFF'], [8,'WAVE'], [12,'fmt '], [36,'data']]) {
+    for (let i = 0; i < tag.length; i++) view.setUint8(offset + i, tag.charCodeAt(i));
+  }
+  view.setUint32(4, 36 + bytes, true);
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  view.setUint32(40, bytes, true);
+  samples.forEach((sample, i) => view.setInt16(44 + 2 * i, sample, true));
+  return new Blob([view.buffer], {type:'audio/wav'});
 }
 
-async function fingerprintRecognitionClip(clip, signal, reportLevel) {
+async function prepareRecognitionAudio(clip, signal, reportLevel) {
   const AudioContextType = window.AudioContext || window.webkitAudioContext;
   const context = new AudioContextType();
   try {
-    const [chromaprint, decoded] = await Promise.all([
-      loadChromaprint(),
-      clip.arrayBuffer().then(buffer => context.decodeAudioData(buffer))
-    ]);
+    const decoded = await context.decodeAudioData(await clip.arrayBuffer());
     signal.throwIfAborted();
     const channels = Array.from({length: decoded.numberOfChannels}, (_, i) => decoded.getChannelData(i));
     const mono = new Float32Array(decoded.length);
@@ -14876,82 +14863,37 @@ async function fingerprintRecognitionClip(clip, signal, reportLevel) {
     const gain = Math.max(1, Math.min(8, 0.12 / rms, 0.95 / peak));
     const samples = Int16Array.from(mono, value =>
       Math.max(-32768, Math.min(32767, value * gain * 32768)));
-    const fingerprint = chromaprint.fingerprintFromSamples(decoded.sampleRate, 1, samples);
-    if (!fingerprint.raw.length) throw new Error('Aus der Aufnahme konnte kein Fingerabdruck erstellt werden.');
-    return {fingerprint: fingerprint.compressed, duration: Math.round(decoded.duration)};
+    return encodeRecognitionWav(samples, decoded.sampleRate);
   } finally {
     await context.close().catch(() => {});
   }
 }
 
-function requestAcoustidJsonp(endpoint, signal) {
+async function lookupAuddRecording(clip, token, signal, reportLevel) {
+  const audio = await prepareRecognitionAudio(clip, signal, reportLevel);
   signal.throwIfAborted();
-  return new Promise((resolve, reject) => {
-    const frame = document.createElement('iframe');
-    frame.hidden = true;
-    frame.setAttribute('sandbox', 'allow-scripts');
-    endpoint.searchParams.set('format', 'jsonp');
-    endpoint.searchParams.set('jsoncallback', 'vinylAcoustidResult');
-    const finish = (error, payload) => {
-      clearTimeout(timer);
-      window.removeEventListener('message', receive);
-      signal.removeEventListener('abort', cancel);
-      frame.remove();
-      if (error) reject(error);
-      else resolve(payload);
-    };
-    const receive = event => {
-      if (event.source !== frame.contentWindow || event.origin !== 'null') return;
-      if (event.data?.type === 'acoustid-result') finish(null, event.data.payload);
-      if (event.data?.type === 'acoustid-error') finish(new Error('AcoustID ist gerade nicht erreichbar.'));
-    };
-    const cancel = () => finish(signal.reason);
-    const timer = setTimeout(() => finish(new Error('AcoustID antwortet nicht.')), 12000);
-    window.addEventListener('message', receive);
-    signal.addEventListener('abort', cancel, {once:true});
-    // Keep the provider callback in an opaque origin, outside the collection app.
-    frame.srcdoc = `<script>
-      function vinylAcoustidResult(payload) { parent.postMessage({type:'acoustid-result', payload}, '*'); }
-      const request = document.createElement('script');
-      request.referrerPolicy = 'no-referrer';
-      request.src = ${JSON.stringify(endpoint.href)};
-      request.onerror = () => parent.postMessage({type:'acoustid-error'}, '*');
-      document.head.append(request);
-    <\/script>`;
-    document.body.append(frame);
-  });
-}
-
-async function lookupRecognitionFingerprint(clip, credentials, signal, reportLevel) {
-  const params = new URLSearchParams({
-    client: credentials.app, meta: 'recordings releasegroups',
-    ...await fingerprintRecognitionClip(clip, signal, reportLevel)
-  });
-  if (credentials.user) params.set('user', credentials.user);
-  const endpoint = new URL('https://api.acoustid.org/v2/lookup');
-  let payload;
+  const form = new FormData();
+  form.set('api_token', token);
+  form.set('file', audio, 'aufnahme.wav');
+  let response;
   try {
-    const response = await fetch(endpoint, {
-      method: 'POST', body: params, signal: AbortSignal.any([signal, AbortSignal.timeout(12000)])
+    response = await fetch('https://api.audd.io/', {
+      method:'POST', body:form, signal:AbortSignal.any([signal, AbortSignal.timeout(20000)])
     });
-    payload = await response.json();
   } catch (error) {
-    if (error.name !== 'TypeError' || signal.aborted) throw error;
-    endpoint.search = params.toString();
-    payload = await requestAcoustidJsonp(endpoint, signal);
+    if (error.name !== 'TypeError') throw error;
+    throw new Error('AudD ist aus diesem Browser gerade nicht erreichbar. Prüfe die Verbindung und ob der Browser die Anfrage blockiert.');
   }
-  if (payload?.status !== 'ok') {
-    if (Number(payload?.error?.code) === 21) throw new Error('Trage deinen AcoustID-Benutzerschlüssel in den Kontoeinstellungen ein.');
-    throw new Error(payload?.error?.message || 'AcoustID konnte den Fingerabdruck nicht prüfen.');
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.status !== 'success') {
+    const code = Number(payload?.error?.error_code);
+    if (response.status === 401 || code === 900 || code === 901) {
+      throw new Error('AudD hat den API-Token abgelehnt. Prüfe den Token und dein Testkontingent.');
+    }
+    throw new Error(payload?.error?.error_message || 'AudD konnte die Aufnahme gerade nicht prüfen.');
   }
-  const results = [...(payload.results || [])].sort((a, b) => b.score - a.score);
-  for (const result of results) {
-    const recording = result.recordings?.find(entry => entry.title);
-    if (!recording || result.score < 0.5) continue;
-    const release = recording.releasegroups?.find(group => group.type === 'Album') ?? recording.releasegroups?.[0];
-    return {title: recording.title, artists: (recording.artists || []).map(artist => artist.name).filter(Boolean), album: release?.title};
-  }
-  return null;
+  const song = payload.result;
+  return song?.title ? {title:song.title, artist:song.artist || '', album:song.album || ''} : null;
 }
 
 async function startAudioRecognition() {
@@ -14968,14 +14910,8 @@ async function startAudioRecognition() {
   audioRecognitionDialog.showModal();
   try {
     if (!user) throw new Error('Melde dich an, um Musik zu erkennen.');
-    const credentials = {app: readAcoustidKey('app', user.uid), user: readAcoustidKey('user', user.uid)};
-    if (!credentials.app && !credentials.user) {
-      throw new Error('Die AcoustID-Schlüssel fehlen. Trage in den Kontoeinstellungen zuerst den Anwendungsschlüssel ein. Den Benutzerschlüssel kannst du dort ebenfalls hinzufügen.');
-    }
-    if (!credentials.app) throw new Error('Der AcoustID-Anwendungsschlüssel fehlt. Trage ihn in den Kontoeinstellungen ein.');
-    if (!credentials.user && Date.now() >= Date.UTC(2027, 0, 1)) {
-      throw new Error('Der AcoustID-Benutzerschlüssel fehlt. Trage ihn in den Kontoeinstellungen ein.');
-    }
+    const token = readAuddToken(user.uid);
+    if (!token) throw new Error('Trage deinen AudD-API-Token in den Kontoeinstellungen ein.');
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder !== 'function'
       || !(window.AudioContext || window.webkitAudioContext)) {
       throw new Error('Dieser Browser unterstützt hier keine Mikrofonaufnahme.');
@@ -14989,12 +14925,12 @@ async function startAudioRecognition() {
     ear.addEventListener('error', () => {
       if (!signal.aborted && audioRecognitionAnimation.contains(ear)) {
         audioRecognitionAnimation.replaceChildren();
-        audioRecognitionStatus.textContent = 'Höre 25 Sekunden zu … Die Ohr-Animation konnte nicht geladen werden.';
+        audioRecognitionStatus.textContent = `Höre ${recognitionDurationSeconds} Sekunden zu … Die Ohr-Animation konnte nicht geladen werden.`;
       }
     }, {once:true});
     ear.src = new URL('./ear.gif', document.baseURI).href;
     audioRecognitionAnimation.replaceChildren(ear);
-    audioRecognitionStatus.textContent = 'Höre 25 Sekunden zu … Die Aufnahme bleibt in diesem Browser.';
+    audioRecognitionStatus.textContent = `Höre ${recognitionDurationSeconds} Sekunden zu … Die Aufnahme wird zur Erkennung an AudD gesendet.`;
     try {
       attempt.stopWaveform = startRecognitionWaveform(attempt.stream);
     } catch {
@@ -15006,9 +14942,9 @@ async function startAudioRecognition() {
     audioRecognitionAnimation.replaceChildren();
     attempt.stream.getTracks().forEach(track => track.stop());
     if (!clip.size) throw new Error('Es wurde kein Audio aufgenommen.');
-    audioRecognitionStatus.textContent = 'AcoustID gleicht den Audio-Fingerabdruck ab …';
+    audioRecognitionStatus.textContent = 'AudD sucht nach dem Song …';
     let quiet = false;
-    const match = await lookupRecognitionFingerprint(clip, credentials, signal, (db, duration, peak) => {
+    const match = await lookupAuddRecording(clip, token, signal, (db, duration, peak) => {
       quiet = db < -35;
       const level = Number.isFinite(db) ? `${db} dBFS` : 'kein Pegel';
       const hint = quiet ? ' · sehr leise' : peak >= 0.99 ? ' · möglicherweise übersteuert' : '';
@@ -15022,7 +14958,7 @@ async function startAudioRecognition() {
         : 'Kein Song erkannt. Versuch es mit einer anderen Stelle des Songs.';
       return;
     }
-    const artist = match.artists.join(', ');
+    const artist = match.artist;
     const localAlbums = new Set(ownCollection.filter(album => album.owned
       && normalizeRankingText(album.artist) === normalizeRankingText(artist)
       && getRatingTrackRows(album.tracklist).some(row => row.key && normalizeRankingText(row.track.title) === normalizeRankingText(match.title))
@@ -15030,7 +14966,7 @@ async function startAudioRecognition() {
     document.getElementById('audioRecognitionSong').textContent = match.title;
     document.getElementById('audioRecognitionArtist').textContent = artist;
     const albumLine = document.getElementById('audioRecognitionAlbum');
-    albumLine.textContent = match.album ? `Album laut MusicBrainz: ${match.album}` : '';
+    albumLine.textContent = match.album ? `Album laut AudD: ${match.album}` : '';
     const collectionLine = document.getElementById('audioRecognitionCollection');
     collectionLine.textContent = localAlbums.size ? `In deinem Besitz: ${[...localAlbums].join(' · ')}` : '';
     audioRecognitionResult.hidden = false;
@@ -15039,7 +14975,7 @@ async function startAudioRecognition() {
     if (!signal.aborted) {
       audioRecognitionStatus.textContent = error.name === 'NotAllowedError' ? 'Der Mikrofonzugriff wurde nicht erlaubt.'
         : error.name === 'NotFoundError' ? 'Es wurde kein Mikrofon gefunden.'
-        : error.name === 'TimeoutError' ? 'AcoustID antwortet nicht.'
+        : error.name === 'TimeoutError' ? 'AudD antwortet nicht.'
         : error.message || 'Die Musikerkennung ist fehlgeschlagen.';
     }
   } finally {
